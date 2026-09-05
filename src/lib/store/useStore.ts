@@ -334,6 +334,14 @@ const initialOutfit: ActiveOutfit = {};
 
 export type VeyraState = IrisiState;
 
+export function getTimeBasedTheme(): 'dark' | 'light' {
+  if (typeof window === 'undefined') return 'dark';
+  const hour = new Date().getHours();
+  // Morning/Daytime (6:00 AM to 6:59 PM): light mode
+  // Nighttime (7:00 PM to 5:59 AM): dark mode
+  return hour >= 6 && hour < 19 ? 'light' : 'dark';
+}
+
 // Seamless migration of client storage from veyra-store-storage to irisi-store-storage
 if (typeof window !== 'undefined') {
   try {
@@ -349,10 +357,13 @@ if (typeof window !== 'undefined') {
 export const useStore = create<IrisiState>()(
   persist(
     (set, get) => ({
-      // Theme State
-      theme: 'light',
+      // Theme State - Defaults to Dark mode at night (7pm-6am) and Light mode in morning (6am-7pm)
+      theme: getTimeBasedTheme(),
       toggleTheme: () => {
         const next = get().theme === 'dark' ? 'light' : 'dark';
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('irisi_manual_theme_override', 'true');
+        }
         set({ theme: next });
         if (typeof document !== 'undefined') {
           if (next === 'dark') {

@@ -57,7 +57,39 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`light ${cormorant.variable} ${plusJakarta.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en" className={`${cormorant.variable} ${plusJakarta.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var hasManualOverride = sessionStorage.getItem('irisi_manual_theme_override') === 'true';
+                  var savedTheme = null;
+                  if (hasManualOverride) {
+                    var storage = localStorage.getItem('irisi-store-storage');
+                    if (storage) {
+                      var parsed = JSON.parse(storage);
+                      savedTheme = parsed && parsed.state ? parsed.state.theme : null;
+                    }
+                  }
+                  var hour = new Date().getHours();
+                  // Morning/Day (6:00 AM - 6:59 PM): light. Night (7:00 PM - 5:59 AM): dark.
+                  var autoTheme = (hour >= 6 && hour < 19) ? 'light' : 'dark';
+                  var activeTheme = savedTheme || autoTheme;
+                  if (activeTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                  } else {
+                    document.documentElement.classList.add('light');
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased transition-colors duration-300 font-sans">
         <NextTopLoader
           color="#d4af37"
