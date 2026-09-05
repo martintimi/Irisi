@@ -185,6 +185,16 @@ export default function VendorPortalLayout({
           </button>
           
           <Link href="/vendor-portal" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <div className="relative w-8 h-8 rounded-xl overflow-hidden shadow-sm border border-black/15 dark:border-white/15 shrink-0 group-hover:scale-105 transition-transform">
+              <Image
+                src="/images/logo/irisi-icon.png"
+                alt="ÌRÍSÍ Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+                priority
+              />
+            </div>
             <span className="font-editorial text-xl sm:text-2xl font-bold tracking-[0.24em] text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
               Ì R Í S Í
             </span>

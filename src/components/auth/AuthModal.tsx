@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import { X, Sparkles, User, Store, Check, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -123,8 +124,15 @@ export default function AuthModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gold-subtle)] text-[var(--gold-accent)]">
-              <Sparkles className="h-4 w-4" />
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-black/15 dark:border-white/15 shadow-sm">
+              <Image
+                src="/images/logo/irisi-icon.png"
+                alt="ÌRÍSÍ Logo"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+                priority
+              />
             </div>
             <div>
               <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">

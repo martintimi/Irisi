@@ -69,7 +69,7 @@ export default function Footer() {
               <BrandWordmark size="md" />
             </div>
             <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed max-w-xs">
-              Nigeria&apos;s premier multi-brand virtual fitting room and luxury fashion marketplace.
+              Nigeria&apos;s premier multi-brand haute couture and ready-to-wear fashion marketplace.
             </p>
           </div>
 
