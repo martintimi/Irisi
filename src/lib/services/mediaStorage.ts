@@ -2,20 +2,28 @@ import fs from 'fs';
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
 
-// Configure Cloudinary if credentials are present
+// Configure Cloudinary if credentials are present (individual keys or CLOUDINARY_URL)
 const hasCloudinary = !!(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
+  process.env.CLOUDINARY_URL ||
+  (process.env.CLOUDINARY_CLOUD_NAME &&
+   process.env.CLOUDINARY_API_KEY &&
+   process.env.CLOUDINARY_API_SECRET)
 );
 
 if (hasCloudinary) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true,
-  });
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config({
+      cloudinary_url: process.env.CLOUDINARY_URL,
+      secure: true,
+    });
+  } else {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+  }
 }
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'images', 'products', 'uploaded');

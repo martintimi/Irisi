@@ -4,14 +4,28 @@ import { normalizeVideoBuffer } from '@/lib/utils/videoUtils';
 import fs from 'fs';
 import path from 'path';
 
-// Configure Cloudinary if environment variables are set
-if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true,
-  });
+// Configure Cloudinary if environment variables are set (individual keys or CLOUDINARY_URL)
+const hasCloudinary = !!(
+  process.env.CLOUDINARY_URL ||
+  (process.env.CLOUDINARY_CLOUD_NAME &&
+   process.env.CLOUDINARY_API_KEY &&
+   process.env.CLOUDINARY_API_SECRET)
+);
+
+if (hasCloudinary) {
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config({
+      cloudinary_url: process.env.CLOUDINARY_URL,
+      secure: true,
+    });
+  } else {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+  }
 }
 
 export async function POST(request: Request) {
@@ -40,7 +54,7 @@ export async function POST(request: Request) {
     const shouldTrim = data.get('trim') === 'true';
 
     // 1. Cloudinary Upload (Direct high-speed CDN video streaming)
-    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+    if (hasCloudinary) {
       const uploadResult: any = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream(
           {
