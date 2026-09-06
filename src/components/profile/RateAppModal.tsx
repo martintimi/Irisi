@@ -20,18 +20,19 @@ const RATING_LABELS: Record<number, string> = {
 };
 
 const EXPERIENCE_TAGS = [
+  'Boutique Fashion Drops',
+  'Handcrafted Leather Footwear',
+  'Luxury Bags & Jewelry',
   'Accurate Sizing & Fit',
-  'Artisan Craftsmanship',
   'Fast State-to-State Delivery',
   'Seamless Paystack Checkout',
-  'Exclusive Fashion Drops',
   'Responsive Concierge',
 ];
 
 export default function RateAppModal({ isOpen, onClose, userEmail, userName }: RateAppModalProps) {
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>(['Accurate Sizing & Fit', 'Artisan Craftsmanship']);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['Boutique Fashion Drops', 'Accurate Sizing & Fit']);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -111,7 +112,7 @@ export default function RateAppModal({ isOpen, onClose, userEmail, userName }: R
             Rate Your Ìrísí Experience
           </h3>
           <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
-            Your rating helps us champion authentic Nigerian ateliers & refine the platform.
+            Your rating helps us champion authentic Nigerian boutiques & designers.
           </p>
         </div>
 

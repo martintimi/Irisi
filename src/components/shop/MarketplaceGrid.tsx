@@ -168,11 +168,11 @@ export default function MarketplaceGrid() {
             </div>
 
             <h1 className="font-editorial text-2xl sm:text-5xl text-[var(--text-primary)] leading-tight font-normal">
-              Shop Senator, Native & Streetwear
+              Curated Fashion, Footwear & Accessories
             </h1>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl">
-              Curated Nigerian haute couture, bespoke Senator tailoring, and verified streetwear ateliers with nationwide escrow delivery.
+              Curated Nigerian boutiques, ready-to-wear fashion, handcrafted footwear, luxury bags, fine jewelry, and streetwear drops with nationwide escrow delivery.
             </p>
           </div>
 

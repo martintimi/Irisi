@@ -639,7 +639,7 @@ export default function MobileProfileView() {
                       Need Help / FAQ Topics
                     </h4>
                     <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Escrow protection, nationwide dispatch & verified sizing
+                      Escrow protection, nationwide delivery, shoes, bags & boutique sizing
                     </p>
                   </div>
                 </div>
@@ -661,7 +661,7 @@ export default function MobileProfileView() {
                       WhatsApp Luxury Concierge
                     </h4>
                     <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Instant direct chat with bespoke fashion specialists
+                      Instant direct chat with fashion, shoe & accessory stylists
                     </p>
                   </div>
                 </div>
@@ -769,7 +769,7 @@ export default function MobileProfileView() {
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
-        userEmail={userAuth.email}
+        userEmail={userAuth.email || bodyProfile.email || ''}
       />
       <FaqHelpModal
         isOpen={isFaqOpen}

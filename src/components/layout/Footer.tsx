@@ -52,7 +52,7 @@ export default function Footer() {
                 Authentic Nigerian Craft
               </h4>
               <p className="text-xs text-[var(--text-secondary)] mt-1 font-light leading-relaxed">
-                Direct partnerships with verified tailoring houses, footwear artisans, and jewelry ateliers.
+                Direct partnerships with verified boutiques, fashion houses, footwear artisans, and jewelry brands.
               </p>
             </div>
           </div>

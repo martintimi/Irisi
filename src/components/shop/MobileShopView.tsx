@@ -17,11 +17,11 @@ import MobileProductSlider from '@/components/shop/MobileProductSlider';
 const ITEMS_PER_PAGE = 8;
 
 const categoryMeta: Record<string, { label: string; desc: string }> = {
-  tops: { label: 'Native & Kaftans', desc: 'Senator sets, Agbadas, and bespoke kaftans' },
-  outerwear: { label: 'Streetwear Drops & Hoodies', desc: 'Heavyweight hoodies, jackets, and urban drops' },
-  footwear: { label: 'Footwear & Slides', desc: 'Handcrafted leather slides, mules, and sneakers' },
-  bottoms: { label: 'Trousers & Denim', desc: 'Baggy denim, cargo pants, and tailored trousers' },
-  accessories: { label: 'Jewelry, Caps & Bags', desc: 'Cuban links, rings, dad hats, and leather bags' },
+  tops: { label: 'Shirts & Tops', desc: 'Boutique shirts, tees, Senator sets, and kaftans' },
+  outerwear: { label: 'Streetwear & Hoodies', desc: 'Heavyweight hoodies, jackets, and urban drops' },
+  footwear: { label: 'Footwear & Shoes', desc: 'Handcrafted leather shoes, slides, mules, and sneakers' },
+  bottoms: { label: 'Trousers & Denim', desc: 'Baggy denim, cargo pants, and boutique trousers' },
+  accessories: { label: 'Bags & Jewelry', desc: 'Luxury totes, Cuban links, rings, and leather bags' },
 };
 
 export default function MobileShopView() {
@@ -37,7 +37,7 @@ export default function MobileShopView() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all');
+  const [genderFilter, setGenderFilter] = useState<'male' | 'female'>('male');
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -93,28 +93,28 @@ export default function MobileShopView() {
       setSelectedCategory('all');
     }
     const gen = searchParams.get('gender');
-    if (gen && ['male', 'female', 'all'].includes(gen)) {
-      setGenderFilter(gen as any);
+    if (gen && ['male', 'female'].includes(gen)) {
+      setGenderFilter(gen as 'male' | 'female');
       setCurrentPage(1);
     }
   }, [searchParams]);
 
   const categories: { id: GarmentCategory | 'all'; label: string }[] = [
-    { id: 'all', label: 'All Drops' },
-    { id: 'tops', label: 'Native & Kaftans' },
+    { id: 'all', label: 'All Items' },
+    { id: 'tops', label: 'Shirts & Natives' },
     { id: 'outerwear', label: 'Streetwear Drops' },
     { id: 'bottoms', label: 'Trousers & Denim' },
-    { id: 'footwear', label: 'Footwear & Slides' },
-    { id: 'accessories', label: 'Jewelry & Caps' },
+    { id: 'footwear', label: 'Footwear & Shoes' },
+    { id: 'accessories', label: 'Bags & Jewelry' },
   ];
 
   const filteredProducts = useMemo(() => {
     let list = Array.isArray(allProducts) ? [...allProducts] : [];
 
-    // Filter
+    // Filter strictly by gender: only selected gender or unisex (never show both male and female together)
     list = list.filter((p) => {
       const pGender = (p.genderTarget || '').toLowerCase();
-      const matchesGender = genderFilter === 'all' || pGender === genderFilter || pGender === 'unisex' || !pGender;
+      const matchesGender = pGender === genderFilter || pGender === 'unisex';
       const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery = !q ||
@@ -151,18 +151,19 @@ export default function MobileShopView() {
     return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredProducts, currentPage]);
 
-  const handleGenderChange = (g: 'all' | 'male' | 'female') => {
+  const handleGenderChange = (g: 'male' | 'female') => {
     setGenderFilter(g);
     setCurrentPage(1);
+    router.replace(`/shop?gender=${g}${selectedCategory !== 'all' ? `&category=${selectedCategory}` : ''}`);
   };
 
   const handleCategoryChange = (catId: GarmentCategory | 'all') => {
     setSelectedCategory(catId);
     setCurrentPage(1);
     if (catId === 'all') {
-      router.replace('/shop');
+      router.replace(`/shop?gender=${genderFilter}`);
     } else {
-      router.replace(`/shop?category=${catId}${genderFilter !== 'all' ? `&gender=${genderFilter}` : ''}`);
+      router.replace(`/shop?category=${catId}&gender=${genderFilter}`);
     }
   };
 
@@ -204,9 +205,7 @@ export default function MobileShopView() {
                 ? categoryMeta[selectedCategory]?.label || 'Category Drops'
                 : genderFilter === 'male'
                 ? "Men's Drops"
-                : genderFilter === 'female'
-                ? "Women's Drops"
-                : 'All Drops'}
+                : "Women's Drops"}
             </h1>
             <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5">
               {filteredProducts.length} {filteredProducts.length === 1 ? 'piece' : 'pieces'} {selectedCategory !== 'all' ? `in ${categoryMeta[selectedCategory]?.label || selectedCategory}` : 'curated across Nigeria'}
@@ -251,21 +250,20 @@ export default function MobileShopView() {
         </div>
       </div>
 
-      {/* GENDER TABS */}
-      <div className="px-4 flex items-center gap-4 border-b border-[var(--border-subtle)] pb-0">
+      {/* GENDER TABS (ONLY MEN AND WOMEN) */}
+      <div className="px-4 flex items-center gap-6 border-b border-[var(--border-subtle)] pb-0">
         {[
-          { id: 'all', label: 'All' },
           { id: 'male', label: 'Men' },
           { id: 'female', label: 'Women' },
         ].map((g) => (
           <button
             key={g.id}
             type="button"
-            onClick={() => handleGenderChange(g.id as 'all' | 'male' | 'female')}
-            className={`pb-3 text-xs font-medium uppercase tracking-wide transition-all border-b-2 cursor-pointer ${
+            onClick={() => handleGenderChange(g.id as 'male' | 'female')}
+            className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 cursor-pointer ${
               genderFilter === g.id
                 ? 'border-[var(--text-primary)] text-[var(--text-primary)]'
-                : 'border-transparent text-[var(--text-secondary)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             {g.label}
@@ -337,7 +335,7 @@ export default function MobileShopView() {
           </div>
           <button
             type="button"
-            onClick={() => { setGenderFilter('all'); setSelectedCategory('all'); setSearchQuery(''); setCurrentPage(1); }}
+            onClick={() => { setGenderFilter('male'); setSelectedCategory('all'); setSearchQuery(''); setCurrentPage(1); }}
             className="mt-1 px-6 py-2.5 border border-[var(--text-primary)] text-[var(--text-primary)] text-xs font-medium rounded-sm hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] transition-colors cursor-pointer"
           >
             Clear Filters
@@ -609,18 +607,18 @@ export default function MobileShopView() {
             {/* Department */}
             <div className="space-y-2">
               <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">Department</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[{ id: 'all', label: 'All' }, { id: 'male', label: 'Men' }, { id: 'female', label: 'Women' }].map((g) => (
+              <div className="grid grid-cols-2 gap-2">
+                {[{ id: 'male', label: 'Men' }, { id: 'female', label: 'Women' }].map((g) => (
                   <button
                     key={g.id}
                     type="button"
                     onClick={() => {
-                      setGenderFilter(g.id as 'all' | 'male' | 'female');
+                      setGenderFilter(g.id as 'male' | 'female');
                       setCurrentPage(1);
                     }}
-                    className={`py-2 rounded-xl text-center text-xs font-mono-luxury transition-all cursor-pointer border ${
+                    className={`py-2.5 rounded-xl text-center text-xs font-mono-luxury transition-all cursor-pointer border ${
                       genderFilter === g.id
-                        ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold'
+                        ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-xs'
                         : 'border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-secondary)]'
                     }`}
                   >
@@ -660,7 +658,7 @@ export default function MobileShopView() {
               <button
                 type="button"
                 onClick={() => {
-                  setGenderFilter('all');
+                  setGenderFilter('male');
                   setSelectedCategory('all');
                   setSearchQuery('');
                   setPriceRange('all');

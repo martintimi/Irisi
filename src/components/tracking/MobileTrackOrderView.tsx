@@ -590,7 +590,7 @@ export default function MobileTrackOrderView() {
                   Rate {activeReviewVendor.vendorName}
                 </h3>
                 <p className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
-                  How was the fabric quality and tailoring fit?
+                  How was the product quality and fit?
                 </p>
               </div>
               <button
@@ -624,7 +624,7 @@ export default function MobileTrackOrderView() {
 
               <div>
                 <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Sizing Drape & Fit:
+                  Sizing & Fit:
                 </label>
                 <select
                   value={reviewFit}
@@ -646,7 +646,7 @@ export default function MobileTrackOrderView() {
                   required
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="Share details on tailoring drape and fabric feel..."
+                  placeholder="Share details on product quality, fit, and finish..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] resize-none"
                 />
               </div>

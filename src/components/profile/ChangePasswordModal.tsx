@@ -36,13 +36,28 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!hasMinLength) {
+    if (!currentPassword.trim()) {
+      setErrorMessage('Please enter your current password.');
+      return;
+    }
+
+    if (!newPassword.trim()) {
+      setErrorMessage('Please enter your new password.');
+      return;
+    }
+
+    if (newPassword.trim().length < 6) {
       setErrorMessage('New password must be at least 6 characters long.');
       return;
     }
 
-    if (!passwordsMatch) {
-      setErrorMessage('New passwords do not match.');
+    if (!confirmPassword.trim()) {
+      setErrorMessage('Please confirm your new password in the third field.');
+      return;
+    }
+
+    if (newPassword.trim() !== confirmPassword.trim()) {
+      setErrorMessage('New passwords do not match. Please ensure both fields match.');
       return;
     }
 
@@ -53,8 +68,9 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentPassword,
-          newPassword,
+          email: userEmail || '',
+          currentPassword: currentPassword.trim(),
+          newPassword: newPassword.trim(),
         }),
       });
 
@@ -66,7 +82,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
         return;
       }
 
-      setSuccessMessage('Password changed successfully in Supabase.');
+      setSuccessMessage('Password changed successfully.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -115,13 +131,13 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
               Change Password
             </h3>
             <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-              Update credentials on Supabase Security Engine
+              Secure your patron account and order vault
             </p>
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 font-mono-luxury text-xs">
+        <form onSubmit={handleSubmit} className="space-y-4 font-mono-luxury text-xs" noValidate>
           {/* Current Password */}
           <div className="space-y-1.5">
             <label className="block text-[var(--text-secondary)] uppercase font-bold text-[10px]">
@@ -133,7 +149,6 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
-                required
                 className="w-full px-3.5 py-3 pr-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
               />
               <button
@@ -157,7 +172,6 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                required
                 className="w-full px-3.5 py-3 pr-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
               />
               <button
@@ -194,7 +208,6 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat new password"
-                required
                 className="w-full px-3.5 py-3 pr-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
               />
               <button
@@ -214,7 +227,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-fadeIn">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -222,7 +235,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
 
           {/* Success Message */}
           {successMessage && (
-            <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2 animate-fadeIn">
               <ShieldCheck className="h-4 w-4 shrink-0" />
               <span>{successMessage}</span>
             </div>
@@ -231,13 +244,13 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSubmitting || !hasMinLength || !passwordsMatch}
+            disabled={isSubmitting}
             className="w-full py-3.5 rounded-xl bg-[var(--gold-accent)] text-black font-bold uppercase tracking-wider hover:brightness-110 active:scale-98 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? (
               <>
                 <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                <span>Updating in Supabase...</span>
+                <span>Updating Password...</span>
               </>
             ) : (
               <>

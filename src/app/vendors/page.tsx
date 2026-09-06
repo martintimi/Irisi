@@ -78,7 +78,7 @@ export default function VendorsPage() {
         </h1>
 
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl mx-auto">
-          Explore independent Nigerian tailors, bespoke native houses, and contemporary streetwear designers. Every brand is verified for quality and craftsmanship.
+          Explore verified fashion boutiques, shoe artisans, jewelry designers, and streetwear labels across Nigeria. Every brand is verified for authenticity and craftsmanship.
         </p>
       </div>
 

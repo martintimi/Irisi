@@ -10,7 +10,7 @@ interface FaqHelpModalProps {
 
 interface FaqItem {
   id: string;
-  category: 'sizing' | 'payment' | 'delivery' | 'returns' | 'concierge';
+  category: 'fashion' | 'sizing' | 'footwear_bags' | 'payment' | 'delivery' | 'returns' | 'concierge';
   question: string;
   answer: string;
 }
@@ -18,45 +18,51 @@ interface FaqItem {
 const FAQ_ITEMS: FaqItem[] = [
   {
     id: 'faq-1',
-    category: 'sizing',
-    question: 'How does garment sizing work for bespoke tailoring and ready-to-wear?',
-    answer: 'Ready-to-wear pieces follow standard size charts (S, M, L, XL, XXL) with exact chest, waist, and length measurements. For bespoke tailoring (Senator suits, Agbadas, Kaftans), verified ateliers stitch directly to your custom tape measurements for a tailored fit.',
+    category: 'fashion',
+    question: 'What types of fashion and products are available on Ìrísí?',
+    answer: 'Ìrísí is Nigeria’s premier luxury fashion marketplace featuring verified fashion boutiques, shoe artisans, handbag designers, and streetwear labels. You can shop ready-to-wear boutique outfits, handcrafted leather footwear, luxury totes & bags, jewelry, accessories, and bespoke designer drops.',
   },
   {
     id: 'faq-2',
     category: 'sizing',
-    question: 'What if a custom tailored piece does not fit me perfectly?',
-    answer: 'All bespoke designer pieces ordered through Ìrísí come with our Guaranteed Fit Promise. If adjustments are required within 7 days of delivery, our verified ateliers provide prompt alteration assistance or bespoke tailoring adjustments free of charge.',
+    question: 'How does sizing work across clothing, footwear, and accessories?',
+    answer: 'Clothing items follow standard size charts (XS to 3XL) with exact bust/chest and waist guides. Footwear is listed in European EU shoe sizes (38 to 47). Jewelry, caps, sunglasses, and bags feature exact dimensions and one-size universal specifications.',
   },
   {
     id: 'faq-3',
-    category: 'payment',
-    question: 'How does Escrow Protection safeguard my money?',
-    answer: 'When you purchase via Paystack debit card or instant bank transfer, your payment is held securely in Ìrísí Escrow. The artisan only receives their payout after your order has been successfully delivered and inspected.',
+    category: 'footwear_bags',
+    question: 'Are shoes, handbags, and jewelry genuine and authentic?',
+    answer: 'Yes, 100%. Every boutique, shoe artisan, and jewelry designer on Ìrísí goes through strict verification. Handcrafted leather shoes, mules, slides, sneakers, and handbags are made from high-grade genuine leather and inspected before courier dispatch.',
   },
   {
     id: 'faq-4',
-    category: 'delivery',
-    question: 'What are the delivery timelines across Nigerian states?',
-    answer: 'Ready-to-wear pieces ship within 24–48 hours in Lagos, and 2–4 business days across other 35 states via our integrated logistics network. Bespoke tailoring takes 5–7 days for handcrafted production plus courier dispatch.',
+    category: 'payment',
+    question: 'How does Escrow Protection safeguard my money?',
+    answer: 'When you purchase via Paystack (card, USSD, or direct bank transfer), your funds are held safely in Ìrísí Escrow. Sellers and boutique vendors only receive payment after your items have been successfully delivered to your doorstep and verified.',
   },
   {
     id: 'faq-5',
     category: 'delivery',
-    question: 'How do I track my delivery and courier waybill?',
-    answer: 'Navigate to "Orders" in your Patron Profile and tap "Track Order". You will see live courier tracking stages (Atelier Crafting -> Quality Verified -> Waybill Dispatched -> Out for Delivery) with direct waybill codes.',
+    question: 'What are the delivery timelines across Nigerian states?',
+    answer: 'In-stock boutique clothing, footwear, bags, and jewelry typically dispatch within 24–48 hours in Lagos, and 2–4 business days across all 35 other states via integrated courier partners (GIG Logistics, Fez Delivery, Red Star Express) and interstate motor park waybills.',
   },
   {
     id: 'faq-6',
-    category: 'returns',
-    question: 'What is the return and exchange policy?',
-    answer: 'Ready-to-wear drops can be returned or exchanged within 7 days of delivery as long as security tags remain intact, unworn, and in original packaging. Simply contact concierge to initiate an instant return.',
+    category: 'delivery',
+    question: 'How do I track my delivery and courier waybill?',
+    answer: 'Navigate to "Orders" in your Patron Profile and tap "Track Order". You will see real-time status updates as your order is packed by the boutique, verified, and dispatched with carrier tracking numbers and interstate waybill codes.',
   },
   {
     id: 'faq-7',
+    category: 'returns',
+    question: 'What is the return and exchange policy for boutique fashion, shoes, and jewelry?',
+    answer: 'Unworn boutique clothing with security tags attached, footwear in original shoe boxes, and unused jewelry & bags can be returned or exchanged within 7 days of delivery. Contact our concierge to initiate a prompt exchange.',
+  },
+  {
+    id: 'faq-8',
     category: 'concierge',
-    question: 'Can I chat directly with a human stylist or concierge?',
-    answer: 'Yes! Our dedicated Ìrísí Luxury Fashion Concierge is available 24/7 on WhatsApp to assist with private sizing consultations, custom bridal/native inquiries, and doorstep order tracking.',
+    question: 'Can I chat directly with a stylist or concierge for advice?',
+    answer: 'Yes! Our dedicated Ìrísí Luxury Concierge is available 24/7 on WhatsApp to assist with shoe fit comparisons, boutique outfit curation, bag recommendations, and doorstep order tracking.',
   },
 ];
 
@@ -104,7 +110,7 @@ export default function FaqHelpModal({ isOpen, onClose }: FaqHelpModalProps) {
               Need Help & FAQ Topics
             </h3>
             <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-              Escrow safety, nationwide dispatch, alterations & sizing guides
+              Boutiques, footwear, bags, jewelry, escrow safety & nationwide delivery
             </p>
           </div>
         </div>
@@ -117,7 +123,7 @@ export default function FaqHelpModal({ isOpen, onClose }: FaqHelpModalProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search topics (e.g. sizing, delivery, escrow, returns)..."
+              placeholder="Search topics (e.g. shoes, bags, sizing, delivery, escrow)..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
             />
             {searchQuery && (
@@ -136,10 +142,12 @@ export default function FaqHelpModal({ isOpen, onClose }: FaqHelpModalProps) {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-3 text-[10px] font-mono-luxury">
           {[
             { id: 'all', label: 'All Topics' },
-            { id: 'sizing', label: 'Sizing & Tailoring' },
+            { id: 'fashion', label: 'Boutiques & Apparel' },
+            { id: 'footwear_bags', label: 'Shoes, Bags & Jewelry' },
+            { id: 'sizing', label: 'Sizing Guides' },
             { id: 'payment', label: 'Escrow & Paystack' },
             { id: 'delivery', label: 'Waybills & Shipping' },
-            { id: 'returns', label: 'Returns & Alterations' },
+            { id: 'returns', label: 'Returns & Exchanges' },
             { id: 'concierge', label: 'Stylist Concierge' },
           ].map((cat) => (
             <button

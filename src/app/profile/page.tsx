@@ -112,7 +112,7 @@ export default function ProfilePage() {
   // Rating Modal state
   const [ratingModalOrder, setRatingModalOrder] = useState<string | null>(null);
   const [starRating, setStarRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('World-class bespoke tailoring. Fits my broad shoulder line perfectly.');
+  const [reviewComment, setReviewComment] = useState('World-class quality and authentic craftsmanship. Fits comfortably and delivered promptly.');
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -307,10 +307,10 @@ export default function ProfilePage() {
         <div className="space-y-6 animate-fadeIn">
           <div>
             <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-              Your Orders & Tailoring Progress
+              Your Orders & Delivery Status
             </h2>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-              Direct doorstep deliveries dispatched by each verified brand across all 36 states.
+              Direct doorstep deliveries dispatched by each verified boutique and brand across Nigeria.
             </p>
           </div>
 
@@ -322,7 +322,7 @@ export default function ProfilePage() {
                   No Orders Yet
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-sm mx-auto">
-                  You have not placed any orders yet. Discover custom tailoring & ready-to-wear drops on the catalog.
+                  You have not placed any orders yet. Discover boutique apparel, shoes, bags & jewelry drops on the shop.
                 </p>
                 <Link
                   href="/shop"
@@ -449,8 +449,8 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <span className="text-xs font-bold text-[var(--text-primary)]">How did your clothes fit?</span>
-                      <p className="text-xs text-[var(--text-muted)] font-light">Rate the fabric drape and tailoring fidelity for the designers.</p>
+                      <span className="text-xs font-bold text-[var(--text-primary)]">How was your order and fit?</span>
+                      <p className="text-xs text-[var(--text-muted)] font-light">Rate the quality, fit and craftsmanship for the boutique & designers.</p>
                     </div>
                   )}
 
@@ -769,7 +769,7 @@ export default function ProfilePage() {
               Settings & Patron Support
             </h2>
             <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-1">
-              Manage security credentials, explore atelier FAQs, rate the platform, or submit feedback.
+              Manage security credentials, explore FAQs for boutiques, shoes & jewelry, rate the platform, or submit feedback.
             </p>
           </div>
 
@@ -784,7 +784,7 @@ export default function ProfilePage() {
                   Account Password & Security
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                  Update your Supabase authentication password. Protect your bespoke measurements and order vault.
+                  Update your Supabase authentication password. Protect your account credentials and order vault.
                 </p>
               </div>
 
@@ -808,7 +808,7 @@ export default function ProfilePage() {
                   Need Help / FAQ Topics
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                  Clear answers on bespoke tailoring measurements, escrow guarantees, courier tracking, and atelier returns.
+                  Clear answers on boutique fashion, shoe & bag specifications, escrow guarantees, courier tracking, and returns.
                 </p>
               </div>
 
@@ -921,10 +921,10 @@ export default function ProfilePage() {
                 <Star className="h-6 w-6 fill-current" />
               </div>
               <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-                Rate Your Garments & Fit
+                Rate Your Items & Fit
               </h3>
               <p className="text-xs text-[var(--text-secondary)]">
-                How accurately did the tailoring match your saved sizing dimensions?
+                How accurately did this piece fit your sizing and expectations?
               </p>
             </div>
 
