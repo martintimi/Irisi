@@ -9,11 +9,12 @@ import {
   ArrowLeft, Bookmark, Share2, Sparkles, ShieldCheck, MapPin,
   Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2,
   ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn,
-  Video, Volume2, VolumeX
+  Video, Volume2, VolumeX, MessageCircle, User, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import Product3DModal from '@/components/3d/Product3DModal';
 
 interface MobileProductDetailViewProps {
   product: any;
@@ -58,6 +59,8 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [is3DModalOpen, setIs3DModalOpen] = useState(false);
+  const [isModelTryOnOpen, setIsModelTryOnOpen] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
@@ -467,18 +470,43 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           </div>
         )}
 
-        {/* Bottom Floating Controls (Tap to View only, Try on 3D Twin removed) */}
-        <div className="absolute bottom-3 left-3 z-10 text-xs font-mono-luxury">
+        {/* Bottom Floating Controls (Tap to View + Try on Model + View in 3D) */}
+        <div className="absolute bottom-3 left-3 z-10 text-xs font-mono-luxury flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               setIsImageModalOpen(true);
             }}
-            className="px-3 py-1.5 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white/90 text-[10px] font-bold flex items-center gap-1.5 shadow-lg active:scale-95 transition-transform cursor-pointer"
+            className="px-3 py-1.5 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white/90 text-[10px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition-transform cursor-pointer"
           >
             <ZoomIn className="h-3 w-3 text-[var(--gold-accent)]" />
             <span>Tap to View</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOutfitItem(product);
+              router.push('/studio');
+            }}
+            className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-[var(--gold-accent)] text-[var(--gold-accent)] text-[10px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition-all cursor-pointer hover:bg-[var(--gold-accent)] hover:text-black"
+          >
+            <Layers className="h-3 w-3" />
+            <span>Style in Studio</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIs3DModalOpen(true);
+            }}
+            className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white/90 text-[10px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition-all cursor-pointer hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)]"
+          >
+            <Sparkles className="h-3 w-3" />
+            <span>3D Inspect</span>
           </button>
         </div>
       </div>
@@ -735,6 +763,19 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           )}
         </div>
 
+        {/* 8. WHATSAPP CONCIERGE SIZING & ATELIER INQUIRY */}
+        <a
+          href={`https://wa.me/2348000000000?text=${encodeURIComponent(
+            `Hello Ìrísí Concierge, I am inquiring about "${product.name}" by ${product.vendorName || 'the Atelier'} (Price: ₦${Number(product.price || 0).toLocaleString()}). Could you assist with sizing and delivery details?`
+          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono-luxury text-xs font-bold transition-all hover:bg-emerald-500/20 active:scale-[0.98] cursor-pointer shadow-sm"
+        >
+          <MessageCircle className="h-4 w-4 fill-emerald-500/20" />
+          <span>Inquire via WhatsApp Concierge</span>
+        </a>
+
         {/* Toast Alert */}
         {addedToast && (
           <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-mono-luxury font-bold flex items-center justify-center gap-2 animate-fadeIn text-center">
@@ -888,6 +929,13 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
         onSelectSize={(sz) => setSelectedSize(sz)}
         category={product.category}
         availableSizes={availableSizes}
+      />
+
+      {/* 3D WebGL Product Inspector Modal */}
+      <Product3DModal
+        isOpen={is3DModalOpen}
+        onClose={() => setIs3DModalOpen(false)}
+        product={product}
       />
 
     </div>

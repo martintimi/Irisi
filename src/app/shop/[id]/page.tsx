@@ -6,13 +6,14 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Sparkles, Check, ShoppingBag, ShieldCheck, Truck, RotateCcw,
   Star, Heart, ArrowLeft, ArrowRight, Share2, Ruler,
-  Building, Phone, MapPin, CheckCircle2, ChevronRight, Loader2, Store, Clock, Package, Play
+  Building, Phone, MapPin, CheckCircle2, ChevronRight, Loader2, Store, Clock, Package, Play, User, Layers
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import MobileProductDetailView from '@/components/shop/MobileProductDetailView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
+import Product3DModal from '@/components/3d/Product3DModal';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -25,6 +26,7 @@ export default function ProductDetailPage() {
     allProducts,
     toggleVaultItem,
     isInVault,
+    setOutfitItem,
   } = useStore();
 
   const cachedProduct = useMemo(() => {
@@ -46,6 +48,8 @@ export default function ProductDetailPage() {
   });
   const [activeImage, setActiveImage] = useState<string>(() => cachedProduct?.imageUrl || '');
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [is3DModalOpen, setIs3DModalOpen] = useState(false);
+  const [isModelTryOnOpen, setIsModelTryOnOpen] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
   const [reviewsData, setReviewsData] = useState<{ averageRating: number; fitAccuracyPercent: number; count: number; reviews: any[] }>({
     averageRating: 5.0,
@@ -284,17 +288,40 @@ export default function ProductDetailPage() {
               </span>
             </div>
 
-            {/* Watch Product Video Button if video exists and isn't currently playing */}
-            {product.videoUrl && !isVideoPlaying && (
+            {/* Action Badges in Top Right: Try on Model, Inspect in 3D & Watch Video */}
+            <div className="absolute top-4 right-4 z-10 flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => setIsVideoPlaying(true)}
-                className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-[var(--gold-accent)] hover:text-amber-300 text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-white/15 backdrop-blur-md shadow-lg transition-transform active:scale-95 cursor-pointer"
+                onClick={() => {
+                  setOutfitItem(product);
+                  router.push('/studio');
+                }}
+                className="px-3.5 py-1.5 rounded-full bg-black/85 hover:bg-black text-[var(--gold-accent)] text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-[var(--gold-accent)] backdrop-blur-md shadow-lg transition-all active:scale-95 cursor-pointer hover:bg-[var(--gold-accent)] hover:text-black"
               >
-                <Play className="h-3.5 w-3.5 fill-current" />
-                <span>Watch Video</span>
+                <Layers className="h-3.5 w-3.5" />
+                <span>Style in Studio</span>
               </button>
-            )}
+
+              <button
+                type="button"
+                onClick={() => setIs3DModalOpen(true)}
+                className="px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white/90 hover:text-white text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-white/20 backdrop-blur-md shadow-lg transition-all active:scale-95 cursor-pointer hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)]"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Inspect in 3D</span>
+              </button>
+
+              {product.videoUrl && !isVideoPlaying && (
+                <button
+                  type="button"
+                  onClick={() => setIsVideoPlaying(true)}
+                  className="px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white hover:text-zinc-200 text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-white/15 backdrop-blur-md shadow-lg transition-transform active:scale-95 cursor-pointer"
+                >
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  <span>Watch Video</span>
+                </button>
+              )}
+            </div>
 
             {/* Store Origin Location Badge on Photo */}
             <div className="absolute bottom-4 left-4 right-4 p-3 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs font-mono-luxury text-white">
@@ -700,6 +727,15 @@ export default function ProductDetailPage() {
         </div>
       </div>
       </div>
+
+      {/* 3D WebGL Product Inspector Modal */}
+      {product && (
+        <Product3DModal
+          isOpen={is3DModalOpen}
+          onClose={() => setIs3DModalOpen(false)}
+          product={product}
+        />
+      )}
     </>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import { GarmentCategory, GarmentOriginType } from '@/types';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
+import { products as initialProducts } from '@/lib/data/products';
 import { Sparkles, Check, Plus, Scissors, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 
@@ -15,6 +16,7 @@ export default function WardrobeDrawer() {
     removeOutfitItem,
     addToCart,
     allProducts,
+    fetchProductsFromDb,
     selectedGender,
     setSelectedGender,
     selectedOriginType,
@@ -23,16 +25,23 @@ export default function WardrobeDrawer() {
 
   const [activeCategory, setActiveCategory] = useState<GarmentCategory | 'all'>('tops');
 
+  // Load latest real products from database on mount
+  useEffect(() => {
+    fetchProductsFromDb();
+  }, [fetchProductsFromDb]);
+
+  const catalog = (allProducts && allProducts.length > 0) ? allProducts : initialProducts;
+
   const categories: { id: GarmentCategory | 'all'; stepNum: string; label: string }[] = [
     { id: 'tops', stepNum: 'Step 1', label: selectedGender === 'female' ? 'Ankara / Tops' : 'Senators / Tops' },
     { id: 'bottoms', stepNum: 'Step 2', label: 'Trousers & Denim' },
     { id: 'footwear', stepNum: 'Step 3', label: 'Shoes & Slides' },
     { id: 'outerwear', stepNum: 'Layer', label: 'Agbada & Robes' },
-    { id: 'accessories', stepNum: 'Extra', label: 'Fila / Accs' },
+    { id: 'accessories', stepNum: 'Extra', label: 'Fila & Accs' },
     { id: 'all', stepNum: 'All', label: 'All Catalog' },
   ];
 
-  const filteredProducts = allProducts.filter((item) => {
+  const filteredProducts = catalog.filter((item) => {
     const pGender = String(item.genderTarget || '').toLowerCase();
     const sGender = String(selectedGender || '').toLowerCase();
     const matchesGender = 
@@ -49,7 +58,21 @@ export default function WardrobeDrawer() {
       (sOrigin === 'ready_made_boutique' && pOrigin === 'ready_made_boutique') ||
       pOrigin === sOrigin;
 
-    const matchesCat = activeCategory === 'all' || item.category === activeCategory;
+    const n = (item.name || '').toLowerCase();
+    const matchesCat = activeCategory === 'all'
+      ? true
+      : activeCategory === 'tops'
+      ? item.category === 'tops' || n.includes('hoodie') || n.includes('sweatshirt') || n.includes('shirt') || n.includes('top')
+      : activeCategory === 'bottoms'
+      ? item.category === 'bottoms' || n.includes('jean') || n.includes('trouser') || n.includes('pant') || n.includes('adiddas')
+      : activeCategory === 'footwear'
+      ? item.category === 'footwear' || n.includes('slide') || n.includes('shoe')
+      : activeCategory === 'outerwear'
+      ? item.category === 'outerwear' || n.includes('agbada') || n.includes('jacket')
+      : activeCategory === 'accessories'
+      ? item.category === 'accessories' || n.includes('cap') || n.includes('chain')
+      : item.category === activeCategory;
+
     return matchesGender && matchesOrigin && matchesCat;
   });
 
