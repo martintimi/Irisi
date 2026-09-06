@@ -175,9 +175,10 @@ export default function WardrobeVaultDrawer() {
 
                           {/* Action Row */}
                           <div className="flex items-center gap-2 pt-2">
+                            {/* Desktop: Style Look and Bag. Mobile: Clean full-width Add to Bag */}
                             <button
                               onClick={() => handleTryOn(product)}
-                              className={`flex-1 py-1.5 px-2.5 rounded-full text-[10px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-1 border transition-all ${
+                              className={`hidden md:flex flex-1 py-1.5 px-2.5 rounded-full text-[10px] font-mono-luxury uppercase font-bold items-center justify-center gap-1 border transition-all ${
                                 isWorn
                                   ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
                                   : 'bg-[var(--bg-primary)] text-[var(--text-primary)] border-[var(--border-subtle)] hover:border-[var(--gold-accent)]'
@@ -201,10 +202,10 @@ export default function WardrobeVaultDrawer() {
                                 addToCart(product);
                                 confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
                               }}
-                              className="py-1.5 px-3 rounded-full text-[10px] font-mono-luxury uppercase font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 flex items-center gap-1 transition-all"
+                              className="w-full md:w-auto py-1.5 px-3 rounded-full text-[10px] font-mono-luxury uppercase font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 flex items-center justify-center gap-1 transition-all cursor-pointer"
                             >
                               <ShoppingBag className="h-3 w-3" />
-                              <span>Bag</span>
+                              <span>Add to Bag</span>
                             </button>
                           </div>
                         </div>

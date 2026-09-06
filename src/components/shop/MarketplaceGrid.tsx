@@ -519,40 +519,52 @@ export default function MarketplaceGrid() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2 pt-2.5 sm:pt-3 border-t border-[var(--border-subtle)]">
-                    <button
-                      onClick={() => {
-                        if (isWorn) {
-                          removeOutfitItem(product.category);
-                        } else {
-                          setOutfitItem(product);
-                        }
-                      }}
-                      className={`flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-1 sm:px-2 rounded-full text-[9px] sm:text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all ${
-                        isWorn
-                          ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                          : 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)]'
-                      }`}
-                    >
-                      {isWorn ? (
-                        <>
-                          <Check className="h-3 w-3 stroke-[3] shrink-0" />
-                          <span className="truncate">On Model</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
-                          <span className="truncate">Style Look</span>
-                        </>
-                      )}
-                    </button>
+                  <div className="pt-2.5 sm:pt-3 border-t border-[var(--border-subtle)]">
+                    {/* Desktop: 2-column grid with Style Look and Add to Bag */}
+                    <div className="hidden md:grid md:grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          if (isWorn) {
+                            removeOutfitItem(product.category);
+                          } else {
+                            setOutfitItem(product);
+                          }
+                        }}
+                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all ${
+                          isWorn
+                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
+                            : 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)]'
+                        }`}
+                      >
+                        {isWorn ? (
+                          <>
+                            <Check className="h-3 w-3 stroke-[3] shrink-0" />
+                            <span className="truncate">On Model</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
+                            <span className="truncate">Style Look</span>
+                          </>
+                        )}
+                      </button>
 
+                      <button
+                        onClick={() => addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] transition-all cursor-pointer"
+                      >
+                        <ShoppingBag className="h-3 w-3 shrink-0" />
+                        <span className="truncate">Add to Bag</span>
+                      </button>
+                    </div>
+
+                    {/* Mobile: Clean single Add to Bag button (Zero Style Look on mobile) */}
                     <button
                       onClick={() => addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
-                      className="flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-1 sm:px-2 rounded-full text-[9px] sm:text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] transition-all"
+                      className="md:hidden w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider font-bold whitespace-nowrap bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] active:scale-95 transition-all cursor-pointer"
                     >
                       <ShoppingBag className="h-3 w-3 shrink-0" />
-                      <span className="truncate">Add to Bag</span>
+                      <span>Add to Bag</span>
                     </button>
                   </div>
                 </div>

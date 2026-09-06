@@ -14,7 +14,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
-import Product3DModal from '@/components/3d/Product3DModal';
 
 interface MobileProductDetailViewProps {
   product: any;
@@ -60,8 +59,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const [is3DModalOpen, setIs3DModalOpen] = useState(false);
-  const [isModelTryOnOpen, setIsModelTryOnOpen] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
@@ -930,13 +927,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
         onSelectSize={(sz) => setSelectedSize(sz)}
         category={product.category}
         availableSizes={availableSizes}
-      />
-
-      {/* 3D WebGL Product Inspector Modal */}
-      <Product3DModal
-        isOpen={is3DModalOpen}
-        onClose={() => setIs3DModalOpen(false)}
-        product={product}
       />
 
     </div>

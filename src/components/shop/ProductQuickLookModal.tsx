@@ -321,7 +321,8 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
 
             {/* Action Buttons */}
             <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
-              <div className="grid grid-cols-2 gap-2">
+              {/* Desktop: 2-column grid with Style Look and Add to Bag */}
+              <div className="hidden md:grid md:grid-cols-2 gap-2">
                 {/* Style Look */}
                 <button
                   onClick={handleTryOn}
@@ -354,6 +355,16 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
                   <span>{currentStock === 0 ? 'Out of Stock' : 'Add to Bag'}</span>
                 </button>
               </div>
+
+              {/* Mobile: Clean single Add to Bag button (Zero Style Look on mobile) */}
+              <button
+                onClick={handleAddToCart}
+                disabled={currentStock === 0}
+                className="md:hidden w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>{currentStock === 0 ? 'Out of Stock' : 'Add to Bag'}</span>
+              </button>
 
               <div className="flex items-center gap-2">
                 {/* Curate / Save to Vault */}
