@@ -87,17 +87,17 @@ export default function StudioPage() {
         {studioMode === 'look_builder' ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-[640px]">
             {/* Left: Step-by-Step Clothes Selector (4 cols) */}
-            <div className="lg:col-span-4 h-[620px] lg:h-[720px]">
+            <div className="lg:col-span-4 h-[620px] lg:h-[720px] flex flex-col min-h-0">
               <WardrobeDrawer />
             </div>
 
             {/* Center: Live Look Canvas Preview (5 cols) */}
-            <div className="lg:col-span-5 h-[620px] lg:h-[720px]">
+            <div className="lg:col-span-5 h-[620px] lg:h-[720px] flex flex-col min-h-0">
               <OutfitCanvas />
             </div>
 
             {/* Right: Outfit Summary & Checkout (3 cols) */}
-            <div className="lg:col-span-3 h-[620px] lg:h-[720px]">
+            <div className="lg:col-span-3 h-[620px] lg:h-[720px] flex flex-col min-h-0">
               <LookBreakdown />
             </div>
           </div>

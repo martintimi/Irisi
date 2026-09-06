@@ -77,10 +77,10 @@ export default function WardrobeDrawer() {
   });
 
   return (
-    <div className="flex flex-col h-full rounded-3xl surface-card p-5 overflow-hidden">
+    <div className="flex flex-col h-full max-h-full rounded-3xl surface-card p-5 overflow-hidden">
       
       {/* Top Filter Bar: Gender Switch + Handmade vs ReadyMade Filter */}
-      <div className="pb-3 border-b border-[var(--border-subtle)] space-y-3">
+      <div className="pb-3 border-b border-[var(--border-subtle)] space-y-3 shrink-0">
         
         {/* Gender Toggle & Header */}
         <div className="flex items-center justify-between">
@@ -169,7 +169,7 @@ export default function WardrobeDrawer() {
       </div>
 
       {/* Product Items List */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3 mt-3">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-3 mt-3 overscroll-contain">
         {filteredProducts.length === 0 ? (
           <div className="py-12 text-center text-xs text-[var(--text-muted)] font-light">
             No garments match this filter. Switch category or gender above.
