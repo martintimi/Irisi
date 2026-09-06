@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Home, Tag, ShoppingBag, Truck, CircleUserRound, LogIn, Heart } from 'lucide-react';
+import { Home, Tag, ShoppingBag, Bookmark, CircleUserRound, LogIn, Heart } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { cart, setIsCartOpen, userAuth } = useStore();
+  const { cart, setIsCartOpen, userAuth, vault, setIsVaultOpen } = useStore();
   const [isVisible, setIsVisible] = useState(true);
 
   const lastScrollY = useRef(0);
@@ -57,6 +57,7 @@ export default function MobileBottomNav() {
   if (isStandalonePage) return null;
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const vaultCount = vault.length;
   const isLoggedIn = userAuth.isLoggedIn;
 
   const isActive = (href: string) =>
@@ -104,42 +105,46 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* Bag — elevated center CTA */}
+            {/* Vault / Saved — elevated center CTA */}
             <button
               type="button"
-              onClick={() => setIsCartOpen(true)}
+              onClick={() => setIsVaultOpen(true)}
               className="flex flex-col items-center justify-center gap-[3px] w-16 relative -mt-5 cursor-pointer"
-              aria-label="Shopping Bag"
+              aria-label="Wardrobe Vault"
             >
               <div className="relative h-[52px] w-[52px] rounded-2xl bg-gradient-to-br from-[var(--gold-accent)] to-amber-700 shadow-[0_6px_24px_rgba(196,151,46,0.4)] flex items-center justify-center active:scale-95 transition-transform">
-                <ShoppingBag className="h-[22px] w-[22px] text-black" strokeWidth={2} />
-                {totalCartCount > 0 && (
+                <Bookmark className="h-[22px] w-[22px] text-black" strokeWidth={2} />
+                {vaultCount > 0 && (
                   <span className="absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 rounded-full bg-white text-black text-[9px] font-bold flex items-center justify-center shadow-md">
-                    {totalCartCount}
+                    {vaultCount}
                   </span>
                 )}
               </div>
               <span className="text-[9px] uppercase tracking-wider font-bold text-[var(--gold-accent)]">
-                Bag
+                Vault
               </span>
             </button>
 
-            {/* Track Orders */}
-            <Link
-              href="/track-order"
-              className="flex flex-col items-center justify-center gap-[3px] w-14 pt-2 relative"
+            {/* Bag */}
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="flex flex-col items-center justify-center gap-[3px] w-14 pt-2 relative cursor-pointer"
+              aria-label="Shopping Bag"
             >
-              {isActive('/track-order') && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-6 rounded-full bg-[var(--gold-accent)]" />
-              )}
-              <Truck
-                strokeWidth={isActive('/track-order') ? 2 : 1.5}
-                className={`h-[21px] w-[21px] transition-all ${isActive('/track-order') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}
-              />
-              <span className={`text-[9px] uppercase tracking-wider font-medium transition-colors ${isActive('/track-order') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}>
-                Track
-              </span>
-            </Link>
+              <div className="relative">
+                <ShoppingBag
+                  strokeWidth={1.5}
+                  className="h-[21px] w-[21px] text-[var(--text-secondary)]"
+                />
+                {totalCartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-[14px] min-w-[14px] px-0.5 rounded-full bg-[var(--gold-accent)] text-black text-[8px] font-bold flex items-center justify-center">
+                    {totalCartCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[9px] uppercase tracking-wider font-medium text-[var(--text-secondary)]">Bag</span>
+            </button>
 
             {/* Account / Login */}
             <Link
