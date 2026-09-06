@@ -6,13 +6,17 @@ export interface DynamicAtelier {
   slug: string;
   name: string;
   location: string;
+  city: string;
+  state: string;
   focus: string;
   desc: string;
   images: string[];
   tag: string;
+  categoryKey: 'streetwear' | 'native' | 'jewelry' | 'footwear' | 'all';
   heroPieces: string;
   rating: string;
   productCount: number;
+  minPrice: number;
 }
 
 export async function GET() {
@@ -75,6 +79,10 @@ export async function GET() {
         } catch (e) {}
       }
 
+      const locationParts = (v.location || '').split(',');
+      if (!city && locationParts[0]) city = locationParts[0].trim();
+      if (!state && locationParts[1]) state = locationParts[1].trim();
+
       const locationDisplay = v.location || (city && state ? `${city}, ${state}` : city || state || 'Nigeria');
 
       // Extract distinct real product images (up to 4)
@@ -101,23 +109,33 @@ export async function GET() {
 
       let focus = 'Contemporary Ready-to-Wear & Urban Drops';
       let tag = v.vendor_type === 'boutique_seller' || v.vendor_type === 'boutique_merchant' ? 'Verified Boutique' : 'Designer Atelier';
+      let categoryKey: 'streetwear' | 'native' | 'jewelry' | 'footwear' | 'all' = 'streetwear';
 
       if (allNames.includes('senator') || allNames.includes('agbada') || allNames.includes('kaftan') || allNames.includes('native')) {
         focus = 'Bespoke Senator Suits & Ceremonial Agbada';
         tag = 'Bespoke Tailoring';
+        categoryKey = 'native';
       } else if (topCat === 'accessories' || (allNames.includes('chain') && !allNames.includes('hoodie'))) {
         focus = 'Fine Chains, Necklaces & Luxury Accents';
         tag = 'Artisanal Jewelry';
+        categoryKey = 'jewelry';
       } else if (topCat === 'outerwear' || topCat === 'tops' || allNames.includes('hoodie') || allNames.includes('trapstar') || allNames.includes('waistcoat')) {
         focus = 'Afro-Streetwear & Heavyweight Drops';
         tag = 'Ready-to-Wear Street';
+        categoryKey = 'streetwear';
       } else if (topCat === 'footwear' || allNames.includes('slide') || allNames.includes('shoe')) {
         focus = 'Handcrafted Footwear & Slides';
         tag = 'Handmade Footwear';
+        categoryKey = 'footwear';
       } else if (topCat === 'bottoms' || allNames.includes('jean') || allNames.includes('cargo')) {
         focus = 'Street Denim & Tailored Cargo Fits';
         tag = 'Ready-to-Wear Denim';
+        categoryKey = 'streetwear';
       }
+
+      // Lowest piece price
+      const validPrices = vendorProducts.map((p: any) => Number(p.price)).filter((n: number) => !isNaN(n) && n > 0);
+      const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
 
       // Signature hero pieces
       const heroPieces = vendorProducts
@@ -137,22 +155,36 @@ export async function GET() {
         slug: v.id,
         name: v.brand_name || 'Verified Atelier',
         location: locationDisplay,
+        city: city || 'Nigeria',
+        state: state || 'Nigeria',
         focus,
         desc,
         images,
         tag,
+        categoryKey,
         heroPieces: heroPieces || 'Curated Ready-to-Wear',
         rating,
-        productCount: vendorProducts.length
+        productCount: vendorProducts.length,
+        minPrice
       });
     });
 
     // Sort by product count descending (vendors with largest catalogs first)
     activeVendors.sort((a, b) => b.productCount - a.productCount);
 
+    // Calculate category counts
+    const categoryCounts = {
+      all: activeVendors.length,
+      streetwear: activeVendors.filter(v => v.categoryKey === 'streetwear').length,
+      native: activeVendors.filter(v => v.categoryKey === 'native').length,
+      jewelry: activeVendors.filter(v => v.categoryKey === 'jewelry').length,
+      footwear: activeVendors.filter(v => v.categoryKey === 'footwear').length,
+    };
+
     return NextResponse.json({
       success: true,
       count: activeVendors.length,
+      categories: categoryCounts,
       ateliers: activeVendors
     }, {
       headers: {
