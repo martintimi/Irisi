@@ -36,15 +36,14 @@ export default function VendorSettlementsPage() {
 
   const totalEscrowLocked = orders.reduce((sum, ord) => {
     const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-    const shipping = Number(ord.shippingFee) || 2500;
-    return sum + itemsTotal + shipping;
+    // Escrow balance is strictly clothes sales. Delivery fees belong to couriers / transport drivers.
+    return sum + itemsTotal;
   }, 0);
 
   const completedOrders = orders.filter(o => o.trackingStage >= 4);
   const totalSettled = completedOrders.reduce((sum, ord) => {
     const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-    const shipping = Number(ord.shippingFee) || 2500;
-    return sum + itemsTotal + shipping;
+    return sum + itemsTotal;
   }, 0);
 
   return (
@@ -169,7 +168,7 @@ export default function VendorSettlementsPage() {
                 <div className="space-y-3">
                   {orders.map((ord, idx) => {
                     const rowSubtotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-                    const rowPayout = rowSubtotal + (Number(ord.shippingFee) || 2500);
+                    const rowPayout = rowSubtotal;
 
                     return (
                       <div key={idx} className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between text-xs font-mono-luxury">

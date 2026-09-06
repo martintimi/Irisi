@@ -141,8 +141,22 @@ export default function SplitCartDrawer() {
                           </div>
                           <div className="truncate">
                             <h5 className="font-bold text-xs text-[var(--text-primary)] truncate max-w-[170px]">{item.product.name}</h5>
-                            <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] mt-0.5">
-                              Size: <strong className="text-[var(--text-primary)]">{item.selectedSize}</strong> · ₦{item.product.price.toLocaleString()}
+                            <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span>Size: <strong className="text-[var(--text-primary)]">{item.selectedSize}</strong></span>
+                              {item.selectedColor?.name && (
+                                <>
+                                  <span>·</span>
+                                  <span className="flex items-center gap-1">
+                                    <span
+                                      className="h-2 w-2 rounded-full border border-white/20 inline-block shrink-0"
+                                      style={{ backgroundColor: item.selectedColor.hex || '#111111' }}
+                                    />
+                                    <span>{item.selectedColor.name}</span>
+                                  </span>
+                                </>
+                              )}
+                              <span>·</span>
+                              <span>₦{item.product.price.toLocaleString()}</span>
                             </div>
                           </div>
                         </div>

@@ -299,6 +299,10 @@ export interface OrderItem {
   vendorName: string;
   price: number;
   size: string;
+  color?: string;
+  colorName?: string;
+  colorHex?: string;
+  quantity?: number;
   imageUrl: string;
   category: GarmentCategory;
 }

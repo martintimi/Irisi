@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import {
-  ActiveOutfit, BodyProfile, CartItem, Product, GarmentCategory,
+  ActiveOutfit, BodyProfile, CartItem, Product, ProductColor, GarmentCategory,
   GarmentOriginType, Order, NotificationItem, VendorProfile, VendorStory
 } from '@/types';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
@@ -67,7 +67,12 @@ export interface IrisiState {
 
   // Cart
   cart: CartItem[];
-  addToCart: (product: Product, size?: string) => void;
+  addToCart: (
+    product: Product,
+    size?: string,
+    color?: ProductColor | { name: string; hex: string; imageUrl?: string } | string | null,
+    quantity?: number
+  ) => void;
   addEntireOutfitToCart: () => void;
   removeFromCart: (cartItemId: string) => void;
   updateCartQuantity: (cartItemId: string, quantity: number) => void;
@@ -342,17 +347,109 @@ export function getTimeBasedTheme(): 'dark' | 'light' {
   return hour >= 6 && hour < 19 ? 'light' : 'dark';
 }
 
-// Seamless migration of client storage from veyra-store-storage to irisi-store-storage
+// Purge legacy storage key to free browser quota immediately
 if (typeof window !== 'undefined') {
   try {
-    const legacyStorage = localStorage.getItem('veyra-store-storage');
-    if (legacyStorage && !localStorage.getItem('irisi-store-storage')) {
-      localStorage.setItem('irisi-store-storage', legacyStorage);
-    }
-  } catch (e) {
-    // Ignore storage errors in restrictive environments
-  }
+    localStorage.removeItem('veyra-store-storage');
+  } catch (e) {}
 }
+
+/**
+ * Strips heavy data (e.g. huge images arrays, base64 strings, descriptions)
+ * before persisting to localStorage to guarantee keeping storage well below browser quota.
+ */
+function sanitizeProductForStorage(p: Product): Product {
+  if (!p) return p;
+  return {
+    id: p.id,
+    name: p.name,
+    price: Number(p.price || 0),
+    originalPrice: p.originalPrice,
+    vendorId: p.vendorId,
+    vendorName: p.vendorName,
+    vendorCity: p.vendorCity,
+    vendorState: p.vendorState,
+    category: p.category,
+    genderTarget: p.genderTarget,
+    garmentOriginType: p.garmentOriginType,
+    imageUrl: p.imageUrl || '',
+    images: [], // Omit secondary images array from storage to save memory, keeping primary imageUrl intact
+    dispatchDays: p.dispatchDays,
+    shippingRates: p.shippingRates,
+    weightKg: p.weightKg,
+    colors: Array.isArray(p.colors)
+      ? p.colors.map(c => ({
+          name: typeof c === 'string' ? c : (c.name || 'Standard'),
+          hex: typeof c === 'object' && c.hex ? c.hex : '#111111',
+          imageUrl: typeof c === 'object' && typeof c.imageUrl === 'string' ? c.imageUrl : undefined
+        }))
+      : [],
+    sizes: p.sizes || [],
+    description: '',
+    tags: [],
+    sizeChart: {},
+    fabricComposition: '',
+    fitNotes: '',
+    rating: p.rating || 5,
+    reviewCount: p.reviewCount || 0,
+    layerZIndex: p.layerZIndex || 1,
+  };
+}
+
+function sanitizeCartItemForStorage(item: CartItem): CartItem {
+  return {
+    id: item.id,
+    selectedSize: item.selectedSize,
+    selectedColor: {
+      name: item.selectedColor?.name || 'Standard',
+      hex: item.selectedColor?.hex || '#111111',
+      imageUrl: typeof item.selectedColor?.imageUrl === 'string'
+        ? item.selectedColor.imageUrl
+        : undefined
+    },
+    quantity: Math.max(1, Number(item.quantity || 1)),
+    fitScore: item.fitScore || 95,
+    product: sanitizeProductForStorage(item.product),
+  };
+}
+
+const safeStorage = {
+  getItem: (name: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(name);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(name, value);
+    } catch (quotaError) {
+      console.warn(`[irisi-store] localStorage quota exceeded while writing "${name}". Recovering storage...`, quotaError);
+      try {
+        localStorage.removeItem('veyra-store-storage');
+        const parsed = JSON.parse(value);
+        if (parsed?.state) {
+          if (Array.isArray(parsed.state.userOrders)) {
+            parsed.state.userOrders = parsed.state.userOrders.slice(0, 1);
+          }
+          parsed.state.vault = [];
+          localStorage.setItem(name, JSON.stringify(parsed));
+        }
+      } catch (recoveryErr) {
+        console.error('[irisi-store] Quota recovery failed, suppressing throw to prevent app crash.', recoveryErr);
+      }
+    }
+  },
+  removeItem: (name: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(name);
+    } catch {}
+  },
+};
 
 export const useStore = create<IrisiState>()(
   persist(
@@ -548,6 +645,7 @@ export const useStore = create<IrisiState>()(
       isProductsLoading: true,
       setAllProducts: (products) => set({ allProducts: products }),
       fetchProductsFromDb: async () => {
+        if (typeof window === 'undefined') return;
         const state = get();
         const now = Date.now();
 
@@ -626,8 +724,29 @@ export const useStore = create<IrisiState>()(
                 };
               });
 
-              // Set strictly to live PostgreSQL database products (no mock merging)
-              set({ allProducts: dbProducts });
+              // Set strictly to live PostgreSQL database products and heal cart items with real DB images
+              set((state) => ({
+                allProducts: dbProducts,
+                cart: state.cart.map((cartItem) => {
+                  const dbMatch = dbProducts.find((dp) => dp.id === cartItem.product?.id);
+                  if (dbMatch) {
+                    return {
+                      ...cartItem,
+                      product: {
+                        ...cartItem.product,
+                        imageUrl: dbMatch.imageUrl || cartItem.product.imageUrl,
+                        images: dbMatch.images && dbMatch.images.length > 0 ? dbMatch.images : cartItem.product.images,
+                        vendorId: dbMatch.vendorId || cartItem.product.vendorId,
+                        vendorName: dbMatch.vendorName || cartItem.product.vendorName,
+                        vendorCity: dbMatch.vendorCity || cartItem.product.vendorCity,
+                        vendorState: dbMatch.vendorState || cartItem.product.vendorState,
+                        shippingRates: dbMatch.shippingRates || cartItem.product.shippingRates,
+                      },
+                    };
+                  }
+                  return cartItem;
+                }),
+              }));
             } else if (data.success && Array.isArray(data.products) && data.products.length === 0) {
               set({ allProducts: [] });
             }
@@ -692,25 +811,53 @@ export const useStore = create<IrisiState>()(
       cart: [],
       isCartOpen: false,
       setIsCartOpen: (open) => set({ isCartOpen: open }),
-      addToCart: (product, size) => {
+      addToCart: (product, size, color, quantity) => {
         const { bodyProfile, cart } = get();
         const fitResult = calculateFitMatch(bodyProfile, product);
-        const chosenSize = size || fitResult.recommendedSize;
+        const chosenSize = size || (product as any).selectedSize || fitResult.recommendedSize || product.sizes?.[0] || 'M';
+
+        // Extract chosen color reliably
+        let chosenColor: ProductColor = product.colors?.[0] || { name: 'Standard', hex: '#111111' };
+        if (color) {
+          if (typeof color === 'string') {
+            chosenColor = { name: color, hex: '#111111' };
+          } else if (typeof color === 'object' && color.name) {
+            chosenColor = {
+              name: color.name,
+              hex: color.hex || '#111111',
+              imageUrl: color.imageUrl
+            };
+          }
+        } else if ((product as any).selectedColor) {
+          const sc = (product as any).selectedColor;
+          chosenColor = typeof sc === 'string' ? { name: sc, hex: '#111111' } : {
+            name: sc.name || 'Standard',
+            hex: sc.hex || '#111111',
+            imageUrl: sc.imageUrl
+          };
+        }
+
+        // Extract chosen quantity reliably
+        const addQty = Math.max(1, Number(quantity ?? (product as any).quantity ?? 1));
+
+        // Match existing item by both size AND color
         const existingIndex = cart.findIndex(
-          item => item.product.id === product.id && item.selectedSize === chosenSize
+          item => item.product.id === product.id &&
+                  item.selectedSize === chosenSize &&
+                  (item.selectedColor?.name || '').toLowerCase().trim() === (chosenColor.name || '').toLowerCase().trim()
         );
 
         if (existingIndex > -1) {
           const updated = [...cart];
-          updated[existingIndex].quantity += 1;
+          updated[existingIndex].quantity = (Number(updated[existingIndex].quantity) || 1) + addQty;
           set({ cart: updated, isCartOpen: true });
         } else {
           const newItem: CartItem = {
             id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
             product,
             selectedSize: chosenSize,
-            selectedColor: product.colors[0],
-            quantity: 1,
+            selectedColor: chosenColor,
+            quantity: addQty,
             fitScore: fitResult.matchScore,
           };
           set({ cart: [...cart, newItem], isCartOpen: true });
@@ -742,7 +889,7 @@ export const useStore = create<IrisiState>()(
       },
       removeFromCart: (cartItemId) => {
         set((state) => ({
-          cart: state.cart.filter(item => item.id !== cartItemId),
+          cart: state.cart.filter(item => item.id !== cartItemId && item.product.id !== cartItemId),
         }));
       },
       updateCartQuantity: (cartItemId, quantity) => {
@@ -752,7 +899,7 @@ export const useStore = create<IrisiState>()(
         }
         set((state) => ({
           cart: state.cart.map(item =>
-            item.id === cartItemId ? { ...item, quantity } : item
+            (item.id === cartItemId || item.product.id === cartItemId) ? { ...item, quantity } : item
           ),
         }));
       },
@@ -828,6 +975,7 @@ export const useStore = create<IrisiState>()(
     }),
     {
       name: 'irisi-store-storage',
+      storage: createJSONStorage(() => safeStorage),
       partialize: (state) => ({
         theme: state.theme,
         selectedGender: state.selectedGender,
@@ -835,12 +983,17 @@ export const useStore = create<IrisiState>()(
         bodyProfile: state.bodyProfile,
         isVendorLoggedIn: state.isVendorLoggedIn,
         vendorProfile: state.vendorProfile,
-        cart: state.cart,
-        vault: state.vault,
-        userOrders: state.userOrders,
+        cart: state.cart.map(sanitizeCartItemForStorage),
+        vault: state.vault.slice(0, 10).map(sanitizeProductForStorage),
+        userOrders: (state.userOrders || []).slice(0, 5),
         followedVendors: state.followedVendors,
-        userNotifications: state.userNotifications,
+        userNotifications: state.userNotifications.slice(0, 10),
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state && typeof state.fetchProductsFromDb === 'function') {
+          state.fetchProductsFromDb();
+        }
+      },
     }
   )
 );

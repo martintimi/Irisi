@@ -31,8 +31,7 @@ export default function MobileVendorSettlements({
       .filter(o => o.trackingStage < 4)
       .reduce((sum, ord) => {
         const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-        const shipping = Number(ord.shippingFee) || 2500;
-        return sum + itemsTotal + shipping;
+        return sum + itemsTotal;
       }, 0);
   }, [orders]);
 
@@ -42,8 +41,7 @@ export default function MobileVendorSettlements({
   const totalSettled = useMemo(() => {
     return completedOrders.reduce((sum, ord) => {
       const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-      const shipping = Number(ord.shippingFee) || 2500;
-      return sum + itemsTotal + shipping;
+      return sum + itemsTotal;
     }, 0);
   }, [completedOrders]);
 
@@ -269,7 +267,7 @@ export default function MobileVendorSettlements({
           <div className="space-y-2.5">
             {filteredOrders.map((ord, idx) => {
               const rowSubtotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-              const rowPayout = rowSubtotal + (Number(ord.shippingFee) || 2500);
+              const rowPayout = rowSubtotal;
               const isSettled = ord.trackingStage >= 4;
 
               return (

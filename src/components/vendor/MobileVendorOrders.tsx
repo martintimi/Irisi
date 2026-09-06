@@ -193,8 +193,19 @@ export default function MobileVendorOrders({
                     </div>
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">{item.productName}</h4>
-                      <div className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                        Size: <strong className="text-[var(--gold-accent)]">{item.size || 'M'}</strong> · Qty: <strong className="text-[var(--gold-accent)]">{item.quantity || 1}</strong>
+                      <div className="text-[10px] font-mono-luxury text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap mt-0.5">
+                        <span>Size: <strong className="text-[var(--gold-accent)]">{item.size || 'M'}</strong></span>
+                        <span>·</span>
+                        <span className="flex items-center gap-1">
+                          <span>Color:</span>
+                          <span
+                            className="inline-block h-2 w-2 rounded-full border border-white/20 shadow-xs shrink-0"
+                            style={{ backgroundColor: item.colorHex || (typeof item.color === 'string' && item.color.startsWith('#') ? item.color : '#111111') }}
+                          />
+                          <strong className="text-[var(--text-primary)]">{item.colorName || item.color || 'Standard'}</strong>
+                        </span>
+                        <span>·</span>
+                        <span>Qty: <strong className="text-[var(--gold-accent)]">{item.quantity || 1}</strong></span>
                       </div>
                       <div className="text-[11px] font-mono-luxury text-[var(--gold-accent)] font-bold">
                         ₦{(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString()}
@@ -204,15 +215,58 @@ export default function MobileVendorOrders({
                 ))}
               </div>
 
+              {/* Dedicated Logistics & Pickup Dispatch Hub Ribbon */}
+              <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-1.5">
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono-luxury font-bold uppercase flex items-center gap-1 ${
+                    ord.deliveryMethod === 'park_pickup'
+                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                  }`}>
+                    {ord.deliveryMethod === 'park_pickup' ? <Truck className="h-3 w-3" /> : <Truck className="h-3 w-3" />}
+                    <span>{ord.deliveryMethod === 'park_pickup' ? 'Park Waybill' : 'Door Delivery'}</span>
+                  </span>
+
+                  <span className="text-[11px] font-mono-luxury font-bold text-[var(--text-primary)]">
+                    Courier: <span className="text-[var(--gold-accent)]">{ord.courierName || 'GIG Logistics'}</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
+                  <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-muted)] block text-[9px]">Waybill No:</span>
+                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || 'Pending'}</span>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-muted)] block text-[9px]">Package Weight:</span>
+                    <span className="font-bold text-[var(--text-primary)]">{ord.packageWeightKg || 0.8}kg</span>
+                  </div>
+                </div>
+
+                {ord.instructions && (
+                  <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)] leading-tight">
+                    {ord.instructions}
+                  </p>
+                )}
+              </div>
+
               {/* Payout & Delivery Breakdown */}
               <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1.5 text-xs font-mono-luxury">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-[var(--text-secondary)]">Destination:</span>
                   <span className="font-bold text-[var(--text-primary)] text-right truncate max-w-[180px]">{ord.deliveryAddress}</span>
                 </div>
+                {ord.deliveryMethod === 'park_pickup' && ord.dropoffStation && (
+                  <div className="flex items-center justify-between text-[11px] text-amber-400">
+                    <span>Collection Terminal:</span>
+                    <span className="font-bold truncate max-w-[170px]">{ord.dropoffStation}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[var(--text-secondary)]">Delivery Fee Allocated:</span>
-                  <span className="text-[var(--gold-accent)] font-bold">₦{Number(ord.vendorDeliveryFee || 0).toLocaleString()}</span>
+                  <span className="text-[var(--text-secondary)]">Delivery Method / Fee:</span>
+                  <span className="text-[var(--gold-accent)] font-bold">
+                    {ord.deliveryMethod === 'park_pickup' ? 'Pay on Collection' : `₦${Number(ord.vendorDeliveryFee || 0).toLocaleString()}`}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]">
                   <span className="text-[var(--text-primary)] font-bold">Your Escrow Payout:</span>
@@ -222,19 +276,17 @@ export default function MobileVendorOrders({
                 </div>
               </div>
 
-              {/* Waybill info if dispatched */}
-              {ord.trackingStage >= 3 && ord.trackingDetails?.waybillNumber && (
+              {/* Courier & Driver details if dispatched - NO DUPLICATE WAYBILL */}
+              {ord.trackingStage >= 3 && ord.trackingDetails?.driverPhone && (
                 <div className="p-2.5 rounded-2xl bg-[var(--gold-subtle)]/40 border border-[var(--gold-accent)]/30 flex items-center justify-between text-[11px] font-mono-luxury text-[var(--text-primary)]">
                   <div className="flex items-center gap-1.5">
                     <Truck className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                    <span>Waybill: <strong>{ord.trackingDetails.waybillNumber}</strong></span>
+                    <span>Courier: <strong>{ord.courierName}</strong></span>
                   </div>
-                  {ord.trackingDetails.driverPhone && (
-                    <a href={`tel:${ord.trackingDetails.driverPhone}`} className="text-[var(--gold-accent)] font-bold flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      <span>{ord.trackingDetails.driverPhone}</span>
-                    </a>
-                  )}
+                  <a href={`tel:${ord.trackingDetails.driverPhone}`} className="text-[var(--gold-accent)] font-bold flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    <span>{ord.trackingDetails.driverPhone}</span>
+                  </a>
                 </div>
               )}
 
@@ -274,10 +326,16 @@ export default function MobileVendorOrders({
                     type="button"
                     onClick={() => onPackReady(ord)}
                     disabled={isUpdatingStatus}
-                    className="w-full py-3 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
+                    className="w-full py-3 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
                   >
                     <PackageCheck className="h-4 w-4" />
-                    <span>Pack & Mark Ready</span>
+                    <span>
+                      {ord.deliveryMethod === 'park_pickup'
+                        ? 'Mark Ready for Motor Park'
+                        : ord.courierServiceType === 'pickup'
+                        ? 'Mark Ready for Courier Pickup'
+                        : 'Mark Ready for Station Drop-off'}
+                    </span>
                   </button>
                 )}
 

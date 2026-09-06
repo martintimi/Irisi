@@ -1,6 +1,7 @@
 import { sendOrderConfirmationEmail, sendVendorNewOrderEmail, sendDispatchNotificationEmail, sendDeliverySettledEmail } from '@/lib/services/emailService';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { computeVendorPackageMetrics, checkLocationServiceability, createShipbubbleShipment } from '@/lib/services/logistics';
 
 export async function GET(request: Request) {
   try {
@@ -141,6 +142,10 @@ export async function GET(request: Request) {
           const vId = item.vendor_id || item.vendorId || 'moji-wears';
           const pName = item.product_name || item.productName || 'Garment';
           const matchedImage = item.image_url || item.imageUrl || productImageMap.get(pId) || '/images/products/BlackTrapStarHoodie.jpg';
+          const rawColor = item.color || item.colorName || 'As Pictured';
+          const isHex = typeof rawColor === 'string' && rawColor.startsWith('#');
+          const colorName = item.colorName || (isHex ? 'Standard' : rawColor);
+          const colorHex = item.colorHex || (isHex ? rawColor : '#111111');
           return {
             id: item.id || `item-${pId}`,
             productId: pId,
@@ -149,7 +154,9 @@ export async function GET(request: Request) {
             productName: pName,
             price: Number(item.price || 0),
             size: item.size || item.selectedSize || 'M',
-            color: item.color || '#111111',
+            color: colorName,
+            colorName: colorName,
+            colorHex: colorHex,
             quantity: Number(item.quantity || 1),
             imageUrl: matchedImage,
             status: item.status || o.status || 'escrow_secured'
@@ -180,30 +187,103 @@ export async function POST(request: Request) {
     // Initialize explicit per-vendor packages for every item's vendor in the order
     const initialVendorPackages: Record<string, any> = { ...(body.vendorPackages || {}) };
     if (body.items && Array.isArray(body.items)) {
+      // Group items by vendorId to compute cumulative metrics
+      const itemsByVendor: Record<string, any[]> = {};
       body.items.forEach((item: any) => {
         const vId = (item.vendorId || item.vendor_id || 'vendor').toLowerCase().trim();
-        if (!initialVendorPackages[vId]) {
-          const method = body.packageMethods?.[vId] || 'doorstep';
-          const isPark = method === 'park_pickup';
-          const trackingCode = isPark ? `VY-PK-${Date.now().toString().slice(-6)}` : `GIG-NG-${Date.now().toString().slice(-6)}`;
-          
-          initialVendorPackages[vId] = {
-            vendorId: vId,
-            vendorName: item.vendorName || vId.replace(/-/g, ' ').toUpperCase(),
-            vendorCity: item.vendorCity || 'Lagos',
-            vendorState: item.vendorState || 'Lagos',
-            status: 'escrow_secured',
-            deliveryMethod: method,
-            courierName: isPark ? 'Motor Park Bus Waybill' : 'GIG Logistics / Shipbubble',
-            trackingStage: 1,
-            waybillNumber: trackingCode,
-            trackingNumber: trackingCode,
-            driverPhone: '',
-            driverName: '',
-            lastUpdated: new Date().toISOString()
-          };
-        }
+        if (!itemsByVendor[vId]) itemsByVendor[vId] = [];
+        itemsByVendor[vId].push(item);
       });
+
+      const totalVendorCount = Object.keys(itemsByVendor).length || 1;
+
+      for (const [vId, vItems] of Object.entries(itemsByVendor)) {
+        const firstItem = vItems[0] || {};
+        const vCity = firstItem.vendorCity || 'Lagos';
+        const vState = firstItem.vendorState || 'Lagos';
+        const serviceability = checkLocationServiceability(vCity, vState);
+        const metrics = computeVendorPackageMetrics(vItems.map(i => ({ product: i, quantity: i.quantity || 1 })));
+
+        const passedPkg = initialVendorPackages[vId];
+        const method = passedPkg?.deliveryMethod || body.packageMethods?.[vId] || 'doorstep';
+        const isPark = method === 'park_pickup';
+        const courierServiceType: 'pickup' | 'dropoff' = (!isPark && serviceability.hasDoorstepPickup) ? 'pickup' : 'dropoff';
+        const chosenCourierName = passedPkg?.courierName || (isPark ? 'Motor Park Bus Waybill' : (courierServiceType === 'pickup' ? 'Fez delivery' : 'Station Drop-off'));
+        const pkgFee = passedPkg?.shippingFee !== undefined
+          ? Number(passedPkg.shippingFee)
+          : (isPark ? 0 : Math.round(Number(body.shippingFee || 4500) / totalVendorCount));
+
+        // Attempt live Shipbubble shipment creation if tokens are present
+        let bookedShipment: any = null;
+        if (!isPark && passedPkg?.requestToken && passedPkg?.serviceCode && passedPkg?.courierId) {
+          try {
+            bookedShipment = await createShipbubbleShipment({
+              orderNumber,
+              orderId,
+              customerName: body.customerName,
+              customerPhone: body.customerPhone,
+              deliveryAddress: body.deliveryAddress,
+              deliveryCity: body.deliveryCity || body.city || 'Lagos',
+              deliveryState: body.deliveryState || body.state || 'Lagos',
+              vendorName: firstItem.vendorName || vId,
+              vendorAddress: `${vCity}, ${vState}`,
+              vendorCity: vCity,
+              vendorState: vState,
+              vendorPhone: '+2348012345678',
+              deliveryMethod: 'doorstep',
+              courierName: chosenCourierName,
+              requestToken: passedPkg.requestToken,
+              serviceCode: passedPkg.serviceCode,
+              courierId: passedPkg.courierId,
+              items: vItems,
+              totalWeightKg: metrics.totalWeightKg,
+            });
+          } catch (err) {
+            console.warn(`[Shipbubble] Booking call for ${vId} encountered:`, err);
+          }
+        }
+
+        const trackingCode = bookedShipment?.trackingNumber || '';
+        const resolvedCourier = bookedShipment?.courierName || chosenCourierName;
+
+        initialVendorPackages[vId] = {
+          vendorId: vId,
+          vendorName: firstItem.vendorName || vId.replace(/-/g, ' ').toUpperCase(),
+          vendorCity: vCity,
+          vendorState: vState,
+          status: 'escrow_secured',
+          deliveryMethod: method,
+          courierServiceType,
+          courierName: resolvedCourier,
+          shippingFee: pkgFee,
+          trackingStage: 1,
+          waybillNumber: trackingCode,
+          trackingNumber: trackingCode,
+          labelStatus: bookedShipment?.status || (isPark ? 'awaiting_park_dropoff' : 'label_pending'),
+          labelError: bookedShipment?.error || null,
+          trackingUrl: bookedShipment?.trackingUrl || '',
+          driverPhone: '',
+          driverName: '',
+          packageWeightKg: metrics.totalWeightKg,
+          packageDimensions: `${metrics.lengthCm}×${metrics.widthCm}×${metrics.heightCm}cm`,
+          packagingType: metrics.packagingType,
+          hasDoorstepPickup: courierServiceType === 'pickup',
+          instructions: isPark
+            ? 'Package garment and drop at local motor park. Customer pays collection fee upon arrival.'
+            : (courierServiceType === 'pickup'
+              ? `${resolvedCourier} dispatch rider will arrive at your registered atelier address to collect the parcel.`
+              : `Doorstep pickup unavailable in ${vCity}. Drop off at ${serviceability.nearestStationRecommendation}.`),
+          dropoffStation: isPark
+            ? (body.selectedParkTerminals?.[vId] || `${body.deliveryState || 'Destination'} Central Terminal`)
+            : (courierServiceType === 'dropoff' ? serviceability.nearestStationRecommendation : undefined),
+          selectedParkTerminal: isPark ? (body.selectedParkTerminals?.[vId] || `${body.deliveryState || 'Destination'} Central Terminal`) : undefined,
+          pickupStatus: 'pending_packaging',
+          requestToken: passedPkg?.requestToken,
+          serviceCode: passedPkg?.serviceCode,
+          courierId: passedPkg?.courierId,
+          lastUpdated: new Date().toISOString()
+        };
+      }
     }
 
     // Package metadata with per-vendor delivery fee allocations
@@ -212,6 +292,7 @@ export async function POST(request: Request) {
       items: body.items || [],
       vendorPackages: initialVendorPackages,
       packageMethods: body.packageMethods || {},
+      selectedParkTerminals: body.selectedParkTerminals || {},
       deliveryState: body.deliveryState || body.state || '',
       trackingDetails: {}
     };
@@ -393,8 +474,11 @@ export async function PATCH(request: Request) {
         status,
         trackingStage: Number(trackingStage || 1),
         waybillNumber: waybillNumber !== undefined ? waybillNumber : (existingVendorPackages[matchedVendorKey]?.waybillNumber || ''),
+        courierName: body.courierName !== undefined ? body.courierName : (existingVendorPackages[matchedVendorKey]?.courierName || ''),
         driverPhone: driverPhone !== undefined ? driverPhone : (existingVendorPackages[matchedVendorKey]?.driverPhone || ''),
         driverName: driverName !== undefined ? driverName : (existingVendorPackages[matchedVendorKey]?.driverName || ''),
+        pickupStatus: body.pickupStatus !== undefined ? body.pickupStatus : (existingVendorPackages[matchedVendorKey]?.pickupStatus || (Number(trackingStage) === 2 ? 'ready_for_pickup' : Number(trackingStage) === 3 ? 'in_transit' : Number(trackingStage) === 4 ? 'delivered' : 'pending_packaging')),
+        deliveryIssue: body.deliveryIssue !== undefined ? body.deliveryIssue : (existingVendorPackages[matchedVendorKey]?.deliveryIssue || null),
         lastUpdated: new Date().toISOString()
       };
 

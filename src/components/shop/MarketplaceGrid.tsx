@@ -172,7 +172,7 @@ export default function MarketplaceGrid() {
             </h1>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl">
-              Every piece auto-calculates your exact size. Click &quot;Try on Twin&quot; to test clothes directly on your live model before ordering.
+              Curated Nigerian haute couture, bespoke Senator tailoring, and verified streetwear ateliers with nationwide escrow delivery.
             </p>
           </div>
 
@@ -542,13 +542,13 @@ export default function MarketplaceGrid() {
                       ) : (
                         <>
                           <Sparkles className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
-                          <span className="truncate">Try on Twin</span>
+                          <span className="truncate">Style Look</span>
                         </>
                       )}
                     </button>
 
                     <button
-                      onClick={() => addToCart(product, fitResult.recommendedSize)}
+                      onClick={() => addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
                       className="flex items-center justify-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-1 sm:px-2 rounded-full text-[9px] sm:text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] transition-all"
                     >
                       <ShoppingBag className="h-3 w-3 shrink-0" />

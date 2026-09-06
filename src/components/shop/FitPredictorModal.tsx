@@ -248,7 +248,7 @@ export default function FitPredictorModal({
               Recommended Size
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono-luxury font-bold">
-              {prediction.confidence}% Twin Match
+              {prediction.confidence}% Fit Confidence
             </span>
           </div>
 

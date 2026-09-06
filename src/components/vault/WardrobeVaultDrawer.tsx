@@ -191,7 +191,7 @@ export default function WardrobeVaultDrawer() {
                               ) : (
                                 <>
                                   <Sparkles className="h-3 w-3 text-[var(--gold-accent)]" />
-                                  <span>Try on Twin</span>
+                                  <span>Style Look</span>
                                 </>
                               )}
                             </button>

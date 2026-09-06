@@ -108,7 +108,11 @@ export default function MobileHomeView() {
     fetchProductsFromDb,
   } = useStore();
 
-  useEffect(() => { fetchProductsFromDb(); }, [fetchProductsFromDb]);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    fetchProductsFromDb();
+  }, [fetchProductsFromDb]);
 
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
@@ -306,8 +310,17 @@ export default function MobileHomeView() {
           <Link href="/shop" className="p-2 rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer">
             <Search className="h-4 w-4" />
           </Link>
-          <button type="button" onClick={toggleTheme} className="p-2 rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer">
-            {theme === 'dark' ? <Sun className="h-4 w-4 text-[var(--gold-accent)]" /> : <Moon className="h-4 w-4" />}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            suppressHydrationWarning
+            className="p-2 rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+          >
+            {mounted ? (
+              theme === 'dark' ? <Sun className="h-4 w-4 text-[var(--gold-accent)]" /> : <Moon className="h-4 w-4" />
+            ) : (
+              <div className="h-4 w-4" />
+            )}
           </button>
         </div>
       </motion.div>

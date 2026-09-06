@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -12,6 +12,12 @@ import BrandWordmark from '@/components/common/BrandWordmark';
 
 export default function MobileHeader() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const {
     theme,
     toggleTheme,
@@ -41,10 +47,15 @@ export default function MobileHeader() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={toggleTheme}
+            suppressHydrationWarning
             className="p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
             title="Toggle theme"
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {mounted ? (
+              theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />
+            ) : (
+              <div className="h-4 w-4" />
+            )}
           </button>
 
           {/* Curated Wardrobe Vault */}

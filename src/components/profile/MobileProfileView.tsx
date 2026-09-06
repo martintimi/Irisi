@@ -6,7 +6,7 @@ import {
   User, Sparkles, Bookmark, Package, Store, MapPin,
   Phone, ShieldCheck, LogOut, Check, ChevronRight,
   ArrowRight, ShoppingBag, ArrowLeft, Ruler, Truck, Loader2,
-  Settings, KeyRound, HelpCircle, Star, Lightbulb, ExternalLink
+  Settings, KeyRound, HelpCircle, Star, Lightbulb, ExternalLink, Eye
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -422,14 +422,13 @@ export default function MobileProfileView() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-1.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setOutfitItem(product)}
-                        className="py-1.5 px-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[9px] font-mono-luxury uppercase font-bold text-[var(--gold-accent)] flex items-center justify-center gap-0.5"
+                      <Link
+                        href={`/shop/${product.id}`}
+                        className="py-1.5 px-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[9px] font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:text-[var(--gold-accent)] flex items-center justify-center gap-0.5 transition-colors"
                       >
-                        <Sparkles className="h-2.5 w-2.5" />
-                        <span>3D Fit</span>
-                      </button>
+                        <Eye className="h-2.5 w-2.5" />
+                        <span>View</span>
+                      </Link>
 
                       <button
                         type="button"

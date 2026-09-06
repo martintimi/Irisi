@@ -204,7 +204,7 @@ export default function ProfilePage() {
                 {displayName}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px] font-mono-luxury font-bold">
-                ● Verified Digital Twin
+                ● Verified Patron Account
               </span>
             </div>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1 flex items-center gap-3 flex-wrap">
@@ -228,7 +228,7 @@ export default function ProfilePage() {
             <span className="font-bold text-sm text-[var(--text-primary)]">{effectiveOrders.length} Completed</span>
           </div>
           <div className="px-4 py-2 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-center shrink-0">
-            <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Fit Profile ID</span>
+            <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Patron Atelier ID</span>
             <span className="font-mono-luxury font-bold text-xs text-[var(--gold-accent)]">{bodyProfile.twinId || 'VY-NIG-782'}</span>
           </div>
         </div>
@@ -808,7 +808,7 @@ export default function ProfilePage() {
                   Need Help / FAQ Topics
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                  Clear answers on 3D Digital Twin sizing, escrow guarantees, courier tracking, and atelier returns.
+                  Clear answers on bespoke tailoring measurements, escrow guarantees, courier tracking, and atelier returns.
                 </p>
               </div>
 

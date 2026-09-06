@@ -4,13 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Home, Tag, Scan, ShoppingBag, CircleUserRound, LogIn, Heart } from 'lucide-react';
-import MobileTwinDrawer from '@/components/studio/MobileTwinDrawer';
+import { Home, Tag, Store, ShoppingBag, CircleUserRound, LogIn, Heart } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { cart, setIsCartOpen, userAuth, activeOutfit } = useStore();
-  const [isTwinDrawerOpen, setIsTwinDrawerOpen] = useState(false);
+  const { cart, setIsCartOpen, userAuth } = useStore();
   const [isVisible, setIsVisible] = useState(true);
 
   const lastScrollY = useRef(0);
@@ -59,7 +57,6 @@ export default function MobileBottomNav() {
   if (isStandalonePage) return null;
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const activeOutfitCount = Object.values(activeOutfit).filter(Boolean).length;
   const isLoggedIn = userAuth.isLoggedIn;
 
   const isActive = (href: string) =>
@@ -67,8 +64,6 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      <MobileTwinDrawer isOpen={isTwinDrawerOpen} onClose={() => setIsTwinDrawerOpen(false)} />
-
       <nav
         className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           isVisible ? 'translate-y-0' : 'translate-y-full'
@@ -109,25 +104,19 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 3D Fit — elevated center CTA */}
-            <button
-              type="button"
-              onClick={() => setIsTwinDrawerOpen(true)}
+            {/* Ateliers — elevated center CTA */}
+            <Link
+              href="/vendors"
               className="flex flex-col items-center justify-center gap-[3px] w-16 relative -mt-5"
-              aria-label="3D Fit Studio"
+              aria-label="Ateliers & Designers"
             >
-              <div className="relative h-[52px] w-[52px] rounded-2xl bg-gradient-to-br from-[var(--gold-accent)] to-amber-700 shadow-[0_6px_24px_rgba(196,151,46,0.5)] flex items-center justify-center active:scale-95 transition-transform">
-                <Scan className="h-[22px] w-[22px] text-black" strokeWidth={2} />
-                {activeOutfitCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-white text-black text-[8px] font-bold flex items-center justify-center shadow-sm border border-[var(--gold-accent)]/30">
-                    {activeOutfitCount}
-                  </span>
-                )}
+              <div className="relative h-[52px] w-[52px] rounded-2xl bg-gradient-to-br from-[var(--gold-accent)] to-amber-700 shadow-[0_6px_24px_rgba(196,151,46,0.4)] flex items-center justify-center active:scale-95 transition-transform">
+                <Store className="h-[22px] w-[22px] text-black" strokeWidth={2} />
               </div>
-              <span className="text-[9px] uppercase tracking-wider font-bold text-[var(--gold-accent)]">
-                3D Fit
+              <span className={`text-[9px] uppercase tracking-wider font-bold transition-colors ${isActive('/vendors') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}>
+                Ateliers
               </span>
-            </button>
+            </Link>
 
             {/* Bag */}
             <button

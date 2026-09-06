@@ -32,11 +32,15 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   } = useStore();
 
   const [selectedSize, setSelectedSize] = useState<string>('M');
+  const [selectedColor, setSelectedColor] = useState<any>(null);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (product) {
       const fit = calculateFitMatch(bodyProfile, product);
       setSelectedSize(fit.recommendedSize || product.sizes?.[0] || 'M');
+      setSelectedColor(product.colors?.[0] || { name: 'Standard', hex: '#111111' });
+      setQuantity(1);
     }
   }, [product, bodyProfile]);
 
@@ -60,7 +64,7 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   };
 
   const handleAddToCart = () => {
-    addToCart(product, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
     confetti({ particleCount: 55, spread: 65, origin: { y: 0.6 } });
   };
 
@@ -140,7 +144,7 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-xs font-mono-luxury text-emerald-400 font-bold uppercase">
-                  {fitResult.matchScore}% Twin Match
+                  {fitResult.matchScore}% Bespoke Fit Match
                 </span>
               </div>
               <span className="text-xs font-mono-luxury text-white font-bold bg-emerald-500/20 px-3 py-1 rounded-lg border border-emerald-500/30">
@@ -226,6 +230,66 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
                 </div>
               </div>
 
+              {/* Color Selector if available */}
+              {product.colors && product.colors.length > 1 && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs font-mono-luxury">
+                    <span className="text-[var(--text-secondary)] uppercase font-bold">Color:</span>
+                    <span className="text-[var(--gold-accent)] font-bold">{selectedColor?.name || 'Standard'}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {product.colors.map((c: any, i: number) => {
+                      const cName = typeof c === 'string' ? c : c.name;
+                      const cHex = typeof c === 'object' && c.hex ? c.hex : '#111111';
+                      const isChosen = selectedColor?.name === cName;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setSelectedColor(typeof c === 'object' ? c : { name: cName, hex: cHex })}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono-luxury border transition-all cursor-pointer ${
+                            isChosen
+                              ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-transparent ring-1 ring-[var(--gold-accent)]'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          <span className="h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: cHex }} />
+                          <span>{cName}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity Stepper */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)]">
+                  Quantity:
+                </span>
+                <div className="flex items-center bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-xl p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    className="h-7 w-7 rounded-lg flex items-center justify-center text-[var(--text-primary)] disabled:opacity-30 cursor-pointer font-bold"
+                  >
+                    -
+                  </button>
+                  <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)] px-2 min-w-[20px] text-center">
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(q => Math.min(currentStock || 15, q + 1))}
+                    disabled={quantity >= (currentStock || 15)}
+                    className="h-7 w-7 rounded-lg flex items-center justify-center text-[var(--text-primary)] disabled:opacity-30 cursor-pointer font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
               {/* Description */}
               <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed">
                 {product.description}
@@ -235,7 +299,7 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
               <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1 text-xs font-mono-luxury">
                 <div className="flex items-center gap-1.5 text-[var(--text-primary)] font-bold">
                   <Ruler className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                  <span>Virtual Twin Fit Analysis</span>
+                  <span>Atelier Sizing Precision</span>
                 </div>
                 <p className="text-[11px] text-[var(--text-secondary)] font-light">
                   {(fitResult.insights && fitResult.insights[0]) || 'Tailored to drape naturally over standard Nigerian silhouette metrics.'}
@@ -258,7 +322,7 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
             {/* Action Buttons */}
             <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
               <div className="grid grid-cols-2 gap-2">
-                {/* Try on Twin */}
+                {/* Style Look */}
                 <button
                   onClick={handleTryOn}
                   className={`flex items-center justify-center gap-2 py-3 px-3 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold transition-all shadow-sm ${
@@ -275,7 +339,7 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4 text-[var(--gold-accent)]" />
-                      <span>Try on Twin</span>
+                      <span>Style Look</span>
                     </>
                   )}
                 </button>

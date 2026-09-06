@@ -55,6 +55,11 @@ export default function VendorAuthPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Password visibility
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -438,10 +443,15 @@ export default function VendorAuthPage() {
           <div className="flex items-center gap-3 ml-auto">
             <button
               onClick={toggleTheme}
+              suppressHydrationWarning
               className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               title="Toggle theme"
             >
-              {theme === 'dark' ? <Sun className="h-4 w-4 text-[var(--gold-accent)]" /> : <Moon className="h-4 w-4" />}
+              {mounted ? (
+                theme === 'dark' ? <Sun className="h-4 w-4 text-[var(--gold-accent)]" /> : <Moon className="h-4 w-4" />
+              ) : (
+                <div className="h-4 w-4" />
+              )}
             </button>
             <Link
               href="/auth"

@@ -42,13 +42,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
 
   const handleAddBag = () => {
     setIsAdding(true);
-    addToCart({
-      ...product,
-      price: Number(product.price || 0),
-      selectedSize,
-      selectedColor,
-      quantity,
-    }, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
 
     confetti({
       particleCount: 60,
@@ -65,13 +59,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   };
 
   const handleInstantBuy = () => {
-    addToCart({
-      ...product,
-      price: Number(product.price || 0),
-      selectedSize,
-      selectedColor,
-      quantity,
-    }, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
 
     onClose();
     router.push('/checkout');

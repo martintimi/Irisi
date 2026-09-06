@@ -56,6 +56,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
 
   const [selectedSize, setSelectedSize] = useState(defaultSize);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || { name: 'Standard', hex: '#111111' });
+  const [quantity, setQuantity] = useState(1);
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -257,7 +258,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    addToCart(product, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
     setAddedToast(true);
     confetti({
       particleCount: 45,
@@ -270,7 +271,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    addToCart(product, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
     router.push('/checkout');
   };
 
@@ -482,31 +483,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           >
             <ZoomIn className="h-3 w-3 text-[var(--gold-accent)]" />
             <span>Tap to View</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setOutfitItem(product);
-              router.push('/studio');
-            }}
-            className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-[var(--gold-accent)] text-[var(--gold-accent)] text-[10px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition-all cursor-pointer hover:bg-[var(--gold-accent)] hover:text-black"
-          >
-            <Layers className="h-3 w-3" />
-            <span>Style in Studio</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIs3DModalOpen(true);
-            }}
-            className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/20 text-white/90 text-[10px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition-all cursor-pointer hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)]"
-          >
-            <Sparkles className="h-3 w-3" />
-            <span>3D Inspect</span>
           </button>
         </div>
       </div>
@@ -790,6 +766,31 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
       <div className="fixed bottom-0 inset-x-0 z-40 bg-[var(--bg-primary)] border-t border-[var(--border-subtle)] p-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.12)]">
         {/* Add to Bag + Instant Buy */}
         <div className="flex items-center gap-2">
+          {/* Compact Quantity Stepper */}
+          <div className="flex items-center bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setQuantity(q => Math.max(1, q - 1))}
+              disabled={quantity <= 1 || isOutOfStock}
+              className="h-8 w-7 rounded-lg flex items-center justify-center text-[var(--text-primary)] disabled:opacity-30 active:bg-[var(--bg-primary)] transition-all font-bold text-sm cursor-pointer"
+              title="Decrease"
+            >
+              -
+            </button>
+            <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)] px-1 min-w-[18px] text-center">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={() => setQuantity(q => Math.min(currentSizeStock || 15, q + 1))}
+              disabled={quantity >= (currentSizeStock || 15) || isOutOfStock}
+              className="h-8 w-7 rounded-lg flex items-center justify-center text-[var(--text-primary)] disabled:opacity-30 active:bg-[var(--bg-primary)] transition-all font-bold text-sm cursor-pointer"
+              title="Increase"
+            >
+              +
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleAddToCart}

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
   ShieldCheck, Truck, Lock, CreditCard, CheckCircle2,
   ArrowRight, ArrowLeft, Phone, MapPin, Store,
-  Building, Home, Clock, Check, Loader2, Sparkles
+  Building, Home, Clock, Check, Loader2, Sparkles, AlertCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
-import { estimateItemWeightKg } from '@/lib/services/logistics';
+import { estimateItemWeightKg, getMotorParksForState } from '@/lib/services/logistics';
 
 export default function MobileCheckoutView() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function MobileCheckoutView() {
     bodyProfile,
     createNewOrder,
     userAuth,
+    fetchProductsFromDb,
   } = useStore();
 
   const initialDeliveryState = bodyProfile.state || 'Lagos';
@@ -38,6 +39,39 @@ export default function MobileCheckoutView() {
     notes: '',
   });
 
+  // Fetch fresh products and heal cart items from DB on mount
+  useEffect(() => {
+    fetchProductsFromDb();
+  }, [fetchProductsFromDb]);
+
+  // Restore saved checkout form from sessionStorage so reloads never erase customer input
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = sessionStorage.getItem('irisi_checkout_form');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setFormData(prev => ({
+          ...prev,
+          ...parsed,
+          name: parsed.name || prev.name,
+          phone: parsed.phone || prev.phone,
+          address: parsed.address || prev.address,
+          state: parsed.state || prev.state,
+          city: parsed.city || prev.city,
+        }));
+      }
+    } catch {}
+  }, []);
+
+  // Persist form changes to sessionStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem('irisi_checkout_form', JSON.stringify(formData));
+    } catch {}
+  }, [formData]);
+
   const handleStateChange = (newState: string) => {
     const cities = getCitiesForState(newState);
     setFormData(prev => ({
@@ -48,6 +82,7 @@ export default function MobileCheckoutView() {
   };
 
   const [packageMethods, setPackageMethods] = useState<Record<string, 'doorstep' | 'park_pickup'>>({});
+  const [selectedParkTerminals, setSelectedParkTerminals] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'bank_transfer'>('paystack');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -138,32 +173,47 @@ export default function MobileCheckoutView() {
 
   // Calculate dynamic shipping fee per vendor package
   const packageShippingCalculations = useMemo(() => {
-    const calcs: Record<string, { fee: number; method: 'doorstep' | 'park_pickup'; reason: string; isSameCity: boolean; courierName?: string; eta?: string }> = {};
+    const calcs: Record<string, {
+      fee: number;
+      method: 'doorstep' | 'park_pickup';
+      reason: string;
+      isSameCity: boolean;
+      courierName?: string;
+      eta?: string;
+      packageWeightKg?: number;
+      packageDimensions?: string;
+      hasDoorstepPickup?: boolean;
+      courierServiceType?: 'pickup' | 'dropoff';
+      dropoffStation?: string;
+      instructions?: string;
+      serviceabilityBadge?: string;
+      motorParks?: any[];
+    }> = {};
 
     Object.values(groupedItems).forEach((pkg) => {
       const live = liveRates[pkg.vendorId];
       const chosenMethod = packageMethods[pkg.vendorId] || 'doorstep';
 
       if (live) {
-        if (chosenMethod === 'park_pickup') {
-          calcs[pkg.vendorId] = {
-            fee: 0,
-            method: 'park_pickup',
-            reason: 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
-            isSameCity: live.isSameCity,
-            courierName: live.parkPickup?.courierName || 'Motor Park Waybill',
-            eta: live.parkPickup?.estimatedDeliveryDays || '1-2 business days',
-          };
-        } else {
-          calcs[pkg.vendorId] = {
-            fee: live.doorstep?.fee || 4500,
-            method: 'doorstep',
-            reason: live.doorstep?.serviceType || 'Doorstep Courier',
-            isSameCity: live.isSameCity,
-            courierName: live.doorstep?.courierName || 'GIG Logistics',
-            eta: live.doorstep?.estimatedDeliveryDays || '1-3 business days',
-          };
-        }
+        const isDoor = chosenMethod === 'doorstep';
+        const rateObj = isDoor ? live.doorstep : live.parkPickup;
+
+        calcs[pkg.vendorId] = {
+          fee: rateObj?.fee || (isDoor ? 4500 : 0),
+          method: chosenMethod,
+          reason: isDoor ? (rateObj?.serviceType || 'Doorstep Courier') : 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
+          isSameCity: live.isSameCity,
+          courierName: rateObj?.courierName || (isDoor ? 'GIG Logistics' : 'Motor Park Waybill'),
+          eta: rateObj?.estimatedDeliveryDays || (isDoor ? '1-3 business days' : '1-2 business days'),
+          packageWeightKg: live.packageWeightKg,
+          packageDimensions: live.packageDimensions,
+          hasDoorstepPickup: live.doorstep?.hasDoorstepPickup,
+          courierServiceType: live.doorstep?.courierServiceType,
+          dropoffStation: live.doorstep?.dropoffStation,
+          instructions: rateObj?.instructions,
+          serviceabilityBadge: live.serviceability?.badgeLabel,
+          motorParks: live.motorParks || getMotorParksForState(formData.state),
+        };
       } else {
         const customerCity = (formData.city || '').toLowerCase().trim();
         const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
@@ -175,6 +225,13 @@ export default function MobileCheckoutView() {
             method: 'park_pickup',
             reason: 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
             isSameCity: false,
+            courierName: 'Interstate Bus Terminal Waybill',
+            eta: '1-2 business days',
+            packageWeightKg: 0.8,
+            packageDimensions: '32×24×6cm',
+            hasDoorstepPickup: false,
+            courierServiceType: 'dropoff',
+            motorParks: getMotorParksForState(formData.state),
           };
         } else {
           calcs[pkg.vendorId] = {
@@ -182,17 +239,44 @@ export default function MobileCheckoutView() {
             method: 'doorstep',
             reason: isSameCity ? 'Same-City Direct Rider' : 'Interstate Doorstep Courier',
             isSameCity,
+            courierName: isSameCity ? 'Direct Dispatch Rider' : 'GIG Logistics Express',
+            eta: isSameCity ? 'Same-day / 24h' : '2-3 business days',
+            packageWeightKg: 0.8,
+            packageDimensions: '32×24×6cm',
+            hasDoorstepPickup: isSameCity,
+            courierServiceType: isSameCity ? 'pickup' : 'dropoff',
+            motorParks: getMotorParksForState(formData.state),
           };
         }
       }
     });
 
     return calcs;
-  }, [groupedItems, liveRates, packageMethods, formData.city]);
+  }, [groupedItems, liveRates, packageMethods, formData.city, formData.state]);
+
+  const vendorIds = useMemo(() => Object.keys(groupedItems), [groupedItems]);
+  const isAllParkPickup = vendorIds.length > 0 && vendorIds.every(
+    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method) === 'park_pickup'
+  );
+  const hasDoorstep = vendorIds.length === 0 || vendorIds.some(
+    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method || 'doorstep') === 'doorstep'
+  );
 
   const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  const totalShippingFee = Object.values(packageShippingCalculations).reduce((sum, item) => sum + item.fee, 0);
+  const totalShippingFee = isAllParkPickup ? 0 : Object.values(packageShippingCalculations).reduce((sum, item) => sum + item.fee, 0);
   const grandTotal = subtotal + totalShippingFee;
+
+  const [motorParkName, setMotorParkName] = useState<string>('');
+  const resolvedMotorPark = motorParkName.trim() || `${formData.city} Motor Park`;
+
+  // Toggle park pickup vs doorstep for all vendor packages at once
+  const setAllDeliveryMethods = (method: 'doorstep' | 'park_pickup') => {
+    const updated: Record<string, 'doorstep' | 'park_pickup'> = {};
+    vendorIds.forEach(vId => {
+      updated[vId] = method;
+    });
+    setPackageMethods(updated);
+  };
 
   const togglePackageMethod = (vendorId: string, method: 'doorstep' | 'park_pickup') => {
     setPackageMethods(prev => ({ ...prev, [vendorId]: method }));
@@ -201,8 +285,12 @@ export default function MobileCheckoutView() {
   const handleStartPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
-    if (!formData.name || !formData.phone || !formData.address || !formData.city) {
-      alert('Please fill in your recipient name, phone, address, and city.');
+    if (!formData.name || !formData.phone || !formData.city) {
+      alert('Please fill in your recipient name, phone, and city.');
+      return;
+    }
+    if (hasDoorstep && !formData.address) {
+      alert('Please enter your street address for doorstep courier delivery.');
       return;
     }
     handlePayWithPaystack();
@@ -269,12 +357,62 @@ export default function MobileCheckoutView() {
       const orderNum = `#VY-ORD-${Math.floor(1000 + Math.random() * 9000)}`;
       const paymentRef = resolvedPaymentRef || `vy_escrow_${Date.now()}`;
 
+      const parkLocation = motorParkName.trim() || `${formData.city} Motor Park`;
+      const resolvedParkTerminals = vendorIds.reduce((acc, vId) => {
+        acc[vId] = parkLocation;
+        return acc;
+      }, {} as Record<string, string>);
+
+      const formattedDeliveryAddress = isAllParkPickup
+        ? `${parkLocation}, ${formData.city}, ${formData.state} (Motor Park Pickup)`
+        : `${formData.address ? formData.address + ', ' : ''}${formData.city}, ${formData.state}`;
+
+      const vendorPackagesPayload: Record<string, any> = {};
+      Object.values(groupedItems).forEach((pkg) => {
+        const vId = pkg.vendorId;
+        const method = packageMethods[vId] || 'doorstep';
+        const isPark = method === 'park_pickup';
+        const live = liveRates[vId];
+        const rateObj = isPark ? live?.parkPickup : live?.doorstep;
+        const calc = packageShippingCalculations[vId];
+
+        const courierName = isPark
+          ? 'Motor Park Bus Waybill'
+          : (rateObj?.courierName || calc?.courierName || 'Shipbubble Courier');
+
+        const shippingFee = isPark ? 0 : (rateObj?.fee || calc?.fee || 0);
+
+        vendorPackagesPayload[vId] = {
+          vendorId: vId,
+          vendorName: pkg.vendorName,
+          vendorCity: pkg.vendorCity || 'Lagos',
+          vendorState: pkg.vendorState || 'Lagos',
+          deliveryMethod: method,
+          shippingFee,
+          courierName,
+          courierServiceType: isPark ? 'dropoff' : (rateObj?.courierServiceType || calc?.courierServiceType || 'pickup'),
+          hasDoorstepPickup: isPark ? false : (rateObj?.hasDoorstepPickup ?? calc?.hasDoorstepPickup ?? true),
+          requestToken: rateObj?.requestToken || live?.doorstep?.requestToken,
+          serviceCode: rateObj?.serviceCode || live?.doorstep?.serviceCode,
+          courierId: rateObj?.courierId || live?.doorstep?.courierId,
+          selectedParkTerminal: isPark ? (selectedParkTerminals[vId] || motorParkName || `${formData.city} Motor Park`) : undefined,
+          dropoffStation: isPark ? (selectedParkTerminals[vId] || motorParkName) : (rateObj?.dropoffStation || calc?.dropoffStation),
+          instructions: rateObj?.instructions || calc?.instructions || (isPark
+            ? 'Package garment and drop at local motor park. Customer pays collection fee upon arrival.'
+            : `${courierName} rider will pick up from your atelier once marked ready.`),
+          packageWeightKg: live?.packageWeightKg || calc?.packageWeightKg || 1.0,
+          packageDimensions: live?.packageDimensions || calc?.packageDimensions || '32×24×6cm',
+          status: 'escrow_secured',
+          pickupStatus: 'pending_packaging',
+        };
+      });
+
       const orderPayload: any = {
         orderNumber: orderNum,
         customerName: formData.name,
         customerPhone: formData.phone,
         customerEmail: formData.email || userAuth?.email || bodyProfile?.email || '',
-        deliveryAddress: `${formData.address}, ${formData.city}, ${formData.state}`,
+        deliveryAddress: formattedDeliveryAddress,
         deliveryCity: formData.city,
         subtotal,
         shippingFee: totalShippingFee,
@@ -294,12 +432,18 @@ export default function MobileCheckoutView() {
           price: item.product.price,
           quantity: Number(item.quantity || 1),
           size: item.selectedSize,
-          imageUrl: item.product.imageUrl,
+          color: item.selectedColor?.name || 'As Pictured',
+          colorName: item.selectedColor?.name || 'As Pictured',
+          colorHex: item.selectedColor?.hex || '#111111',
+          imageUrl: item.selectedColor?.imageUrl || item.product.imageUrl,
           category: item.product.category,
         })),
+        vendorPackages: vendorPackagesPayload,
         paymentRef,
         paystackRef: paymentRef,
         packageMethods,
+        selectedParkTerminals,
+        deliveryState: formData.state,
       };
 
       try {
@@ -419,11 +563,46 @@ export default function MobileCheckoutView() {
       {/* 2. CHECKOUT FORM CONTENT */}
       <form onSubmit={handleStartPayment} id="mobile-checkout-form" className="p-4 space-y-4">
         
-        {/* Step 1: Contact & Delivery Address */}
+        {/* Step 1: Contact & Delivery Destination */}
         <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3.5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
-            <MapPin className="h-3.5 w-3.5" />
-            <span>1. Delivery Contact & Address</span>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
+              <MapPin className="h-3.5 w-3.5" />
+              <span>1. Delivery Method & Destination</span>
+            </div>
+            {isAllParkPickup && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-mono-luxury font-bold uppercase">
+                Park Pickup · Pay on Collection
+              </span>
+            )}
+          </div>
+
+          {/* Delivery Option Toggle */}
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold">
+            <button
+              type="button"
+              onClick={() => setAllDeliveryMethods('doorstep')}
+              className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                !isAllParkPickup
+                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span>Doorstep Delivery</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAllDeliveryMethods('park_pickup')}
+              className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                isAllParkPickup
+                  ? 'bg-[var(--gold-accent)] text-black shadow-sm font-extrabold'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              <Building className="h-3.5 w-3.5" />
+              <span>Motor Park Waybill</span>
+            </button>
           </div>
 
           <div className="space-y-3 text-xs font-mono-luxury">
@@ -444,7 +623,7 @@ export default function MobileCheckoutView() {
             <div className="grid grid-cols-2 gap-2.5">
               <div>
                 <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Phone (For Driver)
+                  {isAllParkPickup ? 'Phone (For Park Call)' : 'Phone (For Courier)'}
                 </label>
                 <input
                   type="tel"
@@ -487,113 +666,159 @@ export default function MobileCheckoutView() {
               </select>
             </div>
 
-            <div>
-              <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                Street Address
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="House / flat number, street name, and landmark"
-                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
-              />
+            {/* Conditionally Render: Motor Park in City vs Street Address */}
+            {isAllParkPickup ? (
+              <div className="p-3.5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/30 space-y-2.5 animate-fadeIn">
+                <div className="flex items-start gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                    <Truck className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-bold text-[var(--text-primary)] uppercase">
+                      Motor Park Delivery (No Street Address Needed)
+                    </h4>
+                    <p className="text-[10px] text-[var(--text-secondary)] leading-snug mt-0.5">
+                      The vendor will send your package via an interstate bus driver heading to <strong>{formData.city}, {formData.state}</strong>. When the bus arrives at the motor park in {formData.city}, the driver will call your phone ({formData.phone || 'provided above'}) to collect it.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] uppercase text-[var(--gold-accent)] font-bold mb-1">
+                    Motor Park / Garage in {formData.city} (Optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={motorParkName}
+                    onChange={(e) => setMotorParkName(e.target.value)}
+                    placeholder={`e.g. Main Motor Park, Central Garage, or nearest park in ${formData.city}`}
+                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                  <span className="text-[9px] text-amber-400/90 block mt-1">
+                    ⚠️ Pay the bus driver's transport fee directly when you collect your parcel from the driver in {formData.city}.
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                    Street Address
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="House / flat number, street name, and landmark"
+                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                    Delivery Notes / Landmark (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="e.g. Opposite First Bank, call on arrival"
+                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Step 2: Order Summary & Escrow Breakdown */}
+        <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4 shadow-sm text-xs font-mono-luxury">
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
+            <span className="uppercase text-[var(--gold-accent)] font-bold block">
+              2. Order Summary ({cart.reduce((s, i) => s + i.quantity, 0)} item{cart.reduce((s, i) => s + i.quantity, 0) > 1 ? 's' : ''})
+            </span>
+            <span className="text-[10px] text-[var(--text-secondary)] font-bold">
+              {isAllParkPickup ? 'Motor Park Delivery' : 'Doorstep Courier'}
+            </span>
+          </div>
+
+          {/* Cart Items List */}
+          <div className="space-y-3 max-h-64 overflow-y-auto pr-1 divide-y divide-[var(--border-subtle)]/50">
+            {cart.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 pt-2.5 first:pt-0">
+                <div className="relative h-12 w-12 rounded-xl overflow-hidden shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+                  <Image src={item.selectedColor?.imageUrl || item.product.imageUrl} alt={item.product.name} fill unoptimized className="object-cover" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-[var(--text-primary)] truncate text-xs">{item.product.name}</h4>
+                  <div className="text-[10px] text-[var(--text-secondary)] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span>Size: <strong className="text-[var(--gold-accent)]">{item.selectedSize}</strong></span>
+                    {item.selectedColor?.name && (
+                      <>
+                        <span>·</span>
+                        <span className="flex items-center gap-1">
+                          <span
+                            className="h-2 w-2 rounded-full border border-white/20 inline-block shrink-0"
+                            style={{ backgroundColor: item.selectedColor.hex || '#111111' }}
+                          />
+                          <span>{item.selectedColor.name}</span>
+                        </span>
+                      </>
+                    )}
+                    <span>·</span>
+                    <span>Qty: <strong className="text-[var(--gold-accent)]">{item.quantity}</strong></span>
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)] truncate">
+                    {item.product.vendorName || 'Atelier Store'}
+                  </div>
+                </div>
+                <div className="text-right font-bold text-[var(--text-primary)] font-editorial text-sm shrink-0">
+                  ₦{(item.product.price * item.quantity).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Price Breakdown */}
+          <div className="space-y-2.5 pt-3 border-t border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between text-[var(--text-secondary)]">
+              <span>Clothes Subtotal:</span>
+              <span className="font-bold text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                <span>Delivery:</span>
+                <span className="font-bold text-[var(--gold-accent)]">
+                  {isAllParkPickup ? 'Pay Driver on Collection (~₦1,500)' : `₦${totalShippingFee.toLocaleString()}`}
+                </span>
+              </div>
+              {!isAllParkPickup && (
+                <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <Truck className="h-3 w-3" />
+                    <span>{Object.values(packageShippingCalculations)[0]?.courierName || 'Shipbubble Live Dispatch'}</span>
+                  </span>
+                  <span>{Object.values(packageShippingCalculations)[0]?.eta || '2-4 business days'}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold">
+              <span className="text-[var(--text-primary)]">Total Due Now (Escrow):</span>
+              <span className="font-editorial text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)]">
+                ₦{grandTotal.toLocaleString()}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Step 2: Vendor Packages & Shipping Mode */}
-        <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3.5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
-            <Truck className="h-3.5 w-3.5" />
-            <span>2. Vendor Shipments & Delivery Mode</span>
-          </div>
-
-          <div className="space-y-3">
-            {Object.values(groupedItems).map((pkg) => {
-              const calc = packageShippingCalculations[pkg.vendorId] || { fee: 2500, method: 'doorstep', reason: 'Courier' };
-              const currentMethod = packageMethods[pkg.vendorId] || 'doorstep';
-              const rates = pkg.shippingRates || {};
-
-              return (
-                <div key={pkg.vendorId} className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-[var(--border-subtle)]/60 pb-2">
-                    <div>
-                      <div className="font-bold text-xs font-mono-luxury text-[var(--text-primary)]">{pkg.vendorName}</div>
-                      <div className="text-[10px] font-mono-luxury text-[var(--text-secondary)] flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-[var(--gold-accent)]" />
-                        <span>{pkg.vendorCity || 'Lagos'}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold">
-                        ₦{calc.fee.toLocaleString()}
-                      </div>
-                      <div className="text-[9px] font-mono-luxury text-emerald-400 font-bold">
-                        {calc.reason}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Delivery Mode Toggles */}
-                  {!calc.isSameCity && (
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => togglePackageMethod(pkg.vendorId, 'doorstep')}
-                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[10px] font-mono-luxury uppercase font-bold transition-all cursor-pointer ${
-                          currentMethod === 'doorstep'
-                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                            : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-                        }`}
-                      >
-                        <Home className="h-3.5 w-3.5" />
-                        <span>Deliver to Address</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => togglePackageMethod(pkg.vendorId, 'park_pickup')}
-                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[10px] font-mono-luxury uppercase font-bold transition-all cursor-pointer ${
-                          currentMethod === 'park_pickup'
-                            ? 'bg-[var(--gold-accent)] text-black shadow-sm font-extrabold'
-                            : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-                        }`}
-                      >
-                        <Building className="h-3.5 w-3.5" />
-                        <span>Park Waybill (Pay on Pickup)</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Step 3: Order Breakdown */}
-        <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm text-xs font-mono-luxury">
-          <span className="uppercase text-[var(--text-secondary)] font-bold block">
-            3. Summary Breakdown
-          </span>
-
-          <div className="flex items-center justify-between text-[var(--text-secondary)]">
-            <span>Clothes Subtotal:</span>
-            <span className="font-bold text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
-          </div>
-
-          <div className="flex items-center justify-between text-[var(--text-secondary)]">
-            <span>Multi-Vendor Delivery:</span>
-            <span className="font-bold text-[var(--gold-accent)]">₦{totalShippingFee.toLocaleString()}</span>
-          </div>
-
-          <div className="pt-2.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold">
-            <span className="text-[var(--text-primary)]">Total to Pay (Escrow):</span>
-            <span className="font-editorial text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)]">
-              ₦{grandTotal.toLocaleString()}
-            </span>
+          {/* Escrow Guarantee Badge */}
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-emerald-400 text-[10px] leading-snug">
+            <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <strong>100% Escrow Protection:</strong> Payment is held safely and only released to the vendor after you receive and approve your clothes.
+            </div>
           </div>
         </div>
 

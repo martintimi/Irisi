@@ -7,7 +7,7 @@ import {
   PackageCheck, Clock, CheckCircle2, ShieldCheck,
   Phone, MapPin, User, Truck, ShoppingBag, Scissors, Layers,
   Ruler, Sparkles, ChevronRight, Check, AlertCircle, Package,
-  Send, Loader2, X, Navigation, RefreshCw, Star, Printer
+  Send, Loader2, X, Navigation, RefreshCw, Star, Printer, Building
 } from 'lucide-react';
 import MobileVendorOrders from '@/components/vendor/MobileVendorOrders';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
@@ -78,14 +78,35 @@ export default function VendorOrdersPage() {
       0
     );
 
-    const vendorDeliveryFee = Number(ord.shippingFee) || 2500;
-    const totalPayout = vendorSubtotal + vendorDeliveryFee;
+    const activeVendorId = getActiveVendorId();
+    const vendorKey = (items[0]?.vendorId || activeVendorId || '').toLowerCase().trim();
+    const vendorPackages = ord.vendorPackages || ord.customer_measurements?.vendorPackages || {};
+    const myPkg = vendorPackages[vendorKey] || Object.values(vendorPackages)[0] || {};
 
-    const trackingStage = ord.trackingStage || (
+    const deliveryMethod = myPkg.deliveryMethod || ord.deliveryMethod || 'doorstep';
+    const isParkPickup = deliveryMethod === 'park_pickup';
+    const totalPkgCount = Object.keys(vendorPackages).length || 1;
+    const vendorDeliveryFee = isParkPickup
+      ? 0
+      : (myPkg.shippingFee !== undefined
+          ? Number(myPkg.shippingFee)
+          : Math.round((Number(ord.shippingFee) || 0) / totalPkgCount));
+    // The vendor payout is STRICTLY their clothes earnings! Delivery fees are paid to courier riders or collected at the park.
+    const totalPayout = vendorSubtotal;
+
+    const trackingStage = Number(myPkg.trackingStage || ord.trackingStage || (
       ord.status === 'delivered' ? 4 :
       ord.status === 'dispatched' ? 3 :
       (ord.status === 'packing' || ord.status === 'ready') ? 2 : 1
-    );
+    ));
+    const courierName = myPkg.courierName || (deliveryMethod === 'park_pickup' ? 'Motor Park Bus Waybill' : 'Shipbubble Courier');
+    const waybillNumber = myPkg.waybillNumber || myPkg.trackingNumber || ord.trackingDetails?.waybillNumber || '';
+    const courierServiceType = myPkg.courierServiceType || 'pickup';
+    const pickupStatus = myPkg.pickupStatus || (trackingStage === 4 ? 'delivered' : trackingStage === 3 ? 'in_transit' : trackingStage === 2 ? (courierServiceType === 'pickup' ? 'ready_for_pickup' : 'ready_for_dropoff') : 'pending_packaging');
+    const packageWeightKg = myPkg.packageWeightKg || 1.1;
+    const packageDimensions = myPkg.packageDimensions || '35×25×6cm';
+    const dropoffStation = myPkg.dropoffStation || myPkg.selectedParkTerminal;
+    const instructions = myPkg.instructions || (deliveryMethod === 'park_pickup' ? 'Take parcel to local motor park. Customer pays collection fee.' : (courierServiceType === 'pickup' ? `${courierName} dispatch rider will arrive for pickup at your registered address.` : 'Drop off at nearest courier office.'));
 
     return {
       id: ord.id,
@@ -100,9 +121,19 @@ export default function VendorOrdersPage() {
       vendorSubtotal,
       vendorDeliveryFee,
       totalPayout,
-      status: ord.status || 'escrow_secured',
+      status: myPkg.status || ord.status || 'escrow_secured',
       trackingStage,
       trackingDetails: ord.trackingDetails || {},
+      deliveryMethod,
+      courierName,
+      waybillNumber,
+      courierServiceType,
+      pickupStatus,
+      packageWeightKg,
+      packageDimensions,
+      dropoffStation,
+      instructions,
+      deliveryIssue: myPkg.deliveryIssue || null,
     };
   }).filter(Boolean);
 
@@ -118,6 +149,7 @@ export default function VendorOrdersPage() {
     setIsUpdatingStatus(true);
     const activeVendorId = getActiveVendorId();
     const targetVendorId = ord.items?.[0]?.vendorId || activeVendorId;
+    const nextPickupStatus = ord.courierServiceType === 'pickup' ? 'ready_for_pickup' : 'ready_for_dropoff';
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -130,6 +162,7 @@ export default function VendorOrdersPage() {
           orderId: ord.id,
           status: 'packing',
           trackingStage: 2,
+          pickupStatus: nextPickupStatus,
           vendorId: targetVendorId
         })
       });
@@ -137,7 +170,12 @@ export default function VendorOrdersPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         updateOrderStatus(ord.orderNumber, 'packing', 2, targetVendorId);
-        setDbOrders(prev => prev.map(o => (o.orderNumber === ord.orderNumber || o.id === ord.id) ? { ...o, status: 'packing', trackingStage: 2 } : o));
+        setDbOrders(prev => prev.map(o => (o.orderNumber === ord.orderNumber || o.id === ord.id) ? {
+          ...o,
+          status: 'packing',
+          trackingStage: 2,
+          pickupStatus: nextPickupStatus
+        } : o));
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       }
     } catch (e) {
@@ -174,7 +212,7 @@ export default function VendorOrdersPage() {
           orderId: dispatchModalOrder.id,
           status: 'dispatched',
           trackingStage: 3,
-          waybillNumber: waybillInput.trim() || `WB-${Math.floor(10000 + Math.random() * 90000)}`,
+          waybillNumber: waybillInput.trim(),
           driverPhone: driverPhoneInput.trim(),
           vendorId: targetVendorId
         })
@@ -219,7 +257,7 @@ export default function VendorOrdersPage() {
           orderId: ord.id,
           status: 'dispatched',
           trackingStage: 3,
-          waybillNumber: waybill.trim() || `WB-${Math.floor(10000 + Math.random() * 90000)}`,
+          waybillNumber: waybill.trim(),
           driverPhone: driverPhone.trim(),
           vendorId: targetVendorId
         })
@@ -373,8 +411,19 @@ export default function VendorOrdersPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">{item.productName}</h4>
-                        <div className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-                          Size: <strong className="text-[var(--gold-accent)]">{item.size || 'M'}</strong> · Qty: <strong className="text-[var(--gold-accent)]">{item.quantity || 1}</strong>
+                        <div className="text-[11px] font-mono-luxury text-[var(--text-secondary)] flex items-center gap-2 flex-wrap mt-0.5">
+                          <span>Size: <strong className="text-[var(--gold-accent)]">{item.size || 'M'}</strong></span>
+                          <span>·</span>
+                          <span className="flex items-center gap-1">
+                            <span>Color:</span>
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full border border-white/20 shadow-xs shrink-0"
+                              style={{ backgroundColor: item.colorHex || (typeof item.color === 'string' && item.color.startsWith('#') ? item.color : '#111111') }}
+                            />
+                            <strong className="text-[var(--text-primary)]">{item.colorName || item.color || 'Standard'}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>Qty: <strong className="text-[var(--gold-accent)]">{item.quantity || 1}</strong></span>
                         </div>
                         <div className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold mt-0.5">
                           ₦{(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString()}
@@ -390,39 +439,101 @@ export default function VendorOrdersPage() {
                 </div>
               </div>
 
+              {/* Dedicated Nigerian Logistics & Pickup Dispatch Hub Ribbon */}
+              <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-mono-luxury font-bold uppercase flex items-center gap-1.5 ${
+                      ord.deliveryMethod === 'park_pickup'
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      {ord.deliveryMethod === 'park_pickup' ? <Building className="h-3.5 w-3.5" /> : <Truck className="h-3.5 w-3.5" />}
+                      <span>{ord.deliveryMethod === 'park_pickup' ? 'Park Pickup Waybill' : 'Doorstep Delivery'}</span>
+                    </span>
+
+                    <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
+                      Courier: <span className="text-[var(--gold-accent)]">{ord.courierName}</span>
+                    </span>
+                  </div>
+
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-mono-luxury font-bold uppercase ${
+                    ord.trackingStage === 4
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : ord.trackingStage === 3
+                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
+                      : ord.trackingStage === 2
+                      ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30'
+                      : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  }`}>
+                    {ord.trackingStage === 1
+                      ? 'Pending Packaging'
+                      : ord.trackingStage === 2
+                      ? (ord.courierServiceType === 'pickup' ? 'Ready for Pickup · Rider Notified' : 'Ready for Station Drop-off')
+                      : ord.trackingStage === 3
+                      ? 'In Transit with Courier'
+                      : 'Delivered & Settled'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-muted)]">Waybill / Tracking:</span>
+                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-muted)]">Package Weight:</span>
+                    <span className="font-bold text-[var(--text-primary)]">
+                      {ord.packageWeightKg}kg ({ord.packageDimensions}) <span className="text-[9px] text-emerald-400 font-normal">· Auto-assigned</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] font-mono-luxury text-[var(--text-secondary)] flex items-start gap-1.5">
+                  <Navigation className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0 mt-0.5" />
+                  <span>{ord.instructions}</span>
+                </div>
+              </div>
+
               {/* Delivery Address & THIS Vendor's Payout Breakdown */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
                 <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                   <div className="text-[var(--text-muted)] text-[10px] uppercase">Delivery Address:</div>
                   <div className="font-bold text-[var(--text-primary)] mt-0.5">{ord.deliveryAddress}</div>
+                  {ord.deliveryMethod === 'park_pickup' && ord.dropoffStation && (
+                    <div className="text-[10px] text-amber-400 mt-1 font-bold">Terminal: {ord.dropoffStation}</div>
+                  )}
                 </div>
 
                 <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Your Allocated Delivery Fee:</div>
-                  <div className="font-bold text-[var(--gold-accent)] text-sm mt-0.5">₦{ord.vendorDeliveryFee.toLocaleString()}</div>
-                  <div className="text-[10px] text-[var(--text-muted)]">Collected to pay your rider/waybill</div>
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Delivery Method / Transport:</div>
+                  <div className="font-bold text-[var(--gold-accent)] text-sm mt-0.5">
+                    {ord.deliveryMethod === 'park_pickup' ? 'Pay on Collection' : `₦${ord.vendorDeliveryFee.toLocaleString()}`}
+                  </div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    {ord.deliveryMethod === 'park_pickup' ? 'Customer pays driver at motor park terminal' : 'Courier dispatch fee (remitted to courier partner)'}
+                  </div>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Your Total Payout (Escrow):</div>
-                  <div className="font-bold text-emerald-400 text-sm mt-0.5">₦{ord.totalPayout.toLocaleString()}</div>
-                  <div className="text-[10px] text-[var(--text-muted)]">Clothes (₦{ord.vendorSubtotal.toLocaleString()}) + Delivery</div>
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Your Total Escrow Payout:</div>
+                  <div className="font-bold text-emerald-400 text-base mt-0.5">₦{ord.totalPayout.toLocaleString()}</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Clothes Earnings (100% Escrow Secured)</div>
                 </div>
               </div>
 
-              {/* Waybill tracking details if already dispatched */}
-              {ord.trackingStage >= 3 && ord.trackingDetails?.waybillNumber && (
+              {/* Courier & Driver contact details if already dispatched - NO DUPLICATE WAYBILL */}
+              {ord.trackingStage >= 3 && ord.trackingDetails?.driverPhone && (
                 <div className="p-3.5 rounded-2xl bg-[var(--gold-subtle)]/40 border border-[var(--gold-accent)]/30 flex items-center justify-between text-xs font-mono-luxury text-[var(--text-primary)] flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
-                    <span>Waybill / Tracking No: <strong>{ord.trackingDetails.waybillNumber}</strong></span>
+                    <span>Courier Assigned: <strong>{ord.courierName}</strong></span>
                   </div>
-                  {ord.trackingDetails.driverPhone && (
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                      <span>Driver: {ord.trackingDetails.driverPhone}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                    <span>Driver / Station: <strong>{ord.trackingDetails.driverPhone}</strong></span>
+                  </div>
                 </div>
               )}
 
@@ -450,9 +561,9 @@ export default function VendorOrdersPage() {
               {/* Vendor Fulfillment Controls */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <div className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  {ord.trackingStage === 1 && 'Order received. Pack items from your inventory and mark as ready.'}
-                  {ord.trackingStage === 2 && 'Clothes packed! Hand over to dispatch rider or motor park waybill.'}
-                  {ord.trackingStage === 3 && 'Package is out for delivery with your courier/driver.'}
+                  {ord.trackingStage === 1 && (ord.courierServiceType === 'pickup' ? 'Package garments in ÌRÍSÍ mailer and mark ready. Rider dispatched to your atelier.' : 'Package garments and mark ready for drop-off.')}
+                  {ord.trackingStage === 2 && (ord.courierServiceType === 'pickup' ? 'Garment packed! Courier rider arriving for pickup.' : 'Garment packed! Drop off at designated station or motor park.')}
+                  {ord.trackingStage === 3 && 'Package is in transit with courier/driver.'}
                   {ord.trackingStage === 4 && 'Customer has confirmed receipt. Funds credited to payout balance.'}
                 </div>
 
@@ -471,10 +582,16 @@ export default function VendorOrdersPage() {
                       type="button"
                       onClick={() => handlePackReady(ord)}
                       disabled={isUpdatingStatus}
-                      className="px-6 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="px-6 py-2.5 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       <PackageCheck className="h-4 w-4" />
-                      <span>Pack & Mark Ready</span>
+                      <span>
+                        {ord.deliveryMethod === 'park_pickup'
+                          ? 'Mark Ready for Motor Park'
+                          : ord.courierServiceType === 'pickup'
+                          ? 'Mark Ready for Courier Pickup'
+                          : 'Mark Ready for Station Drop-off'}
+                      </span>
                     </button>
                   )}
 

@@ -1,7 +1,27 @@
 /**
- * Ìrísí Nigerian Live Logistics & Carrier Service
+ * ÌRÍSÍ Nigerian Live Logistics & Carrier Service
  * Integrates with Shipbubble, Terminal Africa, and Intelligent State-to-State Distance Matrices.
  */
+
+import {
+  getProductWeightProfile,
+  computeVendorPackageMetrics,
+  GarmentWeightProfile,
+  CumulativePackageMetrics
+} from '@/lib/logistics/weightProfiles';
+import {
+  getMotorParksForState,
+  checkLocationServiceability,
+  MotorParkTerminal,
+  LocationServiceabilityResult
+} from '@/lib/logistics/motorParks';
+
+export {
+  getProductWeightProfile,
+  computeVendorPackageMetrics,
+  getMotorParksForState,
+  checkLocationServiceability
+};
 
 export interface PackageShippingRequest {
   vendorId: string;
@@ -10,17 +30,30 @@ export interface PackageShippingRequest {
   originCity: string;
   destinationState: string;
   destinationCity: string;
+  vendorAddress?: string;
+  deliveryAddress?: string;
   itemCount?: number;
   totalWeightKg?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  items?: any[];
 }
 
 export interface LiveCarrierRate {
   courierName: string;
   serviceType: string;
+  courierServiceType: 'pickup' | 'dropoff';
   fee: number;
   estimatedDeliveryDays: string;
   isSameCity: boolean;
   isPayOnPickup?: boolean;
+  hasDoorstepPickup: boolean;
+  dropoffStation?: string;
+  instructions: string;
+  requestToken?: string;
+  serviceCode?: string;
+  courierId?: string;
 }
 
 export interface PackageRateResult {
@@ -29,8 +62,12 @@ export interface PackageRateResult {
   origin: string;
   destination: string;
   isSameCity: boolean;
+  packageWeightKg: number;
+  packageDimensions: string;
+  serviceability: LocationServiceabilityResult;
   doorstep: LiveCarrierRate;
   parkPickup: LiveCarrierRate;
+  motorParks: MotorParkTerminal[];
 }
 
 // Nigerian Geo-Regional Zones for accurate courier matrix
@@ -41,9 +78,10 @@ const REGIONS: Record<string, string> = {
   'Osun': 'SouthWest',
   'Ondo': 'SouthWest',
   'Ekiti': 'SouthWest',
-  
+
   'FCT - Abuja': 'NorthCentral',
   'Abuja': 'NorthCentral',
+  'Abuja (FCT)': 'NorthCentral',
   'Kwara': 'NorthCentral',
   'Kogi': 'NorthCentral',
   'Niger': 'NorthCentral',
@@ -83,9 +121,9 @@ const REGIONS: Record<string, string> = {
 function normalizeState(stateName: string): string {
   const s = (stateName || '').toLowerCase().trim();
   if (s.includes('lagos')) return 'Lagos';
-  if (s.includes('abuja') || s.includes('fct')) return 'FCT - Abuja';
+  if (s.includes('abuja') || s.includes('fct')) return 'Abuja (FCT)';
   if (s.includes('oyo') || s.includes('ibadan')) return 'Oyo';
-  if (s.includes('ogun') || s.includes('abeokuta')) return 'Ogun';
+  if (s.includes('ogun') || s.includes('abeokuta') || s.includes('ijebu')) return 'Ogun';
   if (s.includes('rivers') || s.includes('port harcourt')) return 'Rivers';
   if (s.includes('kano')) return 'Kano';
   if (s.includes('kaduna')) return 'Kaduna';
@@ -109,79 +147,87 @@ function normalizeState(stateName: string): string {
 export const WAYBILL_SAFETY_BUFFER = 300; // Flat ₦300 safety margin added to courier waybill
 
 /**
- * Intelligent Weight Estimation by Garment Category & Material (in kg)
- * Covers both Ready-to-Wear (RTW) Boutiques and Bespoke Designer Ateliers
+ * Backward compatibility wrapper for existing imports
  */
-export function estimateItemWeightKg(item: { name?: string; category?: string; garmentOriginType?: string; weightKg?: number }): number {
-  if (!item) return 0.6;
-  // 1. If the vendor entered an exact weight on product upload, use their exact measurement!
-  if (typeof item.weightKg === 'number' && item.weightKg > 0) {
-    return item.weightKg;
+export function estimateItemWeightKg(item: { name?: string; category?: string; weightKg?: number }): number {
+  return getProductWeightProfile(item).weightKg;
+}
+
+// In-memory address cache to prevent repeated validation requests to Shipbubble
+const addressCodeCache = new Map<string, number>();
+
+/**
+ * Validate and retrieve a Shipbubble address_code for a given address
+ */
+export async function getOrValidateAddressCode(
+  apiKey: string,
+  params: { name: string; email: string; phone: string; address: string; city: string; state: string }
+): Promise<number | null> {
+  const cleanState = normalizeState(params.state);
+  const cleanCity = (params.city || 'Lagos').trim();
+  const rawAddress = (params.address || cleanCity).trim();
+  const cacheKey = `${rawAddress.toLowerCase()}_${cleanCity.toLowerCase()}_${cleanState.toLowerCase()}`;
+
+  if (addressCodeCache.has(cacheKey)) {
+    return addressCodeCache.get(cacheKey)!;
   }
 
-  const n = (item.name || '').toLowerCase();
-  const c = (item.category || '').toLowerCase();
+  try {
+    const formattedAddress = rawAddress.toLowerCase().includes('nigeria')
+      ? rawAddress
+      : `${rawAddress}, ${cleanCity}, ${cleanState}, Nigeria`;
 
-  // 1. Traditional Ceremonial Wear (heavy damask / embroidery / aso-oke)
-  if (n.includes('agbada') || c.includes('agbada') || c.includes('boubou') || n.includes('ceremonial')) {
-    return 1.6;
+    const res = await fetch('https://api.shipbubble.com/v1/shipping/address/validate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: params.name || 'IRISI Atelier',
+        email: params.email || 'dispatch@irisi.ng',
+        phone: params.phone || '+2348012345678',
+        address: formattedAddress
+      }),
+      signal: AbortSignal.timeout(4000),
+      cache: 'no-store'
+    });
+
+    const data = await res.json();
+    if (data.status === 'success' && data.data?.address_code) {
+      const code = Number(data.data.address_code);
+      addressCodeCache.set(cacheKey, code);
+      return code;
+    }
+  } catch (err) {
+    console.warn('[Shipbubble API] Address validation call failed:', err);
   }
-  // 2. Senator / Kaftan 2-piece sets
-  if (n.includes('senator') || c.includes('senator') || n.includes('kaftan') || c.includes('kaftan')) {
-    return 1.1;
-  }
-  // 3. Footwear & Slides
-  if (n.includes('slide') || n.includes('sandal') || n.includes('slippers') || c === 'slides') {
-    return 0.8; // ~0.8kg for slides / mules in dust bag
-  }
-  if (c.includes('footwear') || c.includes('shoe') || n.includes('shoe') || n.includes('loafer') || n.includes('boot') || n.includes('sneaker') || n.includes('heel') || n.includes('mule')) {
-    return 1.3; // ~1.3kg for shoes / boots + shoebox
-  }
-  // 4. Heavyweight Hoodies, Jackets, Puffers, Fleece, Tracksuits
-  if (n.includes('hoodie') || n.includes('jacket') || c.includes('outerwear') || n.includes('tracksuit') || n.includes('puffer') || n.includes('varsity') || n.includes('sweatshirt')) {
-    return 1.0;
-  }
-  // 5. Tailored Blazers & Suits
-  if (n.includes('blazer') || n.includes('suit') || c.includes('blazers')) {
-    return 0.9;
-  }
-  // 6. Jeans, Denim, Cargo Trousers, Parachute Pants
-  if (n.includes('jean') || n.includes('cargo') || c.includes('bottoms') || c.includes('denim') || n.includes('trouser') || n.includes('pant')) {
-    return 0.8;
-  }
-  // 7. Ready-to-Wear Boutique Dresses & Co-ord Sets (silk, satin, crepe, knitwear)
-  if (n.includes('dress') || c.includes('dresses') || n.includes('co-ord') || n.includes('set') || n.includes('jumpsuit') || n.includes('gown')) {
-    return 0.6;
-  }
-  // 8. T-shirts, Graphic Boxy Tees, Polo Shirts
-  if (n.includes('tee') || n.includes('shirt') || n.includes('polo') || c.includes('tops')) {
-    return 0.35;
-  }
-  // 9. Boutique Crop Tops, Corsets, Bodysuits, Skirts, Shorts
-  if (n.includes('corset') || n.includes('crop') || n.includes('bodysuit') || n.includes('skirt') || n.includes('short')) {
-    return 0.3;
-  }
-  // 10. Fine Jewelry & Chains (Cuban chains, rings, bracelets, pendants, earrings in pouch)
-  if (c.includes('jewelry') || n.includes('chain') || n.includes('ring') || n.includes('necklace') || n.includes('bracelet') || n.includes('pendant') || n.includes('earring') || n.includes('grillz')) {
-    return 0.2;
-  }
-  // 11. Caps, Hats, Sunglasses, Belts, Accessories
-  if (c.includes('accessories') || n.includes('cap') || n.includes('hat') || n.includes('beanie') || n.includes('sunglass') || n.includes('shades') || n.includes('belt')) {
-    return 0.25;
-  }
-  // Default standard garment
-  return 0.5;
+  return null;
 }
 
 /**
- * Fetch live rates from Shipbubble / Terminal Africa or Intelligent Matrix
+ * Fetch live rates from Shipbubble or Intelligent Nigerian Distance Matrix
  */
 export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Promise<PackageRateResult> {
   const originState = normalizeState(pkg.originState || 'Lagos');
   const originCity = (pkg.originCity || 'Lagos').trim();
   const destState = normalizeState(pkg.destinationState || 'Lagos');
   const destCity = (pkg.destinationCity || 'Lagos').trim();
-  const packageWeight = Math.max(0.5, pkg.totalWeightKg || 1);
+  
+  // Auto-calculate weight if not explicitly passed
+  let packageWeight = Math.max(0.4, pkg.totalWeightKg || 0.8);
+  let dimsText = `${pkg.lengthCm || 32}×${pkg.widthCm || 24}×${pkg.heightCm || 6}cm`;
+
+  if (pkg.items && Array.isArray(pkg.items) && pkg.items.length > 0) {
+    const computed = computeVendorPackageMetrics(pkg.items.map(i => ({ product: i.product || i, quantity: i.quantity || 1 })));
+    packageWeight = computed.totalWeightKg;
+    dimsText = `${computed.lengthCm}×${computed.widthCm}×${computed.heightCm}cm`;
+  }
+
+  // 1. Check Location Serviceability (Does this vendor city support courier door pickup?)
+  const serviceability = checkLocationServiceability(originCity, originState);
+  const destinationParks = getMotorParksForState(destState);
+  const primaryPark = destinationParks[0];
 
   const isSameCity = !!(
     originCity.toLowerCase() === destCity.toLowerCase() ||
@@ -199,58 +245,139 @@ export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Pr
   // Extra weight surcharge for packages exceeding standard 2kg tier (₦600 per extra kg)
   const extraWeightSurcharge = packageWeight > 2 ? Math.ceil(packageWeight - 2) * 600 : 0;
 
-  // 1. Try Shipbubble Live API if API Key is configured
+  // 2. Real Shipbubble Live Carrier API Integration
   const shipbubbleKey = process.env.SHIPBUBBLE_API_KEY;
   if (shipbubbleKey && !isSameCity) {
     try {
-      const response = await fetch('https://api.shipbubble.com/v1/shipping/fetch_rates', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${shipbubbleKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender: { state: originState, city: originCity },
-          receiver: { state: destState, city: destCity },
-          package: { weight: packageWeight }
-        }),
-        signal: AbortSignal.timeout(2500),
-        cache: 'no-store'
+      const senderCode = await getOrValidateAddressCode(shipbubbleKey, {
+        name: pkg.vendorName || 'IRISI Atelier',
+        email: 'atelier@irisi.ng',
+        phone: '+2348012345678',
+        address: pkg.vendorAddress || `${originCity}, ${originState}`,
+        city: originCity,
+        state: originState
       });
 
-      const data = await response.json();
-      if (data.status === 'success' && Array.isArray(data.data?.couriers) && data.data.couriers.length > 0) {
-        const cheapest = data.data.couriers[0];
-        const rawFee = Number(cheapest.total) || 4500;
-        return {
-          vendorId: pkg.vendorId,
-          vendorName: pkg.vendorName,
-          origin: `${originCity}, ${originState}`,
-          destination: `${destCity}, ${destState}`,
-          isSameCity: false,
-          doorstep: {
-            courierName: cheapest.courier_name || 'GIG Logistics',
-            serviceType: 'Doorstep Express',
-            fee: rawFee + WAYBILL_SAFETY_BUFFER, // Includes +₦300 waybill buffer
-            estimatedDeliveryDays: cheapest.delivery_eta || '1-3 business days',
-            isSameCity: false,
+      const receiverCode = await getOrValidateAddressCode(shipbubbleKey, {
+        name: 'IRISI Customer',
+        email: 'shopper@irisi.ng',
+        phone: '+2348098765432',
+        address: pkg.deliveryAddress || `${destCity}, ${destState}`,
+        city: destCity,
+        state: destState
+      });
+
+      if (senderCode && receiverCode) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const pickupDate = tomorrow.toISOString().split('T')[0];
+
+        const packageItems = (pkg.items && pkg.items.length > 0)
+          ? pkg.items.map(item => {
+              const p = item.product || item;
+              const unitWeight = estimateItemWeightKg(p);
+              return {
+                name: p.name || 'Garment Piece',
+                description: `${p.category || 'Apparel'} (${p.vendorName || 'Atelier'})`,
+                unit_weight: Number(unitWeight.toFixed(2)),
+                unit_amount: Number(p.price || 20000),
+                quantity: Number(item.quantity || 1)
+              };
+            })
+          : [
+              {
+                name: 'Fashion Garment Package',
+                description: 'Tailored Luxury Fashion',
+                unit_weight: Number(packageWeight.toFixed(2)),
+                unit_amount: 35000,
+                quantity: 1
+              }
+            ];
+
+        const response = await fetch('https://api.shipbubble.com/v1/shipping/fetch_rates', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${shipbubbleKey}`,
+            'Content-Type': 'application/json'
           },
-          parkPickup: {
-            courierName: 'Motor Park Bus Waybill',
-            serviceType: 'Pay on Collection',
-            fee: 0,
-            estimatedDeliveryDays: '1-2 business days',
+          body: JSON.stringify({
+            sender_address_code: senderCode,
+            reciever_address_code: receiverCode,
+            pickup_date: pickupDate,
+            category_id: 74794423, // Shipbubble official "Fashion wears" category ID
+            package_items: packageItems,
+            package_dimension: {
+              length: pkg.lengthCm || 32,
+              width: pkg.widthCm || 24,
+              height: pkg.heightCm || 6
+            }
+          }),
+          signal: AbortSignal.timeout(5000),
+          cache: 'no-store'
+        });
+
+        const data = await response.json();
+        if (data.status === 'success' && Array.isArray(data.data?.couriers) && data.data.couriers.length > 0) {
+          const bestCourier = data.data.cheapest_courier || data.data.couriers[0];
+          const rawFee = Number(bestCourier.total) || Number(bestCourier.rate_card_amount) || 4500;
+          const courierServiceType: 'pickup' | 'dropoff' = bestCourier.service_type === 'dropoff' ? 'dropoff' : 'pickup';
+          const dropStation = bestCourier.dropoff_station?.name || serviceability.nearestStationRecommendation;
+
+          return {
+            vendorId: pkg.vendorId,
+            vendorName: pkg.vendorName,
+            origin: `${originCity}, ${originState}`,
+            destination: `${destCity}, ${destState}`,
             isSameCity: false,
-            isPayOnPickup: true,
-          }
-        };
+            packageWeightKg: packageWeight,
+            packageDimensions: dimsText,
+            serviceability: {
+              ...serviceability,
+              hasDoorstepPickup: courierServiceType === 'pickup',
+              serviceType: courierServiceType,
+              badgeLabel: courierServiceType === 'pickup' ? 'Shipbubble Door Pickup Active' : 'Courier Station Drop-off',
+              instructionToVendor: courierServiceType === 'pickup'
+                ? `Assigned courier (${bestCourier.courier_name}) will pick up directly from your atelier.`
+                : `Assigned courier (${bestCourier.courier_name}) operates drop-off in ${originCity}. Drop off at ${dropStation}.`
+            },
+            doorstep: {
+              courierName: bestCourier.courier_name || 'GIG Logistics / Fez Delivery',
+              serviceType: courierServiceType === 'pickup' ? 'Doorstep Express Courier' : 'Courier Station Drop-off',
+              courierServiceType,
+              fee: Math.round(rawFee) + WAYBILL_SAFETY_BUFFER,
+              estimatedDeliveryDays: bestCourier.delivery_eta || '2-4 business days',
+              isSameCity: false,
+              hasDoorstepPickup: courierServiceType === 'pickup',
+              dropoffStation: courierServiceType === 'dropoff' ? dropStation : undefined,
+              instructions: courierServiceType === 'pickup'
+                ? `${bestCourier.courier_name} rider will collect from your atelier address.`
+                : `Drop parcel off at ${dropStation}. Delivered directly to buyer's doorstep.`,
+              requestToken: data.data.request_token,
+              serviceCode: bestCourier.service_code,
+              courierId: String(bestCourier.courier_id)
+            },
+            parkPickup: {
+              courierName: `${primaryPark?.name || 'Interstate Bus'} Waybill`,
+              serviceType: 'Pay Driver on Collection',
+              courierServiceType: 'dropoff',
+              fee: 0,
+              estimatedDeliveryDays: '1-2 business days',
+              isSameCity: false,
+              isPayOnPickup: true,
+              hasDoorstepPickup: false,
+              dropoffStation: `Destination: ${primaryPark?.name}`,
+              instructions: `Drop at local interstate park. Hand to bus driver heading to ${destCity}. Customer collects and pays driver directly.`
+            },
+            motorParks: destinationParks
+          };
+        }
       }
     } catch (err) {
-      console.warn('[Logistics API] Shipbubble live quote fallback to Matrix:', err);
+      console.warn('[Logistics API] Shipbubble live rate call failed, using Nigerian distance matrix fallback:', err);
     }
   }
 
-  // 2. High-Accuracy Nigerian Matrix Engine (All include +₦300 Waybill Buffer)
+  // 3. High-Accuracy Nigerian Matrix Engine (All include +₦300 Waybill Buffer)
   let baseDoorstepFee = 4500;
   let deliveryEta = '2-4 business days';
   let courierName = 'GIG Logistics / Red Star Express';
@@ -258,33 +385,31 @@ export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Pr
   if (isSameCity) {
     baseDoorstepFee = 1500;
     deliveryEta = 'Same-day / 24h Express';
-    courierName = 'Local Direct Dispatch Rider';
+    courierName = 'Direct Dispatch Rider (Local)';
   } else if (isSameState) {
     baseDoorstepFee = 2200;
     deliveryEta = '1-2 business days';
-    courierName = 'Intra-State Express Courier';
+    courierName = 'Intra-State Express Courier (Fez / GIGL)';
   } else if (isSameRegion) {
-    // E.g. Lagos to Ibadan/Ogun/Osun
     baseDoorstepFee = 2800;
     deliveryEta = '1-2 business days';
-    courierName = 'GIG Logistics Regional Drop';
+    courierName = 'Regional Linehaul Drop (GIG Logistics)';
   } else if (
     (originRegion === 'SouthWest' && destRegion === 'NorthCentral') ||
     (originRegion === 'NorthCentral' && destRegion === 'SouthWest') ||
     (originRegion === 'SouthWest' && destRegion === 'SouthSouth')
   ) {
-    // E.g. Lagos to Abuja or Lagos to Port Harcourt/Benin
     baseDoorstepFee = 3800;
     deliveryEta = '2-3 business days';
-    courierName = 'GIG Logistics Interstate';
+    courierName = 'Interstate Linehaul (GIG Logistics / DHL)';
   } else {
-    // Far North / North East / Far Interstate
     baseDoorstepFee = 4800;
     deliveryEta = '3-5 business days';
-    courierName = 'DHL / Fez Interstate Linehaul';
+    courierName = 'National Express (DHL / Fez Interstate)';
   }
 
   const finalDoorstepFee = baseDoorstepFee + WAYBILL_SAFETY_BUFFER + extraWeightSurcharge;
+  const doorstepServiceType: 'pickup' | 'dropoff' = serviceability.hasDoorstepPickup ? 'pickup' : 'dropoff';
 
   return {
     vendorId: pkg.vendorId,
@@ -292,27 +417,46 @@ export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Pr
     origin: `${originCity}, ${originState}`,
     destination: `${destCity}, ${destState}`,
     isSameCity,
+    packageWeightKg: packageWeight,
+    packageDimensions: dimsText,
+    serviceability,
     doorstep: {
       courierName,
-      serviceType: isSameCity ? 'Direct Rider' : 'Doorstep Courier',
+      serviceType: isSameCity
+        ? 'Direct Dispatch Rider'
+        : doorstepServiceType === 'pickup'
+        ? 'Doorstep Express Courier'
+        : 'Courier Office Drop-off',
+      courierServiceType: doorstepServiceType,
       fee: finalDoorstepFee,
       estimatedDeliveryDays: deliveryEta,
       isSameCity,
+      hasDoorstepPickup: doorstepServiceType === 'pickup',
+      dropoffStation: doorstepServiceType === 'dropoff' ? serviceability.nearestStationRecommendation : undefined,
+      instructions: doorstepServiceType === 'pickup'
+        ? 'Courier rider will arrive at your workshop to pick up the parcel.'
+        : `Door pickup unavailable in ${originCity}. Drop off at nearest ${serviceability.nearestStationRecommendation}.`
     },
     parkPickup: {
-      courierName: 'Motor Park Bus Waybill',
+      courierName: `${primaryPark?.name || 'Motor Park Bus'} Waybill`,
       serviceType: 'Pay Driver on Collection',
+      courierServiceType: 'dropoff',
       fee: 0,
-      estimatedDeliveryDays: isSameCity ? 'N/A (Use Direct Rider)' : '1-2 business days',
+      estimatedDeliveryDays: isSameCity ? 'N/A (Use Direct Rider)' : '1-2 business days (Overnight Bus)',
       isSameCity,
       isPayOnPickup: true,
-    }
+      hasDoorstepPickup: false,
+      dropoffStation: `Destination: ${primaryPark?.name}`,
+      instructions: `Drop parcel at local interstate park. Customer picks up at ${primaryPark?.name} and pays the collection fee.`
+    },
+    motorParks: destinationParks
   };
 }
 
 export interface ShipmentBookingRequest {
   orderNumber: string;
-  vendorId: string;
+  orderId?: string;
+  vendorId?: string;
   vendorName: string;
   vendorPhone: string;
   vendorAddress: string;
@@ -324,27 +468,49 @@ export interface ShipmentBookingRequest {
   deliveryAddress: string;
   deliveryCity: string;
   deliveryState: string;
-  itemCount: number;
+  deliveryMethod?: 'doorstep' | 'park_pickup';
+  courierName?: string;
+  selectedParkTerminal?: string;
+  itemCount?: number;
   totalWeightKg?: number;
+  lengthCm?: number;
+  widthCm?: number;
+  heightCm?: number;
+  requestToken?: string;
+  serviceCode?: string;
+  courierId?: string;
+  items?: any[];
 }
 
 export interface ShipmentBookingResult {
   success: boolean;
+  error?: string;
   trackingNumber: string;
+  waybillNumber: string;
   courierName: string;
+  deliveryMethod: 'doorstep' | 'park_pickup';
+  courierServiceType: 'pickup' | 'dropoff';
   trackingUrl: string;
   status: string;
   shipmentId?: string;
+  instructions: string;
+  dropoffStation?: string;
 }
 
 /**
  * Dispatch automated courier pickup via Shipbubble (GIG Logistics, Fez, Red Star)
+ * or generate verified Motor Park Waybill code
  */
 export async function createShipbubbleShipment(req: ShipmentBookingRequest): Promise<ShipmentBookingResult> {
+  const isPark = req.deliveryMethod === 'park_pickup';
+
+  // Check if vendor's address has doorstep pickup
+  const serviceability = checkLocationServiceability(req.vendorCity, req.vendorState);
+  const courierServiceType: 'pickup' | 'dropoff' = (!isPark && serviceability.hasDoorstepPickup) ? 'pickup' : 'dropoff';
+
   const shipbubbleKey = process.env.SHIPBUBBLE_API_KEY;
-  const trackingNumber = `VY-SB-${Date.now().toString().slice(-6)}`;
-  
-  if (shipbubbleKey) {
+
+  if (shipbubbleKey && !isPark && req.requestToken && req.serviceCode && req.courierId) {
     try {
       const response = await fetch('https://api.shipbubble.com/v1/shipping/labels', {
         method: 'POST',
@@ -353,54 +519,97 @@ export async function createShipbubbleShipment(req: ShipmentBookingRequest): Pro
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          sender: {
-            name: req.vendorName,
-            phone: req.vendorPhone,
-            address: req.vendorAddress,
-            city: req.vendorCity,
-            state: req.vendorState,
-            country: 'NG'
-          },
-          receiver: {
-            name: req.customerName,
-            phone: req.customerPhone,
-            email: req.customerEmail || 'buyer@veyra.ng',
-            address: req.deliveryAddress,
-            city: req.deliveryCity,
-            state: req.deliveryState,
-            country: 'NG'
-          },
-          package: {
-            weight: req.totalWeightKg || 1,
-            description: `Ìrísí Order #${req.orderNumber}`
-          }
+          request_token: req.requestToken,
+          service_code: req.serviceCode,
+          courier_id: req.courierId
         }),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(6000),
         cache: 'no-store'
       });
 
       const data = await response.json();
       if (data.status === 'success' && data.data) {
+        const resolvedTracking = data.data.order_id || data.data.tracking_number || data.data.waybill_number || '';
+        const courierAssigned = data.data.courier?.name || req.courierName || 'Shipbubble Courier';
         return {
           success: true,
-          trackingNumber: data.data.tracking_number || data.data.waybill_number || trackingNumber,
-          courierName: data.data.courier_name || 'GIG Logistics',
-          trackingUrl: data.data.tracking_url || `https://app.shipbubble.com/track/${data.data.tracking_number || trackingNumber}`,
-          status: 'pickup_scheduled',
-          shipmentId: data.data.id || data.data.shipment_id
+          trackingNumber: resolvedTracking,
+          waybillNumber: resolvedTracking,
+          courierName: courierAssigned,
+          deliveryMethod: 'doorstep',
+          courierServiceType,
+          trackingUrl: data.data.tracking_url || (resolvedTracking ? `https://app.shipbubble.com/track/${resolvedTracking}` : ''),
+          status: courierServiceType === 'pickup' ? 'pickup_scheduled' : 'ready_for_dropoff',
+          shipmentId: data.data.order_id || resolvedTracking,
+          instructions: courierServiceType === 'pickup'
+            ? `Courier rider (${courierAssigned}) will arrive at your workshop to collect the parcel.`
+            : `Drop off parcel at nearest station. Courier will deliver to customer.`,
+          dropoffStation: serviceability.nearestStationRecommendation
         };
       }
-    } catch (err) {
-      console.warn('[Logistics API] Shipbubble label fallback:', err);
+
+      // Shipbubble returned an explicit failure (e.g., Insufficient wallet balance)
+      const errorMsg = data.message || data.error || 'Shipbubble shipment label could not be created';
+      return {
+        success: false,
+        error: errorMsg,
+        trackingNumber: '',
+        waybillNumber: '',
+        courierName: req.courierName || 'Shipbubble Courier',
+        deliveryMethod: 'doorstep',
+        courierServiceType,
+        trackingUrl: '',
+        status: 'label_pending_wallet',
+        instructions: `Label creation pending: ${errorMsg}. Dispatch will proceed once funded.`,
+        dropoffStation: serviceability.nearestStationRecommendation
+      };
+    } catch (err: any) {
+      console.warn('[Logistics API] Shipbubble label creation call failed:', err);
+      return {
+        success: false,
+        error: err.message || 'Network error connecting to Shipbubble API',
+        trackingNumber: '',
+        waybillNumber: '',
+        courierName: req.courierName || 'Shipbubble Courier',
+        deliveryMethod: 'doorstep',
+        courierServiceType,
+        trackingUrl: '',
+        status: 'booking_network_error',
+        instructions: 'Could not connect to courier gateway. Will retry automatically.',
+        dropoffStation: serviceability.nearestStationRecommendation
+      };
     }
   }
 
+  // Motor Park Waybill
+  if (isPark) {
+    const terminalName = req.selectedParkTerminal || `${req.deliveryState} Central Motor Park`;
+    return {
+      success: true,
+      trackingNumber: '',
+      waybillNumber: '',
+      courierName: `${terminalName} (Interstate Bus Waybill)`,
+      deliveryMethod: 'park_pickup',
+      courierServiceType: 'dropoff',
+      trackingUrl: `/track-order?orderNumber=${encodeURIComponent(req.orderNumber)}`,
+      status: 'pending_packaging',
+      instructions: `Package garment and drop at your local interstate bus park. Hand to driver heading to ${terminalName}. Customer pays collection fee upon arrival.`,
+      dropoffStation: terminalName
+    };
+  }
+
+  // Doorstep Courier without token or offline
   return {
-    success: true,
-    trackingNumber,
-    courierName: 'GIG Logistics / Verified Courier',
-    trackingUrl: `/track-order?orderNumber=${encodeURIComponent(req.orderNumber)}`,
-    status: 'pickup_scheduled'
+    success: false,
+    error: 'No valid courier booking token provided.',
+    trackingNumber: '',
+    waybillNumber: '',
+    courierName: req.courierName || 'Pending Courier Assignment',
+    deliveryMethod: 'doorstep',
+    courierServiceType,
+    trackingUrl: '',
+    status: 'pending_booking',
+    instructions: `${req.courierName || 'Assigned courier'} dispatch rider will arrive at your registered atelier address once label is generated.`,
+    dropoffStation: serviceability.nearestStationRecommendation
   };
 }
-

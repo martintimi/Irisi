@@ -44,6 +44,11 @@ export default function VendorPortalLayout({
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Close mobile menu when route changes
@@ -237,11 +242,16 @@ export default function VendorPortalLayout({
 
           <button
             onClick={toggleTheme}
+            suppressHydrationWarning
             className="p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
             title="Toggle theme"
             aria-label="Toggle color theme"
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {mounted ? (
+              theme === 'dark' ? <Sun className="h-4 w-4 text-amber-300" /> : <Moon className="h-4 w-4 text-zinc-400" />
+            ) : (
+              <div className="h-4 w-4" />
+            )}
           </button>
 
           <button

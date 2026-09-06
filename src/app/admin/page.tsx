@@ -11,7 +11,7 @@ import {
   Lock, KeyRound, Layers, BarChart3, Settings, ShieldAlert,
   EyeOff, Zap, ShoppingCart, Truck, CreditCard, Trash2, Download,
   SlidersHorizontal, CheckSquare, FileText, Wallet,
-  MessageCircle, Copy, Save, PhoneCall, Send
+  MessageCircle, Copy, Save, PhoneCall, Send, X
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -72,7 +72,7 @@ export default function SuperAdminPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'catalog' | 'approvals' | 'finance' | 'customers' | 'concierge'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'logistics' | 'catalog' | 'approvals' | 'finance' | 'customers' | 'concierge'>('overview');
 
   // VIP Concierge Settings State
   const [conciergeConfig, setConciergeConfig] = useState<ConciergeConfig>(getConciergeConfig());
@@ -130,6 +130,24 @@ export default function SuperAdminPage() {
   const [selectedVendorPayoutModal, setSelectedVendorPayoutModal] = useState<any | null>(null);
   const [vendorPayoutFilter, setVendorPayoutFilter] = useState<'all' | 'pending' | 'settled'>('all');
   const [vendorPayoutSearch, setVendorPayoutSearch] = useState('');
+
+  // Logistics & Shipments Management State
+  const [logisticsSearch, setLogisticsSearch] = useState('');
+  const [logisticsMethodFilter, setLogisticsMethodFilter] = useState<'all' | 'doorstep' | 'park_pickup'>('all');
+  const [logisticsStatusFilter, setLogisticsStatusFilter] = useState<'all' | 'pending' | 'ready_for_pickup' | 'picked_up' | 'delivered' | 'issue'>('all');
+  const [logisticsCourierFilter, setLogisticsCourierFilter] = useState<'all' | 'gig' | 'fez' | 'redstar' | 'dhl' | 'park'>('all');
+  const [editingShipment, setEditingShipment] = useState<any | null>(null);
+  const [editCourierName, setEditCourierName] = useState('');
+  const [editWaybillNumber, setEditWaybillNumber] = useState('');
+  const [editPickupStatus, setEditPickupStatus] = useState('pending');
+  const [editTrackingStage, setEditTrackingStage] = useState(1);
+  const [editDeliveryIssue, setEditDeliveryIssue] = useState('');
+  const [isSavingShipment, setIsSavingShipment] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Action states
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -664,6 +682,230 @@ export default function SuperAdminPage() {
   const pendingCount = vendors.filter(v => v.approvalStatus === 'pending' || !v.isVerified).length;
   const approvedCount = vendors.filter(v => v.approvalStatus === 'approved' || v.isVerified).length;
 
+  // Derived multi-vendor shipments list
+  const allShipments = useMemo(() => {
+    const list: Array<{
+      orderId: string;
+      orderNumber: string;
+      orderDate: string;
+      customerName: string;
+      customerPhone: string;
+      customerEmail: string;
+      deliveryAddress: string;
+      deliveryCity: string;
+      deliveryState: string;
+      deliveryMethod: string;
+      vendorId: string;
+      vendorName: string;
+      vendorLocation: string;
+      serviceabilityType: 'pickup' | 'dropoff';
+      items: any[];
+      courierName: string;
+      waybillNumber: string;
+      pickupStatus: string;
+      trackingStage: number;
+      status: string;
+      packageWeightKg: number;
+      packageDimensions: string;
+      dropoffStation: string;
+      shippingFee: number;
+      deliveryIssue?: string;
+    }> = [];
+
+    orders.forEach((ord) => {
+      const vPkgs = ord.vendorPackages || ord.customer_measurements?.vendorPackages || {};
+      const itemsByVendor = new Map<string, any[]>();
+      (ord.items || []).forEach((it: any) => {
+        const vId = (it.vendorId || it.vendor_id || 'vendor').toLowerCase().trim();
+        if (!itemsByVendor.has(vId)) itemsByVendor.set(vId, []);
+        itemsByVendor.get(vId)!.push(it);
+      });
+
+      if (Object.keys(vPkgs).length > 0) {
+        Object.entries(vPkgs).forEach(([vId, pkg]: [string, any]) => {
+          const matchedVendor = vendors.find(v => v.id === vId || (v.name && v.name.toLowerCase() === vId.toLowerCase()));
+          const items = itemsByVendor.get(vId) || [];
+          list.push({
+            orderId: ord.id,
+            orderNumber: ord.orderNumber,
+            orderDate: ord.date || ord.createdAt,
+            customerName: ord.customerName || 'Shopper',
+            customerPhone: ord.customerPhone || 'N/A',
+            customerEmail: ord.customerEmail || 'N/A',
+            deliveryAddress: ord.deliveryAddress || 'N/A',
+            deliveryCity: ord.deliveryCity || 'Lagos',
+            deliveryState: ord.deliveryState || '',
+            deliveryMethod: pkg.deliveryMethod || ord.deliveryMethod || 'doorstep',
+            vendorId: vId,
+            vendorName: pkg.vendorName || matchedVendor?.name || vId.toUpperCase(),
+            vendorLocation: matchedVendor?.location || 'Lagos, Nigeria',
+            serviceabilityType: pkg.serviceabilityType || (pkg.dropoffStation && pkg.deliveryMethod !== 'park_pickup' ? 'dropoff' : 'pickup'),
+            items,
+            courierName: pkg.courierName || (pkg.deliveryMethod === 'park_pickup' ? 'Motor Park Bus Waybill' : 'GIG Logistics Express'),
+            waybillNumber: pkg.waybillNumber || pkg.trackingNumber || '',
+            pickupStatus: pkg.pickupStatus || (pkg.trackingStage >= 3 ? 'picked_up' : pkg.trackingStage === 2 ? 'ready_for_pickup' : 'pending'),
+            trackingStage: pkg.trackingStage !== undefined ? Number(pkg.trackingStage) : 1,
+            status: pkg.status || ord.status || 'escrow_secured',
+            packageWeightKg: pkg.packageWeightKg || 1.1,
+            packageDimensions: pkg.packageDimensions || '35×25×6cm',
+            dropoffStation: pkg.dropoffStation || pkg.selectedParkTerminal || '',
+            shippingFee: pkg.shippingFee || ord.shippingFee || 0,
+            deliveryIssue: pkg.deliveryIssue || ord.deliveryIssue,
+          });
+        });
+      } else {
+        itemsByVendor.forEach((items, vId) => {
+          const matchedVendor = vendors.find(v => v.id === vId || (v.name && v.name.toLowerCase() === vId.toLowerCase()));
+          list.push({
+            orderId: ord.id,
+            orderNumber: ord.orderNumber,
+            orderDate: ord.date || ord.createdAt,
+            customerName: ord.customerName || 'Shopper',
+            customerPhone: ord.customerPhone || 'N/A',
+            customerEmail: ord.customerEmail || 'N/A',
+            deliveryAddress: ord.deliveryAddress || 'N/A',
+            deliveryCity: ord.deliveryCity || 'Lagos',
+            deliveryState: ord.deliveryState || '',
+            deliveryMethod: ord.deliveryMethod || 'doorstep',
+            vendorId: vId,
+            vendorName: matchedVendor?.name || vId.toUpperCase(),
+            vendorLocation: matchedVendor?.location || 'Lagos, Nigeria',
+            serviceabilityType: 'pickup',
+            items,
+            courierName: 'GIG Logistics Express',
+            waybillNumber: ord.trackingNumber || '',
+            pickupStatus: ord.trackingStage >= 3 ? 'picked_up' : ord.trackingStage === 2 ? 'ready_for_pickup' : 'pending',
+            trackingStage: ord.trackingStage !== undefined ? Number(ord.trackingStage) : 1,
+            status: ord.status || 'escrow_secured',
+            packageWeightKg: 1.1,
+            packageDimensions: '35×25×6cm',
+            dropoffStation: '',
+            shippingFee: ord.shippingFee || 0,
+            deliveryIssue: ord.deliveryIssue,
+          });
+        });
+      }
+    });
+
+    return list;
+  }, [orders, vendors]);
+
+  // Filtered shipments
+  const filteredShipments = useMemo(() => {
+    return allShipments.filter((s) => {
+      const q = logisticsSearch.toLowerCase().trim();
+      const matchesSearch = !q ||
+        s.orderNumber.toLowerCase().includes(q) ||
+        s.customerName.toLowerCase().includes(q) ||
+        s.vendorName.toLowerCase().includes(q) ||
+        s.deliveryCity.toLowerCase().includes(q) ||
+        s.waybillNumber.toLowerCase().includes(q) ||
+        s.courierName.toLowerCase().includes(q);
+
+      let matchesMethod = true;
+      if (logisticsMethodFilter !== 'all') {
+        matchesMethod = s.deliveryMethod === logisticsMethodFilter;
+      }
+
+      let matchesStatus = true;
+      if (logisticsStatusFilter === 'pending') {
+        matchesStatus = s.pickupStatus === 'pending' && s.trackingStage < 2;
+      } else if (logisticsStatusFilter === 'ready_for_pickup') {
+        matchesStatus = s.pickupStatus === 'ready_for_pickup' || s.trackingStage === 2;
+      } else if (logisticsStatusFilter === 'picked_up') {
+        matchesStatus = s.trackingStage === 3 || s.pickupStatus === 'picked_up';
+      } else if (logisticsStatusFilter === 'delivered') {
+        matchesStatus = s.trackingStage >= 4 || s.status === 'delivered';
+      } else if (logisticsStatusFilter === 'issue') {
+        matchesStatus = Boolean(s.deliveryIssue);
+      }
+
+      let matchesCourier = true;
+      if (logisticsCourierFilter === 'gig') matchesCourier = s.courierName.toLowerCase().includes('gig');
+      else if (logisticsCourierFilter === 'fez') matchesCourier = s.courierName.toLowerCase().includes('fez');
+      else if (logisticsCourierFilter === 'redstar') matchesCourier = s.courierName.toLowerCase().includes('red star');
+      else if (logisticsCourierFilter === 'dhl') matchesCourier = s.courierName.toLowerCase().includes('dhl');
+      else if (logisticsCourierFilter === 'park') matchesCourier = s.deliveryMethod === 'park_pickup' || s.courierName.toLowerCase().includes('park');
+
+      return matchesSearch && matchesMethod && matchesStatus && matchesCourier;
+    });
+  }, [allShipments, logisticsSearch, logisticsMethodFilter, logisticsStatusFilter, logisticsCourierFilter]);
+
+  // Logistics KPI counts
+  const pendingShipmentsCount = allShipments.filter(s => s.trackingStage < 3 && s.status !== 'delivered').length;
+  const doorstepShipmentsCount = allShipments.filter(s => s.deliveryMethod !== 'park_pickup').length;
+  const parkShipmentsCount = allShipments.filter(s => s.deliveryMethod === 'park_pickup').length;
+  const deliveryIssuesCount = allShipments.filter(s => Boolean(s.deliveryIssue)).length;
+  const totalShippingFeesPool = orders.reduce((sum, o) => sum + Number(o.shippingFee || 0), 0);
+
+  const handleOpenEditShipment = (shipment: any) => {
+    setEditingShipment(shipment);
+    setEditCourierName(shipment.courierName || 'GIG Logistics Express');
+    setEditWaybillNumber(shipment.waybillNumber || '');
+    setEditPickupStatus(shipment.pickupStatus || 'pending');
+    setEditTrackingStage(shipment.trackingStage !== undefined ? Number(shipment.trackingStage) : 1);
+    setEditDeliveryIssue(shipment.deliveryIssue || '');
+  };
+
+  const handleSaveShipment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingShipment) return;
+    setIsSavingShipment(true);
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: editingShipment.orderNumber,
+          vendorId: editingShipment.vendorId,
+          courierName: editCourierName,
+          waybillNumber: editWaybillNumber,
+          pickupStatus: editPickupStatus,
+          trackingStage: Number(editTrackingStage),
+          status: Number(editTrackingStage) >= 4 ? 'delivered' : Number(editTrackingStage) === 3 ? 'dispatched' : Number(editTrackingStage) === 2 ? 'packing' : 'escrow_secured',
+          deliveryIssue: editDeliveryIssue.trim() || undefined,
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionSuccessMsg(`Shipment ${editingShipment.orderNumber} for ${editingShipment.vendorName} updated successfully.`);
+        setEditingShipment(null);
+        await fetchOrdersList();
+      } else {
+        alert(data.error || 'Failed to update shipment');
+      }
+    } catch (err) {
+      console.error('Error saving shipment:', err);
+      alert('Network error updating shipment');
+    } finally {
+      setIsSavingShipment(false);
+    }
+  };
+
+  const handleQuickAdvanceShipment = async (shipment: any, nextStage: number) => {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: shipment.orderNumber,
+          vendorId: shipment.vendorId,
+          trackingStage: nextStage,
+          pickupStatus: nextStage >= 3 ? 'picked_up' : nextStage === 2 ? 'ready_for_pickup' : 'pending',
+          status: nextStage >= 4 ? 'delivered' : nextStage === 3 ? 'dispatched' : nextStage === 2 ? 'packing' : 'escrow_secured',
+        })
+      });
+      if (res.ok) {
+        setActionSuccessMsg(`Updated shipment for ${shipment.vendorName} to Stage ${nextStage}.`);
+        await fetchOrdersList();
+      }
+    } catch (e) {
+      console.error('Error advancing shipment:', e);
+    }
+  };
+
   // Navigation Items
   const navItems = [
     {
@@ -677,6 +919,13 @@ export default function SuperAdminPage() {
       icon: ShoppingCart,
       badge: orders.length > 0 ? `${orders.length}` : null,
       badgeColor: 'bg-[var(--gold-accent)] text-black font-bold'
+    },
+    {
+      id: 'logistics',
+      label: 'Shipments & Logistics',
+      icon: Truck,
+      badge: allShipments.length > 0 ? `${allShipments.length}` : null,
+      badgeColor: 'bg-emerald-500 text-black font-bold'
     },
     {
       id: 'catalog',
@@ -749,10 +998,15 @@ export default function SuperAdminPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleTheme}
+                suppressHydrationWarning
                 className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors cursor-pointer"
                 title="Toggle Theme"
               >
-                {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-zinc-300" />}
+                {mounted ? (
+                  theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-zinc-300" />
+                ) : (
+                  <div className="h-4 w-4" />
+                )}
               </button>
               <span className="px-3 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase tracking-widest font-bold backdrop-blur-md">
                 {adminEditorialSlides[currentSlide].tag}
@@ -936,10 +1190,15 @@ export default function SuperAdminPage() {
 
           <button
             onClick={toggleTheme}
+            suppressHydrationWarning
             className="p-2 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
             title="Toggle theme"
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-zinc-300" />}
+            {mounted ? (
+              theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-zinc-300" />
+            ) : (
+              <div className="h-4 w-4" />
+            )}
           </button>
 
           <button
@@ -1397,6 +1656,473 @@ export default function SuperAdminPage() {
                               title="Delete Order Record"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: SHIPMENTS & LOGISTICS DISPATCH HUB */}
+          {/* ======================================================== */}
+          {activeTab === 'logistics' && (
+            <div className="space-y-6 animate-fadeIn">
+
+              {/* Logistics Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
+                      Shipments & Logistics Control
+                    </h1>
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury font-bold uppercase">
+                      {allShipments.length} Active Shipments
+                    </span>
+                    <span className="px-3 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] text-xs font-mono-luxury font-bold uppercase">
+                      Shipbubble Live + Courier Fallback
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
+                    Manage multi-vendor door pickups, interstate motor park hubs, waybills, and delivery exceptions across all 36 states.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={fetchOrdersList}
+                    className="px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isLoadingOrders ? 'animate-spin' : ''}`} />
+                    <span>Refresh Shipments</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 5 Master Logistics KPI Metric Tiles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                
+                {/* 1. Total Shipments */}
+                <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-2">
+                  <div className="flex items-center justify-between text-[var(--text-muted)]">
+                    <span className="text-[10px] font-mono-luxury uppercase font-bold">Total Shipments</span>
+                    <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
+                  </div>
+                  <div className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--gold-accent)]">
+                    {allShipments.length}
+                  </div>
+                  <div className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
+                    {doorstepShipmentsCount} Doorstep · {parkShipmentsCount} Motor Park
+                  </div>
+                </div>
+
+                {/* 2. Pending Pickups */}
+                <div className="p-6 rounded-3xl surface-card border border-amber-500/20 bg-amber-500/5 space-y-2">
+                  <div className="flex items-center justify-between text-amber-400">
+                    <span className="text-[10px] font-mono-luxury uppercase font-bold">Pending Pickups</span>
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div className="font-editorial text-2xl sm:text-3xl font-bold text-amber-400">
+                    {pendingShipmentsCount}
+                  </div>
+                  <div className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
+                    Awaiting vendor pack or dispatch
+                  </div>
+                </div>
+
+                {/* 3. Active Couriers */}
+                <div className="p-6 rounded-3xl surface-card border border-blue-500/20 bg-blue-500/5 space-y-2">
+                  <div className="flex items-center justify-between text-blue-400">
+                    <span className="text-[10px] font-mono-luxury uppercase font-bold">Courier Network</span>
+                    <Layers className="h-4 w-4" />
+                  </div>
+                  <div className="font-editorial text-2xl sm:text-3xl font-bold text-blue-400">
+                    6 Couriers
+                  </div>
+                  <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate">
+                    GIG, Fez, Red Star, DHL, Parks
+                  </div>
+                </div>
+
+                {/* 4. Shipping Fees Escrow */}
+                <div className="p-6 rounded-3xl surface-card border border-emerald-500/20 bg-emerald-500/5 space-y-2">
+                  <div className="flex items-center justify-between text-emerald-400">
+                    <span className="text-[10px] font-mono-luxury uppercase font-bold">Shipping Fees Pool</span>
+                    <Wallet className="h-4 w-4" />
+                  </div>
+                  <div className="font-editorial text-2xl sm:text-3xl font-bold text-emerald-400">
+                    ₦{totalShippingFeesPool.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
+                    Collected via Paystack checkout
+                  </div>
+                </div>
+
+                {/* 5. Delivery Issues */}
+                <div className={`p-6 rounded-3xl surface-card border space-y-2 ${
+                  deliveryIssuesCount > 0 ? 'border-rose-500/40 bg-rose-500/5' : 'border-[var(--border-subtle)]'
+                }`}>
+                  <div className="flex items-center justify-between text-rose-400">
+                    <span className="text-[10px] font-mono-luxury uppercase font-bold">Delivery Issues</span>
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <div className="font-editorial text-2xl sm:text-3xl font-bold text-rose-400">
+                    {deliveryIssuesCount}
+                  </div>
+                  <div className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
+                    {deliveryIssuesCount > 0 ? 'Action required by admin' : 'All delivery routes clean'}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Serviceability & Routing Advisory Banner */}
+              <div className="p-4 sm:p-5 rounded-3xl surface-card border border-[var(--gold-accent)]/20 bg-[var(--gold-accent)]/[0.02] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs font-mono-luxury">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <strong className="text-[var(--text-primary)] uppercase">Atelier Serviceability Protocol:</strong>
+                  </div>
+                  <p className="text-[var(--text-secondary)] text-[11px] leading-relaxed max-w-3xl">
+                    Door pickup couriers (GIG Logistics, Fez Delivery, DHL) directly collect from vendor ateliers in Lagos, Abuja, Port Harcourt, and major state capitals. If an atelier is in a regional town without direct doorstep pickup, ÌRÍSÍ automatically routes the shipment for <strong>Station Drop-off</strong> or <strong>Motor Park Hub</strong>.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
+                    Doorstep: ₦4,500+
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold">
+                    Park Hub: ₦2,200
+                  </span>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  
+                  {/* Search */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      value={logisticsSearch}
+                      onChange={(e) => setLogisticsSearch(e.target.value)}
+                      placeholder="Search order ref, customer, vendor, waybill, or city..."
+                      className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
+                    />
+                  </div>
+
+                  {/* Courier select filter */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold shrink-0">Courier:</span>
+                    <select
+                      value={logisticsCourierFilter}
+                      onChange={(e) => setLogisticsCourierFilter(e.target.value as any)}
+                      className="px-3 py-2 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                    >
+                      <option value="all">All Couriers (6)</option>
+                      <option value="gig">GIG Logistics</option>
+                      <option value="fez">Fez Delivery</option>
+                      <option value="redstar">Red Star Express</option>
+                      <option value="dhl">DHL Express</option>
+                      <option value="park">Motor Park Bus Waybill</option>
+                    </select>
+                  </div>
+
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border-subtle)]">
+                  
+                  {/* Method Pills */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold mr-1">Method:</span>
+                    {[
+                      { id: 'all', label: 'All' },
+                      { id: 'doorstep', label: 'Doorstep Delivery' },
+                      { id: 'park_pickup', label: 'Motor Park Hub' }
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setLogisticsMethodFilter(m.id as any)}
+                        className={`px-3 py-1 rounded-full text-xs font-mono-luxury font-bold uppercase transition-all cursor-pointer ${
+                          logisticsMethodFilter === m.id
+                            ? 'bg-[var(--gold-accent)] text-black shadow-sm'
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-white'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Status Pills */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold mr-1">Status:</span>
+                    {[
+                      { id: 'all', label: 'All' },
+                      { id: 'pending', label: 'Pending' },
+                      { id: 'ready_for_pickup', label: 'Ready for Pickup' },
+                      { id: 'picked_up', label: 'In Transit' },
+                      { id: 'delivered', label: 'Delivered' },
+                      { id: 'issue', label: 'Issues' }
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        onClick={() => setLogisticsStatusFilter(st.id as any)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-mono-luxury font-bold uppercase transition-all cursor-pointer ${
+                          logisticsStatusFilter === st.id
+                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
+                            : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white'
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Shipments List */}
+              {filteredShipments.length === 0 ? (
+                <div className="p-12 rounded-3xl surface-card border border-[var(--border-subtle)] text-center space-y-3">
+                  <Truck className="h-10 w-10 text-[var(--text-muted)] mx-auto" />
+                  <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                    No Shipments Found
+                  </h3>
+                  <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-sm mx-auto">
+                    No shipments match the selected filters. Clear your search or change criteria to view order dispatches.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredShipments.map((s, sIdx) => {
+                    const isDelivered = s.trackingStage >= 4 || s.status === 'delivered';
+                    const isInTransit = s.trackingStage === 3 || s.pickupStatus === 'picked_up';
+                    const isReady = s.trackingStage === 2 || s.pickupStatus === 'ready_for_pickup';
+                    const isParkPickup = s.deliveryMethod === 'park_pickup';
+
+                    return (
+                      <div
+                        key={`${s.orderId}-${s.vendorId}-${sIdx}`}
+                        className={`p-5 sm:p-6 rounded-3xl surface-card border transition-all space-y-4 shadow-sm hover:shadow-md ${
+                          s.deliveryIssue
+                            ? 'border-rose-500/50 bg-rose-500/[0.02]'
+                            : isDelivered
+                            ? 'border-emerald-500/40 bg-emerald-500/[0.01]'
+                            : isInTransit
+                            ? 'border-[var(--gold-accent)]/50'
+                            : 'border-[var(--border-subtle)]'
+                        }`}
+                      >
+                        {/* Top Line: Order Ref & Status Badges */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-3.5">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              onClick={() => {
+                                const ordMatch = orders.find(o => o.id === s.orderId);
+                                if (ordMatch) setSelectedOrderModal(ordMatch);
+                              }}
+                              className="font-editorial text-xl font-bold text-[var(--text-primary)] hover:text-[var(--gold-accent)] transition-colors cursor-pointer"
+                            >
+                              {s.orderNumber}
+                            </button>
+
+                            {/* Delivery Method Badge */}
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold uppercase flex items-center gap-1 ${
+                              isParkPickup
+                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            }`}>
+                              <Truck className="h-3 w-3" />
+                              <span>{isParkPickup ? 'Motor Park Waybill' : 'Doorstep Courier'}</span>
+                            </span>
+
+                            {/* Serviceability Badge */}
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold uppercase ${
+                              s.serviceabilityType === 'pickup'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            }`}>
+                              {s.serviceabilityType === 'pickup' ? '● Rider Door Pickup' : '▲ Station Drop-off'}
+                            </span>
+
+                            {s.deliveryIssue && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-mono-luxury font-bold uppercase animate-pulse flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                <span>Delivery Issue</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs font-mono-luxury">
+                            <span className="text-[var(--text-muted)]">{s.orderDate}</span>
+                            <span className="font-bold text-[var(--gold-accent)]">
+                              Fee: ₦{Number(s.shippingFee).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Route Grid: Vendor Origin -> Courier Partner -> Customer Destination */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono-luxury">
+                          
+                          {/* Vendor Origin */}
+                          <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1">
+                            <span className="text-[10px] font-bold uppercase text-[var(--text-muted)] flex items-center gap-1">
+                              <Store className="h-3 w-3 text-[var(--gold-accent)]" />
+                              Vendor Atelier Origin:
+                            </span>
+                            <div className="font-bold text-[var(--text-primary)] text-sm">{s.vendorName}</div>
+                            <div className="text-[11px] text-[var(--text-secondary)]">{s.vendorLocation}</div>
+                            <div className="text-[10px] text-zinc-400 pt-1">
+                              Weight Profile: <strong>{s.packageWeightKg}kg</strong> ({s.packageDimensions})
+                            </div>
+                          </div>
+
+                          {/* Courier Partner & Waybill */}
+                          <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1">
+                            <span className="text-[10px] font-bold uppercase text-[var(--text-muted)] flex items-center gap-1">
+                              <Truck className="h-3 w-3 text-emerald-400" />
+                              Assigned Courier & Waybill:
+                            </span>
+                            <div className="font-bold text-emerald-400 text-sm">{s.courierName}</div>
+                            <div className="text-[11px] text-[var(--text-primary)] font-bold">
+                              Waybill: {s.waybillNumber || <span className="text-[var(--text-muted)] italic">Awaiting dispatch</span>}
+                            </div>
+                            {isParkPickup && s.dropoffStation && (
+                              <div className="text-[10px] text-amber-400 pt-1">
+                                Terminal: <strong>{s.dropoffStation}</strong>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Customer Destination */}
+                          <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1">
+                            <span className="text-[10px] font-bold uppercase text-[var(--text-muted)] flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-[var(--gold-accent)]" />
+                              Customer Destination:
+                            </span>
+                            <div className="font-bold text-[var(--text-primary)] text-sm">{s.customerName}</div>
+                            <div className="text-[11px] text-[var(--text-secondary)] truncate">{s.deliveryAddress}</div>
+                            <div className="text-[10px] text-[var(--gold-accent)] pt-1 font-bold">
+                              {s.deliveryCity}{s.deliveryState ? `, ${s.deliveryState}` : ''} • {s.customerPhone}
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* Garment Items Mini-Strip */}
+                        {s.items.length > 0 && (
+                          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                            <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold shrink-0">
+                              Garments ({s.items.length}):
+                            </span>
+                            {s.items.map((it, itIdx) => (
+                              <div key={itIdx} className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury shrink-0">
+                                <span className="font-bold text-[var(--text-primary)] truncate max-w-[150px]">{it.productName}</span>
+                                <span className="text-[var(--text-muted)]">Size: {it.size || 'M'}</span>
+                                <span className="text-[var(--gold-accent)] font-bold">×{it.quantity || 1}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Delivery Issue Alert Box if flagged */}
+                        {s.deliveryIssue && (
+                          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono-luxury flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 shrink-0" />
+                              <span><strong>Issue Note:</strong> {s.deliveryIssue}</span>
+                            </div>
+                            <button
+                              onClick={() => handleOpenEditShipment(s)}
+                              className="px-3 py-1 rounded-full bg-rose-500 text-black text-[10px] font-bold uppercase hover:bg-rose-400 cursor-pointer shrink-0"
+                            >
+                              Resolve Exception
+                            </button>
+                          </div>
+                        )}
+
+                        {/* 4-Stage Progress Stepper Bar */}
+                        <div className="grid grid-cols-4 gap-2 pt-2">
+                          {[
+                            { num: 1, label: 'Stage 1: Confirmed' },
+                            { num: 2, label: 'Stage 2: Atelier Packed' },
+                            { num: 3, label: 'Stage 3: In Transit' },
+                            { num: 4, label: 'Stage 4: Delivered' }
+                          ].map((st) => {
+                            const isDone = s.trackingStage >= st.num;
+                            const isCurrent = s.trackingStage === st.num;
+
+                            return (
+                              <div key={st.num} className="space-y-1">
+                                <div className={`h-1.5 w-full rounded-full transition-all ${
+                                  isDone ? 'bg-[var(--gold-accent)]' : 'bg-[var(--bg-secondary)]'
+                                }`} />
+                                <div className={`text-[10px] font-mono-luxury text-center truncate ${
+                                  isCurrent
+                                    ? 'text-[var(--gold-accent)] font-bold'
+                                    : isDone
+                                    ? 'text-[var(--text-primary)]'
+                                    : 'text-[var(--text-muted)]'
+                                }`}>
+                                  {st.label}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Actions Row */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border-subtle)]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)]">Pickup Status:</span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold uppercase ${
+                              isDelivered
+                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                                : isInTransit
+                                ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30'
+                                : isReady
+                                ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                                : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            }`}>
+                              {s.pickupStatus.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {/* Quick Advance Button */}
+                            {s.trackingStage < 4 && (
+                              <button
+                                onClick={() => handleQuickAdvanceShipment(s, s.trackingStage + 1)}
+                                className="px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury font-bold text-[var(--text-primary)] transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <ArrowRight className="h-3 w-3 text-[var(--gold-accent)]" />
+                                <span>
+                                  {s.trackingStage === 1
+                                    ? 'Advance: Packed'
+                                    : s.trackingStage === 2
+                                    ? 'Advance: In Transit'
+                                    : 'Advance: Delivered'}
+                                </span>
+                              </button>
+                            )}
+
+                            {/* Full Management Modal Button */}
+                            <button
+                              onClick={() => handleOpenEditShipment(s)}
+                              className="px-4 py-1.5 rounded-full bg-[var(--gold-accent)] text-black text-xs font-mono-luxury uppercase font-bold hover:bg-[#d8b357] transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                            >
+                              <Settings className="h-3.5 w-3.5" />
+                              <span>Manage Courier & Waybill</span>
                             </button>
                           </div>
                         </div>
@@ -2998,6 +3724,200 @@ export default function SuperAdminPage() {
                 Close Statement
               </button>
             </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 6. SHIPMENT MANAGEMENT & COURIER REASSIGNMENT MODAL */}
+      {editingShipment && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="w-full max-w-lg surface-card rounded-3xl border border-[var(--border-subtle)] p-6 sm:p-7 space-y-5 shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center font-bold">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold">
+                    Order Ref: {editingShipment.orderNumber}
+                  </div>
+                  <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                    Manage Dispatch & Waybill
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingShipment(null)}
+                className="p-1.5 rounded-full hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Shipment Summary Pill */}
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--text-muted)]">Vendor Atelier:</span>
+                <strong className="text-[var(--text-primary)]">{editingShipment.vendorName}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--text-muted)]">Destination:</span>
+                <strong className="text-[var(--text-primary)]">{editingShipment.deliveryCity}, {editingShipment.customerName}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--text-muted)]">Delivery Method:</span>
+                <span className="font-bold text-[var(--gold-accent)] uppercase">
+                  {editingShipment.deliveryMethod === 'park_pickup' ? 'Motor Park Bus Hub' : 'Doorstep Courier'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--text-muted)]">Auto Weight:</span>
+                <span>{editingShipment.packageWeightKg}kg ({editingShipment.packageDimensions})</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveShipment} className="space-y-4 text-xs font-mono-luxury">
+              
+              {/* Courier Partner Selection */}
+              <div>
+                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                  Courier Partner / Logistics Provider:
+                </label>
+                <div className="space-y-2">
+                  <select
+                    value={
+                      ['GIG Logistics Express', 'Fez Delivery', 'Red Star Express', 'DHL Express Nigeria', 'Gokada Last-Mile', 'Motor Park Bus Waybill'].includes(editCourierName)
+                        ? editCourierName
+                        : 'custom'
+                    }
+                    onChange={(e) => {
+                      if (e.target.value !== 'custom') {
+                        setEditCourierName(e.target.value);
+                      } else {
+                        setEditCourierName('');
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  >
+                    <option value="GIG Logistics Express">GIG Logistics Express (Doorstep & Drop-off)</option>
+                    <option value="Fez Delivery">Fez Delivery (Intra/Interstate)</option>
+                    <option value="Red Star Express">Red Star Express (FedEx Partner)</option>
+                    <option value="DHL Express Nigeria">DHL Express Nigeria (Priority)</option>
+                    <option value="Gokada Last-Mile">Gokada Last-Mile (Instant Dispatch)</option>
+                    <option value="Motor Park Bus Waybill">Motor Park Interstate Bus Waybill (Hub to Hub)</option>
+                    <option value="custom">Custom Logistics Partner...</option>
+                  </select>
+
+                  {(!['GIG Logistics Express', 'Fez Delivery', 'Red Star Express', 'DHL Express Nigeria', 'Gokada Last-Mile', 'Motor Park Bus Waybill'].includes(editCourierName) || editCourierName === '') && (
+                    <input
+                      type="text"
+                      placeholder="Enter courier name..."
+                      value={editCourierName}
+                      onChange={(e) => setEditCourierName(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Waybill / Tracking Number */}
+              <div>
+                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                  Waybill / Tracking Number:
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. GIG-73829104, WAYBILL-8291"
+                  value={editWaybillNumber}
+                  onChange={(e) => setEditWaybillNumber(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* Pickup Status & Tracking Stage */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                    Pickup Status:
+                  </label>
+                  <select
+                    value={editPickupStatus}
+                    onChange={(e) => setEditPickupStatus(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  >
+                    <option value="pending">Pending (Awaiting Vendor)</option>
+                    <option value="ready_for_pickup">Ready for Pickup / Drop-off</option>
+                    <option value="picked_up">Picked Up by Courier</option>
+                    <option value="delivered">Delivered to Customer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                    Tracking Stage:
+                  </label>
+                  <select
+                    value={editTrackingStage}
+                    onChange={(e) => setEditTrackingStage(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  >
+                    <option value={1}>Stage 1: Confirmed</option>
+                    <option value={2}>Stage 2: Packed at Atelier</option>
+                    <option value={3}>Stage 3: In Transit with Courier</option>
+                    <option value={4}>Stage 4: Delivered to Customer</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Delivery Issue Note */}
+              <div>
+                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold flex items-center justify-between">
+                  <span>Delivery Exception / Issue Note:</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal">Leave blank if no issues</span>
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Courier attempted delivery, customer requested Saturday drop-off..."
+                  value={editDeliveryIssue}
+                  onChange={(e) => setEditDeliveryIssue(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none"
+                />
+              </div>
+
+              {/* Modal Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingShipment(null)}
+                  className="py-3 rounded-2xl surface-card border border-[var(--border-subtle)] uppercase font-bold text-[var(--text-primary)] hover:bg-[var(--bg-surface)] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingShipment}
+                  className="py-3 rounded-2xl bg-[var(--gold-accent)] text-black uppercase font-bold hover:bg-[#d8b357] shadow-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingShipment ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-black" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 text-black" />
+                      <span>Save Shipment</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
 
           </div>
         </div>

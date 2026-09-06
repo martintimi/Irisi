@@ -132,7 +132,7 @@ export default function MobileCartView() {
                 <div className="space-y-3">
                   {items.map((item) => (
                     <div
-                      key={`${item.product.id}-${item.selectedSize}`}
+                      key={item.id}
                       className="flex items-center justify-between gap-3 p-2.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]/60"
                     >
                       <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-black/40 shrink-0 border border-[var(--border-subtle)]">
@@ -149,8 +149,20 @@ export default function MobileCartView() {
                         <h3 className="font-bold text-xs text-[var(--text-primary)] truncate">
                           {item.product.name}
                         </h3>
-                        <div className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5">
-                          Size: <strong className="text-[var(--gold-accent)]">{item.selectedSize}</strong>
+                        <div className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span>Size: <strong className="text-[var(--gold-accent)]">{item.selectedSize}</strong></span>
+                          {item.selectedColor?.name && (
+                            <>
+                              <span>·</span>
+                              <span className="flex items-center gap-1">
+                                <span
+                                  className="h-2.5 w-2.5 rounded-full border border-white/20 inline-block shrink-0"
+                                  style={{ backgroundColor: item.selectedColor.hex || '#111111' }}
+                                />
+                                <span>{item.selectedColor.name}</span>
+                              </span>
+                            </>
+                          )}
                         </div>
                         <div className="font-mono-luxury text-xs font-bold text-[var(--gold-accent)] mt-0.5">
                           ₦{Number(item.product.price || 0).toLocaleString()}
@@ -161,8 +173,8 @@ export default function MobileCartView() {
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <button
                           type="button"
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="p-1 rounded-lg text-[var(--text-muted)] hover:text-rose-400 transition-colors"
+                          onClick={() => removeFromCart(item.id)}
+                          className="p-1 rounded-lg text-[var(--text-muted)] hover:text-rose-400 transition-colors cursor-pointer"
                           title="Remove item"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -171,8 +183,8 @@ export default function MobileCartView() {
                         <div className="flex items-center rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-0.5">
                           <button
                             type="button"
-                            onClick={() => updateCartQuantity(item.product.id, item.quantity - 1)}
-                            className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-white"
+                            onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                            className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-white cursor-pointer"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
@@ -181,8 +193,8 @@ export default function MobileCartView() {
                           </span>
                           <button
                             type="button"
-                            onClick={() => updateCartQuantity(item.product.id, item.quantity + 1)}
-                            className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-white"
+                            onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                            className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-white cursor-pointer"
                           >
                             <Plus className="h-3 w-3" />
                           </button>

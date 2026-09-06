@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
@@ -46,8 +46,23 @@ export default function ProductDetailPage() {
   const [selectedColor, setSelectedColor] = useState<{ name: string; hex: string } | null>(() => {
     return cachedProduct?.colors?.[0] || { name: 'As Pictured', hex: '#111111' };
   });
+  const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState<string>(() => cachedProduct?.imageUrl || '');
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Determine next / alternate image for hover preview when no video
+  const nextImage = useMemo(() => {
+    if (!product) return null;
+    const allImages: string[] = [
+      product.imageUrl,
+      ...(Array.isArray(product.images) ? product.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean) : [])
+    ];
+    const unique = Array.from(new Set(allImages));
+    return unique.find(img => img !== (activeImage || product.imageUrl)) || null;
+  }, [product, activeImage]);
+
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [isModelTryOnOpen, setIsModelTryOnOpen] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
@@ -191,7 +206,7 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
-    addToCart(product, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
     setAddedToast(true);
     confetti({
       particleCount: 45,
@@ -204,7 +219,7 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    addToCart(product, selectedSize);
+    addToCart(product, selectedSize, selectedColor, quantity);
     router.push('/checkout');
   };
 
@@ -258,73 +273,81 @@ export default function ProductDetailPage() {
         {/* LEFT COLUMN: HD GALLERY + VENDOR DELIVERY RATES UNDER IMAGE (6 COLS) */}
         <div className="lg:col-span-6 space-y-5">
           
-          {/* Main Product Image Container */}
-          <div className="relative h-[480px] sm:h-[540px] w-full rounded-3xl overflow-hidden surface-card border border-[var(--border-subtle)] shadow-xl group">
-            {isVideoPlaying && product.videoUrl ? (
+          {/* Main Product Image Container with Hover to Play Video or Show Next Image */}
+          <div
+            onMouseEnter={() => {
+              setIsHovered(true);
+              if (hoverVideoRef.current) {
+                hoverVideoRef.current.play().catch(() => {});
+              }
+            }}
+            onMouseLeave={() => {
+              setIsHovered(false);
+              if (hoverVideoRef.current) {
+                hoverVideoRef.current.pause();
+                hoverVideoRef.current.currentTime = 0;
+              }
+            }}
+            className="relative h-[480px] sm:h-[540px] w-full rounded-3xl overflow-hidden surface-card border border-[var(--border-subtle)] shadow-xl group"
+          >
+            {/* 1. Base Active Image */}
+            <Image
+              src={activeImage || product.imageUrl}
+              alt={product.name}
+              fill
+              unoptimized
+              priority
+              className={`object-cover object-center transition-all duration-700 ${
+                isHovered && (product.videoUrl || nextImage) ? 'opacity-0 scale-105' : 'opacity-100 scale-100 group-hover:scale-105'
+              }`}
+            />
+
+            {/* 2. Hover Next/Alternate Image (when no video) */}
+            {nextImage && !product.videoUrl && (
+              <Image
+                src={nextImage}
+                alt={`${product.name} alternate view`}
+                fill
+                unoptimized
+                className={`object-cover object-center transition-opacity duration-500 pointer-events-none ${
+                  isHovered ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            )}
+
+            {/* 3. Hover Video Playback (when video is available) */}
+            {product.videoUrl && (
               <video
+                ref={hoverVideoRef}
                 src={product.videoUrl}
-                autoPlay
                 loop
                 muted
                 playsInline
-                controls
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <Image
-                src={activeImage || product.imageUrl}
-                alt={product.name}
-                fill
-                unoptimized
-                priority
-                className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none ${
+                  isHovered || isVideoPlaying ? 'opacity-100 z-10' : 'opacity-0 z-0'
+                }`}
               />
             )}
 
             {/* Vendor Badge Overlay */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+            <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
               <span className="px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md text-white text-[11px] font-mono-luxury uppercase font-bold border border-white/10 shadow-md">
                 {product.vendorName}
               </span>
             </div>
 
-            {/* Action Badges in Top Right: Try on Model, Inspect in 3D & Watch Video */}
-            <div className="absolute top-4 right-4 z-10 flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => {
-                  setOutfitItem(product);
-                  router.push('/studio');
-                }}
-                className="px-3.5 py-1.5 rounded-full bg-black/85 hover:bg-black text-[var(--gold-accent)] text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-[var(--gold-accent)] backdrop-blur-md shadow-lg transition-all active:scale-95 cursor-pointer hover:bg-[var(--gold-accent)] hover:text-black"
-              >
-                <Layers className="h-3.5 w-3.5" />
-                <span>Style in Studio</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIs3DModalOpen(true)}
-                className="px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white/90 hover:text-white text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-white/20 backdrop-blur-md shadow-lg transition-all active:scale-95 cursor-pointer hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)]"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Inspect in 3D</span>
-              </button>
-
-              {product.videoUrl && !isVideoPlaying && (
-                <button
-                  type="button"
-                  onClick={() => setIsVideoPlaying(true)}
-                  className="px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white hover:text-zinc-200 text-xs font-mono-luxury font-bold flex items-center gap-1.5 border border-white/15 backdrop-blur-md shadow-lg transition-transform active:scale-95 cursor-pointer"
-                >
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                  <span>Watch Video</span>
-                </button>
-              )}
-            </div>
+            {/* Subtle video preview indicator when product has video */}
+            {product.videoUrl && (
+              <div className="absolute top-4 right-4 z-20">
+                <span className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md text-white/90 text-[11px] font-mono-luxury font-bold border border-white/15 flex items-center gap-1.5 shadow-md">
+                  <Play className="h-3 w-3 text-[var(--gold-accent)] fill-current" />
+                  <span>{isHovered ? 'Playing Preview' : 'Hover to Play'}</span>
+                </span>
+              </div>
+            )}
 
             {/* Store Origin Location Badge on Photo */}
-            <div className="absolute bottom-4 left-4 right-4 p-3 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs font-mono-luxury text-white">
+            <div className="absolute bottom-4 left-4 right-4 p-3 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs font-mono-luxury text-white z-20">
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
                 <span>{locationLabel}</span>
@@ -612,6 +635,36 @@ export default function ProductDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Quantity Selector */}
+          <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] flex items-center justify-between shadow-xs">
+            <span className="text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)]">
+              Quantity:
+            </span>
+            <div className="flex items-center gap-3 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-2xl p-1 px-2">
+              <button
+                type="button"
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                disabled={quantity <= 1 || isOutOfStock}
+                className="h-8 w-8 rounded-xl flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-primary)] disabled:opacity-30 transition-all cursor-pointer font-bold text-base"
+                title="Decrease quantity"
+              >
+                -
+              </button>
+              <span className="text-sm font-mono-luxury font-bold text-[var(--text-primary)] min-w-[24px] text-center">
+                {quantity}
+              </span>
+              <button
+                type="button"
+                onClick={() => setQuantity(q => Math.min(currentSizeStock || 15, q + 1))}
+                disabled={quantity >= (currentSizeStock || 15) || isOutOfStock}
+                className="h-8 w-8 rounded-xl flex items-center justify-center text-[var(--text-primary)] hover:bg-[var(--bg-primary)] disabled:opacity-30 transition-all cursor-pointer font-bold text-base"
+                title="Increase quantity"
+              >
+                +
+              </button>
+            </div>
+          </div>
 
           {/* Action Buttons: Add to Bag & Buy Now */}
           <div className="space-y-3 pt-2">

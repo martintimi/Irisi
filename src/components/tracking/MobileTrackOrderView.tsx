@@ -111,8 +111,14 @@ export default function MobileTrackOrderView() {
       items: any[];
       packageStage: number;
       packageStatus: string;
+      deliveryMethod: string;
+      courierName: string;
       driverPhone: string;
       waybillNumber: string;
+      dropoffStation: string;
+      packageWeightKg: number;
+      packageDimensions: string;
+      instructions: string;
       lastUpdated: string;
       subtotal: number;
     }>();
@@ -151,8 +157,14 @@ export default function MobileTrackOrderView() {
           items: [],
           packageStage: pkgStage,
           packageStatus: pkgStatus,
+          deliveryMethod: pkgInfo?.deliveryMethod || 'doorstep',
+          courierName: pkgInfo?.courierName || (pkgInfo?.deliveryMethod === 'park_pickup' ? 'Motor Park Bus Waybill' : 'GIG Logistics Express'),
           driverPhone: pkgInfo?.driverPhone || '',
-          waybillNumber: pkgInfo?.waybillNumber || '',
+          waybillNumber: pkgInfo?.waybillNumber || pkgInfo?.trackingNumber || '',
+          dropoffStation: pkgInfo?.dropoffStation || pkgInfo?.selectedParkTerminal || '',
+          packageWeightKg: pkgInfo?.packageWeightKg || 1.1,
+          packageDimensions: pkgInfo?.packageDimensions || '35×25×6cm',
+          instructions: pkgInfo?.instructions || '',
           lastUpdated: pkgInfo?.lastUpdated || '',
           subtotal: 0,
         });
@@ -419,6 +431,34 @@ export default function MobileTrackOrderView() {
                     }`}>
                       {isDelivered ? 'Delivered' : isDispatched ? 'With Courier' : isPacking ? 'Packed' : 'Received'}
                     </span>
+                  </div>
+
+                  {/* Package Logistics Badge & Details */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono-luxury bg-[var(--bg-secondary)]/70 p-2.5 rounded-2xl border border-[var(--border-subtle)]">
+                    <span className={`px-2 py-0.5 rounded-md font-bold uppercase flex items-center gap-1 ${
+                      pkg.deliveryMethod === 'park_pickup'
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      <Truck className="h-3 w-3" />
+                      <span>{pkg.deliveryMethod === 'park_pickup' ? 'Motor Park Hub' : 'Door Delivery'}</span>
+                    </span>
+                    <span className="text-[var(--text-secondary)]">
+                      Courier: <strong className="text-[var(--gold-accent)]">{pkg.courierName}</strong>
+                    </span>
+                    {pkg.waybillNumber && (
+                      <span className="text-[var(--text-muted)]">
+                        · Waybill: <strong className="text-[var(--text-primary)]">{pkg.waybillNumber}</strong>
+                      </span>
+                    )}
+                    <span className="text-[var(--text-muted)]">
+                      · {pkg.packageWeightKg}kg ({pkg.packageDimensions})
+                    </span>
+                    {pkg.dropoffStation && pkg.deliveryMethod === 'park_pickup' && (
+                      <div className="w-full text-amber-400 pt-1 border-t border-[var(--border-subtle)]/50 mt-1">
+                        Collection Terminal: <strong>{pkg.dropoffStation}</strong> (Pay on collection)
+                      </div>
+                    )}
                   </div>
 
                   {/* 4-Step Progress Bar */}

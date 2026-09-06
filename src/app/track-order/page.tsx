@@ -113,8 +113,14 @@ export default function TrackOrderPage() {
       items: any[];
       packageStage: number;
       packageStatus: string;
+      deliveryMethod: string;
+      courierName: string;
       driverPhone: string;
       waybillNumber: string;
+      dropoffStation: string;
+      packageWeightKg: number;
+      packageDimensions: string;
+      instructions: string;
       lastUpdated: string;
       subtotal: number;
     }>();
@@ -153,8 +159,14 @@ export default function TrackOrderPage() {
           items: [],
           packageStage: pkgStage,
           packageStatus: pkgStatus,
+          deliveryMethod: pkgInfo?.deliveryMethod || 'doorstep',
+          courierName: pkgInfo?.courierName || (pkgInfo?.deliveryMethod === 'park_pickup' ? 'Motor Park Bus Waybill' : 'GIG Logistics Express'),
           driverPhone: pkgInfo?.driverPhone || '',
-          waybillNumber: pkgInfo?.waybillNumber || '',
+          waybillNumber: pkgInfo?.waybillNumber || pkgInfo?.trackingNumber || '',
+          dropoffStation: pkgInfo?.dropoffStation || pkgInfo?.selectedParkTerminal || '',
+          packageWeightKg: pkgInfo?.packageWeightKg || 1.1,
+          packageDimensions: pkgInfo?.packageDimensions || '35×25×6cm',
+          instructions: pkgInfo?.instructions || '',
           lastUpdated: pkgInfo?.lastUpdated || '',
           subtotal: 0,
         });
@@ -456,8 +468,31 @@ export default function TrackOrderPage() {
                         <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-primary)]">
                           {pkg.vendorName}
                         </h3>
-                        <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-                          {pkg.items.length} item(s) in this package · ₦{pkg.subtotal.toLocaleString()}
+                        <div className="flex items-center gap-2 flex-wrap text-xs font-mono-luxury mt-1">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase flex items-center gap-1 ${
+                            pkg.deliveryMethod === 'park_pickup'
+                              ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                              : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                          }`}>
+                            <Truck className="h-3 w-3" />
+                            <span>{pkg.deliveryMethod === 'park_pickup' ? 'Motor Park Waybill' : 'Doorstep Delivery'}</span>
+                          </span>
+                          <span className="text-[11px] text-[var(--text-secondary)]">
+                            Courier: <strong className="text-[var(--gold-accent)]">{pkg.courierName}</strong>
+                          </span>
+                          {pkg.waybillNumber && (
+                            <span className="text-[11px] text-[var(--text-muted)]">
+                              Waybill: <strong className="text-[var(--text-primary)]">{pkg.waybillNumber}</strong>
+                            </span>
+                          )}
+                        </div>
+                        {pkg.dropoffStation && pkg.deliveryMethod === 'park_pickup' && (
+                          <div className="text-[11px] font-mono-luxury text-amber-400 mt-1">
+                            Collection Hub: <strong>{pkg.dropoffStation}</strong> (Pay driver on arrival)
+                          </div>
+                        )}
+                        <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)] block mt-0.5">
+                          {pkg.items.length} item(s) in this package · ₦{pkg.subtotal.toLocaleString()} · Weight: {pkg.packageWeightKg}kg
                         </span>
                       </div>
                     </div>

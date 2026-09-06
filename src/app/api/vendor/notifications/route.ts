@@ -36,8 +36,8 @@ export async function GET(request: Request) {
         ));
 
         const vendorSubtotal = vendorItems.reduce((sum: number, it: any) => sum + (Number(it.price || 0) * (it.quantity || 1)), 0);
-        const deliveryFee = Number(o.shipping_fee || 2500);
-        const totalPayout = vendorSubtotal + deliveryFee;
+        // Vendor payout is strictly their garments escrow earnings. Delivery fees belong to couriers / transport drivers.
+        const totalPayout = vendorSubtotal;
 
         // Notification A: New Order Pending Pack
         if (stage === 1) {
