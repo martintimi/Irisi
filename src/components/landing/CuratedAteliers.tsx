@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, MapPin, Sparkles, Scissors, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, MapPin, Sparkles, ChevronLeft, ChevronRight, Store } from 'lucide-react';
 
-interface AtelierData {
+export interface AtelierData {
   id: string;
   slug: string;
   name: string;
@@ -16,91 +16,41 @@ interface AtelierData {
   tag: string;
   heroPieces: string;
   rating: string;
+  productCount: number;
 }
 
-const ateliers: AtelierData[] = [
-  {
-    id: 'sartorial-lagos',
-    slug: 'sartorial-lagos',
-    name: 'Sartorial Lagos',
-    location: 'Victoria Island, Lagos',
-    focus: 'Bespoke Senator Suits & Ceremonial Agbada',
-    desc: 'Renowned for razor-sharp geometric chest embroidery, structured shoulder lines, and fine Italian merino wool native cuts.',
-    images: [
-      '/images/products/BlackSenator.jpg',
-      '/images/products/BlueSenator.png',
-      '/images/products/GreySenator.jpg',
-      '/images/products/BlackAgbada.jpg'
-    ],
-    tag: 'Bespoke Tailoring',
-    heroPieces: 'Senator Sets · Agbada Robes · Velvet Fila',
-    rating: '4.9 ★ (156 Orders)'
-  },
-  {
-    id: 'street-souk',
-    slug: 'street-souk',
-    name: 'Street Souk Co.',
-    location: 'Lekki Phase 1, Lagos',
-    focus: 'Afro-Streetwear & 450gsm Heavyweight Fleece',
-    desc: 'Lagos youth culture engineered into oversized dropped-shoulder hoodies, boxy graphic tees, and cyber streetwear aesthetics.',
-    images: [
-      '/images/products/BlackTrapStarHoodie.jpg',
-      '/images/products/LVhoodie.jpg',
-      '/images/products/BlueAndWhiteLosAngelisHoddie.jpg',
-      '/images/products/BrownHoodie.jpg'
-    ],
-    tag: 'Ready-to-Wear Street',
-    heroPieces: 'Trapstar Hoodies · Boxy Tees · Aqua Slides',
-    rating: '4.9 ★ (210 Drops)'
-  },
-  {
-    id: 'yaba-denim',
-    slug: 'yaba-denim',
-    name: 'Yaba Denim Works',
-    location: 'Yaba, Lagos',
-    focus: 'Raw 14oz Selvedge Denim & Tactical Cargos',
-    desc: 'Durable wide-leg denim, straight-cut vintage jeans, and articulated utility trousers tailored for the Nigerian urban rhythm.',
-    images: [
-      '/images/products/BaggyJean.jpg',
-      '/images/products/MenVintageCasualJean.jpg',
-      '/images/products/GreyCargoPantsHollister.jpg',
-      '/images/products/TeryWidePant.jpg'
-    ],
-    tag: 'Ready-to-Wear Denim',
-    heroPieces: 'Wide-Leg Baggy Denim · Multi-Pocket Cargos',
-    rating: '4.8 ★ (145 Orders)'
-  },
-  {
-    id: 'kano-leather',
-    slug: 'kano-leather',
-    name: 'Kano Artisan Footwear',
-    location: 'Kano & Lagos',
-    focus: 'Handcrafted Full-Grain Calf Leather Slides & Shoes',
-    desc: 'Century-old Northern tannery heritage crafting anatomical leather slides, horsebit mules, and Goodyear welted Oxfords.',
-    images: [
-      '/images/products/UnisexSlides.jpg',
-      '/images/products/AddidasShoeUnisex.jpg',
-      '/images/products/AdiletteAquaSlides.jpg',
-      '/images/products/BlackSmartShoes.jpg'
-    ],
-    tag: 'Handmade Leathercraft',
-    heroPieces: 'Calf Leather Slides · Suede Mules · Oxfords',
-    rating: '5.0 ★ (182 Pairs)'
-  }
-];
+function AtelierSkeleton() {
+  return (
+    <div className="rounded-3xl surface-card overflow-hidden border border-[var(--border-subtle)] animate-pulse flex flex-col justify-between h-[450px]">
+      <div className="h-72 w-full bg-[var(--bg-secondary)]" />
+      <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
+        <div className="space-y-2.5">
+          <div className="h-6 w-3/4 bg-[var(--border-subtle)] rounded-md" />
+          <div className="h-3 w-full bg-[var(--border-subtle)] rounded-md" />
+          <div className="h-3 w-2/3 bg-[var(--border-subtle)] rounded-md" />
+        </div>
+        <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
+          <div className="h-3 w-16 bg-[var(--border-subtle)] rounded-md" />
+          <div className="h-3 w-20 bg-[var(--border-subtle)] rounded-md" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AtelierCardSlider({ atelier }: { atelier: AtelierData }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const hasMultipleImages = Array.isArray(atelier.images) && atelier.images.length > 1;
 
-  // Auto-slide animation every 3 seconds (pauses on user hover)
+  // Auto-slide animation every 3.5 seconds (pauses on user hover)
   useEffect(() => {
-    if (isHovered) return;
+    if (isHovered || !hasMultipleImages) return;
     const interval = setInterval(() => {
       setCurrentIdx((prev) => (prev + 1) % atelier.images.length);
-    }, 3000);
+    }, 3500);
     return () => clearInterval(interval);
-  }, [atelier.images.length, isHovered]);
+  }, [atelier.images.length, hasMultipleImages, isHovered]);
 
   const handlePrev = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -113,6 +63,8 @@ function AtelierCardSlider({ atelier }: { atelier: AtelierData }) {
     e.stopPropagation();
     setCurrentIdx((prev) => (prev + 1) % atelier.images.length);
   };
+
+  const currentImage = atelier.images[currentIdx] || atelier.images[0] || '/images/products/BlackTrapStarHoodie.jpg';
 
   return (
     <div
@@ -133,7 +85,7 @@ function AtelierCardSlider({ atelier }: { atelier: AtelierData }) {
           >
             <Image
               src={imgSrc}
-              alt={`${atelier.name} piece ${idx + 1}`}
+              alt={`${atelier.name} drop ${idx + 1}`}
               fill
               unoptimized
               className="object-cover object-center brightness-95 group-hover:brightness-100 transition-all"
@@ -154,33 +106,41 @@ function AtelierCardSlider({ atelier }: { atelier: AtelierData }) {
           <span>{atelier.location}</span>
         </div>
 
-        {/* Slide Indicator Dots */}
-        <div className="absolute bottom-3.5 right-3.5 z-20 flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-full">
-          {atelier.images.map((_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === currentIdx ? 'w-4 bg-[var(--gold-accent)]' : 'w-1.5 bg-white/40'
-              }`}
-            />
-          ))}
-        </div>
+        {/* Slide Indicator Dots (Only if multiple real product photos exist) */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-3.5 right-3.5 z-20 flex items-center gap-1.5 bg-black/70 backdrop-blur-sm px-2.5 py-1 rounded-full">
+            {atelier.images.map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === currentIdx ? 'w-4 bg-[var(--gold-accent)]' : 'w-1.5 bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Interactive Hover Arrows */}
-        <button
-          onClick={handlePrev}
-          aria-label="Previous image"
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <button
-          onClick={handleNext}
-          aria-label="Next image"
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        {hasMultipleImages && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous product image"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black cursor-pointer"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next product image"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-7 w-7 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black cursor-pointer"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </>
+        )}
       </Link>
 
       {/* Atelier Details */}
@@ -200,9 +160,9 @@ function AtelierCardSlider({ atelier }: { atelier: AtelierData }) {
 
           <div className="pt-2">
             <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase tracking-wider block">
-              Signature Pieces:
+              Signature Drops:
             </span>
-            <span className="text-xs font-mono-luxury text-[var(--text-primary)] font-bold">
+            <span className="text-xs font-mono-luxury text-[var(--text-primary)] font-bold line-clamp-1">
               {atelier.heroPieces}
             </span>
           </div>
@@ -227,6 +187,30 @@ function AtelierCardSlider({ atelier }: { atelier: AtelierData }) {
 }
 
 export default function CuratedAteliers() {
+  const [ateliers, setAteliers] = useState<AtelierData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadFeaturedAteliers() {
+      try {
+        const res = await fetch('/api/vendors/featured');
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.ateliers)) {
+          setAteliers(data.ateliers);
+        }
+      } catch (err) {
+        console.error('Failed to load featured ateliers:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadFeaturedAteliers();
+    return () => { isMounted = false; };
+  }, []);
+
   return (
     <section className="py-20 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -244,7 +228,7 @@ export default function CuratedAteliers() {
             </h2>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed">
-              Explore verified bespoke designers, streetwear creators, footwear artisans, and jewelry makers.
+              Discover verified independent Nigerian fashion ateliers, bespoke couturiers, and streetwear boutiques with live inventory.
             </p>
           </div>
 
@@ -257,12 +241,30 @@ export default function CuratedAteliers() {
           </Link>
         </div>
 
-        {/* 4 Atelier Cards Grid with Auto-Sliding Product Showcases */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {ateliers.map((atelier) => (
-            <AtelierCardSlider key={atelier.id} atelier={atelier} />
-          ))}
-        </div>
+        {/* Dynamic Atelier Cards Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((n) => (
+              <AtelierSkeleton key={n} />
+            ))}
+          </div>
+        ) : ateliers.length === 0 ? (
+          <div className="p-12 rounded-3xl surface-card border border-[var(--border-subtle)] text-center space-y-3">
+            <Store className="h-10 w-10 text-[var(--text-muted)] mx-auto opacity-50" />
+            <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+              New Atelier Collections Dropping Soon
+            </h3>
+            <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
+              Verified designer storefronts are currently in preparation. Check our shop catalog in the meantime.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {ateliers.map((atelier) => (
+              <AtelierCardSlider key={atelier.id} atelier={atelier} />
+            ))}
+          </div>
+        )}
 
       </div>
     </section>

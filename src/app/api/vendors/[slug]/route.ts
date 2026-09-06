@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { vendors as staticVendors } from '@/lib/data/vendors';
+import { products as staticProducts } from '@/lib/data/products';
 
 export async function GET(
   request: Request,
@@ -33,7 +35,73 @@ export async function GET(
     );
 
     if (!resolvedVendor) {
-      return NextResponse.json({ error: `Brand storefront for "${slug}" not found` }, { status: 404 });
+      // Check static fallback design houses (e.g. Sartorial Lagos, Street Souk Co., Yaba Denim Works, Kano Artisan Footwear)
+      const staticMatch = staticVendors.find((v: any) =>
+        v.id?.toLowerCase() === decodedSlug ||
+        (v.id?.toLowerCase() === 'lagos-streetwear' && (decodedSlug === 'street-souk' || decodedSlug === 'street-souk-co')) ||
+        v.name?.toLowerCase() === cleanBrandName ||
+        v.name?.toLowerCase().replace(/\s+/g, '-') === decodedSlug ||
+        v.id?.toLowerCase().replace(/[-_]/g, '') === decodedSlug.replace(/[-_]/g, '')
+      );
+
+      if (!staticMatch) {
+        return NextResponse.json({ error: `Brand storefront for "${slug}" not found` }, { status: 404 });
+      }
+
+      const matchedProducts = staticProducts
+        .filter((p: any) => p.vendorId === staticMatch.id || (staticMatch.id === 'lagos-streetwear' && (p.vendorId === 'street-souk' || p.vendorId === 'lagos-streetwear')))
+        .map((p: any) => ({
+          id: p.id,
+          vendorId: staticMatch.id,
+          vendorName: staticMatch.name,
+          name: p.name,
+          price: Number(p.price),
+          description: p.description || '',
+          category: p.category || 'tops',
+          genderTarget: p.genderTarget || 'unisex',
+          garmentOriginType: p.garmentOriginType || 'ready_made_boutique',
+          imageUrl: p.imageUrl || '/images/products/BlackTrapStarHoodie.jpg',
+          tags: p.tags || [],
+          colors: p.colors || [],
+          sizes: p.sizes || ['S', 'M', 'L', 'XL'],
+          sizeStock: p.sizes ? Object.fromEntries(p.sizes.map((s: string) => [s, { enabled: true, quantity: 15 }])) : { M: { enabled: true, quantity: 15 } },
+          stockQuantity: 50,
+          rating: p.rating || 4.9,
+          reviewCount: p.reviewCount || 24,
+          createdAt: new Date().toISOString()
+        }));
+
+      const vendorPayload = {
+        id: staticMatch.id,
+        name: staticMatch.name,
+        designerName: 'Lead Designer & Atelier Director',
+        vendorType: staticMatch.vendorType || 'fashion_designer',
+        origin: staticMatch.origin,
+        city: staticMatch.origin?.split(',')?.[0]?.trim() || 'Lagos',
+        state: staticMatch.origin?.split(',')?.[1]?.trim() || 'Lagos State',
+        bio: staticMatch.description || staticMatch.tagline || '',
+        socialLinks: {
+          instagram: `@${staticMatch.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          tiktok: '',
+          snapchat: '',
+          whatsapp: '2348000000000'
+        },
+        instagram: `@${staticMatch.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+        tiktok: '',
+        snapchat: '',
+        whatsapp: '2348000000000',
+        productCount: matchedProducts.length,
+        satisfactionRate: staticMatch.satisfactionRate || 99.2,
+        deliveryDays: staticMatch.deliveryDays || '1-2 business days',
+        isVerified: true
+      };
+
+      return NextResponse.json({
+        success: true,
+        vendor: vendorPayload,
+        products: matchedProducts,
+        count: matchedProducts.length
+      });
     }
 
     const vendorId = resolvedVendor?.id || decodedSlug.replace(/\s+/g, '-');

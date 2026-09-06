@@ -145,14 +145,31 @@ export default function MobileHomeView() {
   const safeFollowed = Array.isArray(followedVendors) ? followedVendors : [];
   const editorsPicks = (allProducts || []).slice(0, 3);
 
-  const featuredAteliers = [
-    { id: 'moji-wears', name: 'Moji Wears', origin: 'Streetwear & Drops', tagline: 'Heavyweight Urban Streetwear & Sets', image: '/images/products/BlackTrapStarHoodie.jpg', dispatch: '24–48h' },
-    { id: 'arike-brand', name: 'Arike Brand', origin: 'Native & Couture', tagline: 'Hand-Embroidered Royal Senator & Agbada', image: '/images/products/BlackAgbada.jpg', dispatch: 'Express' },
-    { id: 'sartorial-lagos', name: 'Sartorial Lagos', origin: 'Bespoke Tailoring', tagline: 'Bespoke Contemporary Tailoring', image: '/images/products/BlackSmartShoes.jpg', dispatch: 'Fast' },
-    { id: 'vee-collection', name: 'Vee Collection', origin: 'Jewelry & Watches', tagline: 'Fine Jewelry, Chains & Luxury Timepieces', image: '/images/products/GucciCap.jpg', dispatch: 'Express' },
-    { id: 'kano-footwear', name: 'Kano Artisan Footwear', origin: 'Handcrafted Footwear', tagline: 'Cowhide Leather Slides & Palms', image: '/images/products/UnisexSlides.jpg', dispatch: 'Fast' },
-    { id: 'yaba-denim', name: 'Yaba Denim Works', origin: 'Streetwear Denim', tagline: 'Street Denim & Tailored Cargo Fits', image: '/images/products/BaggyJean.jpg', dispatch: '24–48h' },
-  ];
+  const [liveAteliers, setLiveAteliers] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/vendors/featured')
+      .then((r) => r.json())
+      .then((d) => {
+        if (isMounted && d.success && Array.isArray(d.ateliers) && d.ateliers.length > 0) {
+          setLiveAteliers(
+            d.ateliers.map((a: any) => ({
+              id: a.id,
+              name: a.name,
+              origin: a.location,
+              tagline: a.focus,
+              image: a.images?.[0] || '/images/products/BlackTrapStarHoodie.jpg',
+              dispatch: '24–48h'
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  const featuredAteliers = liveAteliers.length > 0 ? liveAteliers : [];
 
   const departments = [
     {
@@ -434,7 +451,8 @@ export default function MobileHomeView() {
       </div>
 
       {/* ── 6. FEATURED ATELIERS (Slow continuous auto-sliding slideshow) ── */}
-      <div className="pt-10 space-y-4">
+      {featuredAteliers.length > 0 && (
+        <div className="pt-10 space-y-4">
         <FadeUp className="px-4">
           <div className="flex items-center justify-between">
             <div>
@@ -493,6 +511,7 @@ export default function MobileHomeView() {
           </motion.div>
         </div>
       </div>
+      )}
 
       {/* ── 7. EDITOR'S WEEKLY PICKS ─────────────────────────── */}
       {editorsPicks.length > 0 && (
