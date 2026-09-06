@@ -287,9 +287,21 @@ export async function POST(request: Request) {
     }
 
     // Package metadata with per-vendor delivery fee allocations
+    // Ensure order items do not contain large base64 strings to prevent DB egress bloat
+    const sanitizedItems = (body.items || []).map((it: any) => {
+      const clean = { ...it };
+      if (typeof clean.imageUrl === 'string' && clean.imageUrl.startsWith('data:')) {
+        clean.imageUrl = `/images/products/uploaded/${clean.productId || clean.id || 'default'}.jpg`;
+      }
+      if (typeof clean.image === 'string' && clean.image.startsWith('data:')) {
+        clean.image = `/images/products/uploaded/${clean.productId || clean.id || 'default'}.jpg`;
+      }
+      return clean;
+    });
+
     const measurementsData = {
       ...(body.customerMeasurements || {}),
-      items: body.items || [],
+      items: sanitizedItems,
       vendorPackages: initialVendorPackages,
       packageMethods: body.packageMethods || {},
       selectedParkTerminals: body.selectedParkTerminals || {},

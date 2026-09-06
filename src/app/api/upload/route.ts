@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 import { normalizeVideoBuffer } from '@/lib/utils/videoUtils';
+import fs from 'fs';
+import path from 'path';
 
 // Configure Cloudinary if environment variables are set
 if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
@@ -67,13 +69,23 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. Fallback: Base64 data URL if Cloudinary keys are not yet added in .env.local
-    const base64 = buffer.toString('base64');
-    const dataUrl = `data:${mimeType};base64,${base64}`;
+    // 2. Fallback: Save binary file to local disk (public/images/products/uploaded)
+    // Never return base64 strings to prevent database egress exhaustion
+    const rawExt = file.name ? path.extname(file.name).replace('.', '') : '';
+    const ext = rawExt || (isVideo ? 'mp4' : mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg');
+    const safeName = `upload-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
+    const uploadDir = path.join(process.cwd(), 'public', 'images', 'products', 'uploaded');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    fs.writeFileSync(path.join(uploadDir, safeName), buffer);
+    const finalUrl = `/images/products/uploaded/${safeName}`;
 
     return NextResponse.json({
       success: true,
-      url: dataUrl,
+      url: finalUrl,
       fileName: file.name,
       fileSize: file.size,
     });
