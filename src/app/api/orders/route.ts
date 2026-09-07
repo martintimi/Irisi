@@ -356,6 +356,56 @@ export async function POST(request: Request) {
       if (itemsError) {
         console.error('Error inserting into order_items table:', itemsError);
       }
+
+      // 3. Deduct purchased quantities from product_variants
+      try {
+        for (const item of body.items) {
+          const pId = item.productId || item.id;
+          const qty = Number(item.quantity || 1);
+          const itemSize = (item.size || item.selectedSize || 'M').trim();
+          const rawColor = typeof item.color === 'string' ? item.color : (item.color?.name || item.colorName || '');
+          const itemColor = rawColor.trim();
+
+          if (!pId) continue;
+
+          // Fetch all variants for this product
+          const { data: variants } = await supabase
+            .from('product_variants')
+            .select('*')
+            .eq('product_id', pId);
+
+          if (variants && variants.length > 0) {
+            // Match best variant: size AND color match first
+            let matched = variants.find(v => 
+              v.size?.toLowerCase() === itemSize.toLowerCase() && 
+              itemColor && v.color?.toLowerCase() === itemColor.toLowerCase()
+            );
+
+            // Fallback: match by size
+            if (!matched) {
+              matched = variants.find(v => v.size?.toLowerCase() === itemSize.toLowerCase());
+            }
+
+            // Fallback: first available variant with stock
+            if (!matched) {
+              matched = variants.find(v => Number(v.stock_quantity) > 0) || variants[0];
+            }
+
+            if (matched) {
+              const currentStock = Number(matched.stock_quantity) || 0;
+              const newStock = Math.max(0, currentStock - qty);
+              await supabase
+                .from('product_variants')
+                .update({ stock_quantity: newStock })
+                .eq('id', matched.id);
+
+              console.log(`[Inventory] Deducted ${qty} units of ${pId} (${matched.size}, ${matched.color}). Stock: ${currentStock} -> ${newStock}`);
+            }
+          }
+        }
+      } catch (stockErr) {
+        console.warn('[Inventory] Error decrementing variant stock:', stockErr);
+      }
     }
 
     // Dispatch automated background email alerts

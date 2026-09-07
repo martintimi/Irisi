@@ -11,6 +11,7 @@ interface ChangePasswordModalProps {
 }
 
 export default function ChangePasswordModal({ isOpen, onClose, userEmail }: ChangePasswordModalProps) {
+  const [emailInput, setEmailInput] = useState(userEmail || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -25,19 +26,26 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
 
   if (!isOpen) return null;
 
+  const targetEmail = (userEmail || emailInput || '').trim();
+
   // Password strength calculations
   const hasMinLength = newPassword.length >= 6;
   const hasNumber = /\d/.test(newPassword);
   const hasSpecialOrUpper = /[A-Z!@#$%^&*]/.test(newPassword);
-  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  const passwordsMatch = !confirmPassword || newPassword === confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
 
+    if (!targetEmail) {
+      setErrorMessage('Please enter your account email address.');
+      return;
+    }
+
     if (!currentPassword.trim()) {
-      setErrorMessage('Please enter your current password.');
+      setErrorMessage('Please enter your current (old) password.');
       return;
     }
 
@@ -51,12 +59,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
       return;
     }
 
-    if (!confirmPassword.trim()) {
-      setErrorMessage('Please confirm your new password in the third field.');
-      return;
-    }
-
-    if (newPassword.trim() !== confirmPassword.trim()) {
+    if (confirmPassword.trim() && confirmPassword.trim() !== newPassword.trim()) {
       setErrorMessage('New passwords do not match. Please ensure both fields match.');
       return;
     }
@@ -68,7 +71,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: userEmail || '',
+          email: targetEmail,
           currentPassword: currentPassword.trim(),
           newPassword: newPassword.trim(),
         }),
@@ -77,7 +80,7 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || 'Failed to update password. Please check your current password.');
+        setErrorMessage(data.error || 'Failed to update password. Please verify your current password.');
         setIsSubmitting(false);
         return;
       }
@@ -138,10 +141,31 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 font-mono-luxury text-xs" noValidate>
+          {/* Account Email Display or Input */}
+          {userEmail ? (
+            <div className="px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-between text-[11px]">
+              <span className="text-[var(--text-secondary)]">Account:</span>
+              <span className="text-[var(--gold-accent)] font-bold truncate max-w-[220px]">{userEmail}</span>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <label className="block text-[var(--text-secondary)] uppercase font-bold text-[10px]">
+                Account Email
+              </label>
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="yourname@gmail.com"
+                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
+              />
+            </div>
+          )}
+
           {/* Current Password */}
           <div className="space-y-1.5">
             <label className="block text-[var(--text-secondary)] uppercase font-bold text-[10px]">
-              Current Password
+              Current (Old) Password
             </label>
             <div className="relative">
               <input
@@ -200,14 +224,14 @@ export default function ChangePasswordModal({ isOpen, onClose, userEmail }: Chan
           {/* Confirm Password */}
           <div className="space-y-1.5">
             <label className="block text-[var(--text-secondary)] uppercase font-bold text-[10px]">
-              Confirm New Password
+              Confirm New Password <span className="text-[var(--text-muted)] font-normal">(Optional)</span>
             </label>
             <div className="relative">
               <input
                 type={showConfirm ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repeat new password"
+                placeholder="Repeat new password (optional)"
                 className="w-full px-3.5 py-3 pr-10 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
               />
               <button

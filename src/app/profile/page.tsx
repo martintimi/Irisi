@@ -480,7 +480,7 @@ export default function ProfilePage() {
               Your Bespoke Sizing & Measurements Profile
             </h2>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-              Used by Nigerian tailors & designers to guarantee 100% precision fit on Senator sets, Agbadas, and streetwear.
+              Used by premium boutiques, designers & artisans across Nigeria to guarantee precision sizing across streetwear, ready-to-wear, and couture.
             </p>
           </div>
 

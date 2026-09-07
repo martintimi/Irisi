@@ -84,20 +84,30 @@ export async function GET(request: Request) {
 
     const vendorMap = new Map<string, any>();
 
-    // Fetch product variants for sizing & stock
+    // Fetch product variants for sizing & stock and order_items for sold quantities
     const productIds = (products || []).map((p) => p.id);
     const variantsMap = new Map<string, any[]>();
+    const soldMap = new Map<string, number>();
+
     if (productIds.length > 0) {
-      const { data: variantsList } = await supabase
-        .from('product_variants')
-        .select('*')
-        .in('product_id', productIds);
-      if (variantsList && Array.isArray(variantsList)) {
-        variantsList.forEach((v) => {
+      const [variantsRes, orderItemsRes] = await Promise.all([
+        supabase.from('product_variants').select('*').in('product_id', productIds),
+        supabase.from('order_items').select('product_id, quantity').in('product_id', productIds),
+      ]);
+
+      if (variantsRes.data && Array.isArray(variantsRes.data)) {
+        variantsRes.data.forEach((v) => {
           if (!variantsMap.has(v.product_id)) {
             variantsMap.set(v.product_id, []);
           }
           variantsMap.get(v.product_id)!.push(v);
+        });
+      }
+
+      if (orderItemsRes.data && Array.isArray(orderItemsRes.data)) {
+        orderItemsRes.data.forEach((oi) => {
+          const prev = soldMap.get(oi.product_id) || 0;
+          soldMap.set(oi.product_id, prev + (Number(oi.quantity) || 1));
         });
       }
     }
@@ -277,27 +287,38 @@ export async function GET(request: Request) {
       }
 
       const pVariants = variantsMap.get(p.id) || [];
-      const dynamicSizeStock: Record<string, { enabled: boolean; quantity: number }> = {};
+      const dynamicSizeStock: Record<string, any> = {};
+      const variantStockMap: Record<string, number> = {};
       let dynamicTotalStock = 0;
 
       if (pVariants.length > 0) {
         pVariants.forEach((v) => {
-          dynamicSizeStock[v.size] = { enabled: true, quantity: Number(v.stock_quantity) || 0 };
-          dynamicTotalStock += Number(v.stock_quantity) || 0;
+          const qty = Number(v.stock_quantity) || 0;
+          const currentSizeQty = dynamicSizeStock[v.size]?.quantity || 0;
+          dynamicSizeStock[v.size] = { 
+            enabled: true, 
+            quantity: currentSizeQty + qty 
+          };
+          dynamicTotalStock += qty;
+
+          if (v.color && v.size) {
+            variantStockMap[`${v.color.trim()}_${v.size.trim()}`] = qty;
+          }
         });
+        dynamicSizeStock.variants = variantStockMap;
       }
 
       let resolvedSizes: string[] = ['M', 'L', 'XL'];
       if (isAccessory) {
         resolvedSizes = ['One Size'];
-      } else if (Object.keys(dynamicSizeStock).length > 0) {
-        resolvedSizes = Object.keys(dynamicSizeStock);
+      } else if (Object.keys(dynamicSizeStock).filter(k => k !== 'variants').length > 0) {
+        resolvedSizes = Object.keys(dynamicSizeStock).filter(k => k !== 'variants');
       } else if (p.category === 'footwear') {
         resolvedSizes = ['40', '41', '42', '43', '44'];
       }
 
       const finalSizeStock = isAccessory
-        ? { 'One Size': dynamicSizeStock['One Size'] || { enabled: true, quantity: 20 } }
+        ? { 'One Size': dynamicSizeStock['One Size'] || { enabled: true, quantity: 20 }, variants: variantStockMap }
         : Object.keys(dynamicSizeStock).length > 0
         ? dynamicSizeStock
         : (p.category === 'footwear'
@@ -368,7 +389,8 @@ export async function GET(request: Request) {
         colors: isAccessory ? [] : enrichedColors,
         sizes: resolvedSizes,
         sizeStock: finalSizeStock,
-        stockQuantity: dynamicTotalStock > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50),
+        stockQuantity: pVariants.length > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50),
+        unitsSold: soldMap.get(p.id) || 0,
         isCustomizable: p.is_customizable,
         vendorId: p.vendor_id,
         vendorName: vendorInfo?.brand_name || p.vendor_id?.replace(/-/g, ' ').toUpperCase() || 'Ìrísí Partner',
@@ -522,28 +544,39 @@ export async function POST(request: Request) {
         const allVariants: any[] = [];
         body.items.forEach((item: any, idx: number) => {
           const pId = rows[idx].id;
-          const defaultColor = Array.isArray(item.colors) && item.colors.length > 0
-            ? (typeof item.colors[0] === 'string' ? item.colors[0] : item.colors[0]?.name || 'Standard')
-            : 'Standard';
+          const rawColors = Array.isArray(item.colors) && item.colors.length > 0
+            ? item.colors.map((c: any) => typeof c === 'string' ? c : (c.name || c.hex || 'Standard'))
+            : ['Standard'];
+          const effectiveColors = rawColors.length > 0 ? rawColors : ['Standard'];
 
           if (item.category === 'accessories') {
             const accQty = item.sizeStock?.['One Size'] === '' ? 20 : (Number(item.sizeStock?.['One Size']?.quantity ?? item.sizeStock?.['One Size']) || 20);
-            allVariants.push({
-              product_id: pId,
-              size: 'One Size',
-              color: defaultColor,
-              stock_quantity: accQty,
+            const perColorQty = Math.max(1, Math.floor(accQty / effectiveColors.length));
+            const remainder = accQty - (perColorQty * effectiveColors.length);
+
+            effectiveColors.forEach((colorName: string, cIdx: number) => {
+              allVariants.push({
+                product_id: pId,
+                size: 'One Size',
+                color: colorName,
+                stock_quantity: perColorQty + (cIdx === 0 ? remainder : 0),
+              });
             });
           } else if (item.sizeStock && typeof item.sizeStock === 'object') {
             Object.entries(item.sizeStock).forEach(([sz, val]: [string, any]) => {
               const qty = typeof val === 'object' ? (val.quantity === '' ? 0 : Number(val.quantity) || 0) : (val === '' ? 0 : Number(val) || 0);
               const enabled = typeof val === 'object' ? val.enabled !== false : qty > 0;
               if (enabled && qty > 0) {
-                allVariants.push({
-                  product_id: pId,
-                  size: sz,
-                  color: defaultColor,
-                  stock_quantity: qty,
+                const perColorQty = Math.max(1, Math.floor(qty / effectiveColors.length));
+                const remainder = qty - (perColorQty * effectiveColors.length);
+
+                effectiveColors.forEach((colorName: string, cIdx: number) => {
+                  allVariants.push({
+                    product_id: pId,
+                    size: sz,
+                    color: colorName,
+                    stock_quantity: perColorQty + (cIdx === 0 ? remainder : 0),
+                  });
                 });
               }
             });
@@ -663,30 +696,40 @@ export async function POST(request: Request) {
     // Invalidate products cache
     apiProductsCache.clear();
 
-    // Insert size variants into product_variants
+    // Insert size & color variants into product_variants
     try {
       if (sizeStock && typeof sizeStock === 'object') {
         const variantsToInsert: any[] = [];
-        const defaultColor = colorsList[0] || 'Standard';
+        const effectiveColors = colorsList.length > 0 ? colorsList : ['Standard'];
 
         if (category === 'accessories') {
           const accQty = sizeStock['One Size'] === '' ? 20 : (Number(sizeStock['One Size']?.quantity ?? sizeStock['One Size']) || 20);
-          variantsToInsert.push({
-            product_id: productId,
-            size: 'One Size',
-            color: defaultColor,
-            stock_quantity: accQty,
+          const perColorQty = Math.max(1, Math.floor(accQty / effectiveColors.length));
+          const remainder = accQty - (perColorQty * effectiveColors.length);
+
+          effectiveColors.forEach((colorName: string, cIdx: number) => {
+            variantsToInsert.push({
+              product_id: productId,
+              size: 'One Size',
+              color: colorName,
+              stock_quantity: perColorQty + (cIdx === 0 ? remainder : 0),
+            });
           });
         } else {
           Object.entries(sizeStock).forEach(([sz, val]: [string, any]) => {
             const qty = typeof val === 'object' ? (val.quantity === '' ? 0 : Number(val.quantity) || 0) : (val === '' ? 0 : Number(val) || 0);
             const enabled = typeof val === 'object' ? val.enabled !== false : qty > 0;
             if (enabled && qty > 0) {
-              variantsToInsert.push({
-                product_id: productId,
-                size: sz,
-                color: defaultColor,
-                stock_quantity: qty,
+              const perColorQty = Math.max(1, Math.floor(qty / effectiveColors.length));
+              const remainder = qty - (perColorQty * effectiveColors.length);
+
+              effectiveColors.forEach((colorName: string, cIdx: number) => {
+                variantsToInsert.push({
+                  product_id: productId,
+                  size: sz,
+                  color: colorName,
+                  stock_quantity: perColorQty + (cIdx === 0 ? remainder : 0),
+                });
               });
             }
           });

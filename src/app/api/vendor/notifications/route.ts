@@ -91,6 +91,80 @@ export async function GET(request: Request) {
       });
     }
 
+    // 2. Fetch vendor's products & variants to generate low-stock & sold-out alerts
+    try {
+      const { data: vendorProducts } = await supabase
+        .from('products')
+        .select('id, name, image_url, vendor_id')
+        .or(`vendor_id.eq.${vendorId},vendor_id.ilike.%${vendorId}%`);
+
+      if (vendorProducts && vendorProducts.length > 0) {
+        const vProdIds = vendorProducts.map(p => p.id);
+        const { data: prodVariants } = await supabase
+          .from('product_variants')
+          .select('*')
+          .in('product_id', vProdIds);
+
+        const variantsByProd = new Map<string, any[]>();
+        (prodVariants || []).forEach(v => {
+          if (!variantsByProd.has(v.product_id)) variantsByProd.set(v.product_id, []);
+          variantsByProd.get(v.product_id)!.push(v);
+        });
+
+        vendorProducts.forEach(p => {
+          const variants = variantsByProd.get(p.id) || [];
+          if (variants.length === 0) return;
+
+          const totalStock = variants.reduce((sum, v) => sum + (Number(v.stock_quantity) || 0), 0);
+
+          if (totalStock === 0) {
+            notifications.push({
+              id: `notif-soldout-${p.id}`,
+              type: 'stock_out',
+              title: '🔴 Piece Completely Sold Out!',
+              message: `"${p.name}" has 0 units remaining across all sizes and colors. Restock soon to keep receiving orders.`,
+              productId: p.id,
+              productName: p.name,
+              imageUrl: p.image_url,
+              createdAt: new Date().toISOString(),
+              link: '/vendor-portal/publish'
+            });
+          } else if (totalStock <= 3) {
+            notifications.push({
+              id: `notif-lowstock-${p.id}`,
+              type: 'stock_low',
+              title: '⚠️ Low Stock Warning',
+              message: `Only ${totalStock} unit(s) remaining for "${p.name}". Consider adding more stock.`,
+              productId: p.id,
+              productName: p.name,
+              imageUrl: p.image_url,
+              createdAt: new Date().toISOString(),
+              link: '/vendor-portal/publish'
+            });
+          } else {
+            // Check if any individual variant (color/size) is 0
+            const soldOutVariants = variants.filter(v => Number(v.stock_quantity) === 0);
+            if (soldOutVariants.length > 0 && soldOutVariants.length < variants.length) {
+              const variantLabels = soldOutVariants.map(v => `${v.size}${v.color ? ` (${v.color})` : ''}`).slice(0, 2).join(', ');
+              notifications.push({
+                id: `notif-varout-${p.id}-${soldOutVariants[0].id}`,
+                type: 'variant_sold_out',
+                title: '⚠️ Variant Sold Out',
+                message: `Variant ${variantLabels} for "${p.name}" is sold out (0 left). Restock to satisfy customer demand.`,
+                productId: p.id,
+                productName: p.name,
+                imageUrl: p.image_url,
+                createdAt: new Date().toISOString(),
+                link: '/vendor-portal/publish'
+              });
+            }
+          }
+        });
+      }
+    } catch (invNotifErr) {
+      console.warn('Error fetching inventory notifications:', invNotifErr);
+    }
+
     // Sort newest first
     notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

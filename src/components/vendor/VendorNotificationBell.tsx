@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Package, DollarSign, Star, CheckCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import { Bell, Package, DollarSign, Star, CheckCircle, ExternalLink, RefreshCw, AlertCircle, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getActiveVendorId } from '@/lib/services/apiClient';
@@ -163,13 +163,21 @@ export default function VendorNotificationBell() {
                     }`}
                   >
                     <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs ${
-                      n.type === 'escrow_released'
+                      n.type === 'stock_out'
+                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                        : n.type === 'stock_low' || n.type === 'variant_sold_out'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                        : n.type === 'escrow_released'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         : n.type === 'review_received'
                         ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30'
                         : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                     }`}>
-                      {n.type === 'escrow_released' ? (
+                      {n.type === 'stock_out' ? (
+                        <AlertCircle className="h-4 w-4" />
+                      ) : n.type === 'stock_low' || n.type === 'variant_sold_out' ? (
+                        <AlertTriangle className="h-4 w-4" />
+                      ) : n.type === 'escrow_released' ? (
                         <DollarSign className="h-4 w-4" />
                       ) : n.type === 'review_received' ? (
                         <Star className="h-4 w-4 fill-current" />

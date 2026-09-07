@@ -58,15 +58,17 @@ export async function GET(
       parkPickupEnabled: true,
     };
 
-    const [vendorRes, variantsRes] = await Promise.all([
+    const [vendorRes, variantsRes, orderItemsRes] = await Promise.all([
       product.vendor_id
         ? supabase.from('vendors').select('id, brand_name, designer_name, location, bio, rating').eq('id', product.vendor_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from('product_variants').select('*').eq('product_id', id),
+      supabase.from('order_items').select('quantity').eq('product_id', id),
     ]);
 
     const vendor = vendorRes.data;
     const variants = variantsRes.data;
+    const unitsSold = (orderItemsRes.data || []).reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
 
     if (vendor) {
         vendorName = vendor.brand_name || vendor.designer_name || 'Verified Vendor';
@@ -232,26 +234,37 @@ export async function GET(
 
     const isAccessory = product.category === 'accessories';
 
-    const dynamicSizeStock: Record<string, { enabled: boolean; quantity: number }> = {};
+    const dynamicSizeStock: Record<string, any> = {};
+    const variantStockMap: Record<string, number> = {};
     let dynamicTotalStock = 0;
     if (variants && Array.isArray(variants) && variants.length > 0) {
       variants.forEach((v) => {
-        dynamicSizeStock[v.size] = { enabled: true, quantity: Number(v.stock_quantity) || 0 };
-        dynamicTotalStock += Number(v.stock_quantity) || 0;
+        const qty = Number(v.stock_quantity) || 0;
+        const currentSizeQty = dynamicSizeStock[v.size]?.quantity || 0;
+        dynamicSizeStock[v.size] = { 
+          enabled: true, 
+          quantity: currentSizeQty + qty 
+        };
+        dynamicTotalStock += qty;
+
+        if (v.color && v.size) {
+          variantStockMap[`${v.color.trim()}_${v.size.trim()}`] = qty;
+        }
       });
+      dynamicSizeStock.variants = variantStockMap;
     }
 
     let resolvedSizes: string[] = ['M', 'L', 'XL'];
     if (isAccessory) {
       resolvedSizes = ['One Size'];
-    } else if (Object.keys(dynamicSizeStock).length > 0) {
-      resolvedSizes = Object.keys(dynamicSizeStock);
+    } else if (Object.keys(dynamicSizeStock).filter(k => k !== 'variants').length > 0) {
+      resolvedSizes = Object.keys(dynamicSizeStock).filter(k => k !== 'variants');
     } else if (product.category === 'footwear') {
       resolvedSizes = ['40', '41', '42', '43', '44'];
     }
 
     const finalSizeStock = isAccessory
-      ? { 'One Size': dynamicSizeStock['One Size'] || { enabled: true, quantity: 20 } }
+      ? { 'One Size': dynamicSizeStock['One Size'] || { enabled: true, quantity: 20 }, variants: variantStockMap }
       : Object.keys(dynamicSizeStock).length > 0
       ? dynamicSizeStock
       : (product.category === 'footwear'
@@ -329,7 +342,8 @@ export async function GET(
       colors: isAccessory ? [] : enrichedColors,
       sizes: resolvedSizes,
       sizeStock: finalSizeStock,
-      stockQuantity: dynamicTotalStock > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50),
+      stockQuantity: (variants && variants.length > 0) ? dynamicTotalStock : (isAccessory ? 20 : 50),
+      unitsSold,
       rating: 0,
       reviewCount: 0,
       createdAt: product.created_at,

@@ -400,10 +400,14 @@ export default function MobileVendorOverview({
                     <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">
                       {piece.name}
                     </h4>
-                    <div className="flex items-center gap-2 text-[10px] font-mono-luxury text-[var(--text-secondary)] mt-0.5">
+                    <div className="flex items-center gap-1.5 text-[10px] font-mono-luxury text-[var(--text-secondary)] mt-0.5 flex-wrap">
                       <span className="text-[var(--gold-accent)] uppercase font-bold truncate">{piece.category || 'Ready-to-Wear'}</span>
                       <span>·</span>
-                      <span>{Array.isArray(piece.colors) ? `${piece.colors.length} Col` : '1 Col'}</span>
+                      <span className={piece.stockQuantity === 0 ? 'text-rose-400 font-bold' : piece.stockQuantity <= 3 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                        {piece.stockQuantity === 0 ? '0 Left' : `${piece.stockQuantity ?? 0} Left`}
+                      </span>
+                      <span>·</span>
+                      <span className="text-[var(--text-primary)] font-bold">{piece.unitsSold ?? 0} Sold</span>
                     </div>
                   </div>
                 </div>
@@ -412,9 +416,19 @@ export default function MobileVendorOverview({
                   <div className="font-editorial font-bold text-sm text-[var(--text-primary)]">
                     ₦{Number(piece.price || 0).toLocaleString()}
                   </div>
-                  <span className="text-[9px] font-mono-luxury uppercase text-emerald-400">
-                    Active
-                  </span>
+                  {piece.stockQuantity === 0 ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 text-[9px] font-mono-luxury uppercase font-bold border border-rose-500/30">
+                      🔴 Sold Out
+                    </span>
+                  ) : piece.stockQuantity <= 3 ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[9px] font-mono-luxury uppercase font-bold border border-amber-500/30 animate-pulse">
+                      ⚠️ Only {piece.stockQuantity} Left
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-mono-luxury uppercase text-emerald-400 font-bold">
+                      Active · {piece.stockQuantity} in Stock
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
