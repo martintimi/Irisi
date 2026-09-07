@@ -391,7 +391,7 @@ export default function MobileVendorOverview({
           </div>
         ) : (
           <div className="space-y-2.5">
-            {dbProducts.map((piece, i) => (
+            {dbProducts.slice(0, 4).map((piece, i) => (
               <div
                 key={piece.id || i}
                 onClick={() => onEditProduct?.(piece)}

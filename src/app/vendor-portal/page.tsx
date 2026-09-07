@@ -473,7 +473,7 @@ export default function VendorOverviewPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {dbProducts.map((piece, i) => {
+                {dbProducts.slice(0, 4).map((piece, i) => {
                   const qty = typeof piece.stockQuantity === 'number'
                     ? piece.stockQuantity
                     : typeof piece.stock_quantity === 'number'
