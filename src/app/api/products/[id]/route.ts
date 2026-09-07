@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
+import { invalidateProductsCache } from '../route';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -342,6 +343,12 @@ export async function GET(
       colors: isAccessory ? [] : enrichedColors,
       sizes: resolvedSizes,
       sizeStock: finalSizeStock,
+      variants: (variants || []).map((v: any) => ({
+        id: v.id,
+        size: v.size,
+        color: v.color,
+        stock_quantity: v.stock_quantity,
+      })),
       stockQuantity: (variants && variants.length > 0) ? dynamicTotalStock : (isAccessory ? 20 : 50),
       unitsSold,
       rating: 0,
@@ -365,6 +372,150 @@ export async function GET(
         },
       }
     );
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const supabase = await createClient();
+
+    // 1. Prepare fields to update on products table
+    const updateData: Record<string, any> = {};
+    if (body.name !== undefined) updateData.name = body.name.trim();
+    if (body.price !== undefined) updateData.price = Number(body.price);
+    if (body.category !== undefined) updateData.category = body.category;
+    if (body.genderTarget !== undefined) updateData.gender_target = body.genderTarget;
+    if (body.description !== undefined) updateData.description = body.description.trim();
+    if (body.is_published !== undefined) updateData.is_published = Boolean(body.is_published);
+    if (body.tags !== undefined && Array.isArray(body.tags)) updateData.tags = body.tags;
+
+    if (Object.keys(updateData).length > 0) {
+      const { error: prodUpdateErr } = await supabase
+        .from('products')
+        .update(updateData)
+        .eq('id', id);
+
+      if (prodUpdateErr) {
+        return NextResponse.json({ error: prodUpdateErr.message }, { status: 500 });
+      }
+    }
+
+    // 2. Update stock quantities in product_variants
+    if (Array.isArray(body.variants)) {
+      for (const v of body.variants) {
+        if (v.id) {
+          await supabase
+            .from('product_variants')
+            .update({ stock_quantity: Math.max(0, Number(v.stock_quantity) || 0) })
+            .eq('id', v.id);
+        } else if (v.size) {
+          const { data: existing } = await supabase
+            .from('product_variants')
+            .select('id')
+            .eq('product_id', id)
+            .eq('size', v.size)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase
+              .from('product_variants')
+              .update({ stock_quantity: Math.max(0, Number(v.stock_quantity) || 0) })
+              .eq('id', existing.id);
+          } else {
+            await supabase
+              .from('product_variants')
+              .insert({
+                product_id: id,
+                size: v.size,
+                color: v.color || 'Standard',
+                stock_quantity: Math.max(0, Number(v.stock_quantity) || 0),
+              });
+          }
+        }
+      }
+    } else if (body.sizeStock && typeof body.sizeStock === 'object') {
+      for (const [sz, val] of Object.entries(body.sizeStock)) {
+        if (sz === 'variants') continue;
+        const qty = typeof val === 'object' ? (Number((val as any)?.quantity) || 0) : (Number(val) || 0);
+
+        const { data: existingVariants } = await supabase
+          .from('product_variants')
+          .select('id, stock_quantity')
+          .eq('product_id', id)
+          .eq('size', sz);
+
+        if (existingVariants && existingVariants.length > 0) {
+          for (const ev of existingVariants) {
+            await supabase
+              .from('product_variants')
+              .update({ stock_quantity: Math.max(0, qty) })
+              .eq('id', ev.id);
+          }
+        } else {
+          await supabase
+            .from('product_variants')
+            .insert({
+              product_id: id,
+              size: sz,
+              color: 'Standard',
+              stock_quantity: Math.max(0, qty),
+            });
+        }
+      }
+    }
+
+    productDetailCache.delete(id);
+    invalidateProductsCache();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product and inventory updated successfully',
+    });
+  } catch (error: any) {
+    console.error('Error updating product:', error);
+    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+
+    // Delete variants first
+    await supabase.from('product_variants').delete().eq('product_id', id);
+    // Delete product
+    const { error } = await supabase.from('products').delete().eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    productDetailCache.delete(id);
+    invalidateProductsCache();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product removed from catalog',
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
   }

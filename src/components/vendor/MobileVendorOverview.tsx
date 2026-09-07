@@ -26,6 +26,7 @@ interface MobileVendorOverviewProps {
   activeEscrowBalance?: number;
   settledPayouts?: number;
   recentOrders?: any[];
+  onEditProduct?: (product: any) => void;
 }
 
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
@@ -38,7 +39,8 @@ export default function MobileVendorOverview({
   pendingOrdersCount = 0,
   activeEscrowBalance = 0,
   settledPayouts = 0,
-  recentOrders = []
+  recentOrders = [],
+  onEditProduct
 }: MobileVendorOverviewProps) {
   const [copied, setCopied] = useState(false);
   const isBoutique = isBoutiqueVendor(vendorProfile);
@@ -354,12 +356,20 @@ export default function MobileVendorOverview({
           <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
             Live Product Drops ({dbProducts.length})
           </h3>
-          <Link
-            href="/vendor-portal/publish"
-            className="text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline"
-          >
-            + Add Drop
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/vendor-portal/products"
+              className="text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline"
+            >
+              Manage ({dbProducts.length})
+            </Link>
+            <Link
+              href="/vendor-portal/publish"
+              className="text-[11px] font-mono-luxury uppercase text-[var(--text-primary)] font-bold hover:underline"
+            >
+              + Add
+            </Link>
+          </div>
         </div>
 
         {dbProducts.length === 0 ? (
@@ -384,7 +394,8 @@ export default function MobileVendorOverview({
             {dbProducts.map((piece, i) => (
               <div
                 key={piece.id || i}
-                className="p-3 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between gap-3 hover:border-[var(--gold-accent)]/50 transition-all shadow-sm"
+                onClick={() => onEditProduct?.(piece)}
+                className="p-3 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between gap-3 hover:border-[var(--gold-accent)]/50 transition-all shadow-sm cursor-pointer active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative h-13 w-12 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
@@ -429,9 +440,22 @@ export default function MobileVendorOverview({
                       Active · {piece.stockQuantity} in Stock
                     </span>
                   )}
+                  <div className="text-[9px] text-[var(--gold-accent)] font-mono-luxury mt-0.5 font-bold">
+                    Tap to Edit ✏️
+                  </div>
                 </div>
               </div>
             ))}
+
+            <div className="pt-2">
+              <Link
+                href="/vendor-portal/products"
+                className="w-full py-3 px-4 rounded-2xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-center text-xs font-mono-luxury font-bold text-[var(--gold-accent)] uppercase flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <span>Open Full Catalog & Stock Manager ({dbProducts.length})</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           </div>
         )}
       </div>

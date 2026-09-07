@@ -30,6 +30,10 @@ interface CacheEntry {
 const apiProductsCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60000; // 60 seconds (cleared automatically on new uploads)
 
+export function invalidateProductsCache() {
+  apiProductsCache.clear();
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -58,7 +62,14 @@ export async function GET(request: Request) {
     let query = supabase.from('products').select('*').order('created_at', { ascending: false }).limit(limit);
 
     if (vendorId && vendorId !== 'all') {
-      query = query.or(`vendor_id.eq.${vendorId},vendor_id.ilike.%${vendorId}%`);
+      let resolvedVId = vendorId.trim();
+      if (resolvedVId.includes('@')) {
+        const { data: vRec } = await supabase.from('vendors').select('id').eq('email', resolvedVId.toLowerCase()).maybeSingle();
+        if (vRec?.id) {
+          resolvedVId = vRec.id;
+        }
+      }
+      query = query.or(`vendor_id.eq.${resolvedVId},vendor_id.ilike.%${resolvedVId}%`);
     }
     if (category && category !== 'all') {
       query = query.eq('category', category);
@@ -393,7 +404,9 @@ export async function GET(request: Request) {
         unitsSold: soldMap.get(p.id) || 0,
         isCustomizable: p.is_customizable,
         vendorId: p.vendor_id,
+        vendor_id: p.vendor_id,
         vendorName: vendorInfo?.brand_name || p.vendor_id?.replace(/-/g, ' ').toUpperCase() || 'Ìrísí Partner',
+        vendor_name: vendorInfo?.brand_name || p.vendor_id?.replace(/-/g, ' ').toUpperCase() || 'Ìrísí Partner',
         vendorLocation: vendorInfo?.location || 'Lagos, Nigeria',
         vendorCity: vendorInfo?.city || 'Lagos',
         vendorState: vendorInfo?.state || 'Lagos',

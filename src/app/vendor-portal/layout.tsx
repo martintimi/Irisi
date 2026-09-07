@@ -109,6 +109,13 @@ export default function VendorPortalLayout({
       active: pathname === '/vendor-portal'
     },
     {
+      id: 'tour-nav-products',
+      label: 'Catalog & Stock',
+      href: '/vendor-portal/products',
+      icon: ShoppingBag,
+      active: pathname.startsWith('/vendor-portal/products')
+    },
+    {
       id: 'tour-nav-publish',
       label: specialtyInfo.publishLabel,
       href: '/vendor-portal/publish',

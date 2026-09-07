@@ -9,10 +9,11 @@ import {
   TrendingUp, PackageCheck, DollarSign, Sparkles,
   ArrowUpRight, Plus, ExternalLink, ShieldCheck, CheckCircle2,
   ShoppingBag, Scissors, Layers, Loader2, Clock, AlertTriangle, AlertCircle, ArrowRight, Store, RefreshCw, Star, Lock,
-  Gem, Footprints, Shirt, Crown
+  Gem, Footprints, Shirt, Crown, Edit3
 } from 'lucide-react';
 import MobileVendorOverview from '@/components/vendor/MobileVendorOverview';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
+import EditProductModal from '@/components/vendor/EditProductModal';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
 
 export default function VendorOverviewPage() {
@@ -26,6 +27,10 @@ export default function VendorOverviewPage() {
   const [reviewsData, setReviewsData] = useState<{ averageRating: number; count: number }>({ averageRating: 5.0, count: 0 });
   const [loadingData, setLoadingData] = useState(true);
 
+  // Edit Product Modal State
+  const [selectedProductForEdit, setSelectedProductForEdit] = useState<any | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   // Live Profile Verification Status
   const [profileStatus, setProfileStatus] = useState<{
     isProfileSaved: boolean;
@@ -37,57 +42,81 @@ export default function VendorOverviewPage() {
   const loadVendorData = useCallback(async () => {
     try {
       setLoadingData(true);
-      const currentVendorId = vendorProfile.email || getActiveVendorId();
+      const activeVid = getActiveVendorId();
+      let currentVendorId = activeVid || vendorProfile.email || '';
       const currentBrandName = (vendorProfile.brandName || '').toLowerCase().trim();
 
-      // Parallel fetch from all real endpoints
-      const [resProf, resProd, resOrders, resReviews] = await Promise.all([
+      // Parallel fetch vendor profile and orders
+      const [resProf, resOrders] = await Promise.all([
         vendorFetch('/api/vendor/profile'),
-        vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId)}`),
-        vendorFetch('/api/orders'),
-        fetch(`/api/reviews?vendorId=${encodeURIComponent(currentVendorId)}`, { headers: { 'Cache-Control': 'no-cache' } })
+        vendorFetch('/api/orders')
       ]);
 
       // 1. Process vendor profile
-      const profData = await resProf.json();
-      if (resProf.ok && profData.success && profData.vendor) {
-        const v = profData.vendor;
-        const verified = !!v.is_verified || !!v.isVerified;
-        setProfileStatus({
-          isProfileSaved: !!v.isProfileSaved,
-          isVerified: verified,
-          approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
-          rejectionReason: v.rejectionReason || ''
-        });
+      let profVendor: any = null;
+      if (resProf.ok) {
+        const profData = await resProf.json();
+        if (profData.success && profData.vendor) {
+          profVendor = profData.vendor;
+          currentVendorId = profVendor.id || currentVendorId;
+          if (typeof window !== 'undefined' && profVendor.id) {
+            localStorage.setItem('irisi_vendor_id', profVendor.id);
+            localStorage.setItem('veyra_vendor_id', profVendor.id);
+          }
 
-        const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
-        setVendorProfile({
-          brandName: v.brandName || v.brand_name || vendorProfile.brandName || 'My Brand',
-          designerName: v.designerName || v.designer_name || v.contact_person || vendorProfile.designerName || 'Manager',
-          contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || vendorProfile.contactPerson,
-          email: v.email || vendorProfile.email,
-          phone: v.phone || vendorProfile.phone,
-          location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : vendorProfile.location) || '',
-          vendorType: normalizedType,
-          bankName: v.bankName || v.bank_name || vendorProfile.bankName,
-          accountNumber: v.accountNumber || v.account_number || vendorProfile.accountNumber,
-          accountName: v.accountName || v.account_name || vendorProfile.accountName,
-          bio: v.bio || vendorProfile.bio
-        });
+          const v = profVendor;
+          const verified = !!v.is_verified || !!v.isVerified;
+          setProfileStatus({
+            isProfileSaved: !!v.isProfileSaved,
+            isVerified: verified,
+            approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
+            rejectionReason: v.rejectionReason || ''
+          });
+
+          const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
+          setVendorProfile({
+            brandName: v.brandName || v.brand_name || vendorProfile.brandName || 'My Brand',
+            designerName: v.designerName || v.designer_name || v.contact_person || vendorProfile.designerName || 'Manager',
+            contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || vendorProfile.contactPerson,
+            email: v.email || vendorProfile.email,
+            phone: v.phone || vendorProfile.phone,
+            location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : vendorProfile.location) || '',
+            vendorType: normalizedType,
+            bankName: v.bankName || v.bank_name || vendorProfile.bankName,
+            accountNumber: v.accountNumber || v.account_number || vendorProfile.accountNumber,
+            accountName: v.accountName || v.account_name || vendorProfile.accountName,
+            bio: v.bio || vendorProfile.bio
+          });
+        }
       }
 
-      // 2. Process products
+      // 2. Fetch products and reviews using resolved vendor ID
+      const [resProd, resReviews] = await Promise.all([
+        vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId || 'all')}`),
+        fetch(`/api/reviews?vendorId=${encodeURIComponent(currentVendorId || 'all')}`, { headers: { 'Cache-Control': 'no-cache' } })
+      ]);
+
+      // Process products
       const prodData = await resProd.json();
       if (prodData.success && Array.isArray(prodData.products)) {
-        const strictlyMyProducts = prodData.products.filter((p: any) => {
-          const pVendorId = (p.vendor_id || '').toLowerCase().trim();
-          const pVendorName = (p.vendor_name || '').toLowerCase().trim();
-          return (
-            pVendorId === currentVendorId.toLowerCase() ||
-            (currentBrandName && pVendorName.includes(currentBrandName)) ||
-            (currentBrandName && currentBrandName.includes(pVendorName))
-          );
-        });
+        const strictlyMyProducts = currentVendorId && currentVendorId !== 'all'
+          ? prodData.products.filter((p: any) => {
+              const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
+              const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
+              const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || currentBrandName || '').toLowerCase().trim();
+              const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
+              const targetVid = currentVendorId.toLowerCase().trim();
+
+              return (
+                pVid === targetVid ||
+                pVid.includes(targetVid) ||
+                targetVid.includes(pVid) ||
+                (vEmail && pVid === vEmail) ||
+                (bName && (pVName.includes(bName) || bName.includes(pVName)))
+              );
+            })
+          : prodData.products;
+
         setDbProducts(strictlyMyProducts);
       } else {
         setDbProducts([]);
@@ -144,15 +173,22 @@ export default function VendorOverviewPage() {
   }, 0);
 
   const totalLiveInventory = dbProducts.reduce((acc, p) => {
-    if (p.size_stock && typeof p.size_stock === 'object') {
-      const sum = Object.values(p.size_stock).reduce((s: number, item: any) => s + (Number(item?.quantity) || 0), 0);
+    if (typeof p.stockQuantity === 'number') {
+      return acc + p.stockQuantity;
+    }
+    if (typeof p.stock_quantity === 'number') {
+      return acc + p.stock_quantity;
+    }
+    const stockObj = p.sizeStock || p.size_stock;
+    if (stockObj && typeof stockObj === 'object') {
+      const sum = Object.entries(stockObj).reduce((s: number, [k, item]: [string, any]) => {
+        if (k === 'variants') return s;
+        const q = typeof item === 'object' ? Number(item?.quantity) : Number(item);
+        return s + (isNaN(q) ? 0 : q);
+      }, 0);
       return acc + sum;
     }
-    if (p.sizes && typeof p.sizes === 'object' && !Array.isArray(p.sizes)) {
-      const sum = Object.values(p.sizes).reduce((s: number, item: any) => s + (Number(item?.quantity) || 0), 0);
-      return acc + sum;
-    }
-    return acc + (Number(p.stock_quantity || p.stockQuantity) || 0);
+    return acc;
   }, 0);
 
   if (loadingData) {
@@ -172,6 +208,10 @@ export default function VendorOverviewPage() {
           activeEscrowBalance={totalEscrowLocked}
           settledPayouts={totalSettled}
           recentOrders={orders}
+          onEditProduct={(piece) => {
+            setSelectedProductForEdit(piece);
+            setIsEditModalOpen(true);
+          }}
         />
       </div>
 
@@ -389,15 +429,29 @@ export default function VendorOverviewPage() {
           {/* Left Column: Live Pieces */}
           <div className="lg:col-span-7 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-                {isBoutique ? 'Live Boutique Catalog & Drops' : 'Active Atelier Garments'}
-              </h2>
-              <Link
-                href="/vendor-portal/publish"
-                className="text-xs font-mono-luxury text-[var(--gold-accent)] uppercase tracking-wider hover:underline"
-              >
-                + Add Drop
-              </Link>
+              <div>
+                <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+                  {isBoutique ? 'Live Boutique Catalog & Drops' : 'Active Atelier Garments'}
+                </h2>
+                <span className="text-xs font-mono-luxury text-[var(--text-secondary)]">
+                  {dbProducts.length} live piece{dbProducts.length === 1 ? '' : 's'} · {totalLiveInventory.toLocaleString()} total units in stock
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/vendor-portal/products"
+                  className="px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury text-[var(--gold-accent)] uppercase font-bold tracking-wider hover:bg-[var(--gold-subtle)] transition-all flex items-center gap-1.5"
+                >
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  <span>Manage Catalog ({dbProducts.length})</span>
+                </Link>
+                <Link
+                  href="/vendor-portal/publish"
+                  className="text-xs font-mono-luxury text-[var(--text-primary)] uppercase tracking-wider hover:underline"
+                >
+                  + Add Drop
+                </Link>
+              </div>
             </div>
 
             {dbProducts.length === 0 ? (
@@ -419,43 +473,81 @@ export default function VendorOverviewPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {dbProducts.map((piece, i) => (
-                  <div
-                    key={piece.id || i}
-                    className="p-4 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between gap-4 hover:border-[var(--gold-accent)] transition-all group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="relative h-16 w-14 rounded-xl overflow-hidden bg-black shrink-0">
-                        <Image
-                          src={piece.imageUrl || piece.image_url || '/images/products/BlackTrapStarHoodie.jpg'}
-                          alt={piece.name}
-                          fill
-                          unoptimized
-                          className="object-cover group-hover:scale-105 transition-transform"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="font-editorial font-bold text-[var(--text-primary)] text-sm sm:text-base">
-                          {piece.name}
-                        </h3>
-                        <div className="flex items-center gap-3 text-xs font-mono-luxury text-[var(--text-secondary)]">
-                          <span className="text-[var(--gold-accent)] uppercase font-bold">{piece.category || 'Ready-to-Wear'}</span>
-                          <span>•</span>
-                          <span>{Array.isArray(piece.colors) ? `${piece.colors.length} Colors` : '1 Colorway'}</span>
+                {dbProducts.map((piece, i) => {
+                  const qty = typeof piece.stockQuantity === 'number'
+                    ? piece.stockQuantity
+                    : typeof piece.stock_quantity === 'number'
+                    ? piece.stock_quantity
+                    : 0;
+
+                  return (
+                    <div
+                      key={piece.id || i}
+                      className="p-4 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between gap-4 hover:border-[var(--gold-accent)] transition-all group"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="relative h-16 w-14 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
+                          <Image
+                            src={piece.imageUrl || piece.image_url || '/images/products/BlackTrapStarHoodie.jpg'}
+                            alt={piece.name}
+                            fill
+                            unoptimized
+                            className="object-cover group-hover:scale-105 transition-transform"
+                          />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <h3 className="font-editorial font-bold text-[var(--text-primary)] text-sm sm:text-base truncate">
+                            {piece.name}
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--text-secondary)] flex-wrap">
+                            <span className="text-[var(--gold-accent)] uppercase font-bold">{piece.category || 'Ready-to-Wear'}</span>
+                            <span>•</span>
+                            <span className={qty === 0 ? 'text-rose-400 font-bold' : qty <= 3 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
+                              {qty === 0 ? '🔴 Sold Out' : qty <= 3 ? `⚠️ Only ${qty} Left` : `🟢 ${qty} in Stock`}
+                            </span>
+                            <span>•</span>
+                            <span>{piece.unitsSold ?? 0} Sold</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="text-right">
-                      <div className="font-editorial font-bold text-sm text-[var(--text-primary)]">
-                        ₦{Number(piece.price || 0).toLocaleString()}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <div className="font-editorial font-bold text-sm text-[var(--text-primary)]">
+                            ₦{Number(piece.price || 0).toLocaleString()}
+                          </div>
+                          <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block">
+                            {piece.garment_origin_type === 'bespoke_atelier' ? 'Bespoke' : 'Ready-to-Wear'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedProductForEdit(piece);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="px-3.5 py-2 rounded-xl bg-[var(--bg-secondary)] hover:bg-[var(--surface-hover)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury uppercase font-bold text-[var(--gold-accent)] flex items-center gap-1.5 transition-colors cursor-pointer"
+                          title="Edit piece pricing, description, and stock"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          <span>Edit Stock</span>
+                        </button>
                       </div>
-                      <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)]">
-                        {piece.garment_origin_type === 'bespoke_atelier' ? 'Bespoke' : 'Ready-to-Wear'}
-                      </span>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+
+                <div className="pt-2">
+                  <Link
+                    href="/vendor-portal/products"
+                    className="w-full py-3.5 px-4 rounded-2xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-center text-xs font-mono-luxury font-bold text-[var(--gold-accent)] uppercase flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>Open Full Catalog & Stock Manager ({dbProducts.length} Pieces)</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -551,6 +643,24 @@ export default function VendorOverviewPage() {
         </div>
 
       </div>
+
+      {/* Interactive Edit Product & Stock Modal */}
+      <EditProductModal
+        product={selectedProductForEdit}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedProductForEdit(null);
+        }}
+        onProductUpdated={(updated) => {
+          setDbProducts((prev) =>
+            prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+          );
+        }}
+        onProductDeleted={(delId) => {
+          setDbProducts((prev) => prev.filter((p) => p.id !== delId));
+        }}
+      />
     </>
   );
 }
