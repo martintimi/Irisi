@@ -88,6 +88,7 @@ export default function MobileCheckoutView() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaystackSimModal, setShowPaystackSimModal] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<any>(null);
+  const isTestMode = (process.env.NEXT_PUBLIC_PAYSTACK_KEY || '').startsWith('pk_test_') || !process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
   // Group items by vendor
   const groupedItems = useMemo(() => {
@@ -890,19 +891,21 @@ export default function MobileCheckoutView() {
                 ) : (
                   <>
                     <Check className="h-4 w-4 stroke-[3] text-black" />
-                    <span>Pay ₦{grandTotal.toLocaleString()} {paymentMethod === 'paystack' ? '(Paystack Test)' : ''}</span>
+                    <span>Pay ₦{grandTotal.toLocaleString()} {paymentMethod === 'paystack' && isTestMode ? '(Test Mode)' : ''}</span>
                   </>
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => handleCompletePayment()}
-                disabled={isProcessing}
-                className="w-full py-2.5 rounded-xl border border-[var(--border-subtle)] text-center text-xs font-mono-luxury uppercase text-[var(--gold-accent)] hover:border-[var(--gold-accent)] transition-colors cursor-pointer"
-              >
-                Instant Test Checkout (Skip Gateway)
-              </button>
+              {isTestMode && (
+                <button
+                  type="button"
+                  onClick={() => handleCompletePayment()}
+                  disabled={isProcessing}
+                  className="w-full py-2.5 rounded-xl border border-[var(--border-subtle)] text-center text-xs font-mono-luxury uppercase text-[var(--gold-accent)] hover:border-[var(--gold-accent)] transition-colors cursor-pointer"
+                >
+                  Instant Test Checkout (Skip Gateway)
+                </button>
+              )}
 
               <button
                 type="button"
