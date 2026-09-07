@@ -40,7 +40,10 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   const [isAdding, setIsAdding] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
 
+  const isOutOfStock = product.stockQuantity === 0;
+
   const handleAddBag = () => {
+    if (isOutOfStock) return;
     setIsAdding(true);
     addToCart(product, selectedSize, selectedColor, quantity);
 
@@ -59,6 +62,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   };
 
   const handleInstantBuy = () => {
+    if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
 
     onClose();
@@ -205,20 +209,21 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
           <button
             type="button"
             onClick={handleAddBag}
-            disabled={isAdding}
-            className="py-3.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+            disabled={isAdding || isOutOfStock}
+            className="py-3.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md disabled:opacity-40"
           >
             <ShoppingBag className="h-4 w-4 text-[var(--gold-accent)]" />
-            <span>Add to Bag</span>
+            <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleInstantBuy}
-            className="py-3.5 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xl"
+            disabled={isOutOfStock}
+            className="py-3.5 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xl disabled:opacity-40"
           >
             <Zap className="h-4 w-4 fill-current text-black" />
-            <span>Instant Buy</span>
+            <span>{isOutOfStock ? 'Out of Stock' : 'Instant Buy'}</span>
           </button>
         </div>
 

@@ -50,9 +50,19 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   const isWorn = activeOutfit[product.category]?.id === product.id;
   const isSaved = isInVault(product.id);
 
-  const currentStock = product.sizeStock && selectedSize && product.sizeStock[selectedSize] !== undefined
-    ? product.sizeStock[selectedSize]
-    : (product.stockQuantity ?? 15);
+  const currentStock = (() => {
+    if (product.sizeStock && typeof product.sizeStock === 'object') {
+      const anyStock: any = product.sizeStock;
+      const variantKey = selectedColor?.name && selectedSize ? `${selectedColor.name.trim()}_${selectedSize.trim()}` : null;
+      if (variantKey && anyStock.variants && anyStock.variants[variantKey] !== undefined) {
+        return anyStock.variants[variantKey];
+      }
+      if (selectedSize && anyStock[selectedSize] !== undefined) {
+        return typeof anyStock[selectedSize] === 'number' ? anyStock[selectedSize] : (anyStock[selectedSize]?.quantity ?? product.stockQuantity ?? 15);
+      }
+    }
+    return product.stockQuantity ?? 15;
+  })();
 
   const handleTryOn = () => {
     if (isWorn) {

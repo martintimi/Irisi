@@ -375,20 +375,36 @@ export async function POST(request: Request) {
             .eq('product_id', pId);
 
           if (variants && variants.length > 0) {
-            // Match best variant: size AND color match first
+            // Match priority:
+            // 1. Exact Size AND Color match
             let matched = variants.find(v => 
               v.size?.toLowerCase() === itemSize.toLowerCase() && 
-              itemColor && v.color?.toLowerCase() === itemColor.toLowerCase()
+              itemColor && (v.color?.toLowerCase() === itemColor.toLowerCase() || itemColor.toLowerCase().includes(v.color?.toLowerCase()))
             );
 
-            // Fallback: match by size
+            // 2. Size match with available stock
+            if (!matched) {
+              matched = variants.find(v => v.size?.toLowerCase() === itemSize.toLowerCase() && Number(v.stock_quantity) > 0);
+            }
+
+            // 3. Any size match
             if (!matched) {
               matched = variants.find(v => v.size?.toLowerCase() === itemSize.toLowerCase());
             }
 
-            // Fallback: first available variant with stock
+            // 4. Color match with available stock
+            if (!matched && itemColor) {
+              matched = variants.find(v => v.color?.toLowerCase() === itemColor.toLowerCase() && Number(v.stock_quantity) > 0);
+            }
+
+            // 5. First available variant with stock > 0
             if (!matched) {
-              matched = variants.find(v => Number(v.stock_quantity) > 0) || variants[0];
+              matched = variants.find(v => Number(v.stock_quantity) > 0);
+            }
+
+            // 6. Fallback to first variant
+            if (!matched) {
+              matched = variants[0];
             }
 
             if (matched) {
@@ -399,8 +415,22 @@ export async function POST(request: Request) {
                 .update({ stock_quantity: newStock })
                 .eq('id', matched.id);
 
-              console.log(`[Inventory] Deducted ${qty} units of ${pId} (${matched.size}, ${matched.color}). Stock: ${currentStock} -> ${newStock}`);
+              console.log(`[Inventory] Deducted ${qty} units of ${pId} (Variant: ${matched.size || 'Standard'}, ${matched.color || 'Default'}). Stock: ${currentStock} -> ${newStock}`);
             }
+          } else {
+            // If product had no variants in database yet, auto-create one and deduct immediately
+            const initialDefaultStock = 10;
+            const newStock = Math.max(0, initialDefaultStock - qty);
+            await supabase
+              .from('product_variants')
+              .insert({
+                product_id: pId,
+                size: itemSize || 'One Size',
+                color: itemColor || 'Standard',
+                stock_quantity: newStock,
+              });
+
+            console.log(`[Inventory] Initialized variant for ${pId} and deducted ${qty} units. Stock: ${initialDefaultStock} -> ${newStock}`);
           }
         }
       } catch (stockErr) {

@@ -506,9 +506,19 @@ export default function MarketplaceGrid() {
                       <span className="font-editorial text-lg sm:text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)] drop-shadow-sm">
                         ₦{product.price.toLocaleString()}
                       </span>
-                      <span className="text-[9px] sm:text-[11px] font-mono-luxury text-emerald-500 font-bold">
-                        In Stock
-                      </span>
+                      {product.stockQuantity === 0 ? (
+                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-rose-500 font-bold uppercase">
+                          Sold Out
+                        </span>
+                      ) : (product.stockQuantity !== undefined && product.stockQuantity <= 3) ? (
+                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-amber-500 font-bold uppercase animate-pulse">
+                          Only {product.stockQuantity} Left
+                        </span>
+                      ) : (
+                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-emerald-500 font-bold">
+                          In Stock
+                        </span>
+                      )}
                     </div>
 
                     {/* Store Origin Location */}
@@ -550,21 +560,31 @@ export default function MarketplaceGrid() {
                       </button>
 
                       <button
-                        onClick={() => addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] transition-all cursor-pointer"
+                        onClick={() => product.stockQuantity === 0 ? null : addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
+                        disabled={product.stockQuantity === 0}
+                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap border transition-all ${
+                          product.stockQuantity === 0
+                            ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 opacity-60 cursor-not-allowed'
+                            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] cursor-pointer'
+                        }`}
                       >
                         <ShoppingBag className="h-3 w-3 shrink-0" />
-                        <span className="truncate">Add to Bag</span>
+                        <span className="truncate">{product.stockQuantity === 0 ? 'Sold Out' : 'Add to Bag'}</span>
                       </button>
                     </div>
 
                     {/* Mobile: Clean single Add to Bag button (Zero Style Look on mobile) */}
                     <button
-                      onClick={() => addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
-                      className="md:hidden w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider font-bold whitespace-nowrap bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] active:scale-95 transition-all cursor-pointer"
+                      onClick={() => product.stockQuantity === 0 ? null : addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
+                      disabled={product.stockQuantity === 0}
+                      className={`md:hidden w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider font-bold whitespace-nowrap border transition-all ${
+                        product.stockQuantity === 0
+                          ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 opacity-60 cursor-not-allowed'
+                          : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-primary)] active:scale-95 cursor-pointer'
+                      }`}
                     >
                       <ShoppingBag className="h-3 w-3 shrink-0" />
-                      <span>Add to Bag</span>
+                      <span>{product.stockQuantity === 0 ? 'Sold Out' : 'Add to Bag'}</span>
                     </button>
                   </div>
                 </div>

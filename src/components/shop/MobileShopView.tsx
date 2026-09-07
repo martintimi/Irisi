@@ -362,14 +362,26 @@ export default function MobileShopView() {
                       aspectRatioClass={gridCols === 1 ? 'aspect-[3/4]' : 'aspect-[3/4]'}
                       idx={idx}
                     >
-                      {/* Top-Left: Discount Badge */}
-                      {hasDiscount && discountPercent > 0 && (
+                      {/* Top-Left: Sold Out Badge or Discount Badge */}
+                      {product.stockQuantity === 0 ? (
+                        <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                          <span className="px-2 py-0.5 rounded-full bg-rose-600/95 backdrop-blur-sm text-white text-[9px] font-mono-luxury font-bold uppercase tracking-wider shadow-md">
+                            Sold Out
+                          </span>
+                        </div>
+                      ) : (product.stockQuantity !== undefined && product.stockQuantity <= 3) ? (
+                        <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
+                          <span className="px-2 py-0.5 rounded-full bg-amber-600/95 backdrop-blur-sm text-white text-[9px] font-mono-luxury font-bold uppercase tracking-wider shadow-md animate-pulse">
+                            Only {product.stockQuantity} Left
+                          </span>
+                        </div>
+                      ) : hasDiscount && discountPercent > 0 ? (
                         <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
                           <span className="px-1.5 py-0.5 rounded bg-white text-rose-600 text-[10px] font-mono-luxury font-bold tracking-tight shadow-sm">
                             -{discountPercent}%
                           </span>
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Wishlist heart — Instagram burst animation */}
                       <button
@@ -433,11 +445,12 @@ export default function MobileShopView() {
                   {/* Single Clean Add to Bag Button */}
                   <button
                     type="button"
-                    onClick={() => setQuickBuyProduct(product)}
-                    className={`w-full mt-2.5 py-2 px-2.5 rounded-xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[var(--text-primary)] ${gridCols === 1 ? 'text-xs py-2.5' : 'text-[11px]'} font-mono-luxury uppercase font-bold tracking-wider hover:bg-[var(--gold-subtle)] active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer`}
+                    onClick={() => product.stockQuantity === 0 ? null : setQuickBuyProduct(product)}
+                    disabled={product.stockQuantity === 0}
+                    className={`w-full mt-2.5 py-2 px-2.5 rounded-xl border ${product.stockQuantity === 0 ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 opacity-60 cursor-not-allowed' : 'surface-card border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[var(--text-primary)] hover:bg-[var(--gold-subtle)] cursor-pointer active:scale-95'} ${gridCols === 1 ? 'text-xs py-2.5' : 'text-[11px]'} font-mono-luxury uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}
                   >
-                    <ShoppingBag className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
-                    <span>Add to Bag</span>
+                    <ShoppingBag className={`h-3.5 w-3.5 ${product.stockQuantity === 0 ? 'text-rose-400' : 'text-[var(--gold-accent)]'} shrink-0`} />
+                    <span>{product.stockQuantity === 0 ? 'Sold Out' : 'Add to Bag'}</span>
                   </button>
                 </div>
               );
