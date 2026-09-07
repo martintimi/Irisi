@@ -218,7 +218,7 @@ export default function CartPage() {
 
             <p className="text-[10px] font-mono-luxury text-[var(--text-muted)] text-center flex items-center justify-center gap-1">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-              <span>100% Escrow Protected Payment via Paystack</span>
+              <span>100% Escrow Protected Payment</span>
             </p>
           </div>
 

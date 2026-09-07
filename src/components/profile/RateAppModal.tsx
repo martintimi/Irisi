@@ -25,7 +25,7 @@ const EXPERIENCE_TAGS = [
   'Luxury Bags & Jewelry',
   'Accurate Sizing & Fit',
   'Fast State-to-State Delivery',
-  'Seamless Paystack Checkout',
+  'Seamless Escrow Checkout',
   'Responsive Concierge',
 ];
 

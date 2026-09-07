@@ -117,7 +117,7 @@ export default function HeroSection() {
             {/* Pill Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-xs font-mono-luxury tracking-wider uppercase">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Doorstep Nationwide Delivery · Top Nigerian Designers</span>
+              <span>Doorstep & Hub Delivery · Top Nigerian Designers</span>
             </div>
 
             {/* Main Headline */}

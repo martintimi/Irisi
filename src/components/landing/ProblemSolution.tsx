@@ -47,7 +47,7 @@ export default function ProblemSolution() {
     {
       icon: Flame,
       title: 'The Complete Nigerian Fit',
-      desc: 'Bespoke Senator native suits, royal Agbada cuts, 450gsm heavyweight street hoodies, and relaxed linen sets — tailored to your exact measurements with zero guessing.',
+      desc: 'Bespoke Senator native suits, royal Agbada cuts, 450gsm heavyweight street hoodies, and relaxed linen sets — crafted with precision cuts and premium finishing.',
       tag: 'Native & Streetwear',
       sub: 'Senator · Agbada · Hoodies',
       num: '01'

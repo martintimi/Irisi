@@ -439,37 +439,87 @@ export default function VendorOrdersPage() {
                 </div>
               </div>
 
-              {/* Delivery Destination & Vendor Escrow Payout (Clean 2-Column Grid) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
-                <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex flex-col justify-between">
-                  <div>
-                    <span className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-wider block">
-                      Delivery Destination:
+              {/* Dedicated Nigerian Logistics & Pickup Dispatch Hub Ribbon */}
+              <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-mono-luxury font-bold uppercase flex items-center gap-1.5 ${
+                      ord.deliveryMethod === 'park_pickup'
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    }`}>
+                      {ord.deliveryMethod === 'park_pickup' ? <Building className="h-3.5 w-3.5" /> : <Truck className="h-3.5 w-3.5" />}
+                      <span>{ord.deliveryMethod === 'park_pickup' ? 'Park Pickup Waybill' : 'Doorstep Delivery'}</span>
                     </span>
-                    <div className="font-bold text-[var(--text-primary)] mt-1 text-sm leading-snug">
-                      {ord.deliveryAddress}
-                    </div>
+
+                    <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
+                      Courier: <span className="text-[var(--gold-accent)]">{ord.courierName}</span>
+                    </span>
                   </div>
-                  {ord.deliveryCity && (
-                    <span className="text-[10px] text-[var(--gold-accent)] mt-2 block font-bold">
-                      📍 {ord.deliveryCity}
+
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-mono-luxury font-bold uppercase ${
+                    ord.trackingStage === 4
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : ord.trackingStage === 3
+                      ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
+                      : ord.trackingStage === 2
+                      ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30'
+                      : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  }`}>
+                    {ord.trackingStage === 1
+                      ? 'Pending Packaging'
+                      : ord.trackingStage === 2
+                      ? (ord.courierServiceType === 'pickup' ? 'Ready for Pickup · Rider Notified' : 'Ready for Station Drop-off')
+                      : ord.trackingStage === 3
+                      ? 'In Transit with Courier'
+                      : 'Delivered & Settled'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-muted)]">Waybill / Tracking:</span>
+                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-muted)]">Package Weight:</span>
+                    <span className="font-bold text-[var(--text-primary)]">
+                      {ord.packageWeightKg}kg ({ord.packageDimensions}) <span className="text-[9px] text-emerald-400 font-normal">· Auto-assigned</span>
                     </span>
+                  </div>
+                </div>
+
+                <div className="text-[11px] font-mono-luxury text-[var(--text-secondary)] flex items-start gap-1.5">
+                  <Navigation className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0 mt-0.5" />
+                  <span>{ord.instructions}</span>
+                </div>
+              </div>
+
+              {/* Delivery Address & THIS Vendor's Payout Breakdown */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
+                <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Delivery Address:</div>
+                  <div className="font-bold text-[var(--text-primary)] mt-0.5">{ord.deliveryAddress}</div>
+                  {ord.deliveryMethod === 'park_pickup' && ord.dropoffStation && (
+                    <div className="text-[10px] text-amber-400 mt-1 font-bold">Terminal: {ord.dropoffStation}</div>
                   )}
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex flex-col justify-between">
-                  <div>
-                    <span className="text-[var(--text-muted)] text-[10px] uppercase font-bold tracking-wider block">
-                      Your Total Escrow Payout:
-                    </span>
-                    <div className="font-editorial font-bold text-emerald-400 text-2xl mt-0.5">
-                      ₦{ord.totalPayout.toLocaleString()}
-                    </div>
+                <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Delivery Method / Transport:</div>
+                  <div className="font-bold text-[var(--gold-accent)] text-sm mt-0.5">
+                    {ord.deliveryMethod === 'park_pickup' ? 'Pay on Collection' : `₦${ord.vendorDeliveryFee.toLocaleString()}`}
                   </div>
-                  <div className="text-[10px] text-emerald-400/90 mt-2 font-bold flex items-center gap-1">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span>100% Escrow Secured · Clothes Earnings credited upon delivery</span>
+                  <div className="text-[10px] text-[var(--text-muted)]">
+                    {ord.deliveryMethod === 'park_pickup' ? 'Customer pays driver at motor park terminal' : 'Courier dispatch fee (remitted to courier partner)'}
                   </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                  <div className="text-[var(--text-muted)] text-[10px] uppercase">Your Total Escrow Payout:</div>
+                  <div className="font-bold text-emerald-400 text-base mt-0.5">₦{ord.totalPayout.toLocaleString()}</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Clothes Earnings (100% Escrow Secured)</div>
                 </div>
               </div>
 
@@ -511,9 +561,9 @@ export default function VendorOrdersPage() {
               {/* Vendor Fulfillment Controls */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <div className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  {ord.trackingStage === 1 && 'Package garments and mark ready.'}
-                  {ord.trackingStage === 2 && 'Garments packed! Ready for courier dispatch.'}
-                  {ord.trackingStage === 3 && 'Package is in transit to customer.'}
+                  {ord.trackingStage === 1 && (ord.courierServiceType === 'pickup' ? 'Package garments in ÌRÍSÍ mailer and mark ready. Rider dispatched to your atelier.' : 'Package garments and mark ready for drop-off.')}
+                  {ord.trackingStage === 2 && (ord.courierServiceType === 'pickup' ? 'Garment packed! Courier rider arriving for pickup.' : 'Garment packed! Drop off at designated station or motor park.')}
+                  {ord.trackingStage === 3 && 'Package is in transit with courier/driver.'}
                   {ord.trackingStage === 4 && 'Customer has confirmed receipt. Funds credited to payout balance.'}
                 </div>
 
@@ -524,7 +574,7 @@ export default function VendorOrdersPage() {
                     className="px-4 py-2.5 rounded-full surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer hover:bg-[var(--gold-subtle)]"
                   >
                     <Printer className="h-4 w-4 text-[var(--gold-accent)]" />
-                    <span>Print Packing Slip</span>
+                    <span>Print Waybill</span>
                   </button>
 
                   {ord.trackingStage === 1 && (
@@ -535,7 +585,13 @@ export default function VendorOrdersPage() {
                       className="px-6 py-2.5 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       <PackageCheck className="h-4 w-4" />
-                      <span>Mark Packed & Ready</span>
+                      <span>
+                        {ord.deliveryMethod === 'park_pickup'
+                          ? 'Mark Ready for Motor Park'
+                          : ord.courierServiceType === 'pickup'
+                          ? 'Mark Ready for Courier Pickup'
+                          : 'Mark Ready for Station Drop-off'}
+                      </span>
                     </button>
                   )}
 
@@ -546,7 +602,7 @@ export default function VendorOrdersPage() {
                       className="px-6 py-2.5 rounded-full bg-[var(--gold-accent)] text-white font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-md flex items-center gap-2 cursor-pointer"
                     >
                       <Truck className="h-4 w-4 text-white" />
-                      <span>Dispatch / Hand to Rider</span>
+                      <span>Dispatch / Waybill to Driver</span>
                     </button>
                   )}
 

@@ -102,7 +102,6 @@ export default function MobileHomeView() {
     allProducts,
     followedVendors,
     toggleFollowVendor,
-    setOutfitItem,
     theme,
     toggleTheme,
     fetchProductsFromDb,
@@ -273,10 +272,10 @@ export default function MobileHomeView() {
   }, [departments.length]);
 
   const marqueeItems = [
-    '100% Escrow via Paystack',
-    'Doorstep Nationwide Delivery',
+    '100% Escrow Protection',
+    'Doorstep & Hub Delivery',
     'Verified Nigerian Designers',
-    'Verified Custom Sizing',
+    'Handcrafted Fashion & Footwear',
     'Fast Dispatch Logistics',
     'Bespoke Handmade Pieces',
   ];
@@ -565,13 +564,12 @@ export default function MobileHomeView() {
                     >
                       Quick Add
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setOutfitItem(item)}
-                      className="text-[9px] font-mono-luxury text-[var(--gold-accent)] uppercase font-bold"
+                    <Link
+                      href={`/shop/${item.id}`}
+                      className="text-[9px] font-mono-luxury text-[var(--gold-accent)] uppercase font-bold hover:underline"
                     >
-                      3D Fit
-                    </button>
+                      View Piece
+                    </Link>
                   </div>
                 </div>
               </FadeUp>
@@ -586,9 +584,9 @@ export default function MobileHomeView() {
           <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">The Ìrísí Standard</h3>
         </FadeUp>
         {[
-          { icon: Lock, label: 'Paystack Escrow Security', desc: 'Funds held safely. Released only after delivery confirmation.', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-          { icon: Sparkles, label: 'Custom Sizing Guarantee', desc: 'Input measurements once. Eliminate size guesswork forever.', color: 'text-[var(--gold-accent)]', bg: 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/30' },
-          { icon: Truck, label: 'Nationwide Express Delivery', desc: 'Fast doorstep delivery across all 36 Nigerian states.', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
+          { icon: Lock, label: '100% Escrow Protection', desc: 'Funds held safely. Released only after order dispatch and confirmation.', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+          { icon: Sparkles, label: 'Verified Fashion Brands', desc: 'Authentic streetwear, native wear, bags, footwear & jewelry.', color: 'text-[var(--gold-accent)]', bg: 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/30' },
+          { icon: Truck, label: 'Doorstep & Hub Delivery', desc: 'Direct courier dispatch and motor park pickup with live tracking.', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/20' },
         ].map((p, idx) => (
           <FadeUp key={idx} delay={idx * 0.08}>
             <div className="p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex items-start gap-3">

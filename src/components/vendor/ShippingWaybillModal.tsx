@@ -56,7 +56,7 @@ export default function ShippingWaybillModal({
 
   // Text for handwriting on parcel bag or carton with a marker
   const markerBagText = `-------------------------
-📦 VEYRA DISPATCH LABEL
+📦 IRISI DISPATCH LABEL
 -------------------------
 TO: ${customerName}
 TEL: ${customerPhone}
@@ -83,7 +83,7 @@ FROM: ${vendorName} (${vendorPhone})
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `*VEYRA WAYBILL & DISPATCH MANIFEST*\n\n` +
+      `*IRISI WAYBILL & DISPATCH MANIFEST*\n\n` +
       `*Order #:* ${order.orderNumber || order.id}\n` +
       `*Waybill / Tracking:* ${waybillNo}\n` +
       `*Delivery Type:* ${isParkPickup ? 'Park Pickup (Interstate Bus)' : 'Doorstep Courier Express'}\n` +
@@ -255,7 +255,7 @@ FROM: ${vendorName} (${vendorPhone})
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xl font-black tracking-tighter font-serif uppercase">
-                      V E Y R A
+                      Ì R Í S Í
                     </span>
                     <span className="text-[10px] font-mono uppercase bg-black text-white px-1.5 py-0.5 font-bold rounded">
                       {isParkPickup ? 'PARK WAYBILL' : 'ESCROW PARCEL'}

@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, ArrowUpRight, ShieldCheck, Ruler, Truck } from 'lucide-react';
+import { ArrowRight, Sparkles, ArrowUpRight, ShieldCheck, Truck } from 'lucide-react';
 
 interface OccasionEdit {
   id: string;
@@ -176,18 +176,18 @@ export default function CuratedAteliers() {
               <ShieldCheck className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-xs font-bold text-[var(--text-primary)] block">100% Paystack Escrow</span>
+              <span className="text-xs font-bold text-[var(--text-primary)] block">100% Escrow Protection</span>
               <span className="text-[11px] text-[var(--text-secondary)] font-light">Funds released only upon delivery & inspection</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3 p-4 rounded-2xl surface-card border border-[var(--border-subtle)]">
             <div className="h-9 w-9 rounded-xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 flex items-center justify-center text-[var(--gold-accent)] shrink-0">
-              <Ruler className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-xs font-bold text-[var(--text-primary)] block">Twin-Fit Sizing Engine</span>
-              <span className="text-[11px] text-[var(--text-secondary)] font-light">Custom tailoring algorithm eliminating size guesswork</span>
+              <span className="text-xs font-bold text-[var(--text-primary)] block">Verified Fashion Brands</span>
+              <span className="text-[11px] text-[var(--text-secondary)] font-light">Authentic streetwear, native wear, bags, footwear & jewelry</span>
             </div>
           </div>
 
@@ -196,8 +196,8 @@ export default function CuratedAteliers() {
               <Truck className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-xs font-bold text-[var(--text-primary)] block">Doorstep Nationwide Logistics</span>
-              <span className="text-[11px] text-[var(--text-secondary)] font-light">Fast delivery across all 36 Nigerian states</span>
+              <span className="text-xs font-bold text-[var(--text-primary)] block">Doorstep & Hub Delivery</span>
+              <span className="text-[11px] text-[var(--text-secondary)] font-light">Direct courier dispatch and park pickup with live tracking</span>
             </div>
           </div>
         </div>

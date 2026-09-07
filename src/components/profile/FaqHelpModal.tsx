@@ -38,7 +38,7 @@ const FAQ_ITEMS: FaqItem[] = [
     id: 'faq-4',
     category: 'payment',
     question: 'How does Escrow Protection safeguard my money?',
-    answer: 'When you purchase via Paystack (card, USSD, or direct bank transfer), your funds are held safely in Ìrísí Escrow. Sellers and boutique vendors only receive payment after your items have been successfully delivered to your doorstep and verified.',
+    answer: 'When you make a purchase (card, USSD, or direct bank transfer), your funds are held safely in Ìrísí Escrow. Sellers and boutique vendors only receive payment after your items have been successfully delivered to your doorstep and verified.',
   },
   {
     id: 'faq-5',
@@ -145,7 +145,7 @@ export default function FaqHelpModal({ isOpen, onClose }: FaqHelpModalProps) {
             { id: 'fashion', label: 'Boutiques & Apparel' },
             { id: 'footwear_bags', label: 'Shoes, Bags & Jewelry' },
             { id: 'sizing', label: 'Sizing Guides' },
-            { id: 'payment', label: 'Escrow & Paystack' },
+            { id: 'payment', label: 'Escrow & Payments' },
             { id: 'delivery', label: 'Waybills & Shipping' },
             { id: 'returns', label: 'Returns & Exchanges' },
             { id: 'concierge', label: 'Stylist Concierge' },
