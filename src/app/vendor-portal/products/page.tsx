@@ -10,7 +10,7 @@ import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import {
   ShoppingBag, Plus, Search, Filter, ExternalLink, Edit3,
   TrendingUp, AlertTriangle, CheckCircle2, RefreshCw, Package,
-  Layers, ChevronRight, Store, ArrowUpDown, SlidersHorizontal
+  Layers, ChevronRight, Store, ArrowUpDown, SlidersHorizontal, Eye
 } from 'lucide-react';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
 
@@ -330,7 +330,7 @@ export default function VendorProductsCatalogPage() {
         </div>
       </div>
 
-      {/* 4. Products List / Grid */}
+      {/* 4. Products List: Detailed Luxury Dashboard Rows (Loved by Vendor) */}
       {filteredProducts.length === 0 ? (
         <div className="p-12 sm:p-16 rounded-3xl surface-card border border-[var(--border-subtle)] text-center space-y-4 font-mono-luxury shadow-sm">
           <Store className="h-12 w-12 text-[var(--gold-accent)] mx-auto opacity-50" />
@@ -364,7 +364,7 @@ export default function VendorProductsCatalogPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="space-y-3.5">
           {filteredProducts.map((piece) => {
             const qty = typeof piece.stockQuantity === 'number'
               ? piece.stockQuantity
@@ -385,124 +385,112 @@ export default function VendorProductsCatalogPage() {
             return (
               <div
                 key={piece.id}
-                className="surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/60 rounded-3xl overflow-hidden flex flex-col transition-all duration-300 shadow-sm hover:shadow-xl group"
+                className="p-4 sm:p-5 rounded-2xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/70 transition-all shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 group"
               >
-                {/* Image & Badges */}
-                <div className="relative aspect-4/3 w-full bg-black overflow-hidden">
-                  <Image
-                    src={productImg}
-                    alt={piece.name}
-                    fill
-                    unoptimized
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
-
-                  {/* Top Badges */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
-                    <span className="px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-[9px] font-mono-luxury uppercase font-bold text-[var(--gold-accent)]">
-                      {piece.category || 'Ready-to-Wear'}
-                    </span>
-
-                    {isSoldOut ? (
-                      <span className="px-2.5 py-1 rounded-full bg-rose-500/90 text-white text-[9px] font-mono-luxury uppercase font-bold shadow-md">
-                        🔴 Sold Out
-                      </span>
-                    ) : isLowStock ? (
-                      <span className="px-2.5 py-1 rounded-full bg-amber-500 text-black text-[9px] font-mono-luxury uppercase font-bold shadow-md animate-pulse">
-                        ⚠️ Only {qty} Left
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/90 text-black text-[9px] font-mono-luxury uppercase font-bold shadow-md">
-                        🟢 {qty} in Stock
-                      </span>
-                    )}
+                {/* Left: Thumbnail & Details */}
+                <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
+                  {/* High Quality Thumbnail */}
+                  <div className="relative h-20 w-18 sm:h-22 sm:w-20 rounded-2xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)] shadow-md">
+                    <Image
+                      src={productImg}
+                      alt={piece.name}
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
 
-                  {/* Bottom Price & Sold Count on Image */}
-                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between z-10">
-                    <div>
-                      <span className="text-[10px] font-mono-luxury uppercase text-zinc-300 block">Retail Price</span>
-                      <span className="font-editorial text-xl font-bold text-white leading-tight">
-                        ₦{Number(piece.price || 0).toLocaleString()}
+                  {/* Title, Category, Sold, Stock & Sizing */}
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-editorial font-bold text-[var(--text-primary)] text-base sm:text-lg truncate group-hover:text-[var(--gold-accent)] transition-colors">
+                        {piece.name}
+                      </h3>
+                      <span className="text-[9px] font-mono-luxury px-2 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] uppercase font-bold border border-[var(--gold-accent)]/20">
+                        {piece.category || 'Ready-to-Wear'}
                       </span>
                     </div>
-
-                    <div className="text-right">
-                      <span className="px-2 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-white text-[10px] font-mono-luxury font-bold">
-                        {piece.unitsSold ?? 0} Units Sold
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Content */}
-                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-4 font-mono-luxury">
-                  <div className="space-y-2.5">
-                    <h3 className="font-bold text-sm sm:text-base text-[var(--text-primary)] line-clamp-1 group-hover:text-[var(--gold-accent)] transition-colors">
-                      {piece.name}
-                    </h3>
 
                     {piece.description && (
-                      <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
+                      <p className="text-[11px] text-[var(--text-secondary)] line-clamp-1 font-mono-luxury">
                         {piece.description}
                       </p>
                     )}
 
-                    {/* Variant Stock Preview */}
+                    {/* Stock status & Units sold badges */}
+                    <div className="flex items-center gap-2.5 text-xs font-mono-luxury text-[var(--text-secondary)] flex-wrap">
+                      <span className={`inline-flex items-center gap-1 font-bold ${
+                        isSoldOut ? 'text-rose-400' : isLowStock ? 'text-amber-400' : 'text-emerald-400'
+                      }`}>
+                        <span className="h-2 w-2 rounded-full bg-current inline-block" />
+                        {isSoldOut ? 'Sold Out (0 Units)' : isLowStock ? `Only ${qty} in Stock` : `${qty} in Stock`}
+                      </span>
+                      <span>•</span>
+                      <span className="text-[var(--text-primary)] font-bold">
+                        {piece.unitsSold ?? 0} Sold
+                      </span>
+                      <span>•</span>
+                      <span className="text-[var(--text-muted)] uppercase text-[10px]">
+                        {piece.garmentOriginType === 'bespoke_atelier' ? 'Bespoke Atelier' : 'Ready-to-Wear'}
+                      </span>
+                    </div>
+
+                    {/* Size Variant Breakdown Chips */}
                     {sizeEntries.length > 0 && (
-                      <div className="pt-1.5 space-y-1.5">
-                        <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">
-                          Stock by Size
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {sizeEntries.slice(0, 5).map(([sz, val]: [string, any]) => {
-                            const sizeQty = typeof val === 'object' ? Number(val?.quantity) || 0 : Number(val) || 0;
-                            return (
-                              <span
-                                key={sz}
-                                className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
-                                  sizeQty === 0
-                                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                    : sizeQty <= 2
-                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                    : 'bg-[var(--bg-primary)] text-[var(--text-primary)] border-[var(--border-subtle)]'
-                                }`}
-                              >
-                                {sz}: {sizeQty}
-                              </span>
-                            );
-                          })}
-                          {sizeEntries.length > 5 && (
-                            <span className="text-[9px] text-[var(--text-muted)] self-center">
-                              +{sizeEntries.length - 5} more
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[9px] uppercase font-mono-luxury text-[var(--text-muted)] font-bold">Sizes:</span>
+                        {sizeEntries.map(([sz, val]: [string, any]) => {
+                          const sizeQty = typeof val === 'object' ? Number(val?.quantity) || 0 : Number(val) || 0;
+                          return (
+                            <span
+                              key={sz}
+                              className={`px-2 py-0.5 rounded-lg text-[9px] font-mono-luxury font-bold border ${
+                                sizeQty === 0
+                                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                  : sizeQty <= 2
+                                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                  : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                              }`}
+                            >
+                              {sz}: {sizeQty}
                             </span>
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
+                </div>
 
-                  {/* Actions */}
-                  <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
+                {/* Right: Price & Action Buttons */}
+                <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[var(--border-subtle)]">
+                  <div className="text-left md:text-right font-mono-luxury">
+                    <div className="font-editorial font-bold text-lg sm:text-xl text-[var(--text-primary)] leading-none">
+                      ₦{Number(piece.price || 0).toLocaleString()}
+                    </div>
+                    <span className="text-[10px] uppercase text-[var(--text-muted)] block mt-1">
+                      Retail Price
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <a
                       href={`/product/${piece.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3 py-2 rounded-xl bg-[var(--bg-primary)] hover:bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white text-[10px] uppercase font-bold flex items-center gap-1 transition-colors"
+                      className="px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] hover:bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white text-xs font-mono-luxury uppercase font-bold flex items-center gap-1.5 transition-colors"
                       title="Preview piece on public storefront"
                     >
-                      <ExternalLink className="h-3 w-3" />
-                      <span>View</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">View</span>
                     </a>
 
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(piece)}
-                      className="flex-1 py-2 px-4 rounded-xl bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-primary)] text-[11px] font-bold uppercase flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-transform active:scale-95"
+                      className="px-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] hover:bg-[var(--surface-hover)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury uppercase font-bold text-[var(--gold-accent)] flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm active:scale-95"
                     >
                       <Edit3 className="h-3.5 w-3.5" />
-                      <span>Edit Piece & Stock</span>
+                      <span>Edit Stock</span>
                     </button>
                   </div>
                 </div>
