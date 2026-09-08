@@ -79,6 +79,8 @@ export interface IrisiState {
   clearCart: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  lastAddedCartItem: { id: string; name: string; imageUrl: string; timestamp: number } | null;
+  clearLastAddedCartItem: () => void;
 
   // Followed Brands / Vendors
   followedVendors: string[];
@@ -811,6 +813,8 @@ export const useStore = create<IrisiState>()(
       cart: [],
       isCartOpen: false,
       setIsCartOpen: (open) => set({ isCartOpen: open }),
+      lastAddedCartItem: null,
+      clearLastAddedCartItem: () => set({ lastAddedCartItem: null }),
       addToCart: (product, size, color, quantity) => {
         const { bodyProfile, cart } = get();
         const fitResult = calculateFitMatch(bodyProfile, product);
@@ -847,10 +851,17 @@ export const useStore = create<IrisiState>()(
                   (item.selectedColor?.name || '').toLowerCase().trim() === (chosenColor.name || '').toLowerCase().trim()
         );
 
+        const lastAdded = {
+          id: String(product.id),
+          name: product.name,
+          imageUrl: product.imageUrl || (Array.isArray(product.images) && product.images[0]) || '',
+          timestamp: Date.now(),
+        };
+
         if (existingIndex > -1) {
           const updated = [...cart];
           updated[existingIndex].quantity = (Number(updated[existingIndex].quantity) || 1) + addQty;
-          set({ cart: updated, isCartOpen: true });
+          set({ cart: updated, lastAddedCartItem: lastAdded });
         } else {
           const newItem: CartItem = {
             id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -860,7 +871,7 @@ export const useStore = create<IrisiState>()(
             quantity: addQty,
             fitScore: fitResult.matchScore,
           };
-          set({ cart: [...cart, newItem], isCartOpen: true });
+          set({ cart: [...cart, newItem], lastAddedCartItem: lastAdded });
         }
       },
       addEntireOutfitToCart: () => {
@@ -885,7 +896,7 @@ export const useStore = create<IrisiState>()(
           }
         });
 
-        set({ cart: [...cart, ...newItems], isCartOpen: true });
+        set({ cart: [...cart, ...newItems] });
       },
       removeFromCart: (cartItemId) => {
         set((state) => ({

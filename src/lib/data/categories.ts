@@ -104,7 +104,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'underwears',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/editorial/modern_male_streetwear.jpg',
+    imageUrl: '/images/products/men_underwear_luxury.jpg',
     subtitle: 'Modal stretch trunks & ribbed essentials',
   },
 
@@ -194,7 +194,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'crossbody',
     gender: 'men',
     department: 'bags',
-    imageUrl: '/images/editorial/male_hoodie.jpg',
+    imageUrl: '/images/products/men_crossbody_bag.jpg',
     subtitle: 'Urban chest rigs & compact daily carriers',
   },
 
@@ -205,7 +205,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'chains',
     gender: 'men',
     department: 'accessories',
-    imageUrl: '/images/editorial/nigerian_male_model.jpg',
+    imageUrl: '/images/products/men_gold_chain.jpg',
     subtitle: 'Solid stainless steel & 18K gold plated links',
     isPopular: true,
   },
@@ -296,6 +296,16 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     department: 'clothing',
     imageUrl: '/images/editorial/female_dress.jpg',
     subtitle: 'Pleated midi skirts & asymmetric cutouts',
+  },
+  {
+    id: 'women-loungewear',
+    name: 'Silk Loungewear & Sets',
+    slug: 'women-loungewear',
+    gender: 'women',
+    department: 'clothing',
+    imageUrl: '/images/products/women_loungewear_luxury.jpg',
+    subtitle: 'Mulberry silk camisoles & relaxed sleep sets',
+    isPopular: true,
   },
 
   // Native & Cultural (Women)

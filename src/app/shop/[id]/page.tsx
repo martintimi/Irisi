@@ -163,23 +163,36 @@ export default function ProductDetailPage() {
 
   if (!product || errorMsg) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4 animate-fadeIn">
-        <div className="h-16 w-16 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mx-auto">
-          <RotateCcw className="h-8 w-8" />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-5 animate-fadeIn bg-white dark:bg-[#0A0A0C] text-black dark:text-white">
+        <div className="h-20 w-20 mx-auto rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-400">
+          <Layers className="h-9 w-9 stroke-[1.3]" />
         </div>
-        <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-          Product Not Found
-        </h2>
-        <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-md mx-auto">
-          {errorMsg || 'The requested product is no longer active in the storefront catalog.'}
-        </p>
-        <Link
-          href="/shop"
-          className="px-6 py-3 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase font-bold hover:opacity-90 transition-all shadow-md inline-flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Return to Storefront</span>
-        </Link>
+        <div className="space-y-1.5 max-w-sm mx-auto">
+          <span className="text-[10px] font-mono tracking-widest uppercase text-amber-500 font-bold block">
+            PIECE NOT FOUND
+          </span>
+          <h2 className="text-2xl font-black uppercase tracking-tight text-black dark:text-white">
+            Product Not Found
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-light">
+            {errorMsg || 'The requested piece is no longer active in our catalog or may have been archived.'}
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-md"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Return to Shop</span>
+          </Link>
+          <Link
+            href="/categories"
+            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full border border-neutral-300 dark:border-neutral-700 text-xs font-bold uppercase tracking-wider text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+          >
+            <span>Browse Categories</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -702,7 +715,7 @@ export default function ProductDetailPage() {
           <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center gap-3 text-xs font-mono-luxury text-[var(--text-secondary)]">
             <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
             <div>
-              <span className="font-bold text-[var(--text-primary)]">Ìrísí Escrow Protection:</span> Your payment is held safely until the item is delivered and inspected.
+              <span className="font-bold text-[var(--text-primary)]">Buyer Protection Guarantee:</span> Your payment is safely held until the item is delivered and confirmed.
             </div>
           </div>
 

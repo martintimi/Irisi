@@ -66,6 +66,16 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDraggingCarousel = useRef(false);
   const carouselTouchStart = useRef<{ x: number; y: number } | null>(null);
+  // Track in recently viewed
+  useEffect(() => {
+    if (!product?.id || typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('irisi_recently_viewed');
+      const list: string[] = raw ? JSON.parse(raw) : [];
+      const updated = [String(product.id), ...list.filter(id => String(id) !== String(product.id))].slice(0, 12);
+      localStorage.setItem('irisi_recently_viewed', JSON.stringify(updated));
+    } catch (e) {}
+  }, [product?.id]);
 
   const handleCarouselTouchStart = (e: React.TouchEvent) => {
     setHasNudged(true);

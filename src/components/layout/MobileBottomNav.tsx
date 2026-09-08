@@ -2,14 +2,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Home, Search, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
+import { Home, Search, ShoppingBag, Heart, CircleUserRound, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { cart, setIsCartOpen, userAuth, vault, setIsVaultOpen } = useStore();
+  const { cart, userAuth, vault, lastAddedCartItem, clearLastAddedCartItem } = useStore();
   const [isVisible, setIsVisible] = useState(true);
+  const [bagBounce, setBagBounce] = useState(false);
+  const [flyingItem, setFlyingItem] = useState<{ name: string; imageUrl?: string } | null>(null);
+  const [cartToast, setCartToast] = useState<string | null>(null);
 
   const lastScrollY = useRef(0);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -19,8 +24,34 @@ export default function MobileBottomNav() {
     pathname.startsWith('/vendor') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
-    pathname === '/cart' ||
     (pathname.startsWith('/shop/') && pathname.split('/').length >= 3 && pathname.split('/')[2] !== '');
+
+  // Handle Add to Bag micro-animation ("throw to bag") and toast
+  useEffect(() => {
+    if (!lastAddedCartItem) return;
+
+    setFlyingItem({
+      name: lastAddedCartItem.name,
+      imageUrl: lastAddedCartItem.imageUrl,
+    });
+
+    const bounceTimer = setTimeout(() => {
+      setBagBounce(true);
+      setTimeout(() => setBagBounce(false), 450);
+    }, 400);
+
+    setCartToast(lastAddedCartItem.name);
+    const toastTimer = setTimeout(() => {
+      setCartToast(null);
+      setFlyingItem(null);
+      clearLastAddedCartItem();
+    }, 3200);
+
+    return () => {
+      clearTimeout(bounceTimer);
+      clearTimeout(toastTimer);
+    };
+  }, [lastAddedCartItem, clearLastAddedCartItem]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || isStandalonePage) return;
@@ -73,114 +104,185 @@ export default function MobileBottomNav() {
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
-    <nav
-      className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-300 ease-out ${
-        isVisible ? 'translate-y-0' : 'translate-y-full'
-      }`}
-    >
-      <div className="bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-800">
-        <div className="grid grid-cols-5 h-[62px] max-w-md mx-auto items-center px-2 py-1">
-
-          {/* 1. Home */}
-          <Link
-            href="/"
-            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
-              isActive('/')
-                ? 'text-black dark:text-white font-semibold'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-            }`}
+    <>
+      {/* Flying Item Throw to Bag at Bottom Nav */}
+      <AnimatePresence>
+        {flyingItem && (
+          <motion.div
+            initial={{ top: '45%', left: '50%', scale: 1, opacity: 1, x: '-50%', y: '-50%' }}
+            animate={{
+              top: 'calc(100vh - 35px)',
+              left: '50%',
+              scale: 0.18,
+              opacity: 0.15,
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: [0.25, 1, 0.5, 1] }}
+            className="fixed z-50 pointer-events-none"
           >
-            <Home
-              strokeWidth={isActive('/') ? 2 : 1.3}
-              className={`h-[21px] w-[21px] ${isActive('/') ? 'fill-current' : ''}`}
-            />
-            <span className="text-[10px] tracking-tight leading-none">Home</span>
-          </Link>
+            <div className="relative h-16 w-16 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-2xl bg-black">
+              {flyingItem.imageUrl ? (
+                <Image
+                  src={flyingItem.imageUrl}
+                  alt={flyingItem.name}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-amber-400 text-black">
+                  <ShoppingBag className="h-6 w-6" />
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* 2. Shop */}
-          <Link
-            href="/shop"
-            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
-              isActive('/shop')
-                ? 'text-black dark:text-white font-semibold'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-            }`}
+      {/* Floating Added to Bag Toast Message */}
+      <AnimatePresence>
+        {cartToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="fixed bottom-[74px] inset-x-4 z-50 max-w-sm mx-auto p-3 rounded-2xl bg-black/95 text-white dark:bg-white dark:text-black shadow-2xl border border-white/15 dark:border-black/15 flex items-center justify-between gap-3 backdrop-blur-md"
           >
-            <Search
-              strokeWidth={isActive('/shop') ? 2.2 : 1.4}
-              className="h-[21px] w-[21px]"
-            />
-            <span className="text-[10px] tracking-tight leading-none">Shop</span>
-          </Link>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-7 w-7 rounded-lg bg-amber-400 text-black flex items-center justify-center shrink-0">
+                <Check className="h-4 w-4 stroke-[3]" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[9px] font-mono-luxury uppercase tracking-wider text-amber-400 dark:text-amber-600 block font-black">
+                  Added to Bag
+                </span>
+                <span className="text-xs font-bold truncate block">
+                  {cartToast}
+                </span>
+              </div>
+            </div>
+            <Link
+              href="/cart"
+              onClick={() => setCartToast(null)}
+              className="px-3 py-1.5 rounded-full bg-amber-400 text-black font-mono-luxury uppercase text-[10px] font-bold shrink-0 hover:bg-amber-300 transition-colors active:scale-95"
+            >
+              View Bag →
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {/* 3. Bag */}
-          <Link
-            href="/cart"
-            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors relative ${
-              isActive('/cart')
-                ? 'text-black dark:text-white font-semibold'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-            }`}
-            aria-label="Shopping Bag"
-          >
-            <div className="relative">
-              <ShoppingBag
-                strokeWidth={isActive('/cart') ? 2 : 1.3}
+      <nav
+        className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-300 ease-out ${
+          isVisible ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-800">
+          <div className="grid grid-cols-5 h-[62px] max-w-md mx-auto items-center px-2 py-1">
+
+            {/* 1. Home */}
+            <Link
+              href="/"
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+                isActive('/')
+                  ? 'text-black dark:text-white font-semibold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <Home
+                strokeWidth={isActive('/') ? 2 : 1.3}
+                className={`h-[21px] w-[21px] ${isActive('/') ? 'fill-current' : ''}`}
+              />
+              <span className="text-[10px] tracking-tight leading-none">Home</span>
+            </Link>
+
+            {/* 2. Shop */}
+            <Link
+              href="/shop"
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+                isActive('/shop')
+                  ? 'text-black dark:text-white font-semibold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <Search
+                strokeWidth={isActive('/shop') ? 2.2 : 1.4}
                 className="h-[21px] w-[21px]"
               />
-              {totalCartCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[8px] font-bold flex items-center justify-center">
-                  {totalCartCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] tracking-tight leading-none">Bag</span>
-          </Link>
+              <span className="text-[10px] tracking-tight leading-none">Shop</span>
+            </Link>
 
-          {/* 4. Wishlist */}
-          <Link
-            href="/wishlist"
-            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors relative ${
-              isActive('/wishlist')
-                ? 'text-black dark:text-white font-semibold'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-            }`}
-            aria-label="Wishlist"
-          >
-            <div className="relative">
-              <Heart
-                strokeWidth={isActive('/wishlist') ? 2 : 1.3}
-                className={`h-[21px] w-[21px] ${isActive('/wishlist') ? 'fill-current text-rose-500' : ''}`}
+            {/* 3. Bag (with dynamic bounce on add-to-bag) */}
+            <Link
+              href="/cart"
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors relative ${
+                isActive('/cart')
+                  ? 'text-black dark:text-white font-semibold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              }`}
+              aria-label="Shopping Bag"
+            >
+              <div className={`relative transition-transform duration-300 ${bagBounce ? 'scale-125' : 'scale-100'}`}>
+                <ShoppingBag
+                  strokeWidth={isActive('/cart') ? 2 : 1.3}
+                  className={`h-[21px] w-[21px] transition-colors ${bagBounce ? 'text-amber-500 fill-amber-500/20' : ''}`}
+                />
+                {totalCartCount > 0 && (
+                  <span className={`absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full text-[8px] font-bold flex items-center justify-center transition-all ${
+                    bagBounce ? 'bg-amber-500 text-black scale-110' : 'bg-black dark:bg-white text-white dark:text-black'
+                  }`}>
+                    {totalCartCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] tracking-tight leading-none">Bag</span>
+            </Link>
+
+            {/* 4. Wishlist */}
+            <Link
+              href="/wishlist"
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors relative ${
+                isActive('/wishlist')
+                  ? 'text-black dark:text-white font-semibold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              }`}
+              aria-label="Wishlist"
+            >
+              <div className="relative">
+                <Heart
+                  strokeWidth={isActive('/wishlist') ? 2 : 1.3}
+                  className={`h-[21px] w-[21px] ${isActive('/wishlist') ? 'fill-current text-rose-500' : ''}`}
+                />
+                {vaultCount > 0 && (
+                  <span className="absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center">
+                    {vaultCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] tracking-tight leading-none">Wishlist</span>
+            </Link>
+
+            {/* 5. Me */}
+            <Link
+              href={isLoggedIn ? '/profile' : '/auth'}
+              className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+                isActive('/profile') || isActive('/auth')
+                  ? 'text-black dark:text-white font-semibold'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <CircleUserRound
+                strokeWidth={isActive('/profile') || isActive('/auth') ? 2 : 1.4}
+                className="h-[21px] w-[21px]"
               />
-              {vaultCount > 0 && (
-                <span className="absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center">
-                  {vaultCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[10px] tracking-tight leading-none">Wishlist</span>
-          </Link>
+              <span className="text-[10px] tracking-tight leading-none">Me</span>
+            </Link>
 
-          {/* 5. Me */}
-          <Link
-            href={isLoggedIn ? '/profile' : '/auth'}
-            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
-              isActive('/profile') || isActive('/auth')
-                ? 'text-black dark:text-white font-semibold'
-                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            <CircleUserRound
-              strokeWidth={isActive('/profile') || isActive('/auth') ? 2 : 1.4}
-              className="h-[21px] w-[21px]"
-            />
-            <span className="text-[10px] tracking-tight leading-none">Me</span>
-          </Link>
-
+          </div>
+          {/* iOS safe area spacing */}
+          <div className="h-safe-area-bottom" />
         </div>
-        {/* iOS safe area spacing */}
-        <div className="h-safe-area-bottom" />
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }

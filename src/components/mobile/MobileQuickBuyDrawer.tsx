@@ -57,7 +57,6 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
     setTimeout(() => {
       setIsAdding(false);
       onClose();
-      setIsCartOpen(true);
     }, 400);
   };
 
@@ -200,7 +199,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
 
           <div className="flex items-center gap-1 text-emerald-400 text-[11px] font-bold">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Escrow Protected</span>
+            <span>Verified Piece</span>
           </div>
         </div>
 

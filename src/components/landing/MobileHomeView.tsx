@@ -230,74 +230,237 @@ export default function MobileHomeView() {
     }
   }, [activeTab]);
 
-  // Dynamic Hero Campaign (High-Fashion Focus, NO escrow spam)
-  const heroCampaign = useMemo(() => {
+  // Dynamic Hero Slideshow by Tab (Consistent Outfits across Categories)
+  const heroSlides = useMemo(() => {
     switch (activeTab) {
       case 'women':
-        return {
-          title: 'WOMEN’S RUNWAY',
-          subtitle: 'SPRING / SUMMER EDIT',
-          highlight: 'NEW SILHOUETTES & HANDBAGS',
-          image: '/images/editorial/nigerian_female_couture.jpg',
-          link: '/shop?gender=women',
-        };
+        return [
+          {
+            id: 'w-slide-1',
+            tag: 'RUNWAY COUTURE',
+            title: 'CORSETED GOWNS & LACE',
+            subtitle: 'SPRING / SUMMER RUNWAY EDIT',
+            highlight: 'BESPOKE TAILORED SILHOUETTES',
+            image: '/images/editorial/nigerian_female_couture.jpg',
+            link: '/shop?gender=women&category=dresses',
+          },
+          {
+            id: 'w-slide-2',
+            tag: 'STREET ARCHIVE',
+            title: 'OVERSIZED HOODIES & CARGO',
+            subtitle: 'STREETWEAR CAPSULE COLLECTION',
+            highlight: 'HEAVYWEIGHT RELAXED FITS',
+            image: '/images/editorial/modern_female_streetwear.jpg',
+            link: '/shop?gender=women&department=clothing',
+          },
+          {
+            id: 'w-slide-3',
+            tag: 'RESORT SILK',
+            title: 'FLUID SILK BOUBOU',
+            subtitle: 'HAND-STONED LUXURY ROBES',
+            highlight: 'EFFORTLESS ELEGANCE',
+            image: '/images/editorial/female_dress.jpg',
+            link: '/shop?gender=women&category=boubou',
+          },
+          {
+            id: 'w-slide-4',
+            tag: 'SILK ESSENTIALS',
+            title: 'LUXURY LOUNGEWEAR SETS',
+            subtitle: 'PURE MULBERRY SILK & LACE',
+            highlight: 'CHIC AT-HOME COMFORT',
+            image: '/images/products/women_loungewear_luxury.jpg',
+            link: '/shop?gender=women&category=women-loungewear',
+          },
+        ];
+
       case 'streetwear':
-        return {
-          title: 'STREET ARCHIVE',
-          subtitle: '480GSM HEAVYWEIGHT FLEECE',
-          highlight: 'LIMITED WORKSHOP RELEASE',
-          image: '/images/editorial/modern_male_streetwear.jpg',
-          link: '/shop?gender=men&category=hoodies',
-        };
+        return [
+          {
+            id: 's-slide-1',
+            tag: 'STREET ARCHIVE',
+            title: '480GSM FLEECE HOODIES',
+            subtitle: 'LIMITED WORKSHOP RELEASE',
+            highlight: 'DOUBLE-LAYERED HOOD & BOXY CUT',
+            image: '/images/products/BlackTrapStarHoodie.jpg',
+            link: '/shop?category=hoodies',
+          },
+          {
+            id: 's-slide-2',
+            tag: 'VINTAGE DENIM',
+            title: 'RELAXED BAGGY CARGO',
+            subtitle: 'HEAVYWEIGHT VINTAGE WASH',
+            highlight: 'WIDE-LEG STACKED SILHOUETTES',
+            image: '/images/products/BaggyJean.jpg',
+            link: '/shop?category=jeans',
+          },
+          {
+            id: 's-slide-3',
+            tag: 'URBAN RUNNER',
+            title: 'STREET LOW-TOPS & TRAINERS',
+            subtitle: 'LIMITED DROP SNEAKERS',
+            highlight: 'CUSHIONED PLATFORM SOLES',
+            image: '/images/products/AddidasShoeUnisex.jpg',
+            link: '/shop?category=sneakers',
+          },
+        ];
+
       case 'native':
-        return {
-          title: 'IMPERIAL NATIVE',
-          subtitle: 'GRAND AGBADA & BESPOKE SENATORS',
-          highlight: 'HAND-TAILORED HERITAGE',
-          image: '/images/editorial/nigerian_male_couture.jpg',
-          link: '/shop?gender=men&department=native',
-        };
+        return [
+          {
+            id: 'n-slide-1',
+            tag: 'CEREMONIAL HERITAGE',
+            title: 'ROYAL 3-PIECE AGBADA',
+            subtitle: 'BESPOKE NIGERIAN MONARCH EDIT',
+            highlight: 'INTRICATE HAND-EMBROIDERED ROBES',
+            image: '/images/products/BlackAgbada.jpg',
+            link: '/shop?gender=men&category=agbada',
+          },
+          {
+            id: 'n-slide-2',
+            tag: 'BESPOKE SUITING',
+            title: 'TAILORED SENATOR SETS',
+            subtitle: 'GEOMETRIC PLACKETS & MODERN WOOL',
+            highlight: 'SHARP ARCHITECTURAL CUTS',
+            image: '/images/products/BlackSenator.jpg',
+            link: '/shop?gender=men&category=senator',
+          },
+          {
+            id: 'n-slide-3',
+            tag: 'ROYAL HEADWEAR',
+            title: 'HAND-LOOMED FILA CAPS',
+            subtitle: 'ASO-OKE & VELVET FINISH',
+            highlight: 'TRADITIONAL STATEMENT HEADPIECES',
+            image: '/images/products/Cap1.png',
+            link: '/shop?category=fila',
+          },
+        ];
+
       case 'footwear':
-        return {
-          title: 'HANDCRAFTED FOOTWEAR',
-          subtitle: 'CALFSKIN SLIDES & MULES',
-          highlight: 'HANDMADE BY MASTER SHOEMAKERS',
-          image: '/images/products/UnisexSlides.jpg',
-          link: '/shop?department=footwear',
-        };
+        return [
+          {
+            id: 'f-slide-1',
+            tag: 'ARTISANAL LEATHER',
+            title: 'HANDCRAFTED CALFSKIN SLIDES',
+            subtitle: 'FULL-GRAIN KANO LEATHER',
+            highlight: 'ERGONOMIC MOULDED FOOTBED',
+            image: '/images/products/UnisexSlides.jpg',
+            link: '/shop?department=footwear',
+          },
+          {
+            id: 'f-slide-2',
+            tag: 'BESPOKE DRESS',
+            title: 'SMART MULES & LOAFERS',
+            subtitle: 'HAND-BURNISHED CALFSKIN',
+            highlight: 'SLIP-ON LUXURY SILHOUETTES',
+            image: '/images/products/BlackSmartShoes.jpg',
+            link: '/shop?category=loafers',
+          },
+        ];
+
       case 'men':
       default:
-        return {
-          title: 'THE MEN’S EDIT',
-          subtitle: 'BESPOKE SENATORS · STREET ARCHIVES · LEATHER',
-          highlight: 'EXPLORE THE NEW RELEASES',
-          image: '/images/editorial/modern_male_streetwear.jpg',
-          link: '/shop?gender=men',
-        };
+        return [
+          {
+            id: 'm-slide-1',
+            tag: 'NATIVE & CEREMONIAL',
+            title: 'ROYAL 3-PIECE AGBADA',
+            subtitle: 'HAND-TAILORED NIGERIAN LUXURY',
+            highlight: 'EMBROIDERED CEREMONIAL ROBES',
+            image: '/images/products/BlackAgbada.jpg',
+            link: '/shop?gender=men&category=agbada',
+          },
+          {
+            id: 'm-slide-2',
+            tag: 'STREET ARCHIVE',
+            title: '480GSM HEAVY HOODIES',
+            subtitle: 'BOXY URBAN STREETWEAR',
+            highlight: 'HEAVYWEIGHT CUSTOM FLEECE',
+            image: '/images/products/BlackTrapStarHoodie.jpg',
+            link: '/shop?gender=men&category=hoodies',
+          },
+          {
+            id: 'm-slide-3',
+            tag: 'BESPOKE SENATOR',
+            title: 'TAILORED SENATOR SUITS',
+            subtitle: 'SHARP GEOMETRIC PLACKETS',
+            highlight: 'PURE WOOL KAFTAN SETS',
+            image: '/images/products/BlackSenator.jpg',
+            link: '/shop?gender=men&category=senator',
+          },
+          {
+            id: 'm-slide-4',
+            tag: 'HANDMADE LEATHER',
+            title: 'CALFSKIN SLIDES & FOOTWEAR',
+            subtitle: 'KANO ARTISANAL WORKSHOP',
+            highlight: 'FULL-GRAIN LUXURY LEATHER',
+            image: '/images/products/UnisexSlides.jpg',
+            link: '/shop?gender=men&department=footwear',
+          },
+        ];
     }
   }, [activeTab]);
 
-  // Occasions Showcase (Editorial lifestyle)
-  const occasions = [
-    {
-      title: 'The Grand Owambe',
-      sub: 'Ceremonial Agbada, Senators & Velvet Fila',
-      image: '/images/editorial/nigerian_male_couture.jpg',
-      link: '/shop?gender=men&category=agbada',
-    },
-    {
-      title: 'Midnight Underground',
-      sub: '480GSM Boxy Hoodies & Relaxed Cargo',
-      image: '/images/editorial/modern_male_streetwear.jpg',
-      link: '/shop?gender=men&category=hoodies',
-    },
-    {
-      title: 'Artisanal Weekend',
-      sub: 'Full-Grain Leather Slides & Casual Sets',
-      image: '/images/products/UnisexSlides.jpg',
-      link: '/shop?category=slides',
-    },
-  ];
+  // Slideshow active slide index with auto-rotation
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  useEffect(() => {
+    setCurrentSlideIndex(0);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % heroSlides.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
+
+  // Dynamic Occasions Showcase (Strictly matches activeTab gender!)
+  const occasions = useMemo(() => {
+    if (activeTab === 'women') {
+      return [
+        {
+          title: 'Grand Owambe & Soirée',
+          sub: 'Luxury Aso-Ebi, Corseted Gowns & Silk Robes',
+          image: '/images/editorial/nigerian_female_couture.jpg',
+          link: '/shop?gender=women&department=native',
+        },
+        {
+          title: 'Midnight Underground',
+          sub: 'Street Cropped Hoodies, Wide Denim & Sets',
+          image: '/images/editorial/modern_female_streetwear.jpg',
+          link: '/shop?gender=women&department=clothing',
+        },
+        {
+          title: 'Artisanal Weekend & Resort',
+          sub: 'Flowing Silk Boubou, Mules & Chic Handbags',
+          image: '/images/editorial/female_dress.jpg',
+          link: '/shop?gender=women&category=boubou',
+        },
+      ];
+    }
+
+    return [
+      {
+        title: 'The Grand Owambe',
+        sub: 'Ceremonial Agbada, Senators & Velvet Fila',
+        image: '/images/editorial/nigerian_male_couture.jpg',
+        link: '/shop?gender=men&category=agbada',
+      },
+      {
+        title: 'Midnight Underground',
+        sub: '480GSM Boxy Hoodies, Cargo & Heavy Sweats',
+        image: '/images/editorial/modern_male_streetwear.jpg',
+        link: '/shop?gender=men&category=hoodies',
+      },
+      {
+        title: 'Artisanal Weekend',
+        sub: 'Full-Grain Leather Slides & Casual Sets',
+        image: '/images/products/UnisexSlides.jpg',
+        link: '/shop?gender=men&category=slides',
+      },
+    ];
+  }, [activeTab]);
 
   // Featured Independent Ateliers
   const featuredAteliers = [
@@ -449,6 +612,32 @@ export default function MobileHomeView() {
   // Cap trending drops to top 6 (NEVER 30 items)
   const trendingPieces = useMemo(() => productsList.slice(0, 6), [productsList]);
 
+  // Recently Viewed Pieces (stored in localStorage or curated fallback)
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('irisi_recently_viewed');
+      if (raw) {
+        const ids: string[] = JSON.parse(raw);
+        if (Array.isArray(ids) && ids.length > 0 && allProducts && allProducts.length > 0) {
+          const matched = ids
+            .map((id) => allProducts.find((p) => String(p.id) === String(id)))
+            .filter(Boolean);
+          if (matched.length > 0) {
+            setRecentlyViewed(matched.slice(0, 6));
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+
+    if (productsList && productsList.length > 0) {
+      setRecentlyViewed(productsList.slice(0, 4));
+    }
+  }, [allProducts, productsList]);
+
   return (
     <div className="md:hidden pb-28 bg-white dark:bg-[#0A0A0C] text-black dark:text-white min-h-screen">
 
@@ -456,18 +645,18 @@ export default function MobileHomeView() {
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0A0A0C] border-b border-neutral-200 dark:border-neutral-800">
         <div className="px-4 py-3 flex items-center justify-between">
           {/* Logo Icon + Brand Wordmark */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="relative h-7 w-7 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-800 shrink-0 bg-black">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="relative h-9 w-9 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shrink-0 bg-black shadow-sm">
               <Image
                 src="/images/logo/irisi-icon.png"
                 alt="ÌRÍSÍ"
-                width={28}
-                height={28}
+                width={36}
+                height={36}
                 priority
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="font-sans font-black text-2xl tracking-tighter uppercase text-black dark:text-white leading-none">
+            <span className="font-sans font-black text-[25px] tracking-tight uppercase text-black dark:text-white leading-none">
               ÌRÍSÍ
             </span>
           </Link>
@@ -543,39 +732,72 @@ export default function MobileHomeView() {
         </div>
       </header>
 
-      {/* ── 4. FULL-BLEED EDGE-TO-EDGE HERO BANNER (FASHION FOCUS) ── */}
-      <section className="relative w-full aspect-[4/5] max-h-[520px] bg-black overflow-hidden">
-        <Image
-          src={heroCampaign.image}
-          alt={heroCampaign.title}
-          fill
-          unoptimized
-          priority
-          className="object-cover opacity-85"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/10" />
-
-        <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-4 text-center z-10 space-y-2">
-          <span className="text-[11px] font-mono tracking-widest text-neutral-300 uppercase font-semibold">
-            {heroCampaign.subtitle}
-          </span>
-
-          <h1 className="text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-md">
-            {heroCampaign.title}
-          </h1>
-
-          <p className="text-xs font-mono font-bold tracking-widest text-amber-300 uppercase">
-            {heroCampaign.highlight}
-          </p>
-
-          <div className="pt-2">
-            <Link
-              href={heroCampaign.link}
-              className="inline-block text-xs font-black uppercase text-white tracking-widest underline underline-offset-4 decoration-2 hover:text-amber-300 transition-colors"
+      {/* ── 4. FULL-BLEED EDGE-TO-EDGE HERO BANNER (ROTATING SLIDESHOW) ── */}
+      <section className="relative w-full aspect-[4/5] max-h-[520px] bg-black overflow-hidden select-none">
+        {heroSlides.map((slide, idx) => {
+          const isActive = idx === currentSlideIndex;
+          return (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                isActive ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
+              }`}
             >
-              SHOP NOW
-            </Link>
-          </div>
+              <Image
+                src={slide.image}
+                alt={slide.title}
+                fill
+                unoptimized
+                priority={idx === 0}
+                className="object-cover opacity-85 scale-105 transition-transform duration-1000"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-black/15" />
+
+              <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 px-4 text-center z-10 space-y-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[9px] font-mono tracking-widest uppercase font-bold border border-white/20">
+                  {slide.tag}
+                </span>
+
+                <span className="text-[11px] font-mono tracking-widest text-neutral-300 uppercase font-semibold">
+                  {slide.subtitle}
+                </span>
+
+                <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-md">
+                  {slide.title}
+                </h1>
+
+                <p className="text-xs font-mono font-bold tracking-widest text-amber-300 uppercase">
+                  {slide.highlight}
+                </p>
+
+                <div className="pt-2">
+                  <Link
+                    href={slide.link}
+                    className="inline-block px-6 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-amber-300 transition-colors shadow-lg active:scale-95"
+                  >
+                    SHOP THIS DROP →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Slideshow Indicator Dots / Bars */}
+        <div className="absolute bottom-3 left-0 right-0 z-20 flex items-center justify-center gap-1.5">
+          {heroSlides.map((_, dotIdx) => (
+            <button
+              key={`dot-${dotIdx}`}
+              type="button"
+              onClick={() => setCurrentSlideIndex(dotIdx)}
+              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                currentSlideIndex === dotIdx
+                  ? 'w-6 bg-amber-400 shadow-sm'
+                  : 'w-1.5 bg-white/50 hover:bg-white/80'
+              }`}
+              aria-label={`Slide ${dotIdx + 1}`}
+            />
+          ))}
         </div>
       </section>
 
@@ -852,13 +1074,80 @@ export default function MobileHomeView() {
         </div>
       </section>
 
-      {/* ── 10. SUBTLE TRUST FOOTER (CLEAN, ZERO SPAM) ───────── */}
+      {/* ── 10. RECENTLY VIEWED PIECES ───────────────────────────── */}
+      {recentlyViewed.length > 0 && (
+        <section className="px-4 pt-12 space-y-3">
+          <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
+                Recently Viewed
+              </h2>
+              <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                Continue Browsing Pieces You Explored
+              </span>
+            </div>
+            <Link
+              href="/shop"
+              className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white"
+            >
+              Shop All →
+            </Link>
+          </div>
+
+          <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-2">
+            {recentlyViewed.map((item) => {
+              const imageSrc = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+              return (
+                <div
+                  key={`recent-${item.id}`}
+                  className="w-36 shrink-0 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111113] flex flex-col"
+                >
+                  <Link href={`/shop/${item.id}`} className="relative aspect-[3/4] w-full block bg-neutral-100 dark:bg-neutral-900">
+                    <Image
+                      src={imageSrc}
+                      alt={item.name}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </Link>
+                  <div className="p-2 flex flex-col justify-between flex-1 gap-1">
+                    <div>
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-neutral-400 block truncate">
+                        {item.vendorName || 'Brand'}
+                      </span>
+                      <h4 className="text-[11px] font-semibold text-black dark:text-white line-clamp-1">
+                        {item.name}
+                      </h4>
+                    </div>
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className="text-[11px] font-black text-black dark:text-white">
+                        ₦{Number(item.price || 0).toLocaleString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setQuickBuyProduct(item)}
+                        className="p-1 rounded bg-black dark:bg-white text-white dark:text-black text-[9px] font-bold cursor-pointer hover:opacity-80 active:scale-95"
+                        title="Quick Add"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── 11. SUBTLE TRUST FOOTER (CLEAN, ZERO SPAM) ───────── */}
       <footer className="px-4 py-10 mt-10 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-1.5">
             <Lock className="h-4 w-4 text-emerald-500" />
-            <span className="text-[10px] font-bold uppercase leading-tight">100% Escrow</span>
-            <span className="text-[8px] text-neutral-400">Zero Risk Payment</span>
+            <span className="text-[10px] font-bold uppercase leading-tight">Secure Checkout</span>
+            <span className="text-[8px] text-neutral-400">Verified & Encrypted</span>
           </div>
 
           <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-1.5">

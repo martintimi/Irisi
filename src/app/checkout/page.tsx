@@ -1032,13 +1032,13 @@ export default function CheckoutPage() {
               className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <Lock className="h-4 w-4" />
-              <span>Pay ₦{grandTotal.toLocaleString()} via Escrow</span>
+              <span>Pay ₦{grandTotal.toLocaleString()} Securely</span>
             </button>
 
             <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5 text-emerald-400 text-[11px] font-mono-luxury">
               <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
               <div>
-                <strong>100% Escrow Protection:</strong> Your payment is held safely and only released to the vendor after you receive and approve your clothes.
+                <strong>Buyer Protection Guarantee:</strong> Your payment is held securely and only released after your delivery is verified and confirmed.
               </div>
             </div>
           </div>

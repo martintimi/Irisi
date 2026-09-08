@@ -48,7 +48,7 @@ export default function MobileCartView() {
   const distinctVendorsCount = Object.keys(groupedItems).length;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-36 select-none animate-fadeIn">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-48 select-none animate-fadeIn">
       
       {/* 1. TOP FLOATING APP BAR */}
       <div className="sticky top-0 z-30 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] p-4 flex items-center justify-between">
@@ -217,18 +217,13 @@ export default function MobileCartView() {
               </div>
             ))}
 
-            {/* Escrow Guarantee Pill */}
-            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-emerald-400 text-xs font-mono-luxury font-bold">
-              <ShieldCheck className="h-4 w-4 shrink-0" />
-              <span>100% Escrow Protection: Funds released only after delivery</span>
-            </div>
           </>
         )}
       </div>
 
-      {/* 3. FIXED FLOATING BOTTOM DOCK WITH TOTAL & CHECKOUT BUTTON */}
+      {/* 3. FIXED FLOATING BOTTOM DOCK WITH TOTAL & CHECKOUT BUTTON (Docked right above MobileBottomNav) */}
       {cart.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-40 bg-[#0a0a0c]/90 dark:bg-[#0a0a0c]/90 bg-white/95 backdrop-blur-2xl border-t border-black/10 dark:border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3">
+        <div className="fixed bottom-[62px] inset-x-0 z-30 bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-2xl border-t border-neutral-200 dark:border-neutral-800 p-3.5 px-4 shadow-[0_-8px_25px_rgba(0,0,0,0.2)] flex items-center justify-between gap-3">
           <div>
             <span className="text-[9px] font-mono-luxury text-[var(--text-muted)] uppercase block">Estimated Subtotal:</span>
             <div className="font-editorial text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)] leading-none mt-0.5">

@@ -814,11 +814,11 @@ export default function MobileCheckoutView() {
             </div>
           </div>
 
-          {/* Escrow Guarantee Badge */}
+          {/* Buyer Protection Badge */}
           <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-emerald-400 text-[10px] leading-snug">
             <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
             <div>
-              <strong>100% Escrow Protection:</strong> Payment is held safely and only released to the vendor after you receive and approve your clothes.
+              <strong>Buyer Protection Guarantee:</strong> Your payment is held securely and only released after your delivery is verified and confirmed.
             </div>
           </div>
         </div>
