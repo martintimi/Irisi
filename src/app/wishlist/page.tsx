@@ -25,12 +25,6 @@ export default function WishlistPage() {
   // Handle move single item to bag
   const handleMoveToBag = (product: any) => {
     addToCart(product, 'M', undefined, 1);
-    confetti({
-      particleCount: 35,
-      spread: 60,
-      origin: { y: 0.8 },
-      colors: ['#d4af37', '#ffffff', '#000000'],
-    });
     setMovedMessage(`Moved "${product.name}" to your shopping bag`);
     setTimeout(() => setMovedMessage(null), 3500);
   };
@@ -39,12 +33,6 @@ export default function WishlistPage() {
   const handleMoveAllToBag = () => {
     vault.forEach((p) => {
       addToCart(p, 'M', undefined, 1);
-    });
-    confetti({
-      particleCount: 60,
-      spread: 80,
-      origin: { y: 0.7 },
-      colors: ['#d4af37', '#ffffff', '#000000'],
     });
     setMovedMessage(`All ${vault.length} pieces moved to your shopping bag!`);
     setTimeout(() => setMovedMessage(null), 4000);

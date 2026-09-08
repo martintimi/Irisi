@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import {
   Search, Camera, Sparkles, ArrowRight, Heart,
-  ChevronRight, Sun, Moon, ArrowUpRight, Lock, Truck, Crown
+  ChevronRight, Sun, Moon, ArrowUpRight
 } from 'lucide-react';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 
@@ -639,7 +639,7 @@ export default function MobileHomeView() {
   }, [allProducts, productsList]);
 
   return (
-    <div className="md:hidden pb-28 bg-white dark:bg-[#0A0A0C] text-black dark:text-white min-h-screen">
+    <div className="md:hidden pb-16 bg-white dark:bg-[#0A0A0C] text-black dark:text-white min-h-screen">
 
       {/* ── 1. HEADER: ÌRÍSÍ LOGO + WORDMARK + FOR YOU + THEME TOGGLE ── */}
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0A0A0C] border-b border-neutral-200 dark:border-neutral-800">
@@ -1074,9 +1074,9 @@ export default function MobileHomeView() {
         </div>
       </section>
 
-      {/* ── 10. RECENTLY VIEWED PIECES ───────────────────────────── */}
+      {/* ── 10. RECENTLY VIEWED PIECES (FINAL SECTION) ─────────── */}
       {recentlyViewed.length > 0 && (
-        <section className="px-4 pt-12 space-y-3">
+        <section className="px-4 pt-8 pb-3 space-y-3">
           <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
             <div>
               <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
@@ -1140,29 +1140,6 @@ export default function MobileHomeView() {
           </div>
         </section>
       )}
-
-      {/* ── 11. SUBTLE TRUST FOOTER (CLEAN, ZERO SPAM) ───────── */}
-      <footer className="px-4 py-10 mt-10 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-1.5">
-            <Lock className="h-4 w-4 text-emerald-500" />
-            <span className="text-[10px] font-bold uppercase leading-tight">Secure Checkout</span>
-            <span className="text-[8px] text-neutral-400">Verified & Encrypted</span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-1.5">
-            <Crown className="h-4 w-4 text-amber-500" />
-            <span className="text-[10px] font-bold uppercase leading-tight">Verified Brands</span>
-            <span className="text-[8px] text-neutral-400">Authentic Pieces</span>
-          </div>
-
-          <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-1.5">
-            <Truck className="h-4 w-4 text-cyan-500" />
-            <span className="text-[10px] font-bold uppercase leading-tight">Fast Dispatch</span>
-            <span className="text-[8px] text-neutral-400">Doorstep & Hub</span>
-          </div>
-        </div>
-      </footer>
 
       {/* Quick Buy Drawer */}
       {quickBuyProduct && (

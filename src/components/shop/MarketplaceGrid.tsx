@@ -14,7 +14,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 24;
 
 export default function MarketplaceGrid() {
   const {

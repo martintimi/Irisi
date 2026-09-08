@@ -160,9 +160,6 @@ export default function StudioDressingStage() {
       imageUrl: '/images/products/BlackTrapStarHoodie.jpg',
       colors: [activeColor],
     } as any);
-
-    confetti({ particleCount: 45, spread: 60, origin: { y: 0.8 } });
-    setIsCartOpen(true);
   };
 
   return (

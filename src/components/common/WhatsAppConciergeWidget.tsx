@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -16,14 +16,15 @@ export default function WhatsAppConciergeWidget() {
   const { cart, bodyProfile, vendorProfile, userAuth } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState(getConciergeConfig());
+  const isDraggingRef = useRef(false);
 
   // Check if current page is in Vendor Portal
   const isVendorMode = pathname.startsWith('/vendor');
 
-  // Only show for logged in customers or logged in vendors
+  // Customer support accessible to shoppers; vendor support accessible to vendors
   const isCustomerLoggedIn = !!userAuth?.isLoggedIn;
   const isVendorLoggedIn = !!vendorProfile?.email || !!vendorProfile?.brandName;
-  const isAuthorized = isVendorMode ? (isVendorLoggedIn || isCustomerLoggedIn) : isCustomerLoggedIn;
+  const isAuthorized = isVendorMode ? (isVendorLoggedIn || isCustomerLoggedIn) : true;
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -160,14 +161,29 @@ export default function WhatsAppConciergeWidget() {
 
   return (
     <>
-      {/* 1. FLOATING WHATSAPP BUTTON (ROUND ICON ON MOBILE, BADGE ON DESKTOP) */}
-      <div className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40">
-        <motion.button
+      {/* 1. FLOATING DRAGGABLE WHATSAPP BUTTON (FREELY DRAGGABLE ANYWHERE) */}
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.08}
+        whileDrag={{ scale: 1.08 }}
+        onDragStart={() => {
+          isDraggingRef.current = true;
+        }}
+        onDragEnd={() => {
+          setTimeout(() => {
+            isDraggingRef.current = false;
+          }, 120);
+        }}
+        className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40 touch-none cursor-grab active:cursor-grabbing select-none"
+      >
+        <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="group relative flex items-center justify-center h-12 w-12 md:h-auto md:w-auto md:px-4 md:py-3 rounded-full bg-[#128C7E] hover:bg-[#075E54] text-white shadow-[0_10px_25px_rgba(18,140,126,0.4)] border border-white/20 transition-all cursor-pointer"
+          onClick={() => {
+            if (isDraggingRef.current) return;
+            setIsOpen(!isOpen);
+          }}
+          className="group relative flex items-center justify-center h-12 w-12 md:h-auto md:w-auto md:px-4 md:py-3 rounded-full bg-[#128C7E] hover:bg-[#075E54] text-white shadow-[0_10px_25px_rgba(18,140,126,0.4)] border border-white/20 transition-transform cursor-pointer"
           title={isVendorMode ? 'Vendor Support' : 'Ìrísí Support'}
           aria-label={isVendorMode ? 'Vendor Support' : 'Ìrísí Support'}
         >
@@ -192,8 +208,8 @@ export default function WhatsAppConciergeWidget() {
           <span className="text-[10px] font-mono-luxury text-emerald-100 hidden md:inline-block">
             Online
           </span>
-        </motion.button>
-      </div>
+        </button>
+      </motion.div>
 
       {/* 2. THEME-AWARE MODAL (PERFECT IN LIGHT & DARK MODE, NON-LEAKING SCROLL) */}
       <AnimatePresence>

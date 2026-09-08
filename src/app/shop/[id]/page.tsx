@@ -65,7 +65,6 @@ export default function ProductDetailPage() {
 
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [isModelTryOnOpen, setIsModelTryOnOpen] = useState(false);
-  const [addedToast, setAddedToast] = useState(false);
   const [reviewsData, setReviewsData] = useState<{ averageRating: number; fitAccuracyPercent: number; count: number; reviews: any[] }>({
     averageRating: 5.0,
     fitAccuracyPercent: 100,
@@ -220,14 +219,6 @@ export default function ProductDetailPage() {
   const handleAddToCart = () => {
     if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
-    setAddedToast(true);
-    confetti({
-      particleCount: 45,
-      spread: 55,
-      origin: { y: 0.6 },
-      colors: ['#e6c367', '#10b981', '#ffffff']
-    });
-    setTimeout(() => setAddedToast(false), 3500);
   };
 
   const handleBuyNow = () => {
@@ -702,13 +693,6 @@ export default function ProductDetailPage() {
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
-
-            {addedToast && (
-              <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-mono-luxury font-bold flex items-center justify-center gap-2 animate-fadeIn text-center">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                <span>Item added to your shopping bag!</span>
-              </div>
-            )}
           </div>
 
           {/* Buyer Protection Guarantee */}

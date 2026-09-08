@@ -81,8 +81,6 @@ export default function Product3DModal({ isOpen, onClose, product }: Product3DMo
 
   const handleAdd = () => {
     addToCart(product as any);
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
-    setIsCartOpen(true);
     onClose();
   };
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Home, Search, ShoppingBag, Heart, CircleUserRound, Check } from 'lucide-react';
+import { Home, Search, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MobileBottomNav() {
@@ -14,7 +14,6 @@ export default function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [bagBounce, setBagBounce] = useState(false);
   const [flyingItem, setFlyingItem] = useState<{ name: string; imageUrl?: string } | null>(null);
-  const [cartToast, setCartToast] = useState<string | null>(null);
 
   const lastScrollY = useRef(0);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -26,7 +25,7 @@ export default function MobileBottomNav() {
     pathname.startsWith('/checkout') ||
     (pathname.startsWith('/shop/') && pathname.split('/').length >= 3 && pathname.split('/')[2] !== '');
 
-  // Handle Add to Bag micro-animation ("throw to bag") and toast
+  // Handle Add to Bag micro-animation ("throw to bag")
   useEffect(() => {
     if (!lastAddedCartItem) return;
 
@@ -40,16 +39,14 @@ export default function MobileBottomNav() {
       setTimeout(() => setBagBounce(false), 450);
     }, 400);
 
-    setCartToast(lastAddedCartItem.name);
-    const toastTimer = setTimeout(() => {
-      setCartToast(null);
+    const cleanupTimer = setTimeout(() => {
       setFlyingItem(null);
       clearLastAddedCartItem();
-    }, 3200);
+    }, 550);
 
     return () => {
       clearTimeout(bounceTimer);
-      clearTimeout(toastTimer);
+      clearTimeout(cleanupTimer);
     };
   }, [lastAddedCartItem, clearLastAddedCartItem]);
 
@@ -139,38 +136,7 @@ export default function MobileBottomNav() {
         )}
       </AnimatePresence>
 
-      {/* Floating Added to Bag Toast Message */}
-      <AnimatePresence>
-        {cartToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="fixed bottom-[74px] inset-x-4 z-50 max-w-sm mx-auto p-3 rounded-2xl bg-black/95 text-white dark:bg-white dark:text-black shadow-2xl border border-white/15 dark:border-black/15 flex items-center justify-between gap-3 backdrop-blur-md"
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-7 w-7 rounded-lg bg-amber-400 text-black flex items-center justify-center shrink-0">
-                <Check className="h-4 w-4 stroke-[3]" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[9px] font-mono-luxury uppercase tracking-wider text-amber-400 dark:text-amber-600 block font-black">
-                  Added to Bag
-                </span>
-                <span className="text-xs font-bold truncate block">
-                  {cartToast}
-                </span>
-              </div>
-            </div>
-            <Link
-              href="/cart"
-              onClick={() => setCartToast(null)}
-              className="px-3 py-1.5 rounded-full bg-amber-400 text-black font-mono-luxury uppercase text-[10px] font-bold shrink-0 hover:bg-amber-300 transition-colors active:scale-95"
-            >
-              View Bag →
-            </Link>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
 
       <nav
         className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-300 ease-out ${

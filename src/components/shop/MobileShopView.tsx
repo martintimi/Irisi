@@ -14,7 +14,7 @@ import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
 import MobileProductSlider from '@/components/shop/MobileProductSlider';
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 24;
 
 const categoryMeta: Record<string, { label: string; desc: string }> = {
   tops: { label: 'Shirts & Tops', desc: 'Boutique shirts, tees, Senator sets, and kaftans' },

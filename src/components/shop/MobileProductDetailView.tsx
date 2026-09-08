@@ -57,7 +57,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || { name: 'Standard', hex: '#111111' });
   const [quantity, setQuantity] = useState(1);
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
-  const [addedToast, setAddedToast] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -266,14 +265,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const handleAddToCart = () => {
     if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
-    setAddedToast(true);
-    confetti({
-      particleCount: 45,
-      spread: 55,
-      origin: { y: 0.8 },
-      colors: ['#e6c367', '#10b981', '#ffffff']
-    });
-    setTimeout(() => setAddedToast(false), 3000);
   };
 
   const handleBuyNow = () => {
@@ -758,14 +749,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           <MessageCircle className="h-4 w-4 fill-emerald-500/20" />
           <span>Inquire via WhatsApp Concierge</span>
         </a>
-
-        {/* Toast Alert */}
-        {addedToast && (
-          <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-mono-luxury font-bold flex items-center justify-center gap-2 animate-fadeIn text-center">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span>Piece added to your shopping bag!</span>
-          </div>
-        )}
 
       </div>
 
