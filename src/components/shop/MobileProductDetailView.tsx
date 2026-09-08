@@ -9,7 +9,8 @@ import {
   ArrowLeft, Bookmark, Share2, Sparkles, ShieldCheck, MapPin,
   Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2,
   ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn,
-  Video, Volume2, VolumeX, MessageCircle, User, Layers
+  Video, Volume2, VolumeX, MessageCircle, User, Layers,
+  Play, Pause, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
@@ -60,6 +61,9 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoBuffering, setIsVideoBuffering] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDraggingCarousel = useRef(false);
@@ -119,7 +123,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     return items.length > 0 ? items : [{ type: 'image', url: '/images/products/BlackTrapStarHoodie.jpg' }];
   }, [product.imageUrl, product.videoUrl, product.images]);
 
-  // Reliable instant video autoplay without native iOS/Android play button overlay
+  // Reliable instant video autoplay with Low Power Mode manual unlock
   const playVideo = () => {
     const v = videoRef.current;
     if (v) {
@@ -130,15 +134,15 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
       v.setAttribute('webkit-playsinline', '');
       v.setAttribute('x5-playsinline', '');
       v.setAttribute('muted', '');
-      if (v.paused) {
-        const p = v.play();
-        if (p !== undefined) {
-          p.catch(() => {
-            setTimeout(() => {
-              if (v?.paused) v?.play().catch(() => {});
-            }, 60);
-          });
-        }
+      const p = v.play();
+      if (p !== undefined) {
+        p.then(() => {
+          setIsVideoPlaying(true);
+          setIsVideoBuffering(false);
+        }).catch(() => {
+          // Autoplay was blocked by Low Power Mode or browser policy
+          setIsVideoPlaying(false);
+        });
       }
     }
   };
@@ -389,42 +393,102 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
               onPointerDown={playVideo}
             >
               {item.type === 'video' ? (
-                <div className="relative w-full h-full bg-black">
-                  <video
-                    ref={(el) => {
-                      videoRef.current = el;
-                      if (el) {
-                        el.muted = true;
-                        el.defaultMuted = true;
-                        el.playsInline = true;
-                        el.setAttribute('muted', '');
-                        el.setAttribute('playsinline', '');
-                        el.setAttribute('webkit-playsinline', '');
-                        el.setAttribute('x5-playsinline', '');
-                        if (el.paused) el.play().catch(() => {});
-                      }
-                    }}
-                    src={item.url}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    webkit-playsinline="true"
-                    x5-playsinline="true"
-                    controls={false}
-                    disablePictureInPicture
-                    preload="auto"
-                    onPause={(e) => {
-                      e.currentTarget.play().catch(() => {});
-                    }}
-                    onEnded={(e) => {
-                      e.currentTarget.currentTime = 0;
-                      e.currentTarget.play().catch(() => {});
-                    }}
-                    onLoadedData={playVideo}
-                    onCanPlay={playVideo}
-                    className="w-full h-full object-cover pointer-events-none"
+                <div className="relative w-full h-full bg-black overflow-hidden flex items-center justify-center">
+                  {/* Universal Instant Poster Image underneath video: guarantees screen is NEVER blank */}
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    priority
+                    className="object-cover object-center pointer-events-none"
                   />
+
+                  {/* HTML5 Video Layer */}
+                  {!videoError && (
+                    <video
+                      ref={(el) => {
+                        videoRef.current = el;
+                        if (el) {
+                          el.muted = true;
+                          el.defaultMuted = true;
+                          el.playsInline = true;
+                          el.setAttribute('muted', '');
+                          el.setAttribute('playsinline', '');
+                          el.setAttribute('webkit-playsinline', '');
+                          el.setAttribute('x5-playsinline', '');
+                          if (el.paused && activeMediaIndex === idx) {
+                            el.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+                          }
+                        }
+                      }}
+                      src={item.url}
+                      poster={product.imageUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      webkit-playsinline="true"
+                      x5-playsinline="true"
+                      controls={false}
+                      disablePictureInPicture
+                      preload="auto"
+                      onPlaying={() => {
+                        setIsVideoPlaying(true);
+                        setIsVideoBuffering(false);
+                      }}
+                      onPause={() => {
+                        setIsVideoPlaying(false);
+                      }}
+                      onWaiting={() => {
+                        setIsVideoBuffering(true);
+                      }}
+                      onCanPlay={() => {
+                        setIsVideoBuffering(false);
+                      }}
+                      onError={() => {
+                        setVideoError(true);
+                        setIsVideoPlaying(false);
+                        setIsVideoBuffering(false);
+                      }}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+
+                  {/* Centered Play/Unlock Button Overlay if autoplay paused or blocked by battery-saver mode */}
+                  {!isVideoPlaying && !videoError && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        playVideo();
+                      }}
+                      className="absolute inset-0 flex items-center justify-center bg-black/35 z-10 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-black/85 backdrop-blur-md border border-[var(--gold-accent)]/50 text-white shadow-2xl active:scale-95 transition-all">
+                        <Play className="h-4 w-4 text-[var(--gold-accent)] fill-current animate-pulse" />
+                        <span className="text-xs font-mono-luxury font-bold tracking-wider uppercase text-white">
+                          Tap to Play Video
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Loading Spinner if Video is buffering on slow connection */}
+                  {isVideoBuffering && !videoError && (
+                    <div className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-mono-luxury border border-white/15">
+                      <Loader2 className="h-3 w-3 animate-spin text-[var(--gold-accent)]" />
+                      <span>Loading...</span>
+                    </div>
+                  )}
+
+                  {/* Fallback Badge if Video Format was Incompatible on user's device */}
+                  {videoError && (
+                    <div className="absolute bottom-4 left-4 right-4 z-10 p-2.5 rounded-xl bg-black/85 backdrop-blur-md text-center border border-white/10">
+                      <span className="text-[11px] font-mono-luxury text-amber-300">
+                        Video stream not supported by this browser. Showing photo.
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Image
@@ -843,6 +907,14 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
             >
               {mediaItems[activeMediaIndex]?.type === 'video' ? (
                 <div className="relative w-full h-full max-h-[62vh] rounded-2xl overflow-hidden bg-black flex items-center justify-center">
+                  <Image
+                    src={product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    priority
+                    className="object-contain pointer-events-none"
+                  />
                   <video
                     ref={(el) => {
                       if (el) {
@@ -857,23 +929,16 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
                       }
                     }}
                     src={mediaItems[activeMediaIndex].url}
+                    poster={product.imageUrl}
                     autoPlay
                     loop
                     muted
                     playsInline
                     webkit-playsinline="true"
                     x5-playsinline="true"
-                    controls={false}
-                    disablePictureInPicture
+                    controls
                     preload="auto"
-                    onPause={(e) => {
-                      e.currentTarget.play().catch(() => {});
-                    }}
-                    onEnded={(e) => {
-                      e.currentTarget.currentTime = 0;
-                      e.currentTarget.play().catch(() => {});
-                    }}
-                    className="w-full h-full object-contain pointer-events-none"
+                    className="relative w-full h-full object-contain z-10"
                   />
                 </div>
               ) : (

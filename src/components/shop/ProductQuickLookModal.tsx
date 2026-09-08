@@ -135,11 +135,24 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
             />
             {product.videoUrl && (
               <video
+                ref={(el) => {
+                  if (el) {
+                    el.muted = true;
+                    el.defaultMuted = true;
+                    el.playsInline = true;
+                    el.setAttribute('muted', '');
+                    el.setAttribute('playsinline', '');
+                    el.setAttribute('webkit-playsinline', '');
+                  }
+                }}
                 src={product.videoUrl}
+                poster={product.imageUrl}
                 autoPlay
                 loop
                 muted
                 playsInline
+                webkit-playsinline="true"
+                x5-playsinline="true"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}

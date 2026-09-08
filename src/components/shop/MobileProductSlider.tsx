@@ -176,14 +176,44 @@ export default function MobileProductSlider({
               style={{ minWidth: '100%', width: '100%' }}
             >
               {media.type === 'video' ? (
-                <video
-                  src={media.url}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover pointer-events-none"
-                />
+                <div className="relative w-full h-full">
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    priority={priority && sIdx === 0}
+                    loading={priority && sIdx === 0 ? 'eager' : 'lazy'}
+                    className="object-cover pointer-events-none"
+                  />
+                  <video
+                    ref={(el) => {
+                      if (el) {
+                        el.muted = true;
+                        el.defaultMuted = true;
+                        el.playsInline = true;
+                        el.setAttribute('muted', '');
+                        el.setAttribute('playsinline', '');
+                        el.setAttribute('webkit-playsinline', '');
+                        el.setAttribute('x5-playsinline', '');
+                        if (el.paused) el.play().catch(() => {});
+                      }
+                    }}
+                    src={media.url}
+                    poster={product.imageUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    webkit-playsinline="true"
+                    x5-playsinline="true"
+                    preload="metadata"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                  />
+                </div>
               ) : (
                 <Image
                   src={media.url}

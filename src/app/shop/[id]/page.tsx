@@ -322,8 +322,19 @@ export default function ProductDetailPage() {
             {/* 3. Hover Video Playback (when video is available) */}
             {product.videoUrl && (
               <video
-                ref={hoverVideoRef}
+                ref={(el) => {
+                  hoverVideoRef.current = el;
+                  if (el) {
+                    el.muted = true;
+                    el.defaultMuted = true;
+                    el.playsInline = true;
+                    el.setAttribute('muted', '');
+                    el.setAttribute('playsinline', '');
+                    el.setAttribute('webkit-playsinline', '');
+                  }
+                }}
                 src={product.videoUrl}
+                poster={activeImage || product.imageUrl}
                 loop
                 muted
                 playsInline

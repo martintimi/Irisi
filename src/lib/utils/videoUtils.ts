@@ -34,6 +34,14 @@ export function normalizeVideoBuffer(
 export function normalizeVideoUrl(url: string | undefined): string | undefined {
   if (!url || typeof url !== 'string') return undefined;
 
+  // Cloudinary: Ensure video is delivered as universal web-compatible H.264 MP4 with auto compression
+  // This guarantees seamless decoding across iOS Safari (even in Low Power Mode), Chrome Android, and all phones
+  if (url.includes('res.cloudinary.com') && url.includes('/video/upload/')) {
+    if (!url.includes('/video/upload/vc_') && !url.includes('/video/upload/f_')) {
+      return url.replace('/video/upload/', '/video/upload/vc_h264,q_auto,f_mp4/');
+    }
+  }
+
   // Handle QuickTime / MOV data URLs
   if (url.startsWith('data:video/quicktime') || url.startsWith('data:video/mov')) {
     const commaIndex = url.indexOf(',');
