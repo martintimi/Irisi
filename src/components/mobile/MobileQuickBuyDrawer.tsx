@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import { X, Check, ShoppingBag, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
 
 interface QuickBuyDrawerProps {
@@ -47,17 +46,10 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
     setIsAdding(true);
     addToCart(product, selectedSize, selectedColor, quantity);
 
-    confetti({
-      particleCount: 60,
-      spread: 60,
-      origin: { y: 0.8 },
-      colors: ['#e6c367', '#ffffff', '#10b981']
-    });
-
     setTimeout(() => {
       setIsAdding(false);
       onClose();
-    }, 400);
+    }, 200);
   };
 
   const handleInstantBuy = () => {

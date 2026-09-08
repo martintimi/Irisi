@@ -34,15 +34,17 @@ export default function MobileBottomNav() {
       imageUrl: lastAddedCartItem.imageUrl,
     });
 
+    // Fire bouncy feedback right as the item touches down into the bag
     const bounceTimer = setTimeout(() => {
       setBagBounce(true);
-      setTimeout(() => setBagBounce(false), 450);
-    }, 400);
+      setTimeout(() => setBagBounce(false), 500);
+    }, 750);
 
+    // Clean up animation state after smooth touchdown
     const cleanupTimer = setTimeout(() => {
       setFlyingItem(null);
       clearLastAddedCartItem();
-    }, 550);
+    }, 1000);
 
     return () => {
       clearTimeout(bounceTimer);
@@ -106,18 +108,31 @@ export default function MobileBottomNav() {
       <AnimatePresence>
         {flyingItem && (
           <motion.div
-            initial={{ top: '45%', left: '50%', scale: 1, opacity: 1, x: '-50%', y: '-50%' }}
-            animate={{
-              top: 'calc(100vh - 35px)',
+            initial={{
+              top: '38%',
               left: '50%',
-              scale: 0.18,
-              opacity: 0.15,
+              scale: 1.15,
+              opacity: 1,
+              rotate: 0,
+              x: '-50%',
+              y: '-50%'
+            }}
+            animate={{
+              top: ['38%', '48%', 'calc(100vh - 36px)'],
+              left: ['50%', '50.5%', '50%'],
+              scale: [1.15, 0.85, 0.22],
+              rotate: [0, -6, 3, 0],
+              opacity: [1, 1, 1, 0],
             }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.45, ease: [0.25, 1, 0.5, 1] }}
-            className="fixed z-50 pointer-events-none"
+            transition={{
+              duration: 0.85,
+              ease: [0.16, 1, 0.3, 1],
+              times: [0, 0.45, 0.88, 1]
+            }}
+            className="fixed z-50 pointer-events-none drop-shadow-[0_15px_35px_rgba(0,0,0,0.5)]"
           >
-            <div className="relative h-16 w-16 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-2xl bg-black">
+            <div className="relative h-20 w-20 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-[0_10px_35px_rgba(245,158,11,0.55)] bg-black">
               {flyingItem.imageUrl ? (
                 <Image
                   src={flyingItem.imageUrl}
@@ -128,7 +143,7 @@ export default function MobileBottomNav() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-amber-400 text-black">
-                  <ShoppingBag className="h-6 w-6" />
+                  <ShoppingBag className="h-8 w-8" />
                 </div>
               )}
             </div>

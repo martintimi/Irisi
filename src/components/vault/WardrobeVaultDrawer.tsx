@@ -38,7 +38,6 @@ export default function WardrobeVaultDrawer() {
 
   const handleAddAllToBag = () => {
     vault.forEach((p) => addToCart(p));
-    confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
     setIsVaultOpen(false);
   };
 
@@ -200,7 +199,6 @@ export default function WardrobeVaultDrawer() {
                             <button
                               onClick={() => {
                                 addToCart(product);
-                                confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
                               }}
                               className="w-full md:w-auto py-1.5 px-3 rounded-full text-[10px] font-mono-luxury uppercase font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 flex items-center justify-center gap-1 transition-all cursor-pointer"
                             >

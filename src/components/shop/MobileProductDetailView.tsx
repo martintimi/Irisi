@@ -12,7 +12,6 @@ import {
   Video, Volume2, VolumeX, MessageCircle, User, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
 
 interface MobileProductDetailViewProps {
@@ -282,7 +281,6 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
       }).catch(() => {});
     } else if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
-      confetti({ particleCount: 25, spread: 45, origin: { y: 0.8 } });
     }
   };
 

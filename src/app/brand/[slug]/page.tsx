@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import confetti from 'canvas-confetti';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
 import MobileBrandView from '@/components/brand/MobileBrandView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
@@ -103,7 +102,6 @@ export default function BrandStorefrontPage() {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
-      confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 } });
       setTimeout(() => setCopiedLink(false), 3000);
     }
   };
@@ -426,7 +424,6 @@ export default function BrandStorefrontPage() {
                       <button
                         onClick={() => {
                           addToCart(p, p.sizes?.[0] || 'M');
-                          confetti({ particleCount: 30, spread: 45, origin: { y: 0.7 } });
                         }}
                         className="p-2 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 transition-all shadow-md"
                         title="Add to Bag"
