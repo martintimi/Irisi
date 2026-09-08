@@ -457,6 +457,7 @@ export default function AdminCategoriesManager() {
                     { label: 'Polos & Shirts', url: '/images/uploaded/poloandshirt.jpeg' },
                     { label: 'Shorts', url: '/images/uploaded/short.jpeg' },
                     { label: 'Men Bag', url: '/images/uploaded/leaderBags.jpeg' },
+                    { label: 'Crossbody', url: '/images/products/men_crossbody_bag.jpg' },
                     { label: 'Women Bag', url: '/images/uploaded/LeaderbagsWomen.jpeg' },
                     { label: 'Jewelry', url: '/images/uploaded/WomenJewelry.jpeg' },
                     { label: 'Women Street', url: '/images/uploaded/Streetwear&topsWomen.jpeg' },

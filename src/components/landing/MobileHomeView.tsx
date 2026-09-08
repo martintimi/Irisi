@@ -95,10 +95,17 @@ export default function MobileHomeView() {
             link: '/shop?gender=men&category=hoodies',
           },
           {
-            id: 's-denim',
+            id: 's-cargo',
             title: 'Pants & Cargo',
-            subtitle: 'Wide-Leg Vintage Denim',
+            subtitle: 'Tactical Pockets & Sweats',
             image: '/images/uploaded/pantsandcargo.jpeg',
+            link: '/shop?gender=men&category=cargo',
+          },
+          {
+            id: 's-denim',
+            title: 'Vintage Denim',
+            subtitle: 'Wide-Leg Baggy Jeans',
+            image: '/images/products/BaggyJean.jpg',
             link: '/shop?gender=men&category=jeans',
           },
           {
@@ -201,8 +208,15 @@ export default function MobileHomeView() {
           {
             id: 'm-pants',
             title: 'Pants & Cargo',
-            subtitle: 'Bespoke Trousers & Denim',
+            subtitle: 'Tactical Cargo & Sweats',
             image: '/images/uploaded/pantsandcargo.jpeg',
+            link: '/shop?gender=men&category=cargo',
+          },
+          {
+            id: 'm-denim',
+            title: 'Jeans & Denim',
+            subtitle: 'Raw Selvedge & Wide-Leg',
+            image: '/images/products/BaggyJean.jpg',
             link: '/shop?gender=men&category=jeans',
           },
           {
