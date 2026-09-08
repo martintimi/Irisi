@@ -49,7 +49,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'tshirts',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/editorial/male_shirt.jpg',
+    imageUrl: '/images/uploaded/t-shirtsandgraphic.jpeg',
     subtitle: 'Heavy cotton luxury tees & wash drop prints',
   },
   {
@@ -58,7 +58,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'polos',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/editorial/male_shirt.jpg',
+    imageUrl: '/images/uploaded/poloandshirt.jpeg',
     subtitle: 'Tailored knit polos & silk button-downs',
   },
   {
@@ -76,7 +76,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'jeans',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/products/BaggyJean.jpg',
+    imageUrl: '/images/uploaded/pantsandcargo.jpeg',
     subtitle: 'Raw selvedge & relaxed wide-leg denim',
     isPopular: true,
   },
@@ -86,7 +86,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'cargo',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/products/GreyCargoPantsHollister.jpg',
+    imageUrl: '/images/uploaded/pantsandcargo.jpeg',
     subtitle: 'Tactical cargo pockets & heavyweight sweats',
   },
   {
@@ -95,7 +95,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'shorts',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/products/MenCasualJoggers.jpg',
+    imageUrl: '/images/uploaded/short.jpeg',
     subtitle: 'Mesh court shorts & tailored linen sets',
   },
   {

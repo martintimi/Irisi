@@ -5,26 +5,25 @@ import fs from 'fs';
 import path from 'path';
 
 // Configure Cloudinary if environment variables are set (individual keys or CLOUDINARY_URL)
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
 const hasCloudinary = !!(
-  process.env.CLOUDINARY_URL ||
-  (process.env.CLOUDINARY_CLOUD_NAME &&
-   process.env.CLOUDINARY_API_KEY &&
-   process.env.CLOUDINARY_API_SECRET)
+  (cloudName && apiKey && apiSecret) ||
+  process.env.CLOUDINARY_URL
 );
 
 if (hasCloudinary) {
-  if (process.env.CLOUDINARY_URL) {
+  if (cloudName && apiKey && apiSecret) {
     cloudinary.config({
-      cloudinary_url: process.env.CLOUDINARY_URL,
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
       secure: true,
     });
-  } else {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
+  } else if (process.env.CLOUDINARY_URL) {
+    cloudinary.config(true);
   }
 }
 
