@@ -78,7 +78,7 @@ export default function MobileBottomNav() {
       }`}
     >
       <div className="bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-800">
-        <div className="grid grid-cols-5 h-[54px] max-w-md mx-auto items-center px-2">
+        <div className="grid grid-cols-5 h-[62px] max-w-md mx-auto items-center px-2 py-1">
 
           {/* 1. Home */}
           <Link
