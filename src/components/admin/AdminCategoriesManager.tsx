@@ -452,6 +452,11 @@ export default function AdminCategoriesManager() {
                     { label: 'Agbada', url: '/images/products/BlackAgbada.jpg' },
                     { label: 'Denim', url: '/images/products/BaggyJean.jpg' },
                     { label: 'Slides', url: '/images/products/UnisexSlides.jpg' },
+                    { label: 'Men Bag', url: '/images/uploaded/leaderBags.jpeg' },
+                    { label: 'Women Bag', url: '/images/uploaded/LeaderbagsWomen.jpeg' },
+                    { label: 'Jewelry', url: '/images/uploaded/WomenJewelry.jpeg' },
+                    { label: 'Women Street', url: '/images/uploaded/Streetwear&topsWomen.jpeg' },
+                    { label: 'Women Footwear', url: '/images/uploaded/footwear&slideswomen.jpeg' },
                     { label: 'Dress', url: '/images/editorial/female_dress.jpg' },
                     { label: 'Couture', url: '/images/editorial/nigerian_female_couture.jpg' },
                   ].map((preset) => (

@@ -52,28 +52,28 @@ export default function MobileHomeView() {
             id: 'w-street',
             title: 'Streetwear & Tops',
             subtitle: 'Oversized Hoodies & Tees',
-            image: '/images/editorial/modern_female_streetwear.jpg',
+            image: '/images/uploaded/Streetwear&topsWomen.jpeg',
             link: '/shop?gender=women&category=women-hoodies',
           },
           {
             id: 'w-bags',
             title: 'Artisanal Leather Bags',
             subtitle: 'Crossbodies & Luxury Totes',
-            image: '/images/editorial/female_dress.jpg',
+            image: '/images/uploaded/LeaderbagsWomen.jpeg',
             link: '/shop?gender=women&department=bags',
           },
           {
             id: 'w-shoes',
             title: 'Footwear & Slides',
             subtitle: 'Handcrafted Slides & Mules',
-            image: '/images/products/UnisexSlides.jpg',
+            image: '/images/uploaded/footwear&slideswomen.jpeg',
             link: '/shop?gender=women&department=footwear',
           },
           {
             id: 'w-jewelry',
             title: 'Fine Jewelry',
             subtitle: 'Statement Chains & Accents',
-            image: '/images/editorial/nigerian_female_model.jpg',
+            image: '/images/uploaded/WomenJewelry.jpeg',
             link: '/shop?gender=women&category=jewelry',
           },
           {
@@ -223,7 +223,7 @@ export default function MobileHomeView() {
             id: 'm-accessories',
             title: 'Leather Bags & Accents',
             subtitle: 'Crossbodies & Weekend Bags',
-            image: '/images/editorial/male_shirt.jpg',
+            image: '/images/uploaded/leaderBags.jpeg',
             link: '/shop?gender=men&department=bags',
           },
         ];
@@ -250,7 +250,7 @@ export default function MobileHomeView() {
             title: 'OVERSIZED HOODIES & CARGO',
             subtitle: 'STREETWEAR CAPSULE COLLECTION',
             highlight: 'HEAVYWEIGHT RELAXED FITS',
-            image: '/images/editorial/modern_female_streetwear.jpg',
+            image: '/images/uploaded/Oversizedhoodie&cargo.jpeg',
             link: '/shop?gender=women&department=clothing',
           },
           {
@@ -428,13 +428,13 @@ export default function MobileHomeView() {
         {
           title: 'Midnight Underground',
           sub: 'Street Cropped Hoodies, Wide Denim & Sets',
-          image: '/images/editorial/modern_female_streetwear.jpg',
+          image: '/images/uploaded/Oversizedhoodie&cargo.jpeg',
           link: '/shop?gender=women&department=clothing',
         },
         {
           title: 'Artisanal Weekend & Resort',
           sub: 'Flowing Silk Boubou, Mules & Chic Handbags',
-          image: '/images/editorial/female_dress.jpg',
+          image: '/images/uploaded/LeaderbagsWomen.jpeg',
           link: '/shop?gender=women&category=boubou',
         },
       ];
@@ -571,7 +571,7 @@ export default function MobileHomeView() {
           vendorName: 'Kano Leather Studio',
           category: 'accessories',
           genderTarget: 'female',
-          imageUrl: '/images/editorial/female_shirt.jpg',
+          imageUrl: '/images/uploaded/LeaderbagsWomen.jpeg',
           stockQuantity: 4,
         } as any,
       ];
