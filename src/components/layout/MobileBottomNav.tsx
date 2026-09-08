@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Home, Tag, ShoppingBag, Bookmark, CircleUserRound, LogIn, Heart } from 'lucide-react';
+import { Home, Search, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -19,7 +19,6 @@ export default function MobileBottomNav() {
     pathname.startsWith('/vendor') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
-    // Hide on individual product pages — too much overlap with buy buttons
     (pathname.startsWith('/shop/') && pathname.split('/').length >= 3 && pathname.split('/')[2] !== '');
 
   useEffect(() => {
@@ -29,15 +28,24 @@ export default function MobileBottomNav() {
       setIsVisible(true);
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       inactivityTimerRef.current = setTimeout(() => {
-        if (window.scrollY > 80) setIsVisible(false);
-      }, 3500);
+        if (window.scrollY > 120) setIsVisible(false);
+      }, 4000);
     };
 
     const handleScroll = () => {
       const y = window.scrollY;
-      if (y <= 20) { setIsVisible(true); resetInactivityTimer(); lastScrollY.current = y; return; }
-      if (y > lastScrollY.current + 8) setIsVisible(false);
-      else if (y < lastScrollY.current - 8) { setIsVisible(true); resetInactivityTimer(); }
+      if (y <= 30) {
+        setIsVisible(true);
+        resetInactivityTimer();
+        lastScrollY.current = y;
+        return;
+      }
+      if (y > lastScrollY.current + 12) {
+        setIsVisible(false);
+      } else if (y < lastScrollY.current - 12) {
+        setIsVisible(true);
+        resetInactivityTimer();
+      }
       lastScrollY.current = y;
     };
 
@@ -58,126 +66,114 @@ export default function MobileBottomNav() {
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const vaultCount = vault.length;
-  const isLoggedIn = userAuth.isLoggedIn;
+  const isLoggedIn = userAuth?.isLoggedIn;
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
-    <>
-      <nav
-        className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          isVisible ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        <div className="relative bg-[var(--bg-primary)] border-t border-[var(--border-subtle)] shadow-[0_-1px_12px_rgba(0,0,0,0.08)]">
+    <nav
+      className={`fixed bottom-0 inset-x-0 z-40 md:hidden transition-transform duration-300 ease-out ${
+        isVisible ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
+      <div className="bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-lg border-t border-neutral-200 dark:border-neutral-800">
+        <div className="grid grid-cols-5 h-[54px] max-w-md mx-auto items-center px-2">
 
-          {/* Thin gold shimmer line across top */}
-          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--gold-accent)]/30 to-transparent" />
+          {/* 1. Home */}
+          <Link
+            href="/"
+            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+              isActive('/')
+                ? 'text-black dark:text-white font-semibold'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <Home
+              strokeWidth={isActive('/') ? 2 : 1.3}
+              className={`h-[21px] w-[21px] ${isActive('/') ? 'fill-current' : ''}`}
+            />
+            <span className="text-[10px] tracking-tight leading-none">Home</span>
+          </Link>
 
-          <div className="flex items-end justify-around h-[62px] px-1 max-w-md mx-auto pb-1">
+          {/* 2. Shop */}
+          <Link
+            href="/shop"
+            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+              isActive('/shop')
+                ? 'text-black dark:text-white font-semibold'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <Search
+              strokeWidth={isActive('/shop') ? 2.2 : 1.4}
+              className="h-[21px] w-[21px]"
+            />
+            <span className="text-[10px] tracking-tight leading-none">Shop</span>
+          </Link>
 
-            {/* Feed / Home */}
-            <Link href="/" className="flex flex-col items-center justify-center gap-[3px] w-14 pt-2 relative group">
-              {isActive('/') && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-6 rounded-full bg-[var(--gold-accent)]" />
-              )}
-              <Home
-                strokeWidth={isActive('/') ? 2 : 1.5}
-                className={`h-[21px] w-[21px] transition-all ${isActive('/') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}
+          {/* 3. Bag */}
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 py-1 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer relative"
+            aria-label="Shopping Bag"
+          >
+            <div className="relative">
+              <ShoppingBag
+                strokeWidth={1.4}
+                className="h-[21px] w-[21px]"
               />
-              <span className={`text-[9px] uppercase tracking-wider font-medium transition-colors ${isActive('/') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}>
-                Feed
-              </span>
-            </Link>
-
-            {/* Shop */}
-            <Link href="/shop" className="flex flex-col items-center justify-center gap-[3px] w-14 pt-2 relative">
-              {isActive('/shop') && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-6 rounded-full bg-[var(--gold-accent)]" />
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[8px] font-bold flex items-center justify-center">
+                  {totalCartCount}
+                </span>
               )}
-              <Tag
-                strokeWidth={isActive('/shop') ? 2 : 1.5}
-                className={`h-[21px] w-[21px] transition-all ${isActive('/shop') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}
+            </div>
+            <span className="text-[10px] tracking-tight leading-none">Bag</span>
+          </button>
+
+          {/* 4. Wishlist */}
+          <button
+            type="button"
+            onClick={() => setIsVaultOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 py-1 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer relative"
+            aria-label="Wishlist"
+          >
+            <div className="relative">
+              <Heart
+                strokeWidth={1.4}
+                className="h-[21px] w-[21px]"
               />
-              <span className={`text-[9px] uppercase tracking-wider font-medium transition-colors ${isActive('/shop') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}>
-                Shop
-              </span>
-            </Link>
-
-            {/* Vault / Saved — elevated center CTA */}
-            <button
-              type="button"
-              onClick={() => setIsVaultOpen(true)}
-              className="flex flex-col items-center justify-center gap-[3px] w-16 relative -mt-5 cursor-pointer"
-              aria-label="Wardrobe Vault"
-            >
-              <div className="relative h-[52px] w-[52px] rounded-2xl bg-gradient-to-br from-[var(--gold-accent)] to-amber-700 shadow-[0_6px_24px_rgba(196,151,46,0.4)] flex items-center justify-center active:scale-95 transition-transform">
-                <Bookmark className="h-[22px] w-[22px] text-black" strokeWidth={2} />
-                {vaultCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-[18px] min-w-[18px] px-1 rounded-full bg-white text-black text-[9px] font-bold flex items-center justify-center shadow-md">
-                    {vaultCount}
-                  </span>
-                )}
-              </div>
-              <span className="text-[9px] uppercase tracking-wider font-bold text-[var(--gold-accent)]">
-                Vault
-              </span>
-            </button>
-
-            {/* Bag */}
-            <button
-              type="button"
-              onClick={() => setIsCartOpen(true)}
-              className="flex flex-col items-center justify-center gap-[3px] w-14 pt-2 relative cursor-pointer"
-              aria-label="Shopping Bag"
-            >
-              <div className="relative">
-                <ShoppingBag
-                  strokeWidth={1.5}
-                  className="h-[21px] w-[21px] text-[var(--text-secondary)]"
-                />
-                {totalCartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 h-[14px] min-w-[14px] px-0.5 rounded-full bg-[var(--gold-accent)] text-black text-[8px] font-bold flex items-center justify-center">
-                    {totalCartCount}
-                  </span>
-                )}
-              </div>
-              <span className="text-[9px] uppercase tracking-wider font-medium text-[var(--text-secondary)]">Bag</span>
-            </button>
-
-            {/* Account / Login */}
-            <Link
-              href={isLoggedIn ? '/profile' : '/auth'}
-              className="flex flex-col items-center justify-center gap-[3px] w-14 pt-2 relative"
-            >
-              {(isActive('/profile') || isActive('/auth')) && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-6 rounded-full bg-[var(--gold-accent)]" />
+              {vaultCount > 0 && (
+                <span className="absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center">
+                  {vaultCount}
+                </span>
               )}
-              {isLoggedIn ? (
-                <>
-                  <div className="h-[21px] w-[21px] rounded-full bg-[var(--gold-accent)] flex items-center justify-center">
-                    <span className="text-[9px] font-bold text-black leading-none">
-                      {(userAuth.name || 'U').charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span className={`text-[9px] uppercase tracking-wider font-medium transition-colors ${isActive('/profile') ? 'text-[var(--gold-accent)]' : 'text-[var(--text-secondary)]'}`}>
-                    Profile
-                  </span>
-                </>
-              ) : (
-                <>
-                  <LogIn strokeWidth={1.5} className="h-[21px] w-[21px] text-[var(--text-secondary)]" />
-                  <span className="text-[9px] uppercase tracking-wider font-medium text-[var(--text-secondary)]">Login</span>
-                </>
-              )}
-            </Link>
+            </div>
+            <span className="text-[10px] tracking-tight leading-none">Wishlist</span>
+          </button>
 
-          </div>
-          {/* iOS safe area */}
-          <div className="h-safe-area-bottom" />
+          {/* 5. Me */}
+          <Link
+            href={isLoggedIn ? '/profile' : '/auth'}
+            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
+              isActive('/profile') || isActive('/auth')
+                ? 'text-black dark:text-white font-semibold'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <CircleUserRound
+              strokeWidth={isActive('/profile') || isActive('/auth') ? 2 : 1.4}
+              className="h-[21px] w-[21px]"
+            />
+            <span className="text-[10px] tracking-tight leading-none">Me</span>
+          </Link>
+
         </div>
-      </nav>
-    </>
+        {/* iOS safe area spacing */}
+        <div className="h-safe-area-bottom" />
+      </div>
+    </nav>
   );
 }
