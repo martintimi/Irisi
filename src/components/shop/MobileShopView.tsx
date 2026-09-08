@@ -80,21 +80,51 @@ export default function MobileShopView() {
     }, 700);
   };
 
+  const [specificCategory, setSpecificCategory] = useState<string | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
+
   useEffect(() => {
     fetchProductsFromDb();
   }, [fetchProductsFromDb]);
 
   useEffect(() => {
-    const cat = searchParams.get('category');
-    if (cat && ['tops', 'bottoms', 'outerwear', 'footwear', 'accessories'].includes(cat)) {
-      setSelectedCategory(cat as GarmentCategory);
+    const gen = searchParams.get('gender')?.toLowerCase();
+    if (gen === 'male' || gen === 'men') {
+      setGenderFilter('male');
       setCurrentPage(1);
-    } else if (cat === 'all') {
-      setSelectedCategory('all');
+    } else if (gen === 'female' || gen === 'women') {
+      setGenderFilter('female');
+      setCurrentPage(1);
     }
-    const gen = searchParams.get('gender');
-    if (gen && ['male', 'female'].includes(gen)) {
-      setGenderFilter(gen as 'male' | 'female');
+
+    const dept = searchParams.get('department') || searchParams.get('dept');
+    if (dept) {
+      setDepartmentFilter(dept.toLowerCase());
+      setCurrentPage(1);
+    } else {
+      setDepartmentFilter(null);
+    }
+
+    const cat = searchParams.get('category') || searchParams.get('cat');
+    if (cat) {
+      const c = cat.toLowerCase();
+      if (['tops', 'bottoms', 'outerwear', 'footwear', 'accessories'].includes(c)) {
+        setSelectedCategory(c as GarmentCategory);
+        setSpecificCategory(null);
+      } else if (c === 'all') {
+        setSelectedCategory('all');
+        setSpecificCategory(null);
+      } else {
+        setSpecificCategory(c);
+      }
+      setCurrentPage(1);
+    } else {
+      setSpecificCategory(null);
+    }
+
+    const occ = searchParams.get('occasion');
+    if (occ) {
+      setSearchQuery(occ);
       setCurrentPage(1);
     }
   }, [searchParams]);
@@ -111,11 +141,61 @@ export default function MobileShopView() {
   const filteredProducts = useMemo(() => {
     let list = Array.isArray(allProducts) ? [...allProducts] : [];
 
-    // Filter strictly by gender: only selected gender or unisex (never show both male and female together)
+    // Filter strictly by gender: only selected gender or unisex
     list = list.filter((p) => {
       const pGender = (p.genderTarget || '').toLowerCase();
       const matchesGender = pGender === genderFilter || pGender === 'unisex';
+
+      // General category filter
       const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
+
+      // Specific subcategory filter
+      let matchesSpecific = true;
+      if (specificCategory) {
+        const sc = specificCategory.toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        const pDesc = (p.description || '').toLowerCase();
+        const pTags = (p.tags || []).map((t: string) => (t || '').toLowerCase());
+        const pSub = ((p as any).subcategory || '').toLowerCase();
+
+        if (sc === 'hoodies' || sc === 'women-hoodies') {
+          matchesSpecific = pName.includes('hoodie') || pName.includes('sweat') || pTags.some(t => t.includes('hoodie'));
+        } else if (sc === 'senator') {
+          matchesSpecific = pName.includes('senator') || pName.includes('kaftan') || pTags.some(t => t.includes('senator'));
+        } else if (sc === 'agbada') {
+          matchesSpecific = pName.includes('agbada') || pTags.some(t => t.includes('agbada'));
+        } else if (sc === 'slides' || sc === 'women-slides') {
+          matchesSpecific = pName.includes('slide') || pName.includes('palm') || pName.includes('slipper') || pTags.some(t => t.includes('slide'));
+        } else if (sc === 'jeans' || sc === 'women-jeans') {
+          matchesSpecific = pName.includes('jean') || pName.includes('denim') || pName.includes('cargo') || pTags.some(t => t.includes('jean'));
+        } else if (sc === 'dresses') {
+          matchesSpecific = pName.includes('dress') || pName.includes('gown') || pTags.some(t => t.includes('dress'));
+        } else if (sc === 'boubou') {
+          matchesSpecific = pName.includes('boubou') || pName.includes('kaftan') || pName.includes('abaya') || pTags.some(t => t.includes('boubou'));
+        } else if (sc === 'heels') {
+          matchesSpecific = pName.includes('heel') || pName.includes('pump') || pName.includes('mule') || pTags.some(t => t.includes('heel'));
+        } else if (sc === 'watches' || sc === 'women-watches') {
+          matchesSpecific = pName.includes('watch') || pTags.some(t => t.includes('watch'));
+        } else if (sc === 'chains' || sc === 'jewelry') {
+          matchesSpecific = pName.includes('chain') || pName.includes('necklace') || pName.includes('bangle') || pTags.some(t => t.includes('chain'));
+        } else {
+          matchesSpecific = pName.includes(sc) || pDesc.includes(sc) || pTags.some(t => t.includes(sc)) || pSub === sc;
+        }
+      }
+
+      // Department filter
+      let matchesDept = true;
+      if (departmentFilter) {
+        const df = departmentFilter.toLowerCase();
+        const pCat = (p.category || '').toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        if (df === 'clothing') matchesDept = pCat === 'tops' || pCat === 'bottoms' || pCat === 'outerwear';
+        else if (df === 'native') matchesDept = pName.includes('agbada') || pName.includes('senator') || pName.includes('kaftan') || pName.includes('boubou') || pName.includes('fila');
+        else if (df === 'footwear') matchesDept = pCat === 'footwear' || pName.includes('slide') || pName.includes('shoe') || pName.includes('heel');
+        else if (df === 'bags') matchesDept = pCat === 'accessories' || pName.includes('bag') || pName.includes('tote') || pName.includes('backpack');
+        else if (df === 'accessories') matchesDept = pCat === 'accessories' || pName.includes('chain') || pName.includes('watch') || pName.includes('cap');
+      }
+
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery = !q ||
         (p.name || '').toLowerCase().includes(q) ||
@@ -130,7 +210,7 @@ export default function MobileShopView() {
       else if (priceRange === '50k-100k') matchesPrice = price > 50000 && price <= 100000;
       else if (priceRange === 'over100k') matchesPrice = price > 100000;
 
-      return matchesGender && matchesCat && matchesQuery && matchesPrice;
+      return matchesGender && matchesCat && matchesSpecific && matchesDept && matchesQuery && matchesPrice;
     });
 
     // Sort
@@ -143,7 +223,7 @@ export default function MobileShopView() {
     }
 
     return list;
-  }, [allProducts, genderFilter, selectedCategory, searchQuery, priceRange, sortBy]);
+  }, [allProducts, genderFilter, selectedCategory, specificCategory, departmentFilter, searchQuery, priceRange, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const paginatedProducts = useMemo(() => {
@@ -177,38 +257,50 @@ export default function MobileShopView() {
 
       {/* HEADER ROW: title + refine */}
       <div className="px-4 pt-4 pb-2">
-        {selectedCategory !== 'all' && (
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => handleCategoryChange('all')}
-              className="inline-flex items-center gap-1 text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline cursor-pointer"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              <span>All Departments</span>
-            </button>
+        {/* Active Filter Pill Bar */}
+        {(specificCategory || departmentFilter || selectedCategory !== 'all') && (
+          <div className="mb-2.5 flex items-center justify-between gap-2 p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-subtle)]">
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold shrink-0">Filtered:</span>
+              <span className="text-xs font-bold truncate">
+                {specificCategory
+                  ? specificCategory.replace(/-/g, ' ').toUpperCase()
+                  : departmentFilter
+                  ? departmentFilter.toUpperCase()
+                  : categoryMeta[selectedCategory]?.label || selectedCategory}
+              </span>
+            </div>
 
             <button
               type="button"
-              onClick={() => handleCategoryChange('all')}
-              className="text-[10px] font-mono-luxury uppercase text-[var(--text-secondary)] hover:text-rose-400 font-bold px-2 py-0.5 rounded-full border border-[var(--border-subtle)]"
+              onClick={() => {
+                setSelectedCategory('all');
+                setSpecificCategory(null);
+                setDepartmentFilter(null);
+                router.replace(`/shop?gender=${genderFilter === 'male' ? 'men' : 'women'}`);
+              }}
+              className="text-[10px] font-mono-luxury uppercase text-neutral-500 hover:text-rose-500 font-bold px-2 py-0.5 rounded-full border border-neutral-300 dark:border-neutral-700 shrink-0 cursor-pointer"
             >
-              ✕ Clear Filter
+              ✕ Clear
             </button>
           </div>
         )}
 
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h1 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-              {selectedCategory !== 'all'
+            <h1 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight capitalize">
+              {specificCategory
+                ? `${genderFilter === 'male' ? "Men's" : "Women's"} ${specificCategory.replace(/-/g, ' ')}`
+                : departmentFilter
+                ? `${genderFilter === 'male' ? "Men's" : "Women's"} ${departmentFilter}`
+                : selectedCategory !== 'all'
                 ? categoryMeta[selectedCategory]?.label || 'Category Drops'
                 : genderFilter === 'male'
                 ? "Men's Drops"
                 : "Women's Drops"}
             </h1>
             <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5">
-              {filteredProducts.length} {filteredProducts.length === 1 ? 'piece' : 'pieces'} {selectedCategory !== 'all' ? `in ${categoryMeta[selectedCategory]?.label || selectedCategory}` : 'curated across Nigeria'}
+              {filteredProducts.length} {filteredProducts.length === 1 ? 'piece' : 'pieces'} available
             </p>
           </div>
 

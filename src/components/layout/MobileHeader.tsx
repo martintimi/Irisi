@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
-  ShoppingBag, Sun, Moon, Bookmark
+  ShoppingBag, Sun, Moon, Heart
 } from 'lucide-react';
 import BrandWordmark from '@/components/common/BrandWordmark';
 
@@ -22,15 +22,14 @@ export default function MobileHeader() {
     theme,
     toggleTheme,
     cart,
-    setIsCartOpen,
     vault,
-    setIsVaultOpen,
   } = useStore();
 
   const isStandalonePage =
     pathname.startsWith('/auth') ||
     pathname.startsWith('/vendor') ||
-    pathname.startsWith('/admin');
+    pathname.startsWith('/admin') ||
+    pathname === '/'; // MobileHomeView already has its own sticky header on homepage!
 
   if (isStandalonePage) return null;
 
@@ -38,7 +37,7 @@ export default function MobileHeader() {
 
   return (
     <header className="sticky top-0 z-40 w-full md:hidden bg-[var(--bg-primary)]/95 backdrop-blur-xl border-b border-[var(--border-subtle)] transition-all">
-      <div className="h-16 flex items-center justify-between px-4">
+      <div className="h-14 flex items-center justify-between px-4">
         
         {/* Left: Official Brand Wordmark */}
         <BrandWordmark size="sm" withSubtitle={false} />
@@ -48,7 +47,7 @@ export default function MobileHeader() {
           <button
             onClick={toggleTheme}
             suppressHydrationWarning
-            className="p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+            className="p-2 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
             title="Toggle theme"
           >
             {mounted ? (
@@ -58,34 +57,35 @@ export default function MobileHeader() {
             )}
           </button>
 
-          {/* Curated Wardrobe Vault */}
-          <button
-            onClick={() => setIsVaultOpen(true)}
+          {/* Wishlist */}
+          <Link
+            href="/wishlist"
             className="relative p-2 rounded-full text-[var(--text-primary)] transition-all"
-            title="Curated Vault"
-            aria-label="Vault"
+            title="My Wishlist"
+            aria-label="Wishlist"
           >
-            <Bookmark className="h-5 w-5" />
+            <Heart className="h-5 w-5" strokeWidth={1.5} />
             {vault.length > 0 && (
-              <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--gold-accent)] text-[9px] font-bold text-black shadow-md">
+              <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-md">
                 {vault.length}
               </span>
             )}
-          </button>
+          </Link>
 
           {/* Shopping Bag */}
-          <button
-            onClick={() => setIsCartOpen(true)}
+          <Link
+            href="/cart"
             className="relative p-2 rounded-full text-[var(--text-primary)] transition-all"
-            aria-label="Cart"
+            title="Shopping Bag"
+            aria-label="Shopping Bag"
           >
-            <ShoppingBag className="h-5 w-5" />
+            <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
             {totalCartCount > 0 && (
-              <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--gold-accent)] text-[9px] font-bold text-black shadow-md">
+              <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black dark:bg-white text-[9px] font-bold text-white dark:text-black shadow-md">
                 {totalCartCount}
               </span>
             )}
-          </button>
+          </Link>
         </div>
 
       </div>

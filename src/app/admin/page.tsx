@@ -18,6 +18,7 @@ import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import { getConciergeConfig, saveConciergeConfig, generateWhatsAppUrl, ConciergeConfig } from '@/lib/config/concierge';
+import AdminCategoriesManager from '@/components/admin/AdminCategoriesManager';
 
 const adminEditorialSlides = [
   {
@@ -72,7 +73,7 @@ export default function SuperAdminPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'logistics' | 'catalog' | 'approvals' | 'finance' | 'customers' | 'concierge'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'logistics' | 'catalog' | 'categories' | 'approvals' | 'finance' | 'customers' | 'concierge'>('overview');
 
   // VIP Concierge Settings State
   const [conciergeConfig, setConciergeConfig] = useState<ConciergeConfig>(getConciergeConfig());
@@ -932,6 +933,11 @@ export default function SuperAdminPage() {
       label: 'Catalog Moderation',
       icon: ShoppingBag,
       badge: `${products.length}`
+    },
+    {
+      id: 'categories',
+      label: 'Categories Manager',
+      icon: Layers,
     },
     {
       id: 'approvals',
@@ -2321,6 +2327,13 @@ export default function SuperAdminPage() {
               )}
 
             </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB: CATEGORIES & SUBCATEGORIES MANAGER */}
+          {/* ======================================================== */}
+          {activeTab === 'categories' && (
+            <AdminCategoriesManager />
           )}
 
           {/* ======================================================== */}

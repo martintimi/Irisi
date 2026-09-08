@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
   ShoppingBag, Sparkles, Sun, Moon, SlidersHorizontal, User, LogOut,
-  Bell, Check, Package, Star, ChevronRight, Bookmark
+  Bell, Check, Package, Star, ChevronRight, Bookmark, Heart
 } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -252,34 +252,35 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Curated Wardrobe Vault */}
-          <button
-            onClick={() => setIsVaultOpen(true)}
+          {/* Wishlist */}
+          <Link
+            href="/wishlist"
             className="relative flex items-center justify-center h-11 w-11 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] transition-all shadow-sm"
-            title="Curated Wardrobe Vault"
-            aria-label="Open Wardrobe Vault"
+            title="My Wishlist"
+            aria-label="Open Wishlist"
           >
-            <Bookmark className="h-5 w-5" />
+            <Heart className="h-5 w-5" strokeWidth={1.5} />
             {vault.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--gold-accent)] text-[11px] font-bold text-black shadow-md">
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[11px] font-bold text-white shadow-md">
                 {vault.length}
               </span>
             )}
-          </button>
+          </Link>
 
           {/* Shopping Bag */}
-          <button
-            onClick={() => setIsCartOpen(true)}
+          <Link
+            href="/cart"
             className="relative flex items-center justify-center h-11 w-11 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-all shadow-sm"
+            title="Shopping Bag"
             aria-label="Open Shopping Bag"
           >
-            <ShoppingBag className="h-5 w-5" />
+            <ShoppingBag className="h-5 w-5" strokeWidth={1.5} />
             {totalCartCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--gold-accent)] text-[11px] font-bold text-black shadow-md">
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black dark:bg-white text-[11px] font-bold text-white dark:text-black shadow-md">
                 {totalCartCount}
               </span>
             )}
-          </button>
+          </Link>
         </div>
 
       </div>

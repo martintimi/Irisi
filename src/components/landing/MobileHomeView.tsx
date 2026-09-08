@@ -46,42 +46,42 @@ export default function MobileHomeView() {
             title: "Women's Couture",
             subtitle: 'Bespoke Sets & Robes',
             image: '/images/editorial/nigerian_female_couture.jpg',
-            link: '/shop',
+            link: '/shop?gender=women&category=dresses',
           },
           {
             id: 'w-street',
             title: 'Streetwear & Tops',
             subtitle: 'Oversized Hoodies & Tees',
             image: '/images/editorial/modern_female_streetwear.jpg',
-            link: '/category/streetwear',
+            link: '/shop?gender=women&category=women-hoodies',
           },
           {
             id: 'w-bags',
             title: 'Artisanal Leather Bags',
             subtitle: 'Crossbodies & Luxury Totes',
             image: '/images/editorial/female_dress.jpg',
-            link: '/category/accessories',
+            link: '/shop?gender=women&department=bags',
           },
           {
             id: 'w-shoes',
             title: 'Footwear & Slides',
             subtitle: 'Handcrafted Slides & Mules',
             image: '/images/products/UnisexSlides.jpg',
-            link: '/category/footwear',
+            link: '/shop?gender=women&department=footwear',
           },
           {
             id: 'w-jewelry',
             title: 'Fine Jewelry',
             subtitle: 'Statement Chains & Accents',
             image: '/images/editorial/nigerian_female_model.jpg',
-            link: '/category/accessories',
+            link: '/shop?gender=women&category=jewelry',
           },
           {
             id: 'w-shirts',
             title: 'Silk & Tailored Tops',
             subtitle: 'Adire & Casual Blouses',
             image: '/images/editorial/female_shirt.jpg',
-            link: '/category/shirts',
+            link: '/shop?gender=women&category=tops',
           },
         ];
 
@@ -92,28 +92,28 @@ export default function MobileHomeView() {
             title: '480GSM Hoodies',
             subtitle: 'Heavyweight Boxy Fits',
             image: '/images/products/BlackTrapStarHoodie.jpg',
-            link: '/category/streetwear',
+            link: '/shop?gender=men&category=hoodies',
           },
           {
             id: 's-denim',
             title: 'Pants & Cargo',
             subtitle: 'Wide-Leg Vintage Denim',
             image: '/images/products/BaggyJean.jpg',
-            link: '/category/trousers',
+            link: '/shop?gender=men&category=jeans',
           },
           {
             id: 's-caps',
             title: 'Street Caps',
             subtitle: 'Embroidered Structured Caps',
             image: '/images/products/Cap1.png',
-            link: '/category/accessories',
+            link: '/shop?gender=men&category=caps',
           },
           {
             id: 's-slides',
             title: 'Artisanal Slides',
             subtitle: 'Leather Street Slides',
             image: '/images/products/UnisexSlides.jpg',
-            link: '/category/footwear',
+            link: '/shop?category=slides',
           },
         ];
 
@@ -124,28 +124,28 @@ export default function MobileHomeView() {
             title: 'Royal 3-Piece Agbada',
             subtitle: 'Ceremonial Embroidery',
             image: '/images/products/BlackAgbada.jpg',
-            link: '/category/native',
+            link: '/shop?gender=men&category=agbada',
           },
           {
             id: 'n-senator',
             title: 'Tailored Senator Sets',
             subtitle: 'Geometric Placket Cuts',
             image: '/images/products/BlackSenator.jpg',
-            link: '/category/native',
+            link: '/shop?gender=men&category=senator',
           },
           {
             id: 'n-fila',
             title: 'Aso-Oke Fila Caps',
             subtitle: 'Traditional Royal Headwear',
             image: '/images/products/Cap1.png',
-            link: '/category/accessories',
+            link: '/shop?gender=men&category=fila',
           },
           {
             id: 'n-shoes',
             title: 'Handcrafted Footwear',
             subtitle: 'Artisanal Calfskin Slides',
             image: '/images/products/UnisexSlides.jpg',
-            link: '/category/footwear',
+            link: '/shop?gender=men&category=slides',
           },
         ];
 
@@ -156,28 +156,28 @@ export default function MobileHomeView() {
             title: 'Handcrafted Slides',
             subtitle: 'Full-Grain Calfskin',
             image: '/images/products/UnisexSlides.jpg',
-            link: '/category/footwear',
+            link: '/shop?category=slides',
           },
           {
             id: 'f-mules',
             title: 'Artisanal Smart Mules',
             subtitle: 'Modern Slip-On Silhouette',
             image: '/images/products/BlackSmartShoes.jpg',
-            link: '/category/footwear',
+            link: '/shop?category=loafers',
           },
           {
             id: 'f-palms',
             title: 'Double-Strap Palms',
             subtitle: 'Everyday Luxury Comfort',
             image: '/images/products/AdiletteAquaSlides.jpg',
-            link: '/category/footwear',
+            link: '/shop?category=slides',
           },
           {
             id: 'f-shoes',
             title: 'Bespoke Dress Shoes',
             subtitle: 'Hand-Burnished Leather',
             image: '/images/products/BlackSmartShoes2.jpg',
-            link: '/category/footwear',
+            link: '/shop?category=loafers',
           },
         ];
 
@@ -189,42 +189,42 @@ export default function MobileHomeView() {
             title: 'Native & Agbada',
             subtitle: 'Senators & 3-Piece Sets',
             image: '/images/products/BlackAgbada.jpg',
-            link: '/category/native',
+            link: '/shop?gender=men&department=native',
           },
           {
             id: 'm-street',
             title: 'Streetwear Sets',
             subtitle: '480GSM Heavy Hoodies',
             image: '/images/products/BlackTrapStarHoodie.jpg',
-            link: '/category/streetwear',
+            link: '/shop?gender=men&category=hoodies',
           },
           {
             id: 'm-shoes',
             title: 'Leather Footwear',
             subtitle: 'Handcrafted Slides & Mules',
             image: '/images/products/UnisexSlides.jpg',
-            link: '/category/footwear',
+            link: '/shop?gender=men&department=footwear',
           },
           {
             id: 'm-pants',
             title: 'Pants & Cargo',
             subtitle: 'Bespoke Trousers & Denim',
             image: '/images/products/BaggyJean.jpg',
-            link: '/category/trousers',
+            link: '/shop?gender=men&category=jeans',
           },
           {
             id: 'm-caps',
             title: 'Caps & Fila',
             subtitle: 'Aso-Oke & Street Caps',
             image: '/images/products/Cap1.png',
-            link: '/category/accessories',
+            link: '/shop?gender=men&category=caps',
           },
           {
             id: 'm-accessories',
             title: 'Leather Bags & Accents',
             subtitle: 'Crossbodies & Weekend Bags',
             image: '/images/editorial/male_shirt.jpg',
-            link: '/category/accessories',
+            link: '/shop?gender=men&department=bags',
           },
         ];
     }
@@ -235,11 +235,11 @@ export default function MobileHomeView() {
     switch (activeTab) {
       case 'women':
         return {
-          title: 'ATELIER FEMME',
-          subtitle: 'SPRING / SUMMER RUNWAY EDIT',
+          title: 'WOMEN’S RUNWAY',
+          subtitle: 'SPRING / SUMMER EDIT',
           highlight: 'NEW SILHOUETTES & HANDBAGS',
           image: '/images/editorial/nigerian_female_couture.jpg',
-          link: '/shop',
+          link: '/shop?gender=women',
         };
       case 'streetwear':
         return {
@@ -247,7 +247,7 @@ export default function MobileHomeView() {
           subtitle: '480GSM HEAVYWEIGHT FLEECE',
           highlight: 'LIMITED WORKSHOP RELEASE',
           image: '/images/editorial/modern_male_streetwear.jpg',
-          link: '/category/streetwear',
+          link: '/shop?gender=men&category=hoodies',
         };
       case 'native':
         return {
@@ -255,15 +255,15 @@ export default function MobileHomeView() {
           subtitle: 'GRAND AGBADA & BESPOKE SENATORS',
           highlight: 'HAND-TAILORED HERITAGE',
           image: '/images/editorial/nigerian_male_couture.jpg',
-          link: '/category/native',
+          link: '/shop?gender=men&department=native',
         };
       case 'footwear':
         return {
-          title: 'ARTISANAL LEATHER',
+          title: 'HANDCRAFTED FOOTWEAR',
           subtitle: 'CALFSKIN SLIDES & MULES',
           highlight: 'HANDMADE BY MASTER SHOEMAKERS',
           image: '/images/products/UnisexSlides.jpg',
-          link: '/category/footwear',
+          link: '/shop?department=footwear',
         };
       case 'men':
       default:
@@ -272,30 +272,30 @@ export default function MobileHomeView() {
           subtitle: 'BESPOKE SENATORS · STREET ARCHIVES · LEATHER',
           highlight: 'EXPLORE THE NEW RELEASES',
           image: '/images/editorial/modern_male_streetwear.jpg',
-          link: '/shop',
+          link: '/shop?gender=men',
         };
     }
   }, [activeTab]);
 
-  // Occasions Showcase (Farfetch-style editorial)
+  // Occasions Showcase (Editorial lifestyle)
   const occasions = [
     {
       title: 'The Grand Owambe',
       sub: 'Ceremonial Agbada, Senators & Velvet Fila',
       image: '/images/editorial/nigerian_male_couture.jpg',
-      link: '/category/native',
+      link: '/shop?gender=men&category=agbada',
     },
     {
       title: 'Midnight Underground',
       sub: '480GSM Boxy Hoodies & Relaxed Cargo',
       image: '/images/editorial/modern_male_streetwear.jpg',
-      link: '/category/streetwear',
+      link: '/shop?gender=men&category=hoodies',
     },
     {
       title: 'Artisanal Weekend',
       sub: 'Full-Grain Leather Slides & Casual Sets',
       image: '/images/products/UnisexSlides.jpg',
-      link: '/category/footwear',
+      link: '/shop?category=slides',
     },
   ];
 
@@ -472,14 +472,14 @@ export default function MobileHomeView() {
             </span>
           </Link>
 
-          {/* Right Actions: For You Pill + Theme Toggle */}
+          {/* Right Actions: Categories Directory + Theme Toggle */}
           <div className="flex items-center gap-2">
             <Link
-              href="/shop"
+              href="/categories"
               className="flex items-center gap-1 px-3 py-1 rounded-full border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
             >
               <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              <span>For You</span>
+              <span>Categories</span>
             </Link>
 
             <button
@@ -606,10 +606,11 @@ export default function MobileHomeView() {
             Shop by Category · {activeTab.toUpperCase()}
           </h2>
           <Link
-            href="/shop"
-            className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase hover:text-black dark:hover:text-white"
+            href="/categories"
+            className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase hover:text-black dark:hover:text-white flex items-center gap-0.5"
           >
-            View All
+            <span>View All</span>
+            <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
 
@@ -793,19 +794,20 @@ export default function MobileHomeView() {
         </div>
       </section>
 
-      {/* ── 9. FEATURED INDEPENDENT ATELIERS (HORIZONTAL SCROLL) ─ */}
+      {/* ── 9. FEATURED INDEPENDENT BRANDS & STORES ───────────── */}
       <section className="pt-12 space-y-3">
         <div className="px-4 border-b border-neutral-200 dark:border-neutral-800 pb-2 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
-              Featured Ateliers
+              Featured Brands & Stores
             </h2>
             <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-              Verified Independent Fashion Houses
+              Verified Independent Nigerian Fashion Brands
             </span>
           </div>
-          <Link href="/vendors" className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white">
-            All Brands
+          <Link href="/vendors" className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white flex items-center gap-0.5">
+            <span>All Brands</span>
+            <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
 
@@ -840,10 +842,10 @@ export default function MobileHomeView() {
               </p>
 
               <Link
-                href="/shop"
+                href="/vendors"
                 className="w-full py-2 rounded border border-neutral-300 dark:border-neutral-700 text-center text-[10px] font-black uppercase tracking-wider text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
               >
-                Visit Atelier
+                Visit Brand Store
               </Link>
             </div>
           ))}

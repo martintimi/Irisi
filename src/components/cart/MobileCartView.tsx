@@ -93,13 +93,13 @@ export default function MobileCartView() {
               Your Bag is Empty
             </h2>
             <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
-              Explore curated Nigerian ready-to-wear drops with instant escrow protection.
+              Explore curated ready-to-wear drops and find your next favorite fit.
             </p>
             <Link
               href="/shop"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold shadow-xl active:scale-95 transition-transform"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-black dark:bg-white text-white dark:text-black font-mono-luxury uppercase text-xs font-bold shadow-xl active:scale-95 transition-transform"
             >
-              <span>Explore Shop Catalog</span>
+              <span>Explore New Drops</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

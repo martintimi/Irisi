@@ -19,6 +19,7 @@ export default function MobileBottomNav() {
     pathname.startsWith('/vendor') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
+    pathname === '/cart' ||
     (pathname.startsWith('/shop/') && pathname.split('/').length >= 3 && pathname.split('/')[2] !== '');
 
   useEffect(() => {
@@ -113,15 +114,18 @@ export default function MobileBottomNav() {
           </Link>
 
           {/* 3. Bag */}
-          <button
-            type="button"
-            onClick={() => setIsCartOpen(true)}
-            className="flex flex-col items-center justify-center gap-1 py-1 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer relative"
+          <Link
+            href="/cart"
+            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors relative ${
+              isActive('/cart')
+                ? 'text-black dark:text-white font-semibold'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+            }`}
             aria-label="Shopping Bag"
           >
             <div className="relative">
               <ShoppingBag
-                strokeWidth={1.4}
+                strokeWidth={isActive('/cart') ? 2 : 1.3}
                 className="h-[21px] w-[21px]"
               />
               {totalCartCount > 0 && (
@@ -131,19 +135,22 @@ export default function MobileBottomNav() {
               )}
             </div>
             <span className="text-[10px] tracking-tight leading-none">Bag</span>
-          </button>
+          </Link>
 
           {/* 4. Wishlist */}
-          <button
-            type="button"
-            onClick={() => setIsVaultOpen(true)}
-            className="flex flex-col items-center justify-center gap-1 py-1 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white cursor-pointer relative"
+          <Link
+            href="/wishlist"
+            className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors relative ${
+              isActive('/wishlist')
+                ? 'text-black dark:text-white font-semibold'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+            }`}
             aria-label="Wishlist"
           >
             <div className="relative">
               <Heart
-                strokeWidth={1.4}
-                className="h-[21px] w-[21px]"
+                strokeWidth={isActive('/wishlist') ? 2 : 1.3}
+                className={`h-[21px] w-[21px] ${isActive('/wishlist') ? 'fill-current text-rose-500' : ''}`}
               />
               {vaultCount > 0 && (
                 <span className="absolute -top-1 -right-1.5 h-3.5 min-w-[14px] px-1 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center">
@@ -152,7 +159,7 @@ export default function MobileBottomNav() {
               )}
             </div>
             <span className="text-[10px] tracking-tight leading-none">Wishlist</span>
-          </button>
+          </Link>
 
           {/* 5. Me */}
           <Link

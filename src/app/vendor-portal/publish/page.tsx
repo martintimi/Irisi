@@ -47,40 +47,60 @@ const STANDARD_COLORS = [
 
 // Department-Specific Categories
 export const MALE_CATEGORIES = [
+  // Native & Cultural
+  { id: 'senator_kaftan', label: 'Senator Sets & Kaftans', generalCat: 'tops' as GarmentCategory, group: 'native' },
+  { id: 'agbada_robes', label: 'Grand Agbada 3-Piece', generalCat: 'outerwear' as GarmentCategory, group: 'native' },
+  { id: 'jalabiya_tunics', label: 'Jalabiya & Tunics', generalCat: 'tops' as GarmentCategory, group: 'native' },
+  { id: 'men_caps_fila', label: 'Aso-Oke Fila & Traditional Caps', generalCat: 'accessories' as GarmentCategory, group: 'native' },
   // Apparel
-  { id: 'senator_kaftan', label: 'Senator & Kaftan Sets', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'agbada_robes', label: 'Grand Agbada & 3-Piece Robes', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'streetwear_hoodie', label: 'Streetwear Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'suits_blazers', label: 'Suits, Tuxedos & Blazers', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'tshirts_tees', label: 'T-Shirts & Graphic Tees', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'shirts_polos', label: 'Luxury Shirts & Polos', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'jeans_trousers', label: 'Baggy Jeans, Cargo & Trousers', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
-  { id: 'shorts_sweats', label: 'Shorts & Sweatpants', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
+  { id: 'shirts_polos', label: 'Luxury Polos & Button-Downs', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
+  { id: 'jackets_coats', label: 'Jackets, Bombers & Coats', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'jeans_trousers', label: 'Baggy Jeans, Cargo & Denim', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
+  { id: 'joggers_sweats', label: 'Joggers & Sweatpants', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
+  { id: 'shorts_sets', label: 'Shorts & Casual Sets', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
+  { id: 'men_underwears', label: 'Underwear & Loungewear', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   // Footwear
   { id: 'men_slides_palms', label: 'Slides, Palms & Slippers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
-  { id: 'men_shoes_loafers', label: 'Loafers, Shoes & Sneakers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'men_shoes_sneakers', label: 'Sneakers & Casual Trainers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'men_shoes_loafers', label: 'Loafers & Dress Shoes', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  // Bags
+  { id: 'men_bags_backpacks', label: 'Backpacks & Duffels', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
+  { id: 'men_bags_crossbody', label: 'Crossbody & Chest Rigs', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
   // Accessories & Jewelry
-  { id: 'men_jewelry_chains', label: 'Jewelry, Chains & Watches', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
-  { id: 'men_caps_fila', label: 'Caps, Fila & Headwear', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
-  { id: 'men_bags_wallets', label: 'Bags, Wallets & Belts', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'men_jewelry_chains', label: 'Chains, Necklaces & Rings', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'men_watches', label: 'Luxury Wristwatches', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'men_eyewear', label: 'Sunglasses & Glasses', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'men_caps_hats', label: 'Caps, Hats & Beanies', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
 export const FEMALE_CATEGORIES = [
+  // Native & Cultural
+  { id: 'boubou_kaftans', label: 'Silk Boubou, Kaftans & Abayas', generalCat: 'outerwear' as GarmentCategory, group: 'native' },
+  { id: 'lace_ankara', label: 'Lace & Ankara Tailored Sets', generalCat: 'tops' as GarmentCategory, group: 'native' },
   // Apparel
   { id: 'dresses_gowns', label: 'Dresses, Gowns & Maxis', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'boubou_kaftans', label: 'Silk Boubou, Kaftans & Abayas', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'two_piece_sets', label: 'Two-Piece Co-ord Sets', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'corsets_tops', label: 'Corsets, Crop Tops & Blouses', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
+  { id: 'female_streetwear', label: 'Female Hoodies & Sweats', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'women_jeans_trousers', label: 'High-Waist Jeans & Cargo', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   { id: 'skirts_minis', label: 'Skirts & Mini Skirts', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
-  { id: 'women_jeans_trousers', label: 'High-Waist Jeans, Cargo & Pants', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
-  { id: 'female_streetwear', label: 'Female Streetwear & Hoodies', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'women_shorts', label: 'Shorts & Biker Sets', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
+  { id: 'women_underwears', label: 'Underwear, Shapewear & Loungewear', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   // Footwear
-  { id: 'women_slides_palms', label: 'Slides, Palms & Slippers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
-  { id: 'women_heels_mules', label: 'Heels, Mules & Loafers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'women_heels_mules', label: 'Heels, Pumps & Mules', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'women_slides_palms', label: 'Slides, Palms & Flats', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'women_sneakers', label: 'Designer Sneakers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  // Bags
+  { id: 'women_bags_handbags', label: 'Handbags & Totes', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
+  { id: 'women_bags_clutches', label: 'Clutches & Crossbody Minis', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
   // Accessories & Jewelry
   { id: 'women_jewelry', label: 'Jewelry, Necklaces & Bangles', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
-  { id: 'women_bags', label: 'Handbags, Totes & Clutches', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
-  { id: 'women_caps_scarves', label: 'Caps, Scarves & Headbands', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'women_watches', label: 'Women’s Luxury Watches', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'women_sunglasses', label: 'Sunglasses & Shades', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
 export const UNISEX_CATEGORIES = [
@@ -94,6 +114,8 @@ export const UNISEX_CATEGORIES = [
   { id: 'unisex_sneakers', label: 'Sneakers & Casual Shoes', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   // Accessories & Jewelry
   { id: 'unisex_jewelry', label: 'Chains, Rings & Jewelry', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'unisex_watches', label: 'Wristwatches & Timepieces', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'unisex_sunglasses', label: 'Sunglasses & Eyewear', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Bucket Hats', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_bags', label: 'Crossbody Bags & Backpacks', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];

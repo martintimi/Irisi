@@ -48,16 +48,30 @@ export default function MarketplaceGrid() {
   const [quickLookProduct, setQuickLookProduct] = useState<any>(null);
 
   useEffect(() => {
-    const cat = searchParams.get('category');
+    const gen = searchParams.get('gender')?.toLowerCase();
+    if (gen === 'male' || gen === 'men') {
+      setSelectedGender('male');
+      setCurrentPage(1);
+    } else if (gen === 'female' || gen === 'women') {
+      setSelectedGender('female');
+      setCurrentPage(1);
+    }
+
+    const cat = searchParams.get('category')?.toLowerCase();
     if (cat && ['tops', 'bottoms', 'outerwear', 'footwear', 'accessories'].includes(cat)) {
       setSelectedCategory(cat as GarmentCategory);
       setCurrentPage(1);
     } else if (cat === 'all') {
       setSelectedCategory('all');
-    }
-    const gen = searchParams.get('gender');
-    if (gen && ['male', 'female', 'all'].includes(gen)) {
-      setSelectedGender(gen as any);
+      setCurrentPage(1);
+    } else if (cat) {
+      // If it's a specific subcategory, map to the closest category or search query
+      if (['hoodies', 'jackets'].includes(cat)) setSelectedCategory('outerwear');
+      else if (['jeans', 'cargo', 'trousers', 'shorts'].includes(cat)) setSelectedCategory('bottoms');
+      else if (['slides', 'sneakers', 'loafers', 'heels'].includes(cat)) setSelectedCategory('footwear');
+      else if (['bags', 'backpacks', 'chains', 'watches', 'caps', 'fila'].includes(cat)) setSelectedCategory('accessories');
+      else if (['senator', 'agbada', 'jalabiya', 'dresses'].includes(cat)) setSelectedCategory('tops');
+      setSearchQuery(cat);
       setCurrentPage(1);
     }
   }, [searchParams, setSelectedGender]);
