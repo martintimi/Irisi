@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { 
   X, Send, CreditCard, ShieldAlert, Clock, 
   Truck, Edit3, ShieldCheck, PackageCheck, Store,
@@ -16,7 +16,12 @@ export default function WhatsAppConciergeWidget() {
   const { cart, bodyProfile, vendorProfile, userAuth } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const [config, setConfig] = useState(getConciergeConfig());
+  const [mounted, setMounted] = useState(false);
   const isDraggingRef = useRef(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
 
   // Check if current page is in Vendor Portal
   const isVendorMode = pathname.startsWith('/vendor');
@@ -25,6 +30,48 @@ export default function WhatsAppConciergeWidget() {
   const isCustomerLoggedIn = !!userAuth?.isLoggedIn;
   const isVendorLoggedIn = !!vendorProfile?.email || !!vendorProfile?.brandName;
   const isAuthorized = isVendorMode ? (isVendorLoggedIn || isCustomerLoggedIn) : true;
+
+  // Initialize and maintain edge docking on mount and screen resize
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window === 'undefined') return;
+
+    const initDock = () => {
+      const windowW = window.innerWidth;
+      const windowH = window.innerHeight;
+      const btnW = buttonRef.current?.offsetWidth || 48;
+      const btnH = buttonRef.current?.offsetHeight || 48;
+      const margin = 10;
+
+      // Start docked at bottom-right edge above bottom nav
+      x.set(windowW - btnW - margin);
+      y.set(windowH - btnH - 85);
+    };
+
+    const timer = setTimeout(initDock, 40);
+
+    const handleResize = () => {
+      const windowW = window.innerWidth;
+      const windowH = window.innerHeight;
+      const btnW = buttonRef.current?.offsetWidth || 48;
+      const btnH = buttonRef.current?.offsetHeight || 48;
+      const margin = 10;
+
+      const currentX = x.get();
+      const snapLeft = (currentX + btnW / 2) < windowW / 2;
+      const targetX = snapLeft ? margin : (windowW - btnW - margin);
+      const targetY = Math.max(64, Math.min(windowH - btnH - 74, y.get()));
+
+      animate(x, targetX, { type: 'spring', stiffness: 500, damping: 35 });
+      animate(y, targetY, { type: 'spring', stiffness: 500, damping: 35 });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [x, y]);
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -154,28 +201,84 @@ export default function WhatsAppConciergeWidget() {
     setIsOpen(false);
   };
 
-  // Only show if enabled, logged in, and not on Super Admin
-  if (!config.isEnabled || !isAuthorized || pathname.startsWith('/admin')) {
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+    dragStartPos.current = { x: x.get(), y: y.get() };
+  };
+
+  const handleDragEnd = (_event: any, info: any) => {
+    const currentX = x.get();
+    const currentY = y.get();
+
+    const dist = Math.hypot(
+      currentX - dragStartPos.current.x,
+      currentY - dragStartPos.current.y
+    );
+
+    // If barely moved (<6px), treat as tap without snapping
+    if (dist < 6) {
+      isDraggingRef.current = false;
+      return;
+    }
+
+    // Delay resetting drag flag to prevent onClick from triggering upon release
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 150);
+
+    const windowW = window.innerWidth;
+    const windowH = window.innerHeight;
+    const btnW = buttonRef.current?.offsetWidth || 48;
+    const btnH = buttonRef.current?.offsetHeight || 48;
+
+    // Decide snap direction based on horizontal position and flick velocity
+    const centerX = currentX + btnW / 2;
+    const isFlickLeft = info.velocity?.x < -250;
+    const isFlickRight = info.velocity?.x > 250;
+    const snapLeft = isFlickLeft || (!isFlickRight && centerX < windowW / 2);
+
+    const margin = 10;
+    const targetX = snapLeft ? margin : (windowW - btnW - margin);
+
+    // Keep clamped between header and bottom navigation
+    const minY = 64;
+    const maxY = windowH - btnH - 74;
+    const targetY = Math.max(minY, Math.min(maxY, currentY));
+
+    // Magnetic spring snap to edge
+    animate(x, targetX, {
+      type: 'spring',
+      stiffness: 450,
+      damping: 28,
+      mass: 0.8,
+    });
+
+    animate(y, targetY, {
+      type: 'spring',
+      stiffness: 450,
+      damping: 28,
+      mass: 0.8,
+    });
+  };
+
+  // Only show if mounted, enabled, authorized, and not on Super Admin
+  if (!mounted || !config.isEnabled || !isAuthorized || pathname.startsWith('/admin')) {
     return null;
   }
 
   return (
     <>
-      {/* 1. FLOATING DRAGGABLE WHATSAPP BUTTON (FREELY DRAGGABLE ANYWHERE) */}
+      {/* 1. FLOATING DRAGGABLE WHATSAPP BUTTON (MAGNETICALLY SNAPS TO SCREEN EDGE) */}
       <motion.div
+        ref={buttonRef}
+        style={{ x, y }}
         drag
         dragMomentum={false}
         dragElastic={0.08}
         whileDrag={{ scale: 1.08 }}
-        onDragStart={() => {
-          isDraggingRef.current = true;
-        }}
-        onDragEnd={() => {
-          setTimeout(() => {
-            isDraggingRef.current = false;
-          }, 120);
-        }}
-        className="fixed bottom-24 md:bottom-8 right-4 md:right-8 z-40 touch-none cursor-grab active:cursor-grabbing select-none"
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        className="fixed top-0 left-0 z-40 touch-none cursor-grab active:cursor-grabbing select-none"
       >
         <button
           type="button"
