@@ -12,7 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { vendorFetch } from '@/lib/services/apiClient';
-import { compressImage } from '@/lib/utils/imageUtils';
+import { compressImage, compressImageToFile } from '@/lib/utils/imageUtils';
 import { trimVideoInBrowser } from '@/lib/utils/clientVideoTrimmer';
 
 interface BatchItemImage {
@@ -182,48 +182,64 @@ export default function BatchProductUploadView({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const fileList = Array.from(files);
+    const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
     const defaultQty = bulkQuantity === '' ? 15 : (Number(bulkQuantity) || 15);
     const matchedCat = availableCategories.find(c => c.id === bulkCategory) || availableCategories[0];
 
     fileList.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const previewUrl = reader.result as string;
-        
-        const initSizeStock: { [sz: string]: number | string } = {};
-        if (matchedCat.generalCat === 'accessories') {
-          initSizeStock['One Size'] = defaultQty;
-        } else {
-          const defaultSizes = bulkSizes.length > 0 ? [...bulkSizes] : (dropMode === 'footwear' ? ['40', '41', '42', '43', '44'] : ['M', 'L', 'XL']);
-          defaultSizes.forEach(sz => {
-            initSizeStock[sz] = defaultQty;
-          });
-        }
+      const tempId = `batch-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 7)}`;
+      const localPreview = URL.createObjectURL(file);
 
-        setItems(prev => [
-          ...prev,
-          {
-            id: `batch-${Date.now()}-${index}-${Math.random()}`,
-            name: cleanFileNameToTitle(file.name),
-            price: bulkPrice || '',
-            category: matchedCat.generalCat,
-            subCategory: matchedCat.id,
-            genderTarget: bulkGender || matchedCat.dept || 'unisex',
-            imageFile: file,
-            imagePreview: previewUrl,
-            additionalImages: [],
-            videoFile: null,
-            videoPreview: null,
-            selectedColors: [],
-            isCustomColorOpen: false,
-            customColorText: '',
-            customColorHex: '#2563eb',
-            sizeStock: initSizeStock,
+      const initSizeStock: { [sz: string]: number | string } = {};
+      if (matchedCat.generalCat === 'accessories') {
+        initSizeStock['One Size'] = defaultQty;
+      } else {
+        const defaultSizes = bulkSizes.length > 0 ? [...bulkSizes] : (dropMode === 'footwear' ? ['40', '41', '42', '43', '44'] : ['M', 'L', 'XL']);
+        defaultSizes.forEach(sz => {
+          initSizeStock[sz] = defaultQty;
+        });
+      }
+
+      setItems(prev => [
+        ...prev,
+        {
+          id: tempId,
+          name: cleanFileNameToTitle(file.name),
+          price: bulkPrice || '',
+          category: matchedCat.generalCat,
+          subCategory: matchedCat.id,
+          genderTarget: bulkGender || matchedCat.dept || 'unisex',
+          imageFile: file,
+          imagePreview: localPreview,
+          additionalImages: [],
+          videoFile: null,
+          videoPreview: null,
+          selectedColors: [],
+          isCustomColorOpen: false,
+          customColorText: '',
+          customColorHex: '#2563eb',
+          sizeStock: initSizeStock,
+        }
+      ]);
+
+      // Upload directly to Cloudinary CDN in background
+      (async () => {
+        try {
+          const compressed = await compressImageToFile(file, 1400, 0.85);
+          const formData = new FormData();
+          formData.append('file', compressed);
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          const data = await res.json();
+          if (res.ok && data.url) {
+            setItems(prev => prev.map(item => item.id === tempId ? { ...item, imagePreview: data.url } : item));
           }
-        ]);
-      };
-      reader.readAsDataURL(file);
+        } catch (err) {
+          console.warn('Batch image CDN upload error, using local fallback:', err);
+        }
+      })();
     });
 
     if (fileInputRef.current) {
@@ -245,23 +261,43 @@ export default function BatchProductUploadView({
   const handleAddExtraImagesToItem = async (itemId: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
     try {
-      const newExtra: BatchItemImage[] = [];
-      for (const f of Array.from(files)) {
-        if (!f.type.startsWith('image/')) continue;
-        const compressed = await compressImage(f, 1400, 0.85);
-        newExtra.push({
-          id: `extra-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          url: compressed,
-          label: ''
-        });
+      const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      for (const f of validFiles) {
+        const extraId = `extra-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const localPreview = URL.createObjectURL(f);
+
+        setItems(prev => prev.map(item => {
+          if (item.id !== itemId) return item;
+          return {
+            ...item,
+            additionalImages: [...(item.additionalImages || []), { id: extraId, url: localPreview, label: '' }]
+          };
+        }));
+
+        (async () => {
+          try {
+            const compressed = await compressImageToFile(f, 1400, 0.85);
+            const formData = new FormData();
+            formData.append('file', compressed);
+            const res = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            const data = await res.json();
+            if (res.ok && data.url) {
+              setItems(prev => prev.map(item => {
+                if (item.id !== itemId) return item;
+                return {
+                  ...item,
+                  additionalImages: (item.additionalImages || []).map(img => img.id === extraId ? { ...img, url: data.url } : img)
+                };
+              }));
+            }
+          } catch (err) {
+            console.warn('Extra image CDN upload failed:', err);
+          }
+        })();
       }
-      setItems(prev => prev.map(item => {
-        if (item.id !== itemId) return item;
-        return {
-          ...item,
-          additionalImages: [...(item.additionalImages || []), ...newExtra]
-        };
-      }));
     } catch (e) {
       console.error('Error adding extra photos to batch item:', e);
     }

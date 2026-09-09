@@ -93,7 +93,7 @@ export async function persistMedia(
 
     const b64Data = match ? match[2] : trimmed.split(';base64,')[1];
     if (!b64Data) {
-      return trimmed;
+      return isVideo ? '' : '/images/products/BlackTrapStarHoodie.jpg';
     }
 
     const cleanPrefix = prefix.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -105,6 +105,8 @@ export async function persistMedia(
     return `/images/products/uploaded/${filename}`;
   } catch (err) {
     console.error('Failed to persist media to disk:', err);
-    return trimmed;
+    // Never return raw base64 to prevent database bandwidth exhaustion
+    return isVideo ? '' : '/images/products/BlackTrapStarHoodie.jpg';
   }
 }
+

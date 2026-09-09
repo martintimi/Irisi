@@ -14,7 +14,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { vendorFetch } from '@/lib/services/apiClient';
-import { compressImage } from '@/lib/utils/imageUtils';
+import { compressImage, compressImageToFile } from '@/lib/utils/imageUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
 import { trimVideoInBrowser } from '@/lib/utils/clientVideoTrimmer';
 
@@ -202,6 +202,7 @@ export default function MobileVendorPublish({
     isCover?: boolean;
     showColorTag?: boolean;
     isDetectingColor?: boolean;
+    isUploading?: boolean;
   }>>([]);
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -435,41 +436,74 @@ export default function MobileVendorPublish({
 
     setIsProcessingImages(true);
     try {
-      const fileList = Array.from(files);
-      const newItems: Array<{
-        id: string;
-        url: string;
-        label?: string;
-        colorName?: string;
-        colorHex?: string;
-        isCover?: boolean;
-        showColorTag?: boolean;
-        isDetectingColor?: boolean;
-      }> = [];
+      const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
+      if (fileList.length === 0) return;
 
       for (const file of fileList) {
-        if (!file.type.startsWith('image/')) continue;
-        const compressedDataUrl = await compressImage(file, 1400, 0.85);
+        const tempId = `img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        const localPreview = URL.createObjectURL(file);
 
-        newItems.push({
-          id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          url: compressedDataUrl,
-          label: '',
-          colorName: undefined,
-          colorHex: undefined,
-          isCover: false,
-          showColorTag: false,
-          isDetectingColor: false,
+        // Instantly display preview in UI with upload state
+        setUploadedImages((prev) => {
+          const newItem = {
+            id: tempId,
+            url: localPreview,
+            label: '',
+            colorName: undefined,
+            colorHex: undefined,
+            isCover: prev.length === 0,
+            showColorTag: false,
+            isDetectingColor: false,
+            isUploading: true,
+          };
+          return [...prev, newItem];
         });
-      }
 
-      setUploadedImages((prev) => {
-        const combined = [...prev, ...newItems];
-        if (combined.length > 0 && !combined.some((img) => img.isCover)) {
-          combined[0].isCover = true;
-        }
-        return combined;
-      });
+        // Compress and upload directly to Cloudinary CDN
+        (async () => {
+          try {
+            const compressedFile = await compressImageToFile(file, 1400, 0.85);
+            const formData = new FormData();
+            formData.append('file', compressedFile);
+
+            const res = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+
+            const data = await res.json();
+            if (res.ok && data.url) {
+              setUploadedImages((prev) =>
+                prev.map((img) =>
+                  img.id === tempId
+                    ? { ...img, url: data.url, isUploading: false }
+                    : img
+                )
+              );
+            } else {
+              // Fallback to compressed base64 if server upload encounters an issue
+              const fallbackB64 = await compressImage(file, 1200, 0.80);
+              setUploadedImages((prev) =>
+                prev.map((img) =>
+                  img.id === tempId
+                    ? { ...img, url: fallbackB64, isUploading: false }
+                    : img
+                )
+              );
+            }
+          } catch (uploadErr) {
+            console.warn('Direct upload to CDN failed, using compressed fallback:', uploadErr);
+            const fallbackB64 = await compressImage(file, 1200, 0.80);
+            setUploadedImages((prev) =>
+              prev.map((img) =>
+                img.id === tempId
+                  ? { ...img, url: fallbackB64, isUploading: false }
+                  : img
+              )
+            );
+          }
+        })();
+      }
 
       if (e.target) e.target.value = '';
     } catch (err) {
@@ -812,6 +846,12 @@ export default function MobileVendorPublish({
       return;
     }
 
+    if (uploadedImages.some(img => img.isUploading)) {
+      setErrorMessage('Photos are currently optimizing and uploading to the Cloud CDN. Please wait a moment...');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setIsSubmitting(true);
     const activeVendorId = getActiveVendorId();
 
@@ -1075,6 +1115,16 @@ export default function MobileVendorPublish({
                       unoptimized
                       className="object-cover"
                     />
+
+                    {/* Syncing to CDN Overlay */}
+                    {img.isUploading && (
+                      <div className="absolute inset-0 z-20 bg-black/75 flex flex-col items-center justify-center gap-1 backdrop-blur-[2px]">
+                        <RefreshCw className="h-4 w-4 text-[var(--gold-accent)] animate-spin" />
+                        <span className="text-[8px] font-mono-luxury font-bold text-white uppercase tracking-wider">
+                          Syncing to CDN...
+                        </span>
+                      </div>
+                    )}
 
                     {/* Cover Photo Badge / Set Cover Button */}
                     {idx === 0 ? (

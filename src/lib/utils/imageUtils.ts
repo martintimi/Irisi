@@ -80,3 +80,71 @@ export async function compressImages(
 ): Promise<string[]> {
   return Promise.all(files.map((file) => compressImage(file, maxDimension, quality)));
 }
+
+/**
+ * Compresses an image file in browser memory and outputs a lightweight File object
+ * (~80KB - 200KB JPEG) ready to be sent directly to /api/upload -> Cloudinary CDN.
+ */
+export async function compressImageToFile(
+  file: File,
+  maxDimension = 1400,
+  quality = 0.85
+): Promise<File> {
+  if (typeof window === 'undefined') return file;
+
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      let { width, height } = img;
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        } else {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const cleanName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+          const compressedFile = new File([blob], cleanName, { type: 'image/jpeg' });
+          resolve(compressedFile);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+
+    img.src = objectUrl;
+  });
+}
+

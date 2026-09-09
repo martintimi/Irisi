@@ -60,7 +60,11 @@ export async function GET(request: Request) {
 
     const supabase = await createClient();
 
-    let query = supabase.from('products').select('*').order('created_at', { ascending: false }).limit(limit);
+    let query = supabase
+      .from('products')
+      .select('id, name, price, category, gender_target, garment_origin_type, image_url, description, tags, colors, vendor_id, is_published, created_at, video_url, images, is_customizable')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     if (vendorId && vendorId !== 'all') {
       let resolvedVId = vendorId.trim();
@@ -124,7 +128,7 @@ export async function GET(request: Request) {
 
     if (productIds.length > 0) {
       const [variantsRes, orderItemsRes] = await Promise.all([
-        supabase.from('product_variants').select('*').in('product_id', productIds),
+        supabase.from('product_variants').select('product_id, size, color, stock_quantity').in('product_id', productIds),
         supabase.from('order_items').select('product_id, quantity').in('product_id', productIds),
       ]);
 
