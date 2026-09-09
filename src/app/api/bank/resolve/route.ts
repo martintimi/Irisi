@@ -38,33 +38,18 @@ export async function GET(request: Request) {
     );
 
     const paystackData = await paystackRes.json();
-    const isTestModeKey = paystackSecret.startsWith('sk_test_');
 
-    if (!paystackRes.ok || !paystackData?.status) {
-      // In Paystack test mode (sk_test_...), live NIBSS banking rails have rate limits or mock responses.
-      // Gracefully resolve with test mock name so vendor test onboarding succeeds seamlessly.
-      if (
-        isTestModeKey &&
-        (paystackData?.code === 'invalid_bank_code' ||
-         paystackData?.message?.includes('parameters') ||
-         paystackData?.message?.includes('Test mode') ||
-         paystackData?.message?.includes('limit') ||
-         paystackRes.status === 400 ||
-         paystackRes.status === 422)
-      ) {
-        return NextResponse.json({
-          success: true,
-          accountName: 'VERIFIED MERCHANT (PAYSTACK TEST)',
-          accountNumber,
-          isMock: true,
-          message: 'Resolved via Paystack Sandbox Mode',
-        });
-      }
+    if (!paystackRes.ok || !paystackData?.status || !paystackData?.data?.account_name) {
+      const errorMsg = paystackData?.message || 'Could not resolve account name. Please check account number and bank.';
+      const isDailyTestLimit = errorMsg.toLowerCase().includes('limit') || paystackRes.status === 429;
 
       return NextResponse.json(
         {
-          error: paystackData?.message || 'Could not resolve account name. Please check account number and bank.',
+          error: isDailyTestLimit
+            ? 'Paystack test key daily limit reached. Type your account name manually, or switch to a live Paystack secret key.'
+            : errorMsg,
           success: false,
+          isLimit: isDailyTestLimit,
         },
         { status: 422 }
       );

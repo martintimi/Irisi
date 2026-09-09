@@ -1007,9 +1007,6 @@ export default function VendorAuthPage() {
                     <ShieldCheck className="h-4 w-4" />
                     <span>Settlement Bank Payout (Direct Escrow Payouts)</span>
                   </div>
-                  <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)]">
-                    Paystack NIBSS Verified
-                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1047,7 +1044,9 @@ export default function VendorAuthPage() {
                     </label>
                     <div className="relative">
                       <input
-                        type="text"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         maxLength={10}
                         value={regForm.accountNumber}
                         onChange={(e) => {
@@ -1061,7 +1060,7 @@ export default function VendorAuthPage() {
                           }
                         }}
                         placeholder="0123456789"
-                        className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury font-bold tracking-wider"
+                        className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury font-bold tracking-wider"
                       />
                       {isResolvingBank && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1079,7 +1078,7 @@ export default function VendorAuthPage() {
                     </label>
                     {bankVerified && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono-luxury font-bold">
-                        <CheckCircle2 className="h-3 w-3" /> NIBSS Verified
+                        <CheckCircle2 className="h-3 w-3" /> Verified
                       </span>
                     )}
                   </div>
@@ -1087,7 +1086,7 @@ export default function VendorAuthPage() {
                     type="text"
                     value={regForm.accountName}
                     onChange={(e) => setRegForm({ ...regForm, accountName: e.target.value.toUpperCase() })}
-                    placeholder={isResolvingBank ? 'Verifying with Paystack NIBSS...' : 'Auto-resolved via account number'}
+                    placeholder={isResolvingBank ? 'Verifying account holder...' : 'Enter or confirm account name'}
                     className={`w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border text-xs uppercase font-bold tracking-wide focus:outline-none ${
                       bankVerified
                         ? 'border-emerald-500/50 text-emerald-300 bg-emerald-950/10'

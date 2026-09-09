@@ -89,7 +89,7 @@ export default function MobileVendorSettlements({
           accountName: editAccountName,
         });
         setIsEditingBank(false);
-        setToastMessage('Settlement bank updated & verified with Paystack NIBSS!');
+        setToastMessage('Settlement bank account updated successfully!');
         setTimeout(() => setToastMessage(null), 4000);
         confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       } else {
@@ -242,7 +242,7 @@ export default function MobileVendorSettlements({
           </span>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-bold">
-              Paystack Verified
+              Verified
             </span>
             <button
               type="button"
@@ -261,7 +261,7 @@ export default function MobileVendorSettlements({
         {isEditingBank ? (
           <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/30 space-y-3 animate-fadeIn">
             <div className="text-[10px] uppercase font-bold text-[var(--gold-accent)]">
-              Update Settlement Bank (Paystack NIBSS Real-Time)
+              Update Settlement Bank
             </div>
 
             <div>
@@ -295,7 +295,9 @@ export default function MobileVendorSettlements({
               </label>
               <div className="relative">
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={10}
                   value={editAccountNumber}
                   onChange={(e) => {
@@ -326,7 +328,7 @@ export default function MobileVendorSettlements({
                 </label>
                 {isVerified && (
                   <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-                    <CheckCircle2 className="h-3 w-3" /> NIBSS Verified
+                    <CheckCircle2 className="h-3 w-3" /> Verified
                   </span>
                 )}
               </div>
@@ -334,7 +336,7 @@ export default function MobileVendorSettlements({
                 type="text"
                 value={editAccountName}
                 onChange={(e) => setEditAccountName(e.target.value.toUpperCase())}
-                placeholder={isResolving ? 'Resolving with Paystack...' : 'Auto-resolved via NUBAN'}
+                placeholder={isResolving ? 'Verifying account holder...' : 'Enter or confirm account name'}
                 className={`w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border text-xs uppercase font-bold tracking-wide focus:outline-none ${
                   isVerified
                     ? 'border-emerald-500/50 text-emerald-300 bg-emerald-950/10'
