@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
+import { products as fallbackCatalog } from '@/lib/data/products';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -89,8 +90,29 @@ export async function GET(request: Request) {
     const { data: products, error } = productsResult;
     const { data: vendorsList } = vendorsResult;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error || !products) {
+      console.warn('Supabase query restricted or failed (e.g. egress quota):', error?.message);
+      let list = [...fallbackCatalog];
+      if (gender && gender !== 'all') {
+        list = list.filter(p => p.genderTarget === gender || p.genderTarget === 'unisex');
+      }
+      if (category && category !== 'all') {
+        list = list.filter(p => p.category === category || (p as any).subCategory === category);
+      }
+      if (origin && origin !== 'all') {
+        list = list.filter(p => p.garmentOriginType === origin);
+      }
+      return NextResponse.json({
+        success: true,
+        products: list.slice(0, limit),
+        count: list.length,
+        fromFallback: true,
+        notice: 'Serving verified cache while database quota refills'
+      }, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+        }
+      });
     }
 
     const vendorMap = new Map<string, any>();

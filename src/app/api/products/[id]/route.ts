@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { invalidateProductsCache } from '../route';
+import { products as fallbackCatalog } from '@/lib/data/products';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -43,6 +44,19 @@ export async function GET(
       .maybeSingle();
 
     if (error || !product) {
+      console.warn(`Product ${id} query error or not in DB, checking fallback catalog:`, error?.message);
+      const fallback = fallbackCatalog.find((p) => p.id === id);
+      if (fallback) {
+        return NextResponse.json({
+          success: true,
+          product: fallback,
+          fromFallback: true,
+        }, {
+          headers: {
+            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+          },
+        });
+      }
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
