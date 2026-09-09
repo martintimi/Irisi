@@ -253,14 +253,101 @@ export default function MobileVendorPublish({
 
   const currentCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
 
-  const filteredCategoryList = currentCategoryList.filter(c => {
-    if (vendorSpecialty === 'caps') return c.group === 'accessories' && (c.id.includes('cap') || c.id.includes('hat') || c.id.includes('fila'));
-    if (vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry') return c.group === 'accessories';
-    if (vendorSpecialty === 'footwear') return c.group === 'footwear';
-    if (vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear' || vendorSpecialty === 'apparel') return c.group === 'apparel';
-    if (catFilterTab === 'all') return true;
-    return c.group === catFilterTab;
-  });
+  const filteredCategoryList = useMemo(() => {
+    return currentCategoryList.filter((c) => {
+      if (vendorSpecialty === 'native_tailoring') {
+        return c.group === 'native' || c.id.includes('senator') || c.id.includes('agbada') || c.id.includes('kaftan') || c.id.includes('boubou') || c.id.includes('lace') || c.id.includes('fila');
+      }
+      if (vendorSpecialty === 'streetwear') {
+        return c.group === 'apparel' && !c.id.includes('fila');
+      }
+      if (vendorSpecialty === 'footwear') {
+        return c.group === 'footwear';
+      }
+      if (vendorSpecialty === 'caps') {
+        return c.id.includes('cap') || c.id.includes('hat') || c.id.includes('fila') || c.id.includes('beanie');
+      }
+      if (vendorSpecialty === 'jewelry') {
+        return c.id.includes('jewelry') || c.id.includes('chains') || c.id.includes('watches') || c.id.includes('ring') || c.id.includes('necklace') || c.id.includes('bangle');
+      }
+      if (vendorSpecialty === 'accessories') {
+        return c.group === 'accessories' || c.group === 'bags';
+      }
+      // multi_department or general
+      if (catFilterTab === 'all') return true;
+      if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'native';
+      if (catFilterTab === 'footwear') return c.group === 'footwear';
+      if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
+      return true;
+    });
+  }, [currentCategoryList, vendorSpecialty, catFilterTab]);
+
+  const [smartDetectedCat, setSmartDetectedCat] = useState<string | null>(null);
+
+  const detectCategoryFromTitle = (title: string, list: typeof MALE_CATEGORIES) => {
+    const lower = title.toLowerCase().trim();
+    if (!lower || lower.length < 3) return null;
+
+    const rules: { keywords: string[]; match: (id: string) => boolean }[] = [
+      // Footwear
+      { keywords: ['slide', 'palm', 'slipper', 'croc', 'flat', 'clog'], match: id => id.includes('slides_palms') },
+      { keywords: ['sneaker', 'trainer', 'kicks', 'runner', 'dunk'], match: id => id.includes('sneakers') },
+      { keywords: ['heel', 'pump', 'stiletto', 'mule', 'wedge'], match: id => id.includes('heels') || id.includes('mules') },
+      { keywords: ['loafer', 'shoe', 'derby', 'oxford', 'brogue', 'boot'], match: id => id.includes('loafers') || id.includes('shoes') },
+      
+      // Native
+      { keywords: ['agbada'], match: id => id.includes('agbada') },
+      { keywords: ['senator', 'kaftan', 'dashiki'], match: id => id.includes('senator') || id.includes('kaftan') },
+      { keywords: ['jalabiya', 'jalab', 'thobe', 'tunic', 'loungewear'], match: id => id.includes('jalabiya') },
+      { keywords: ['boubou', 'bubu', 'abaya'], match: id => id.includes('boubou') },
+      { keywords: ['lace', 'ankara', 'iro', 'buba'], match: id => id.includes('lace') || id.includes('ankara') },
+      
+      // Accessories / Headwear / Watches / Jewelry / Bags
+      { keywords: ['fila', 'aso-oke', 'asooke'], match: id => id.includes('caps_fila') },
+      { keywords: ['cap', 'hat', 'beanie', 'snapback', 'beret', 'bucket hat'], match: id => id.includes('caps') || id.includes('hats') },
+      { keywords: ['watch', 'wristwatch', 'rolex', 'timepiece', 'chronograph'], match: id => id.includes('watches') },
+      { keywords: ['sunglasses', 'glasses', 'shades', 'eyewear', 'spectacles'], match: id => id.includes('sunglasses') || id.includes('eyewear') },
+      { keywords: ['chain', 'necklace', 'pendant', 'cuban', 'ring', 'bangle', 'bracelet', 'earring', 'jewelry', 'jewellery'], match: id => id.includes('jewelry') || id.includes('chains') },
+      { keywords: ['crossbody', 'chest rig', 'waist bag', 'fanny pack', 'clutch'], match: id => id.includes('crossbody') || id.includes('clutches') },
+      { keywords: ['backpack', 'tote', 'handbag', 'duffle', 'travel bag', 'briefcase', 'leather bag'], match: id => id.includes('backpacks') || id.includes('handbags') || id.includes('bags') },
+      
+      // Apparel
+      { keywords: ['hoodie', 'sweatshirt', 'sweat jacket', 'pullover'], match: id => id.includes('hoodie') || id.includes('streetwear') },
+      { keywords: ['suit', 'blazer', 'tuxedo', 'waistcoat'], match: id => id.includes('suits_blazers') },
+      { keywords: ['tee', 't-shirt', 'graphic tee', 'oversized tee'], match: id => id.includes('tees') || id.includes('tshirts') },
+      { keywords: ['polo', 'button down', 'oxford shirt', 'dress shirt', 'collar shirt', 'shirt'], match: id => id.includes('polos') || id.includes('shirts') },
+      { keywords: ['jacket', 'windbreaker', 'bomber', 'varsity', 'coat'], match: id => id.includes('jackets') },
+      { keywords: ['cargo', 'jeans', 'denim', 'baggy'], match: id => id.includes('jeans') || id.includes('denim') },
+      { keywords: ['jogger', 'sweatpants', 'track pants'], match: id => id.includes('joggers') },
+      { keywords: ['shorts', 'short set', 'biker short'], match: id => id.includes('shorts') },
+      { keywords: ['dress', 'gown', 'maxi', 'midi', 'mini dress'], match: id => id.includes('dresses') },
+      { keywords: ['two piece', 'two-piece', 'co-ord', 'set'], match: id => id.includes('two_piece') },
+      { keywords: ['corset', 'blouse', 'crop top'], match: id => id.includes('corsets') },
+    ];
+
+    for (const rule of rules) {
+      const isMatch = rule.keywords.some(kw => {
+        const regex = new RegExp(`\\b${kw}`, 'i');
+        return regex.test(lower);
+      });
+      if (isMatch) {
+        const found = list.find(c => rule.match(c.id));
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const handleTitleChange = (val: string) => {
+    setName(val);
+    const detected = detectCategoryFromTitle(val, filteredCategoryList);
+    if (detected && detected.id !== subCategory) {
+      handleCategorySelect(detected.id, detected.generalCat);
+      setSmartDetectedCat(detected.label);
+    } else if (!val.trim()) {
+      setSmartDetectedCat(null);
+    }
+  };
   const currentSizeList = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
 
   const handleCategorySelect = (selectedSubCatId: string, generalCat: GarmentCategory) => {
@@ -1270,17 +1357,30 @@ export default function MobileVendorPublish({
         </span>
 
         <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Piece Name / Title <strong className="text-rose-400">*</strong>
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[var(--text-secondary)] uppercase font-bold">
+              Piece Name / Title <strong className="text-rose-400">*</strong>
+            </label>
+            {smartDetectedCat && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 animate-fadeIn">
+                <Sparkles className="h-3 w-3" />
+                <span>Auto-Locked: {smartDetectedCat}</span>
+              </span>
+            )}
+          </div>
           <input
             type="text"
             required
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="e.g. Leather Crocodile Palms, Velvet Fila, Silk Boubou, Cuban Chain"
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
           />
+          {smartDetectedCat && (
+            <p className="mt-1 text-[10px] text-emerald-400/90 font-mono-luxury">
+              ✨ Sizing format auto-adjusted to: <strong>{category === 'footwear' ? 'Shoe Sizes (39-46)' : category === 'accessories' ? 'One Size (Jewelry/Accessories)' : 'Apparel Sizes (S-XXL)'}</strong>
+            </p>
+          )}
         </div>
 
         <div>
@@ -1318,6 +1418,7 @@ export default function MobileVendorPublish({
               const matched = currentCategoryList.find(c => c.id === selectedId) || UNISEX_CATEGORIES.find(c => c.id === selectedId);
               if (matched) {
                 handleCategorySelect(matched.id, matched.generalCat);
+                setSmartDetectedCat(matched.label);
               }
             }}
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"

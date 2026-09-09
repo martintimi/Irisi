@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { signUpCustomer, signInCustomer, verifyOtpCode, resendOtpCode } from '@/lib/services/auth';
+import EmailDomainSuggestions from '@/components/common/EmailDomainSuggestions';
 
 const editorialSlides = [
   {
@@ -632,22 +633,23 @@ function AuthPageContent() {
                 </div>
               )}
 
-              {/* Email Address */}
+              {/* Email Address or Phone Number */}
               <div>
                 <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-                  Email Address
+                  {mode === 'login' ? 'Email Address or Phone Number' : 'Email Address'}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                   <input
-                    type="email"
+                    type={mode === 'login' ? 'text' : 'email'}
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@email.com"
+                    placeholder={mode === 'login' ? 'you@email.com or 080...' : 'you@email.com'}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none"
                   />
                 </div>
+                <EmailDomainSuggestions email={email} onSelectDomain={(full) => setEmail(full)} />
               </div>
 
               {/* Mobile Phone Number (Required for Nigerian Delivery & Dispatch) */}

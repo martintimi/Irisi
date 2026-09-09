@@ -9,14 +9,70 @@ export async function POST(request: Request) {
     const normalizedEmail = (email || '').trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+      return NextResponse.json({ error: 'Email or phone number, and password are required' }, { status: 400 });
     }
 
     const supabase = await createClient();
 
+    let resolvedEmail = normalizedEmail;
+
+    // Support logging in with Nigerian phone number (080..., 090..., +234...)
+    if (!normalizedEmail.includes('@')) {
+      const cleanPhone = normalizedEmail.replace(/[^0-9+]/g, '');
+      const localPhone = cleanPhone.startsWith('+234')
+        ? '0' + cleanPhone.slice(4)
+        : cleanPhone.startsWith('234')
+        ? '0' + cleanPhone.slice(3)
+        : cleanPhone;
+      const intlPhone = cleanPhone.startsWith('0')
+        ? '+234' + cleanPhone.slice(1)
+        : cleanPhone.startsWith('+')
+        ? cleanPhone
+        : '+234' + cleanPhone;
+
+      if (expectedRole === 'vendor') {
+        const { data: vMatch } = await supabase
+          .from('vendors')
+          .select('email, phone')
+          .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
+          .maybeSingle();
+
+        if (vMatch?.email) {
+          resolvedEmail = vMatch.email.trim().toLowerCase();
+        }
+      } else {
+        const { data: pMatch } = await supabase
+          .from('profiles')
+          .select('email, phone')
+          .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
+          .maybeSingle();
+
+        if (pMatch?.email) {
+          resolvedEmail = pMatch.email.trim().toLowerCase();
+        } else {
+          const { data: vMatch } = await supabase
+            .from('vendors')
+            .select('email, phone')
+            .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
+            .maybeSingle();
+
+          if (vMatch?.email) {
+            resolvedEmail = vMatch.email.trim().toLowerCase();
+          }
+        }
+      }
+
+      if (!resolvedEmail || !resolvedEmail.includes('@')) {
+        return NextResponse.json(
+          { error: 'No registered account found with that phone number. Please check or use your email.' },
+          { status: 404 }
+        );
+      }
+    }
+
     // 1. Authenticate credentials with Supabase
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
+      email: resolvedEmail,
       password,
     });
 

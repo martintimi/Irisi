@@ -9,6 +9,7 @@ import {
 import Link from 'next/link';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
+import SearchableCitySelect from '@/components/common/SearchableCitySelect';
 
 interface MobileVendorAtelierProps {
   form: any;
@@ -252,30 +253,13 @@ export default function MobileVendorAtelier({
             <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
               2. City / Town <strong className="text-rose-400">*</strong>
             </label>
-            {form.state && getCitiesForState(form.state).length > 0 ? (
-              <select
-                disabled={isFieldsDisabled}
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-              >
-                <option value="">Select City</option>
-                {getCitiesForState(form.state).map((ct) => (
-                  <option key={ct} value={ct}>
-                    {ct}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                disabled={isFieldsDisabled}
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                placeholder={form.state ? 'Enter city' : 'Select state'}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            )}
+            <SearchableCitySelect
+              state={form.state}
+              value={form.city}
+              onChange={(newCity) => setForm({ ...form, city: newCity })}
+              disabled={isFieldsDisabled}
+              placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
+            />
           </div>
         </div>
 

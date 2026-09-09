@@ -4,10 +4,13 @@ import React, { useState, useMemo } from 'react';
 import {
   ShieldCheck, CheckCircle2, Clock, ArrowUpRight,
   Download, Copy, Check, Sparkles, Building2, Banknote,
-  ChevronRight, RefreshCw, AlertCircle
+  ChevronRight, RefreshCw, AlertCircle, Edit3, X, Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
+import { NIGERIAN_BANKS, getBankCodeByName } from '@/lib/data/nigerianBanks';
+import { vendorFetch } from '@/lib/services/apiClient';
+import { useStore } from '@/lib/store/useStore';
 
 interface MobileVendorSettlementsProps {
   orders: any[];
@@ -22,9 +25,82 @@ export default function MobileVendorSettlements({
   vendorProfile,
   onRefresh
 }: MobileVendorSettlementsProps) {
+  const { setVendorProfile } = useStore();
   const [filterTab, setFilterTab] = useState<'all' | 'escrow' | 'settled'>('all');
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Bank editing & Paystack resolution state
+  const [isEditingBank, setIsEditingBank] = useState(false);
+  const [editBankName, setEditBankName] = useState(vendorProfile?.bankName || 'Guaranty Trust Bank');
+  const [editBankCode, setEditBankCode] = useState(() => getBankCodeByName(vendorProfile?.bankName || 'Guaranty Trust Bank'));
+  const [editAccountNumber, setEditAccountNumber] = useState(vendorProfile?.accountNumber || '');
+  const [editAccountName, setEditAccountName] = useState(vendorProfile?.accountName || '');
+  const [isResolving, setIsResolving] = useState(false);
+  const [isVerified, setIsVerified] = useState(!!vendorProfile?.accountName);
+  const [resolveError, setResolveError] = useState('');
+  const [isSavingBank, setIsSavingBank] = useState(false);
+
+  const resolveAccount = async (num: string, bCode: string) => {
+    const cleanNum = num.replace(/[^0-9]/g, '');
+    if (cleanNum.length !== 10 || !bCode) return;
+    setIsResolving(true);
+    setResolveError('');
+    try {
+      const res = await fetch(`/api/bank/resolve?account_number=${encodeURIComponent(cleanNum)}&bank_code=${encodeURIComponent(bCode)}`);
+      const data = await res.json();
+      if (data.success && data.accountName) {
+        setEditAccountName(data.accountName);
+        setIsVerified(true);
+        setResolveError('');
+      } else {
+        setIsVerified(false);
+        setResolveError(data.error || 'Could not verify account name.');
+      }
+    } catch {
+      setIsVerified(false);
+      setResolveError('Network error resolving bank account.');
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const handleSaveBank = async () => {
+    if (editAccountNumber.length !== 10 || !editAccountName) {
+      setResolveError('Please provide a valid 10-digit NUBAN account number.');
+      return;
+    }
+    setIsSavingBank(true);
+    try {
+      const res = await vendorFetch('/api/vendor/profile', {
+        method: 'POST',
+        body: JSON.stringify({
+          bankName: editBankName,
+          accountNumber: editAccountNumber,
+          accountName: editAccountName,
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setVendorProfile({
+          ...vendorProfile,
+          bankName: editBankName,
+          accountNumber: editAccountNumber,
+          accountName: editAccountName,
+        });
+        setIsEditingBank(false);
+        setToastMessage('Settlement bank updated & verified with Paystack NIBSS!');
+        setTimeout(() => setToastMessage(null), 4000);
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      } else {
+        setResolveError(data.error || 'Failed to update bank details.');
+      }
+    } catch {
+      setResolveError('Error communicating with server.');
+    } finally {
+      setIsSavingBank(false);
+    }
+  };
 
   const totalEscrowLocked = useMemo(() => {
     return orders
@@ -164,42 +240,166 @@ export default function MobileVendorSettlements({
             <Building2 className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
             <span>Settlement Bank Account</span>
           </span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-bold">
-            Verified
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-bold">
+              Paystack Verified
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingBank(!isEditingBank);
+                setResolveError('');
+              }}
+              className="px-2.5 py-1 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] text-[var(--gold-accent)] font-bold flex items-center gap-1 cursor-pointer hover:border-[var(--gold-accent)] transition-all"
+            >
+              {isEditingBank ? <X className="h-3 w-3" /> : <Edit3 className="h-3 w-3" />}
+              <span>{isEditingBank ? 'Cancel' : 'Edit Bank'}</span>
+            </button>
+          </div>
         </div>
 
-        <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-[var(--text-secondary)] uppercase">Bank Name:</span>
-            <strong className="text-[var(--text-primary)]">
-              {vendorProfile?.bankName || 'Guaranty Trust Bank (GTBank)'}
-            </strong>
-          </div>
+        {isEditingBank ? (
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/30 space-y-3 animate-fadeIn">
+            <div className="text-[10px] uppercase font-bold text-[var(--gold-accent)]">
+              Update Settlement Bank (Paystack NIBSS Real-Time)
+            </div>
 
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-[var(--text-secondary)] uppercase">NUBAN Account:</span>
-            <div className="flex items-center gap-1.5">
-              <strong className="text-[var(--gold-accent)] font-mono tracking-wider">
-                {vendorProfile?.accountNumber || '0123456789'}
-              </strong>
-              <button
-                type="button"
-                onClick={handleCopyAccount}
-                className="p-1 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
+            <div>
+              <label className="block text-[10px] uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                Select Bank
+              </label>
+              <select
+                value={editBankName}
+                onChange={(e) => {
+                  const bName = e.target.value;
+                  const code = getBankCodeByName(bName);
+                  setEditBankName(bName);
+                  setEditBankCode(code);
+                  if (editAccountNumber.length === 10) {
+                    resolveAccount(editAccountNumber, code);
+                  }
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
               >
-                {copiedAccount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-              </button>
+                {NIGERIAN_BANKS.map((b) => (
+                  <option key={b.code} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                10-Digit NUBAN Account Number
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  maxLength={10}
+                  value={editAccountNumber}
+                  onChange={(e) => {
+                    const cleanNum = e.target.value.replace(/[^0-9]/g, '');
+                    setEditAccountNumber(cleanNum);
+                    if (cleanNum.length === 10) {
+                      resolveAccount(cleanNum, editBankCode);
+                    } else {
+                      setIsVerified(false);
+                      setResolveError('');
+                    }
+                  }}
+                  placeholder="0123456789"
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono font-bold tracking-wider focus:border-[var(--gold-accent)] focus:outline-none"
+                />
+                {isResolving && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[10px] uppercase text-[var(--text-secondary)] font-bold">
+                  Verified Account Holder Name
+                </label>
+                {isVerified && (
+                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
+                    <CheckCircle2 className="h-3 w-3" /> NIBSS Verified
+                  </span>
+                )}
+              </div>
+              <input
+                type="text"
+                value={editAccountName}
+                onChange={(e) => setEditAccountName(e.target.value.toUpperCase())}
+                placeholder={isResolving ? 'Resolving with Paystack...' : 'Auto-resolved via NUBAN'}
+                className={`w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border text-xs uppercase font-bold tracking-wide focus:outline-none ${
+                  isVerified
+                    ? 'border-emerald-500/50 text-emerald-300 bg-emerald-950/10'
+                    : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)]'
+                }`}
+              />
+              {resolveError && (
+                <p className="mt-1 text-[10px] text-amber-400 font-mono-luxury">
+                  ⚠ {resolveError}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled={isSavingBank || isResolving || editAccountNumber.length !== 10}
+              onClick={handleSaveBank}
+              className="w-full py-2.5 rounded-xl bg-[var(--gold-accent)] text-black uppercase font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              {isSavingBank ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Saving Settlement Account...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>Save & Verify Settlement Account</span>
+                </>
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-[var(--text-secondary)] uppercase">Bank Name:</span>
+              <strong className="text-[var(--text-primary)]">
+                {vendorProfile?.bankName || 'Guaranty Trust Bank (GTBank)'}
+              </strong>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-[var(--text-secondary)] uppercase">NUBAN Account:</span>
+              <div className="flex items-center gap-1.5">
+                <strong className="text-[var(--gold-accent)] font-mono tracking-wider">
+                  {vendorProfile?.accountNumber || '0123456789'}
+                </strong>
+                <button
+                  type="button"
+                  onClick={handleCopyAccount}
+                  className="p-1 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
+                >
+                  {copiedAccount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-[var(--text-secondary)] uppercase">Account Name:</span>
+              <strong className="text-[var(--text-primary)] uppercase truncate max-w-[180px]">
+                {vendorProfile?.accountName || vendorProfile?.brandName || 'Verified Merchant'}
+              </strong>
             </div>
           </div>
-
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-[var(--text-secondary)] uppercase">Account Name:</span>
-            <strong className="text-[var(--text-primary)] uppercase truncate max-w-[180px]">
-              {vendorProfile?.accountName || vendorProfile?.brandName || 'Verified Merchant'}
-            </strong>
-          </div>
-        </div>
+        )}
 
         {/* Download Payout Advice Action */}
         <button

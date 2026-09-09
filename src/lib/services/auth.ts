@@ -21,6 +21,8 @@ export interface VendorSignUpData {
   designerName?: string;
   phone: string;
   location: string;
+  city?: string;
+  state?: string;
   vendorType: 'fashion_designer' | 'boutique_seller';
   specialty?: VendorSpecialty;
   vendorSpecialty?: string;
@@ -103,6 +105,8 @@ export async function signUpVendor(data: VendorSignUpData) {
         designerName: data.designerName,
         phone: data.phone,
         location: data.location,
+        city: data.city,
+        state: data.state,
         vendorType: data.vendorType,
         specialty: data.specialty || data.vendorSpecialty || 'multi_department',
         vendorSpecialty: data.specialty || data.vendorSpecialty || 'multi_department',

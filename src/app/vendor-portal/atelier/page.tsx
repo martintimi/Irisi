@@ -13,6 +13,7 @@ import confetti from 'canvas-confetti';
 import MobileVendorAtelier from '@/components/vendor/MobileVendorAtelier';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
+import SearchableCitySelect from '@/components/common/SearchableCitySelect';
 
 // Vector App Logos
 const InstagramLogo = () => (
@@ -489,30 +490,13 @@ export default function VendorAtelierProfilePage() {
                 <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
                   2. Store City / Town <strong className="text-rose-400">*</strong>
                 </label>
-                {form.state && getCitiesForState(form.state).length > 0 ? (
-                  <select
-                    required
-                    disabled={isFieldsDisabled}
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <option value="">-- Select City / Town --</option>
-                    {getCitiesForState(form.state).map((ct) => (
-                      <option key={ct} value={ct}>{ct}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    required
-                    disabled={isFieldsDisabled}
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder={form.state ? 'Enter your city / area' : 'Select state first'}
-                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                )}
+                <SearchableCitySelect
+                  state={form.state}
+                  value={form.city}
+                  onChange={(newCity) => setForm({ ...form, city: newCity })}
+                  disabled={isFieldsDisabled}
+                  placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
+                />
               </div>
 
               {/* 3. DISPATCHES IN */}

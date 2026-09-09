@@ -120,6 +120,8 @@ export async function POST(request: Request) {
         bio: '',
         specialty: finalSpecialty,
         vendorSpecialty: finalSpecialty,
+        city: (body.city || '').trim(),
+        state: (body.state || '').trim(),
         socialLinks: {
           instagram: '',
           tiktok: '',

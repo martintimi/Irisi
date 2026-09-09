@@ -14,6 +14,10 @@ import confetti from 'canvas-confetti';
 import { signUpVendor, signInVendor, verifyOtpCode, resendOtpCode } from '@/lib/services/auth';
 import { isBoutiqueVendor, VendorSpecialty } from '@/types';
 import BrandWordmark from '@/components/common/BrandWordmark';
+import { NIGERIAN_STATES } from '@/lib/data/nigeriaLocations';
+import SearchableCitySelect from '@/components/common/SearchableCitySelect';
+import EmailDomainSuggestions from '@/components/common/EmailDomainSuggestions';
+import { NIGERIAN_BANKS, getBankCodeByName } from '@/lib/data/nigerianBanks';
 
 const vendorEditorialSlides = [
   {
@@ -78,15 +82,100 @@ export default function VendorAuthPage() {
     phone: '',
     password: '',
     confirmPassword: '',
+    state: 'Lagos',
+    city: 'Ikeja (Allen / Opebi / GRA / Alausa)',
+    address: '',
     location: '',
     vendorType: 'boutique_seller' as 'fashion_designer' | 'boutique_seller',
     specialty: 'streetwear' as VendorSpecialty,
-    bankName: 'Guaranty Trust Bank (GTBank)',
+    bankName: 'Guaranty Trust Bank',
+    bankCode: '058',
     accountNumber: '',
     accountName: '',
   });
 
+  const [isResolvingBank, setIsResolvingBank] = useState(false);
+  const [bankVerified, setBankVerified] = useState(false);
+  const [bankResolveError, setBankResolveError] = useState('');
+
+  const getSpecialtyLabels = (spec: VendorSpecialty) => {
+    switch (spec) {
+      case 'accessories':
+      case 'jewelry':
+        return {
+          brandLabel: 'Jewelry / Accessories Brand Name',
+          brandPlaceholder: 'e.g. Aureus Jewelry Studio, Gem & Chain Co.',
+          addressLabel: 'Studio / Workshop Address',
+          addressPlaceholder: 'e.g. Suite 4, Lekki Mall, Admiralty Way',
+          btnText: 'Register Jewelry Brand & Receive Code',
+        };
+      case 'footwear':
+        return {
+          brandLabel: 'Footwear Studio / Brand Name',
+          brandPlaceholder: 'e.g. Kano Leather Studio, Crown Slides',
+          addressLabel: 'Footwear Workshop Address',
+          addressPlaceholder: 'e.g. 14 Commercial Avenue, Yaba',
+          btnText: 'Register Footwear Brand & Receive Code',
+        };
+      case 'caps':
+        return {
+          brandLabel: 'Headwear Studio / Brand Name',
+          brandPlaceholder: 'e.g. Royal Crown Fila, Street Cap Co.',
+          addressLabel: 'Headwear Workshop Address',
+          addressPlaceholder: 'e.g. 25 Allen Avenue, Ikeja',
+          btnText: 'Register Headwear Brand & Receive Code',
+        };
+      case 'native_tailoring':
+        return {
+          brandLabel: 'Atelier / Tailoring House Name',
+          brandPlaceholder: 'e.g. Deji & Kola Atelier, Seyi Vodi Couture',
+          addressLabel: 'Atelier / Tailoring Workshop Address',
+          addressPlaceholder: 'e.g. 10 Admiralty Way, Lekki Phase 1',
+          btnText: 'Register Atelier & Receive Code',
+        };
+      case 'streetwear':
+      case 'multi_department':
+      default:
+        return {
+          brandLabel: 'Boutique / Brand Name',
+          brandPlaceholder: 'e.g. Moji Boutique, Lagos Urban Archive',
+          addressLabel: 'Boutique / Store Address',
+          addressPlaceholder: 'e.g. Shop 12, Palms Mall, Lekki',
+          btnText: 'Register Boutique & Receive Code',
+        };
+    }
+  };
+
+  const labels = getSpecialtyLabels(regForm.specialty);
   const isBoutiqueSelected = regForm.vendorType === 'boutique_seller';
+
+  // Auto-resolve bank account name via Paystack
+  const resolveBankAccount = async (accNum: string, bCode: string) => {
+    const cleanNum = accNum.replace(/[^0-9]/g, '');
+    if (cleanNum.length !== 10 || !bCode) return;
+    setIsResolvingBank(true);
+    setBankResolveError('');
+    try {
+      const res = await fetch(`/api/bank/resolve?account_number=${encodeURIComponent(cleanNum)}&bank_code=${encodeURIComponent(bCode)}`);
+      const data = await res.json();
+      if (data.success && data.accountName) {
+        setRegForm((prev) => ({
+          ...prev,
+          accountName: data.accountName,
+        }));
+        setBankVerified(true);
+        setBankResolveError('');
+      } else {
+        setBankVerified(false);
+        setBankResolveError(data.error || 'Could not resolve account name. Check details or enter manually.');
+      }
+    } catch {
+      setBankVerified(false);
+      setBankResolveError('Error communicating with verification gateway');
+    } finally {
+      setIsResolvingBank(false);
+    }
+  };
 
   // OTP Verification State
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -199,13 +288,19 @@ export default function VendorAuthPage() {
     }
 
     try {
+      const resolvedLocation = [regForm.address.trim(), regForm.city.trim(), regForm.state.trim()]
+        .filter(Boolean)
+        .join(', ') || regForm.location.trim();
+
       const res = await signUpVendor({
         email: regForm.email.trim(),
         password: regForm.password,
         brandName: regForm.brandName.trim(),
-        designerName: regForm.designerName.trim(),
+        designerName: regForm.designerName.trim() || regForm.brandName.trim(),
         phone: regForm.phone.trim(),
-        location: regForm.location.trim(),
+        location: resolvedLocation,
+        city: regForm.city.trim(),
+        state: regForm.state.trim(),
         vendorType: regForm.vendorType,
         specialty: regForm.specialty,
         vendorSpecialty: regForm.specialty,
@@ -639,6 +734,7 @@ export default function VendorAuthPage() {
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
                   />
                 </div>
+                <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
               </div>
 
               <div>
@@ -723,7 +819,7 @@ export default function VendorAuthPage() {
 
               <div>
                 <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
-                  {isBoutiqueSelected ? 'Boutique / Brand Name' : 'Atelier / Brand Name'}
+                  {labels.brandLabel}
                 </label>
                 <div className="relative">
                   {isBoutiqueSelected ? (
@@ -736,7 +832,7 @@ export default function VendorAuthPage() {
                     required
                     value={regForm.brandName}
                     onChange={(e) => setRegForm({ ...regForm, brandName: e.target.value, designerName: e.target.value })}
-                    placeholder={isBoutiqueSelected ? 'e.g. Moji Boutique' : 'e.g. Deji & Kola Atelier'}
+                    placeholder={labels.brandPlaceholder}
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
                   />
                 </div>
@@ -758,6 +854,10 @@ export default function VendorAuthPage() {
                       className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
                     />
                   </div>
+                  <EmailDomainSuggestions
+                    email={regForm.email}
+                    onSelectDomain={(val: string) => setRegForm({ ...regForm, email: val })}
+                  />
                 </div>
 
                 <div>
@@ -778,20 +878,73 @@ export default function VendorAuthPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
-                  {isBoutiqueSelected ? 'Boutique / Store Address' : 'Atelier / Workshop Address'}
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    required
-                    value={regForm.location}
-                    onChange={(e) => setRegForm({ ...regForm, location: e.target.value })}
-                    placeholder="Enter store or workshop address"
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
-                  />
+              {/* Location: State & City Combobox */}
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
+                      State / Region
+                    </label>
+                    <select
+                      value={regForm.state}
+                      onChange={(e) => {
+                        const newState = e.target.value;
+                        setRegForm((prev) => ({
+                          ...prev,
+                          state: newState,
+                          city: '',
+                          location: [prev.address, newState].filter(Boolean).join(', '),
+                        }));
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                    >
+                      {NIGERIAN_STATES.map((st) => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
+                      City / Neighborhood
+                    </label>
+                    <SearchableCitySelect
+                      state={regForm.state}
+                      value={regForm.city}
+                      onChange={(newCity) => {
+                        setRegForm((prev) => ({
+                          ...prev,
+                          city: newCity,
+                          location: [prev.address, newCity, prev.state].filter(Boolean).join(', '),
+                        }));
+                      }}
+                      placeholder={`Search or type city in ${regForm.state}...`}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
+                    {labels.addressLabel}
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      required
+                      value={regForm.address}
+                      onChange={(e) => {
+                        const newAddress = e.target.value;
+                        setRegForm((prev) => ({
+                          ...prev,
+                          address: newAddress,
+                          location: [newAddress, prev.city, prev.state].filter(Boolean).join(', '),
+                        }));
+                      }}
+                      placeholder={labels.addressPlaceholder}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -849,59 +1002,103 @@ export default function VendorAuthPage() {
 
               {/* Settlement Banking Details (Optional at Registration) */}
               <div className="pt-2 border-t border-[var(--border-subtle)] space-y-3">
-                <div className="flex items-center gap-1.5 text-xs text-[var(--gold-accent)] font-mono-luxury font-bold">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Settlement Bank Payout (Direct Escrow Payouts)</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-[var(--gold-accent)] font-mono-luxury font-bold">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Settlement Bank Payout (Direct Escrow Payouts)</span>
+                  </div>
+                  <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)]">
+                    Paystack NIBSS Verified
+                  </span>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div>
-                    <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-                      Bank Name
+                    <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
+                      Settlement Bank
                     </label>
                     <select
                       value={regForm.bankName}
-                      onChange={(e) => setRegForm({ ...regForm, bankName: e.target.value })}
+                      onChange={(e) => {
+                        const selectedBankName = e.target.value;
+                        const code = getBankCodeByName(selectedBankName);
+                        setRegForm((prev) => ({
+                          ...prev,
+                          bankName: selectedBankName,
+                          bankCode: code,
+                        }));
+                        if (regForm.accountNumber.length === 10) {
+                          resolveBankAccount(regForm.accountNumber, code);
+                        }
+                      }}
                       className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
                     >
-                      <option>Guaranty Trust Bank (GTBank)</option>
-                      <option>Zenith Bank</option>
-                      <option>Access Bank</option>
-                      <option>United Bank for Africa (UBA)</option>
-                      <option>First Bank of Nigeria</option>
-                      <option>Kuda Microfinance Bank</option>
-                      <option>OPay Digital Services</option>
-                      <option>Moniepoint MFB</option>
-                      <option>Stanbic IBTC Bank</option>
-                      <option>Sterling Bank</option>
+                      {NIGERIAN_BANKS.map((b) => (
+                        <option key={b.code} value={b.name}>
+                          {b.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+                    <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
                       10-Digit NUBAN Account Number
                     </label>
-                    <input
-                      type="text"
-                      maxLength={10}
-                      value={regForm.accountNumber}
-                      onChange={(e) => setRegForm({ ...regForm, accountNumber: e.target.value.replace(/[^0-9]/g, '') })}
-                      placeholder="0123456789"
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury font-bold"
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={10}
+                        value={regForm.accountNumber}
+                        onChange={(e) => {
+                          const cleanNum = e.target.value.replace(/[^0-9]/g, '');
+                          setRegForm((prev) => ({ ...prev, accountNumber: cleanNum }));
+                          if (cleanNum.length === 10) {
+                            resolveBankAccount(cleanNum, regForm.bankCode);
+                          } else {
+                            setBankVerified(false);
+                            setBankResolveError('');
+                          }
+                        }}
+                        placeholder="0123456789"
+                        className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury font-bold tracking-wider"
+                      />
+                      {isResolvingBank && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-                    Settlement Account Name
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] font-bold">
+                      Settlement Account Name
+                    </label>
+                    {bankVerified && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono-luxury font-bold">
+                        <CheckCircle2 className="h-3 w-3" /> NIBSS Verified
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={regForm.accountName}
                     onChange={(e) => setRegForm({ ...regForm, accountName: e.target.value.toUpperCase() })}
-                    placeholder="e.g. Registered Business Name"
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none uppercase font-bold"
+                    placeholder={isResolvingBank ? 'Verifying with Paystack NIBSS...' : 'Auto-resolved via account number'}
+                    className={`w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border text-xs uppercase font-bold tracking-wide focus:outline-none ${
+                      bankVerified
+                        ? 'border-emerald-500/50 text-emerald-300 bg-emerald-950/10'
+                        : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)]'
+                    }`}
                   />
+                  {bankResolveError && (
+                    <p className="mt-1 text-[10px] text-amber-400 font-mono-luxury">
+                      ⚠ {bankResolveError}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -917,7 +1114,7 @@ export default function VendorAuthPage() {
                   </>
                 ) : (
                   <>
-                    <span>{isBoutiqueSelected ? 'Register Boutique & Receive Code' : 'Register Atelier & Receive Code'}</span>
+                    <span>{labels.btnText}</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
