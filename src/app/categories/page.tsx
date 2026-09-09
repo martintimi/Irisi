@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowLeft, Search, Sparkles, ChevronRight, Heart, ShoppingBag,
+  ArrowLeft, Search, Sparkles, ChevronRight,
   Layers, ArrowUpRight
 } from 'lucide-react';
 import {
@@ -15,11 +15,9 @@ import {
   getCategoriesGroupedByDepartment,
   INITIAL_CATEGORIES
 } from '@/lib/data/categories';
-import { useStore } from '@/lib/store/useStore';
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const { cart, vault } = useStore();
 
   // Active Gender Division: 'men' | 'women'
   const [activeGender, setActiveGender] = useState<GenderKey>('men');
@@ -66,8 +64,6 @@ export default function CategoriesPage() {
     return result;
   }, [groupedCategories, selectedDept, searchQuery]);
 
-  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0C] text-black dark:text-white pb-32">
 
@@ -90,34 +86,6 @@ export default function CategoriesPage() {
                 {activeGender === 'men' ? "Men's Collection" : "Women's Collection"}
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/wishlist"
-              className="p-2 rounded-full text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white relative"
-              aria-label="Wishlist"
-            >
-              <Heart className="h-4 w-4" strokeWidth={1.5} />
-              {vault.length > 0 && (
-                <span className="absolute top-1 right-1 h-3.5 min-w-[14px] px-1 rounded-full bg-rose-500 text-white text-[8px] font-bold flex items-center justify-center">
-                  {vault.length}
-                </span>
-              )}
-            </Link>
-
-            <Link
-              href="/cart"
-              className="p-2 rounded-full text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white relative"
-              aria-label="Shopping Bag"
-            >
-              <ShoppingBag className="h-4 w-4" strokeWidth={1.5} />
-              {totalCartCount > 0 && (
-                <span className="absolute top-1 right-1 h-3.5 min-w-[14px] px-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[8px] font-bold flex items-center justify-center">
-                  {totalCartCount}
-                </span>
-              )}
-            </Link>
           </div>
         </div>
 

@@ -200,45 +200,10 @@ export default function MobileHomeView() {
           },
           {
             id: 'm-street',
-            title: 'Streetwear Sets',
+            title: 'Streetwear & Hoodies',
             subtitle: '480GSM Heavy Hoodies',
             image: '/images/products/BlackTrapStarHoodie.jpg',
             link: '/shop?gender=men&category=hoodies',
-          },
-          {
-            id: 'm-pants',
-            title: 'Pants & Cargo',
-            subtitle: 'Tactical Cargo & Sweats',
-            image: '/images/uploaded/pantsandcargo.jpeg',
-            link: '/shop?gender=men&category=cargo',
-          },
-          {
-            id: 'm-denim',
-            title: 'Jeans & Denim',
-            subtitle: 'Raw Selvedge & Wide-Leg',
-            image: '/images/products/BaggyJean.jpg',
-            link: '/shop?gender=men&category=jeans',
-          },
-          {
-            id: 'm-tees',
-            title: 'T-Shirts & Graphic Tees',
-            subtitle: 'Heavyweight Graphic Prints',
-            image: '/images/uploaded/t-shirtsandgraphic.jpeg',
-            link: '/shop?gender=men&category=tshirts',
-          },
-          {
-            id: 'm-polos',
-            title: 'Luxury Polos & Shirts',
-            subtitle: 'Tailored Knit & Silk Polos',
-            image: '/images/uploaded/poloandshirt.jpeg',
-            link: '/shop?gender=men&category=polos',
-          },
-          {
-            id: 'm-shorts',
-            title: 'Shorts & Sweatsets',
-            subtitle: 'Mesh Court & Tailored Linen',
-            image: '/images/uploaded/short.jpeg',
-            link: '/shop?gender=men&category=shorts',
           },
           {
             id: 'm-shoes',
@@ -248,11 +213,11 @@ export default function MobileHomeView() {
             link: '/shop?gender=men&department=footwear',
           },
           {
-            id: 'm-caps',
-            title: 'Caps & Fila',
-            subtitle: 'Aso-Oke & Street Caps',
-            image: '/images/products/Cap1.png',
-            link: '/shop?gender=men&category=caps',
+            id: 'm-tees',
+            title: 'T-Shirts & Graphic Tees',
+            subtitle: 'Heavyweight Graphic Prints',
+            image: '/images/uploaded/t-shirtsandgraphic.jpeg',
+            link: '/shop?gender=men&category=tshirts',
           },
           {
             id: 'm-accessories',
@@ -260,6 +225,13 @@ export default function MobileHomeView() {
             subtitle: 'Crossbodies & Weekend Bags',
             image: '/images/uploaded/leaderBags.jpeg',
             link: '/shop?gender=men&department=bags',
+          },
+          {
+            id: 'm-jewelry',
+            title: 'Fine Jewelry & Chains',
+            subtitle: 'Solid Gold & Sterling Accents',
+            image: '/images/products/men_gold_chain.jpg',
+            link: '/shop?gender=men&category=chains',
           },
         ];
     }
