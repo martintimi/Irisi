@@ -62,7 +62,7 @@ export async function GET(request: Request) {
 
     let query = supabase
       .from('products')
-      .select('id, name, price, category, gender_target, garment_origin_type, image_url, description, tags, colors, vendor_id, is_published, created_at, video_url, images, is_customizable')
+      .select('id, name, price, category, gender_target, garment_origin_type, image_url, description, tags, colors, vendor_id, is_published, created_at')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -364,7 +364,7 @@ export async function GET(request: Request) {
 
       const rawTags: string[] = Array.isArray(p.tags) ? p.tags : [];
       const videoTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('video:'));
-      const rawVideoUrl = videoTag ? videoTag.replace(/^video:/, '') : (p.video_url || undefined);
+      const rawVideoUrl = videoTag ? videoTag.replace(/^video:/, '') : ((p as any).video_url || undefined);
       const videoUrl = normalizeVideoUrl(rawVideoUrl);
 
       // Extract gallery images stored in tags as 'img:<url>'
@@ -387,8 +387,8 @@ export async function GET(request: Request) {
 
       // Combine images (resolvedImg first, then gallery images, plus any color images)
       const colorImgs = Array.from(colorImgMap.values());
-      const rawImages = Array.isArray(p.images)
-        ? p.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean)
+      const rawImages = Array.isArray((p as any).images)
+        ? (p as any).images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean)
         : [];
       const combinedImages = Array.from(
         new Set([resolvedImg, ...rawImages, ...galleryImgTags, ...colorImgs].filter(Boolean))
@@ -428,7 +428,7 @@ export async function GET(request: Request) {
         sizeStock: finalSizeStock,
         stockQuantity: pVariants.length > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50),
         unitsSold: soldMap.get(p.id) || 0,
-        isCustomizable: p.is_customizable,
+        isCustomizable: Boolean((p as any).is_customizable),
         vendorId: p.vendor_id,
         vendor_id: p.vendor_id,
         vendorName: vendorInfo?.brand_name || p.vendor_id?.replace(/-/g, ' ').toUpperCase() || 'Ìrísí Partner',
