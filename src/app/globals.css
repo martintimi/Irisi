@@ -5,18 +5,18 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #0a0a0c;
-  --bg-secondary: #121216;
-  --bg-surface: #18181f;
-  --text-primary: #f4f4f6;
-  --text-secondary: #a1a1aa;
+  --bg-primary: #fafafa;
+  --bg-secondary: #f4f4f6;
+  --bg-surface: #ffffff;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
   --text-muted: #71717a;
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.18);
-  --gold-accent: #e6c367;
-  --gold-subtle: rgba(230, 195, 103, 0.12);
-  --gold-glow: rgba(230, 195, 103, 0.25);
-  --badge-bg: rgba(255, 255, 255, 0.05);
+  --border-subtle: rgba(0, 0, 0, 0.09);
+  --border-hover: rgba(0, 0, 0, 0.18);
+  --gold-accent: #c4972e;
+  --gold-subtle: rgba(196, 151, 46, 0.12);
+  --gold-glow: rgba(196, 151, 46, 0.25);
+  --badge-bg: rgba(0, 0, 0, 0.04);
 }
 
 html.light {
@@ -32,6 +32,21 @@ html.light {
   --gold-subtle: rgba(196, 151, 46, 0.12);
   --gold-glow: rgba(196, 151, 46, 0.25);
   --badge-bg: rgba(0, 0, 0, 0.04);
+}
+
+html.dark {
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #121216;
+  --bg-surface: #18181f;
+  --text-primary: #f4f4f6;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.18);
+  --gold-accent: #e6c367;
+  --gold-subtle: rgba(230, 195, 103, 0.12);
+  --gold-glow: rgba(230, 195, 103, 0.25);
+  --badge-bg: rgba(255, 255, 255, 0.05);
 }
 
 /* Global Smooth Transitions for Theme & Interactions */

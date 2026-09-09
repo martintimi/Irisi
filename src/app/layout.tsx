@@ -57,7 +57,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${plusJakarta.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`light ${cormorant.variable} ${plusJakarta.variable} ${spaceGrotesk.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -73,10 +73,8 @@ export default function RootLayout({
                       savedTheme = parsed && parsed.state ? parsed.state.theme : null;
                     }
                   }
-                  var hour = new Date().getHours();
-                  // Morning/Day (6:00 AM - 6:59 PM): light. Night (7:00 PM - 5:59 AM): dark.
-                  var autoTheme = (hour >= 6 && hour < 19) ? 'light' : 'dark';
-                  var activeTheme = savedTheme || autoTheme;
+                  // App defaults to Light Mode unless user has an active manual theme override
+                  var activeTheme = savedTheme || 'light';
                   if (activeTheme === 'dark') {
                     document.documentElement.classList.add('dark');
                     document.documentElement.classList.remove('light');

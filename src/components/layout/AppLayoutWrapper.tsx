@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { useStore, getTimeBasedTheme } from '@/lib/store/useStore';
+import { useStore } from '@/lib/store/useStore';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import SplitCartDrawer from '@/components/cart/SplitCartDrawer';
@@ -19,22 +19,14 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   const pathname = usePathname();
   const { theme, setTheme } = useStore();
   
-  // Synchronize time-based default theme: Light mode in the morning/day (6am-7pm), Dark mode at night (7pm-6am)
+  // Synchronize default theme: Light mode by default unless user manually toggled
   useEffect(() => {
-    const syncTheme = () => {
-      const hasManualOverride = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('irisi_manual_theme_override') === 'true';
-      if (!hasManualOverride) {
-        const autoTheme = getTimeBasedTheme();
-        if (theme !== autoTheme) {
-          setTheme(autoTheme);
-        }
+    const hasManualOverride = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('irisi_manual_theme_override') === 'true';
+    if (!hasManualOverride) {
+      if (theme !== 'light') {
+        setTheme('light');
       }
-    };
-
-    syncTheme();
-    // Check every 60 seconds in case day transitions to night or vice-versa while app is open
-    const interval = setInterval(syncTheme, 60000);
-    return () => clearInterval(interval);
+    }
   }, [theme, setTheme]);
 
   useEffect(() => {

@@ -135,7 +135,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'jalabiya',
     gender: 'men',
     department: 'native',
-    imageUrl: '/images/editorial/nigerian_male_couture.jpg',
+    imageUrl: '/images/uploaded/jalabmen.jpeg',
     subtitle: 'Lightweight breathable embroidered tunics',
   },
   {
@@ -215,7 +215,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'watches',
     gender: 'men',
     department: 'accessories',
-    imageUrl: '/images/editorial/male_senator.jpg',
+    imageUrl: '/images/uploaded/luxerywatches.jpeg',
     subtitle: 'Precision automatic dials & steel bracelets',
   },
   {
@@ -224,7 +224,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'sunglasses',
     gender: 'men',
     department: 'accessories',
-    imageUrl: '/images/editorial/modern_male_streetwear.jpg',
+    imageUrl: '/images/uploaded/sunglassesandeyewear.jpeg',
     subtitle: 'UV400 polarized shades & vintage acetate',
   },
   {
@@ -233,7 +233,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'caps',
     gender: 'men',
     department: 'accessories',
-    imageUrl: '/images/products/CarmoCap.jpg',
+    imageUrl: '/images/uploaded/capshatbeanies.jpeg',
     subtitle: 'Structured trucker hats & embroidered caps',
   },
 
