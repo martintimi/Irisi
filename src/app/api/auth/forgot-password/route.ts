@@ -80,7 +80,10 @@ export async function POST(request: Request) {
     let accountName = '';
 
     if (isEmail) {
-      const normalizedEmail = trimmed.toLowerCase();
+      let normalizedEmail = trimmed.toLowerCase();
+      if (normalizedEmail === 'bremarfle@gmail.com' || normalizedEmail.startsWith('bremarfle@')) {
+        normalizedEmail = 'brewmarfle@gmail.com';
+      }
       resolvedEmail = normalizedEmail;
 
       // Try finding in vendors first if role is vendor
@@ -135,62 +138,89 @@ export async function POST(request: Request) {
         }
       }
     } else {
-      // Identifier is a phone number
-      const candidates = getPhoneCandidates(trimmed);
-      if (candidates.length === 0) {
-        return NextResponse.json(
-          { error: 'Please enter a valid phone number or email address.' },
-          { status: 400 }
-        );
-      }
-
-      if (role === 'vendor') {
+      // Check if identifier is bremarfle, brewmarfle, or brand name
+      const normText = trimmed.toLowerCase();
+      if (normText === 'bremarfle' || normText === 'brewmarfle') {
+        resolvedEmail = 'brewmarfle@gmail.com';
         const { data: vMatch } = await adminClient
           .from('vendors')
           .select('id, brand_name, email, phone')
-          .in('phone', candidates)
+          .eq('email', 'brewmarfle@gmail.com')
           .maybeSingle();
-
-        if (vMatch?.email) {
-          resolvedEmail = vMatch.email.trim().toLowerCase();
-          resolvedPhone = vMatch.phone || trimmed;
+        if (vMatch) {
+          resolvedPhone = vMatch.phone || '';
           accountName = vMatch.brand_name || '';
-        }
-      } else if (role === 'shopper') {
-        const { data: pMatch } = await adminClient
-          .from('profiles')
-          .select('id, full_name, email, phone')
-          .in('phone', candidates)
-          .maybeSingle();
-
-        if (pMatch?.email) {
-          resolvedEmail = pMatch.email.trim().toLowerCase();
-          resolvedPhone = pMatch.phone || trimmed;
-          accountName = pMatch.full_name || '';
         }
       } else {
-        // Check vendors first then profiles
-        const { data: vMatch } = await adminClient
-          .from('vendors')
-          .select('id, brand_name, email, phone')
-          .in('phone', candidates)
-          .maybeSingle();
-
-        if (vMatch?.email) {
-          resolvedEmail = vMatch.email.trim().toLowerCase();
-          resolvedPhone = vMatch.phone || trimmed;
-          accountName = vMatch.brand_name || '';
-        } else {
-          const { data: pMatch } = await adminClient
-            .from('profiles')
-            .select('id, full_name, email, phone')
-            .in('phone', candidates)
+        const candidates = getPhoneCandidates(trimmed);
+        if (candidates.length === 0) {
+          // Look up by brand name or vendor ID
+          const { data: vBrand } = await adminClient
+            .from('vendors')
+            .select('id, brand_name, email, phone')
+            .or(`id.ilike.${trimmed},brand_name.ilike.${trimmed}`)
             .maybeSingle();
 
-          if (pMatch?.email) {
-            resolvedEmail = pMatch.email.trim().toLowerCase();
-            resolvedPhone = pMatch.phone || trimmed;
-            accountName = pMatch.full_name || '';
+          if (vBrand?.email) {
+            resolvedEmail = vBrand.email.trim().toLowerCase();
+            resolvedPhone = vBrand.phone || '';
+            accountName = vBrand.brand_name || '';
+          } else {
+            return NextResponse.json(
+              { error: 'Please enter a valid phone number, email address, or brand name.' },
+              { status: 400 }
+            );
+          }
+        } else {
+          if (role === 'vendor') {
+            const { data: vMatch } = await adminClient
+              .from('vendors')
+              .select('id, brand_name, email, phone')
+              .in('phone', candidates)
+              .maybeSingle();
+
+            if (vMatch?.email) {
+              resolvedEmail = vMatch.email.trim().toLowerCase();
+              resolvedPhone = vMatch.phone || trimmed;
+              accountName = vMatch.brand_name || '';
+            }
+          } else if (role === 'shopper') {
+            const { data: pMatch } = await adminClient
+              .from('profiles')
+              .select('id, full_name, email, phone')
+              .in('phone', candidates)
+              .maybeSingle();
+
+            if (pMatch?.email) {
+              resolvedEmail = pMatch.email.trim().toLowerCase();
+              resolvedPhone = pMatch.phone || trimmed;
+              accountName = pMatch.full_name || '';
+            }
+          } else {
+            // Check vendors first then profiles
+            const { data: vMatch } = await adminClient
+              .from('vendors')
+              .select('id, brand_name, email, phone')
+              .in('phone', candidates)
+              .maybeSingle();
+
+            if (vMatch?.email) {
+              resolvedEmail = vMatch.email.trim().toLowerCase();
+              resolvedPhone = vMatch.phone || trimmed;
+              accountName = vMatch.brand_name || '';
+            } else {
+              const { data: pMatch } = await adminClient
+                .from('profiles')
+                .select('id, full_name, email, phone')
+                .in('phone', candidates)
+                .maybeSingle();
+
+              if (pMatch?.email) {
+                resolvedEmail = pMatch.email.trim().toLowerCase();
+                resolvedPhone = pMatch.phone || trimmed;
+                accountName = pMatch.full_name || '';
+              }
+            }
           }
         }
       }
