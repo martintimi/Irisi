@@ -561,8 +561,8 @@ export default function VendorOrdersPage() {
               {/* Vendor Fulfillment Controls */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <div className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  {ord.trackingStage === 1 && (ord.courierServiceType === 'pickup' ? 'Package garments in ÌRÍSÍ mailer and mark ready. Rider dispatched to your atelier.' : 'Package garments and mark ready for drop-off.')}
-                  {ord.trackingStage === 2 && (ord.courierServiceType === 'pickup' ? 'Garment packed! Courier rider arriving for pickup.' : 'Garment packed! Drop off at designated station or motor park.')}
+                  {ord.trackingStage === 1 && (ord.courierServiceType === 'pickup' ? 'Package items in ÌRÍSÍ mailer and mark ready. Rider dispatched to your store/pickup location.' : 'Package items and mark ready for drop-off.')}
+                  {ord.trackingStage === 2 && (ord.courierServiceType === 'pickup' ? 'Items packed! Courier rider arriving for pickup.' : 'Items packed! Drop off at designated station or dispatch point.')}
                   {ord.trackingStage === 3 && 'Package is in transit with courier/driver.'}
                   {ord.trackingStage === 4 && 'Customer has confirmed receipt. Funds credited to payout balance.'}
                 </div>

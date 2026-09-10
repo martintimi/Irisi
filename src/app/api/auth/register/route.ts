@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     if (existingVendor) {
       return NextResponse.json({
-        error: 'A designer atelier account with this email already exists. Please Sign In instead.'
+        error: 'A merchant account with this email already exists. Please Sign In instead.'
       }, { status: 400 });
     }
 
@@ -114,7 +114,8 @@ export async function POST(request: Request) {
     const twinId = `VY-NIG-${Math.floor(100 + Math.random() * 900)}`;
 
     if (userType === 'vendor') {
-      const vendorId = (brandName || 'atelier').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const defaultPrefix = vendorType === 'boutique_seller' ? 'boutique' : 'atelier';
+      const vendorId = (brandName || defaultPrefix).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const finalSpecialty = specialty || vendorSpecialty || (vendorType === 'fashion_designer' ? 'apparel' : 'multi_department');
       const initialBioObj = {
         bio: '',

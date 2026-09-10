@@ -61,7 +61,7 @@ export default function DirectSalesAssistantPage() {
           const mapped: Product[] = prodData.products.map((p: any) => ({
             id: p.id,
             vendorId: p.vendor_id || targetVendorId,
-            vendorName: p.vendor_name || vendorProfile.brandName || 'Atelier',
+            vendorName: p.vendor_name || vendorProfile.brandName || 'Brand',
             name: p.name,
             price: Number(p.price) || 0,
             description: p.description || '',
@@ -191,7 +191,7 @@ export default function DirectSalesAssistantPage() {
 
       ctx.fillStyle = '#e6c367';
       ctx.font = 'bold 24px sans-serif';
-      ctx.fillText((vendorProfile?.brandName || 'ATELIER').toUpperCase(), 80, 93);
+      ctx.fillText((vendorProfile?.brandName || 'BRAND').toUpperCase(), 80, 93);
 
       // Top Right Irisi Badge
       try {
@@ -471,7 +471,7 @@ export default function DirectSalesAssistantPage() {
               {/* Top Left Brand Badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-white/20">
                 <span className="text-[10px] font-mono-luxury uppercase font-bold text-amber-300">
-                  {vendorProfile?.brandName || 'ATELIER'}
+                  {vendorProfile?.brandName || 'BRAND'}
                 </span>
               </div>
 

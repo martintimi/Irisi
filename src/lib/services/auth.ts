@@ -246,10 +246,7 @@ export async function requestPasswordReset(identifier: string, role?: 'vendor' |
       message: result.message,
       email: result.email,
       phone: result.phone,
-      resolvedEmail: result.resolvedEmail,
       accountName: result.accountName,
-      token: result.token,
-      resetLink: result.resetLink,
       supportUrl: result.supportUrl,
     };
   } catch (err: any) {

@@ -129,9 +129,7 @@ function AuthPageContent() {
   const [recoveryInfo, setRecoveryInfo] = useState<{
     maskedEmail?: string;
     maskedPhone?: string;
-    resolvedEmail?: string;
     accountName?: string;
-    token?: string;
     supportUrl?: string;
   } | null>(null);
   const [resetOtp, setResetOtp] = useState('');
@@ -409,18 +407,15 @@ function AuthPageContent() {
       setRecoveryInfo({
         maskedEmail: res.email,
         maskedPhone: res.phone,
-        resolvedEmail: res.resolvedEmail,
         accountName: res.accountName,
-        token: res.token,
         supportUrl: res.supportUrl,
       });
 
-      if (res.token) {
-        setResetOtp(res.token);
-      }
-
+      setResetOtp('');
       setMode('reset_password');
-      setRecoverySuccessMsg(res.message || 'Recovery code generated. Enter the code and choose your new password.');
+      setRecoverySuccessMsg(
+        res.message || `A verification code has been sent to ${res.email || 'your email'}. Please check your inbox and enter the code below.`
+      );
     } catch (err: any) {
       setErrorMessage(err.message || 'Error requesting password recovery.');
     } finally {
@@ -431,7 +426,7 @@ function AuthPageContent() {
   const handleConfirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetOtp.trim()) {
-      setErrorMessage('Please enter your verification code.');
+      setErrorMessage('Please enter the verification code sent to your email.');
       return;
     }
     if (!newPassword || newPassword.length < 6) {
@@ -447,7 +442,7 @@ function AuthPageContent() {
     setErrorMessage('');
 
     try {
-      const identifier = recoveryInfo?.resolvedEmail || recoveryIdentifier.trim();
+      const identifier = recoveryIdentifier.trim();
       const res = await confirmPasswordReset(identifier, resetOtp.trim(), newPassword);
 
       if (!res.success) {
@@ -614,7 +609,7 @@ function AuthPageContent() {
                 : mode === 'forgot_password'
                 ? 'Enter your registered email address or Nigerian phone number to receive a recovery code.'
                 : mode === 'reset_password'
-                ? `Enter the recovery code sent for ${recoveryInfo?.maskedEmail || recoveryInfo?.resolvedEmail || 'your account'} and choose your new password.`
+                ? `Enter the recovery code sent to ${recoveryInfo?.maskedEmail || 'your registered email'} and choose your new password.`
                 : mode === 'signup'
                 ? 'Join Nigeria’s premier ready-to-wear fashion marketplace with 24-48h dispatch.'
                 : 'Access your saved items, cart, and express checkout.'}
@@ -847,20 +842,9 @@ function AuthPageContent() {
             /* ======================================================== */
             <form onSubmit={handleConfirmReset} className="space-y-4">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)]">
-                    Recovery Verification Code
-                  </label>
-                  {recoveryInfo?.token && (
-                    <button
-                      type="button"
-                      onClick={() => setResetOtp(recoveryInfo.token || '')}
-                      className="text-[10px] font-mono-luxury text-[var(--gold-accent)] underline hover:opacity-80 cursor-pointer"
-                    >
-                      Auto-fill Code ({recoveryInfo.token})
-                    </button>
-                  )}
-                </div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+                  Recovery Verification Code
+                </label>
                 <div className="relative">
                   <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                   <input
@@ -868,10 +852,13 @@ function AuthPageContent() {
                     required
                     value={resetOtp}
                     onChange={(e) => setResetOtp(e.target.value.trim())}
-                    placeholder="Enter verification code"
+                    placeholder="Enter code from your email"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-mono-luxury tracking-wider focus:border-[var(--gold-accent)] focus:outline-none"
                   />
                 </div>
+                <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5">
+                  Check your inbox {recoveryInfo?.maskedEmail ? `(${recoveryInfo.maskedEmail})` : ''} and spam folder for your recovery verification code.
+                </p>
               </div>
 
               <div>

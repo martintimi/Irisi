@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendPasswordResetEmail } from '@/lib/services/emailService';
+
 
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_URL = (!rawUrl || rawUrl.includes('bflddlhjlpdvceuypxkh'))
@@ -216,29 +218,36 @@ export async function POST(request: Request) {
     }
 
     const otpCode = linkData?.properties?.email_otp || '';
-    const actionLink = linkData?.properties?.action_link || '';
 
-    // Non-blocking trigger of standard email if SMTP is configured
+    // Dispatch branded recovery email with the OTP verification code
+    await sendPasswordResetEmail({
+      recipientEmail: resolvedEmail,
+      recipientName: accountName || undefined,
+      otpCode,
+      userType: role === 'vendor' ? 'vendor' : 'shopper',
+      supportUrl: undefined,
+    }).catch((e) => console.warn('[forgot-password] Email dispatch notice:', e));
+
+    // Non-blocking trigger of Supabase reset email if custom SMTP is configured
     anonClient.auth.resetPasswordForEmail(resolvedEmail).catch(() => {});
 
     // WhatsApp Concierge Quick Assist URL
     const supportPhone = '2349070332145';
     const supportText = encodeURIComponent(
-      `Hello Ìrísí Concierge, I am requesting password recovery assistance for my account: ${resolvedEmail}.`
+      `Hello Ìrísí Concierge, I am requesting password recovery assistance for my account: ${maskEmail(resolvedEmail)}.`
     );
     const supportUrl = `https://wa.me/${supportPhone}?text=${supportText}`;
 
+    // Return sanitized response: NEVER leak the raw OTP or resetLink to the frontend
     return NextResponse.json({
       success: true,
-      message: `A recovery code has been generated for ${maskEmail(resolvedEmail)}.`,
+      message: `A recovery verification code has been sent to ${maskEmail(resolvedEmail)}. Please check your inbox and enter the code.`,
       email: maskEmail(resolvedEmail),
       phone: resolvedPhone ? maskPhone(resolvedPhone) : null,
-      resolvedEmail,
       accountName: accountName || null,
-      token: otpCode,
-      resetLink: actionLink,
       supportUrl,
     });
+
   } catch (error: any) {
     console.error('[forgot-password] Unexpected error:', error);
     return NextResponse.json(
