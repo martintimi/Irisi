@@ -83,7 +83,24 @@ const CATEGORY_MAP: Record<string, CategoryConfig> = {
         n.includes('adilette') ||
         n.includes('sneaker') ||
         n.includes('loafer') ||
-        n.includes('palm')
+        n.includes('palm') ||
+        n.includes('clog') ||
+        n.includes('croc')
+      );
+    }
+  },
+  clogs: {
+    title: 'CLOGS & FOAM SLIP-ONS',
+    subtitle: 'Classic clogs, platform mules, Crocs & foam comfort slip-ons',
+    filterFn: (p: any) => {
+      const n = (p.name || '').toLowerCase();
+      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
+      return (
+        n.includes('clog') ||
+        n.includes('croc') ||
+        n.includes('foam') ||
+        n.includes('mule') ||
+        tags.some((t: string) => t.includes('clog') || t.includes('croc') || t.includes('foam'))
       );
     }
   },

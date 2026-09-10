@@ -177,6 +177,16 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     imageUrl: '/images/products/BlackSmartShoes.jpg',
     subtitle: 'Hand-burnished leather & horsebit accents',
   },
+  {
+    id: 'men-clogs',
+    name: 'Clogs & Foam Slip-Ons',
+    slug: 'clogs',
+    gender: 'men',
+    department: 'footwear',
+    imageUrl: '/images/categories/crocs_men.jpg',
+    subtitle: 'Streetwear foam clogs, mules & comfort slip-ons',
+    isPopular: true,
+  },
 
   // Bags (Men)
   {
@@ -247,7 +257,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'dresses',
     gender: 'women',
     department: 'clothing',
-    imageUrl: '/images/editorial/female_dress.jpg',
+    imageUrl: '/images/categories/women_dresses.jpg',
     subtitle: 'Cocktail maxis, corseted bodycons & slips',
     isPopular: true,
   },
@@ -257,7 +267,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'two-piece',
     gender: 'women',
     department: 'clothing',
-    imageUrl: '/images/editorial/nigerian_female_couture.jpg',
+    imageUrl: '/images/categories/women_coord.jpg',
     subtitle: 'Matching pantsuits, resort sets & knit sets',
     isPopular: true,
   },
@@ -285,7 +295,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'women-jeans',
     gender: 'women',
     department: 'clothing',
-    imageUrl: '/images/editorial/modern_female_streetwear.jpg',
+    imageUrl: '/images/categories/women_jeans.jpg',
     subtitle: 'High-waisted wide leg & straight cut denim',
   },
   {
@@ -294,7 +304,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'skirts',
     gender: 'women',
     department: 'clothing',
-    imageUrl: '/images/editorial/female_dress.jpg',
+    imageUrl: '/images/categories/women_skirts.jpg',
     subtitle: 'Pleated midi skirts & asymmetric cutouts',
   },
   {
@@ -345,7 +355,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'heels',
     gender: 'women',
     department: 'footwear',
-    imageUrl: '/images/products/BlackSmartShoes2.jpg',
+    imageUrl: '/images/categories/women_heels.jpg',
     subtitle: 'Stiletto pumps, strappy sandals & block mules',
     isPopular: true,
   },
@@ -368,6 +378,16 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     imageUrl: '/images/products/AddidasShoeUnisex.jpg',
     subtitle: 'Retro runners & minimalist street platforms',
   },
+  {
+    id: 'women-clogs',
+    name: 'Clogs & Foam Slip-Ons',
+    slug: 'clogs',
+    gender: 'women',
+    department: 'footwear',
+    imageUrl: '/images/categories/crocs_women.jpg',
+    subtitle: 'Platform clogs, comfort mules & foam slides',
+    isPopular: true,
+  },
 
   // Bags (Women)
   {
@@ -386,7 +406,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'clutches',
     gender: 'women',
     department: 'bags',
-    imageUrl: '/images/editorial/female_dress.jpg',
+    imageUrl: '/images/categories/women_clutches.jpg',
     subtitle: 'Metallic evening clutches & micro bags',
   },
 
@@ -407,7 +427,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'women-watches',
     gender: 'women',
     department: 'accessories',
-    imageUrl: '/images/editorial/nigerian_female_couture.jpg',
+    imageUrl: '/images/categories/women_watches.jpg',
     subtitle: 'Emerald bezel dials & gold mesh straps',
   },
   {
@@ -416,7 +436,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'women-sunglasses',
     gender: 'women',
     department: 'accessories',
-    imageUrl: '/images/editorial/modern_female_streetwear.jpg',
+    imageUrl: '/images/categories/women_sunglasses.jpg',
     subtitle: 'Cat-eye frames, oversized squares & shields',
   },
 ];

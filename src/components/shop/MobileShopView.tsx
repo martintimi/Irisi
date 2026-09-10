@@ -174,6 +174,8 @@ export default function MobileShopView() {
           matchesSpecific = pName.includes('boubou') || pName.includes('kaftan') || pName.includes('abaya') || pTags.some(t => t.includes('boubou'));
         } else if (sc === 'heels') {
           matchesSpecific = pName.includes('heel') || pName.includes('pump') || pName.includes('mule') || pTags.some(t => t.includes('heel'));
+        } else if (sc === 'clogs' || sc === 'crocs') {
+          matchesSpecific = pName.includes('clog') || pName.includes('croc') || pName.includes('foam') || pName.includes('mule') || pTags.some(t => t.includes('clog') || t.includes('croc') || t.includes('foam'));
         } else if (sc === 'watches' || sc === 'women-watches') {
           matchesSpecific = pName.includes('watch') || pTags.some(t => t.includes('watch'));
         } else if (sc === 'chains' || sc === 'jewelry') {

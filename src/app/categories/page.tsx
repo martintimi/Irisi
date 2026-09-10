@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft, Search, Sparkles, ChevronRight,
   Layers, ArrowUpRight
@@ -16,17 +16,82 @@ import {
   INITIAL_CATEGORIES
 } from '@/lib/data/categories';
 
-export default function CategoriesPage() {
+function CategoriesExplorerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // Active Gender Division: 'men' | 'women'
-  const [activeGender, setActiveGender] = useState<GenderKey>('men');
+  // Read initial values from URL query param or sessionStorage
+  const [activeGender, setActiveGender] = useState<GenderKey>(() => {
+    if (typeof window === 'undefined') return 'men';
+    const urlParam = searchParams.get('gender') as GenderKey | null;
+    if (urlParam === 'men' || urlParam === 'women') return urlParam;
+    try {
+      const stored = sessionStorage.getItem('irisi_category_gender') as GenderKey | null;
+      if (stored === 'men' || stored === 'women') return stored;
+    } catch {}
+    return 'men';
+  });
 
   // Search filter query
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selected Department Filter (or 'all' to show all sections)
-  const [selectedDept, setSelectedDept] = useState<'all' | DepartmentKey>('all');
+  const [selectedDept, setSelectedDept] = useState<'all' | DepartmentKey>(() => {
+    if (typeof window === 'undefined') return 'all';
+    const urlDept = searchParams.get('dept') as DepartmentKey | null;
+    if (urlDept && ['clothing', 'native', 'footwear', 'bags', 'accessories'].includes(urlDept)) {
+      return urlDept;
+    }
+    try {
+      const storedDept = sessionStorage.getItem('irisi_category_dept') as DepartmentKey | null;
+      if (storedDept && ['clothing', 'native', 'footwear', 'bags', 'accessories'].includes(storedDept)) {
+        return storedDept;
+      }
+    } catch {}
+    return 'all';
+  });
+
+  // Keep state synchronized with URL search params if user navigated via browser history
+  useEffect(() => {
+    const urlParam = searchParams.get('gender') as GenderKey | null;
+    if (urlParam === 'men' || urlParam === 'women') {
+      setActiveGender(urlParam);
+    }
+    const urlDept = searchParams.get('dept') as DepartmentKey | null;
+    if (urlDept && ['clothing', 'native', 'footwear', 'bags', 'accessories'].includes(urlDept)) {
+      setSelectedDept(urlDept);
+    } else if (searchParams.has('dept') && searchParams.get('dept') === 'all') {
+      setSelectedDept('all');
+    }
+  }, [searchParams]);
+
+  const handleSwitchGender = (gender: GenderKey) => {
+    setActiveGender(gender);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('irisi_category_gender', gender);
+        const url = new URL(window.location.href);
+        url.searchParams.set('gender', gender);
+        window.history.replaceState(null, '', url.toString());
+      } catch {}
+    }
+  };
+
+  const handleSelectDept = (dept: 'all' | DepartmentKey) => {
+    setSelectedDept(dept);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('irisi_category_dept', dept);
+        const url = new URL(window.location.href);
+        if (dept === 'all') {
+          url.searchParams.delete('dept');
+        } else {
+          url.searchParams.set('dept', dept);
+        }
+        window.history.replaceState(null, '', url.toString());
+      } catch {}
+    }
+  };
 
   // Grouped categories for active gender
   const groupedCategories = useMemo(() => {
@@ -93,7 +158,7 @@ export default function CategoriesPage() {
         <div className="grid grid-cols-2 border-t border-neutral-100 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-950">
           <button
             type="button"
-            onClick={() => setActiveGender('men')}
+            onClick={() => handleSwitchGender('men')}
             className={`py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer border-b-2 ${
               activeGender === 'men'
                 ? 'border-black dark:border-white text-black dark:text-white bg-white dark:bg-[#0A0A0C]'
@@ -104,7 +169,7 @@ export default function CategoriesPage() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveGender('women')}
+            onClick={() => handleSwitchGender('women')}
             className={`py-3 text-xs font-black uppercase tracking-widest transition-all cursor-pointer border-b-2 ${
               activeGender === 'women'
                 ? 'border-black dark:border-white text-black dark:text-white bg-white dark:bg-[#0A0A0C]'
@@ -121,7 +186,7 @@ export default function CategoriesPage() {
             <Search className="absolute left-3.5 h-4 w-4 text-neutral-400" />
             <input
               type="text"
-              placeholder={`Search ${activeGender.toUpperCase()} categories (e.g. Hoodies, Agbada, Slides)...`}
+              placeholder={`Search ${activeGender.toUpperCase()} categories (e.g. Hoodies, Agbada, Slides, Crocs)...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs text-black dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
@@ -133,7 +198,7 @@ export default function CategoriesPage() {
         <div className="flex items-center gap-1.5 px-4 py-2 overflow-x-auto no-scrollbar border-t border-neutral-100 dark:border-neutral-900">
           <button
             type="button"
-            onClick={() => setSelectedDept('all')}
+            onClick={() => handleSelectDept('all')}
             className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shrink-0 transition-all cursor-pointer ${
               selectedDept === 'all'
                 ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm'
@@ -146,7 +211,7 @@ export default function CategoriesPage() {
             <button
               key={dept.key}
               type="button"
-              onClick={() => setSelectedDept(dept.key)}
+              onClick={() => handleSelectDept(dept.key)}
               className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider shrink-0 transition-all cursor-pointer ${
                 selectedDept === dept.key
                   ? 'bg-black dark:bg-white text-white dark:text-black shadow-sm'
@@ -245,7 +310,7 @@ export default function CategoriesPage() {
             <button
               onClick={() => {
                 setSearchQuery('');
-                setSelectedDept('all');
+                handleSelectDept('all');
               }}
               className="px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider"
             >
@@ -256,5 +321,13 @@ export default function CategoriesPage() {
       </main>
 
     </div>
+  );
+}
+
+export default function CategoriesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white dark:bg-[#0A0A0C]" />}>
+      <CategoriesExplorerContent />
+    </Suspense>
   );
 }
