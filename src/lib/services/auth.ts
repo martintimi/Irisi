@@ -226,3 +226,57 @@ export async function resendOtpCode(email: string) {
     return { success: false, error: err.message || 'Network error' };
   }
 }
+
+// 9. REQUEST PASSWORD RESET via /api/auth/forgot-password
+export async function requestPasswordReset(identifier: string, role?: 'vendor' | 'shopper') {
+  try {
+    const res = await fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, role }),
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      return { success: false, error: result.error || 'Failed to request password recovery.' };
+    }
+
+    return {
+      success: true,
+      message: result.message,
+      email: result.email,
+      phone: result.phone,
+      resolvedEmail: result.resolvedEmail,
+      accountName: result.accountName,
+      token: result.token,
+      resetLink: result.resetLink,
+      supportUrl: result.supportUrl,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}
+
+// 10. CONFIRM PASSWORD RESET via /api/auth/reset-password
+export async function confirmPasswordReset(identifier: string, token: string, newPassword: string) {
+  try {
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, token, newPassword }),
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      return { success: false, error: result.error || 'Failed to update password.' };
+    }
+
+    return {
+      success: true,
+      message: result.message,
+      user: result.user,
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error' };
+  }
+}

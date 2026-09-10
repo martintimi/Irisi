@@ -6,12 +6,12 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Building, Scissors, Mail, Phone, Lock, MapPin,
   ShieldCheck, ArrowRight, ArrowLeft, Sparkles, User, Sun, Moon, Loader2,
-  Eye, EyeOff, CheckCircle2, RotateCw, Store
+  Eye, EyeOff, CheckCircle2, RotateCw, Store, KeyRound, MessageCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import confetti from 'canvas-confetti';
-import { signUpVendor, signInVendor, verifyOtpCode, resendOtpCode } from '@/lib/services/auth';
+import { signUpVendor, signInVendor, verifyOtpCode, resendOtpCode, requestPasswordReset, confirmPasswordReset } from '@/lib/services/auth';
 import { isBoutiqueVendor, VendorSpecialty } from '@/types';
 import BrandWordmark from '@/components/common/BrandWordmark';
 import { NIGERIAN_STATES } from '@/lib/data/nigeriaLocations';
@@ -55,7 +55,7 @@ export default function VendorAuthPage() {
     toggleTheme
   } = useStore();
 
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'verify_otp'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'verify_otp' | 'forgot_password' | 'reset_password'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -69,10 +69,27 @@ export default function VendorAuthPage() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+
+  // Password recovery state
+  const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
+  const [recoveryInfo, setRecoveryInfo] = useState<{
+    maskedEmail?: string;
+    maskedPhone?: string;
+    resolvedEmail?: string;
+    accountName?: string;
+    token?: string;
+    supportUrl?: string;
+  } | null>(null);
+  const [resetOtp, setResetOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [recoverySuccessMsg, setRecoverySuccessMsg] = useState('');
 
   // Register form state
   const [regForm, setRegForm] = useState({
@@ -443,6 +460,127 @@ export default function VendorAuthPage() {
     }
   };
 
+  const handleRequestRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryIdentifier.trim()) {
+      setErrorMessage('Please enter your business email or registered phone number.');
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMessage('');
+    setRecoverySuccessMsg('');
+
+    try {
+      const res = await requestPasswordReset(recoveryIdentifier.trim(), 'vendor');
+      if (!res.success) {
+        setErrorMessage(res.error || 'Account not found. Please check your details or contact concierge support.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setRecoveryInfo({
+        maskedEmail: res.email,
+        maskedPhone: res.phone,
+        resolvedEmail: res.resolvedEmail,
+        accountName: res.accountName,
+        token: res.token,
+        supportUrl: res.supportUrl,
+      });
+
+      if (res.token) {
+        setResetOtp(res.token);
+      }
+
+      setAuthMode('reset_password');
+      setRecoverySuccessMsg(res.message || 'Recovery code generated. Enter the code and choose your new password.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error processing password recovery.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetOtp.trim()) {
+      setErrorMessage('Please enter your verification code.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setErrorMessage('New passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const identifier = recoveryInfo?.resolvedEmail || recoveryIdentifier.trim();
+      const res = await confirmPasswordReset(identifier, resetOtp.trim(), newPassword);
+
+      if (!res.success) {
+        setErrorMessage(res.error || 'Failed to update password. The code may be invalid or expired.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setLoginIdentifier(identifier);
+      setLoginPassword(newPassword);
+
+      // Attempt automatic sign-in
+      const loginRes = await signInVendor(identifier, newPassword);
+      if (loginRes.success && loginRes.vendor) {
+        const vId = loginRes.vendor.id || loginRes.vendor.email || identifier;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('irisi_vendor_id', vId);
+          localStorage.setItem('irisi_vendor_email', loginRes.vendor.email || identifier);
+          localStorage.setItem('veyra_vendor_id', vId);
+          localStorage.setItem('veyra_vendor_email', loginRes.vendor.email || identifier);
+          document.cookie = `irisi_vendor_id=${vId}; path=/; max-age=2592000`;
+          document.cookie = `veyra_vendor_id=${vId}; path=/; max-age=2592000`;
+        }
+
+        setVendorProfile({
+          brandName: loginRes.vendor.brand_name || 'My Brand',
+          designerName: loginRes.vendor.designer_name || 'Lead Manager',
+          contactPerson: loginRes.vendor.contact_person || loginRes.vendor.designer_name,
+          email: loginRes.vendor.email || identifier,
+          phone: loginRes.vendor.phone || '',
+          location: loginRes.vendor.location || '',
+          vendorType: isBoutiqueVendor(loginRes.vendor) ? 'boutique_seller' : 'fashion_designer',
+          specialty: loginRes.vendor.specialty || loginRes.vendor.vendorSpecialty || 'multi_department',
+          vendorSpecialty: loginRes.vendor.specialty || loginRes.vendor.vendorSpecialty || 'multi_department',
+          bankName: loginRes.vendor.bank_name || 'Guaranty Trust Bank (GTBank)',
+          accountNumber: loginRes.vendor.account_number || '',
+          accountName: loginRes.vendor.account_name || '',
+          instagram: loginRes.vendor.instagram || '',
+          bio: loginRes.vendor.bio || '',
+        });
+
+        setIsVendorLoggedIn(true);
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#e6c367', '#10b981', '#ffffff']
+        });
+        router.push('/vendor-portal');
+        return;
+      }
+
+      setAuthMode('login');
+      setRecoverySuccessMsg('Password reset successfully! Please sign in with your new password.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error updating password.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen flex flex-col lg:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors">
       
@@ -565,6 +703,10 @@ export default function VendorAuthPage() {
               <span>
                 {authMode === 'verify_otp'
                   ? 'Verification Required'
+                  : authMode === 'forgot_password'
+                  ? 'Account Recovery'
+                  : authMode === 'reset_password'
+                  ? 'Set New Password'
                   : authMode === 'register'
                   ? 'Partner Onboarding'
                   : 'Merchant Partner Portal'}
@@ -573,26 +715,35 @@ export default function VendorAuthPage() {
             <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
               {authMode === 'verify_otp'
                 ? 'Confirm Email & Activate'
+                : authMode === 'forgot_password'
+                ? 'Reset Merchant Password'
+                : authMode === 'reset_password'
+                ? 'Set New Password'
                 : authMode === 'register'
                 ? (isBoutiqueSelected ? 'Register Your Boutique' : 'Register Your Atelier')
                 : 'Partner Workspace Login'}
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light">
               {authMode === 'verify_otp'
-                ? `Enter the 6-digit confirmation code sent to ${pendingEmail || regForm.email}.`
+                ? `Enter the confirmation code sent to ${pendingEmail || regForm.email}.`
+                : authMode === 'forgot_password'
+                ? 'Enter your registered business email or Nigerian phone number to receive a recovery code.'
+                : authMode === 'reset_password'
+                ? `Enter the recovery code sent for ${recoveryInfo?.maskedEmail || recoveryInfo?.resolvedEmail || 'your account'} and choose your new password.`
                 : authMode === 'register'
                 ? 'Publish your ready-to-wear drops and receive orders from verified shoppers.'
                 : 'Access your store orders, catalog inventory, and instant settlement banking.'}
             </p>
           </div>
 
-          {/* Mode Tabs: Login on Left, Register on Right (Hidden in OTP mode) */}
-          {authMode !== 'verify_otp' && (
+          {/* Mode Tabs: Only shown on Sign In / Register Store */}
+          {(authMode === 'login' || authMode === 'register') && (
             <div className="grid grid-cols-2 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider">
               <button
                 onClick={() => {
                   setAuthMode('login');
                   setErrorMessage('');
+                  setRecoverySuccessMsg('');
                 }}
                 className={`py-2.5 rounded-xl transition-all font-semibold cursor-pointer ${
                   authMode === 'login'
@@ -606,6 +757,7 @@ export default function VendorAuthPage() {
                 onClick={() => {
                   setAuthMode('register');
                   setErrorMessage('');
+                  setRecoverySuccessMsg('');
                 }}
                 className={`py-2.5 rounded-xl transition-all font-semibold cursor-pointer ${
                   authMode === 'register'
@@ -614,6 +766,23 @@ export default function VendorAuthPage() {
                 }`}
               >
                 Register Store
+              </button>
+            </div>
+          )}
+
+          {/* Success Notification Alert */}
+          {recoverySuccessMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury flex items-center justify-between gap-2.5 animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span>{recoverySuccessMsg}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecoverySuccessMsg('')}
+                className="text-[10px] text-emerald-400/60 hover:text-emerald-300 transition-colors uppercase font-bold cursor-pointer"
+              >
+                Dismiss
               </button>
             </div>
           )}
@@ -713,10 +882,217 @@ export default function VendorAuthPage() {
                 </button>
               </div>
             </form>
+          ) : authMode === 'forgot_password' ? (
+
+            /* ======================================================== */
+            /* 2. FORGOT PASSWORD VIEW */
+            /* ======================================================== */
+            <form onSubmit={handleRequestRecovery} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                  Business Email or Registered Phone Number
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    required
+                    value={recoveryIdentifier}
+                    onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                    placeholder="contact@brand.ng or 08012*****"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                  />
+                </div>
+                <EmailDomainSuggestions email={recoveryIdentifier} onSelectDomain={(full) => setRecoveryIdentifier(full)} />
+                <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5">
+                  Enter the email or Nigerian phone number you registered your atelier with.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !recoveryIdentifier.trim()}
+                className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                    <span>Finding Account & Generating Code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Recovery Code</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <div className="pt-3 flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    setRecoverySuccessMsg('');
+                    setAuthMode('login');
+                  }}
+                  className="text-xs font-mono-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Back to Sign In</span>
+                </button>
+
+                <a
+                  href="https://wa.me/2349070332145?text=Hello%20Irisi%20Support,%20I%20need%20assistance%20recovering%20my%20merchant%20account."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-mono-luxury text-[var(--gold-accent)] hover:underline inline-flex items-center gap-1.5"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>Instant WhatsApp Concierge Quick-Assist</span>
+                </a>
+              </div>
+            </form>
+          ) : authMode === 'reset_password' ? (
+
+            /* ======================================================== */
+            /* 3. RESET PASSWORD VIEW */
+            /* ======================================================== */
+            <form onSubmit={handleConfirmReset} className="space-y-4">
+              {recoveryInfo?.accountName && (
+                <div className="p-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury flex items-center justify-between">
+                  <span className="text-[var(--text-secondary)]">Atelier:</span>
+                  <span className="font-bold text-[var(--gold-accent)]">{recoveryInfo.accountName}</span>
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] font-bold">
+                    Recovery Verification Code
+                  </label>
+                  {recoveryInfo?.token && (
+                    <button
+                      type="button"
+                      onClick={() => setResetOtp(recoveryInfo.token || '')}
+                      className="text-[10px] font-mono-luxury text-[var(--gold-accent)] underline hover:opacity-80 cursor-pointer"
+                    >
+                      Auto-fill Code ({recoveryInfo.token})
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    required
+                    value={resetOtp}
+                    onChange={(e) => setResetOtp(e.target.value.trim())}
+                    placeholder="Enter verification code"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-mono-luxury tracking-wider focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                  New Password (min 6 characters)
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                  <input
+                    type={showConfirmNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20"
+                    aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !resetOtp.trim() || newPassword.length < 6}
+                className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                    <span>Updating Password & Signing In...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span>Update Password & Enter Portal</span>
+                  </>
+                )}
+              </button>
+
+              <div className="pt-2 flex flex-col items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    setAuthMode('forgot_password');
+                  }}
+                  className="text-xs font-mono-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCw className="h-3.5 w-3.5" />
+                  <span>Resend Code / Change Identifier</span>
+                </button>
+
+                {recoveryInfo?.supportUrl && (
+                  <a
+                    href={recoveryInfo.supportUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono-luxury text-[var(--gold-accent)] hover:underline inline-flex items-center gap-1.5"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>Need Help? Contact Concierge on WhatsApp</span>
+                  </a>
+                )}
+              </div>
+            </form>
           ) : authMode === 'login' ? (
 
             /* ======================================================== */
-            /* 2. SIGN IN VIEW */
+            /* 4. SIGN IN VIEW */
             /* ======================================================== */
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
@@ -758,6 +1134,20 @@ export default function VendorAuthPage() {
                     aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
                   >
                     {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoveryIdentifier(loginIdentifier);
+                      setErrorMessage('');
+                      setRecoverySuccessMsg('');
+                      setAuthMode('forgot_password');
+                    }}
+                    className="text-xs font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors"
+                  >
+                    Forgot Password?
                   </button>
                 </div>
               </div>

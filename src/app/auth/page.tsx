@@ -4,13 +4,13 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
   Sparkles, ArrowRight, ArrowLeft, User, Lock, Mail, Phone,
-  ExternalLink, Loader2, Eye, EyeOff, KeyRound, CheckCircle2, RotateCw
+  ExternalLink, Loader2, Eye, EyeOff, KeyRound, CheckCircle2, RotateCw, MessageCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
-import { signUpCustomer, signInCustomer, verifyOtpCode, resendOtpCode } from '@/lib/services/auth';
+import { signUpCustomer, signInCustomer, verifyOtpCode, resendOtpCode, requestPasswordReset, confirmPasswordReset } from '@/lib/services/auth';
 import EmailDomainSuggestions from '@/components/common/EmailDomainSuggestions';
 
 const editorialSlides = [
@@ -106,7 +106,7 @@ function AuthPageContent() {
   const redirectTarget = searchParams.get('redirect') || '/shop';
   const { setUserAuth, setSelectedGender, setBodyProfile } = useStore();
 
-  const [mode, setMode] = useState<'signup' | 'login' | 'verify_otp'>('login');
+  const [mode, setMode] = useState<'signup' | 'login' | 'verify_otp' | 'forgot_password' | 'reset_password'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Form State
@@ -117,10 +117,27 @@ function AuthPageContent() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [preferredSize, setPreferredSize] = useState<'S' | 'M' | 'L' | 'XL' | 'XXL'>('M');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Password Recovery State
+  const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
+  const [recoveryInfo, setRecoveryInfo] = useState<{
+    maskedEmail?: string;
+    maskedPhone?: string;
+    resolvedEmail?: string;
+    accountName?: string;
+    token?: string;
+    supportUrl?: string;
+  } | null>(null);
+  const [resetOtp, setResetOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [recoverySuccessMsg, setRecoverySuccessMsg] = useState('');
 
   // OTP Verification State
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -371,6 +388,114 @@ function AuthPageContent() {
     }
   };
 
+  const handleRequestRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryIdentifier.trim()) {
+      setErrorMessage('Please enter your email address or Nigerian phone number.');
+      return;
+    }
+    setIsSubmitting(true);
+    setErrorMessage('');
+    setRecoverySuccessMsg('');
+
+    try {
+      const res = await requestPasswordReset(recoveryIdentifier.trim(), 'shopper');
+      if (!res.success) {
+        setErrorMessage(res.error || 'No customer account found with that email or phone number.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setRecoveryInfo({
+        maskedEmail: res.email,
+        maskedPhone: res.phone,
+        resolvedEmail: res.resolvedEmail,
+        accountName: res.accountName,
+        token: res.token,
+        supportUrl: res.supportUrl,
+      });
+
+      if (res.token) {
+        setResetOtp(res.token);
+      }
+
+      setMode('reset_password');
+      setRecoverySuccessMsg(res.message || 'Recovery code generated. Enter the code and choose your new password.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error requesting password recovery.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetOtp.trim()) {
+      setErrorMessage('Please enter your verification code.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setErrorMessage('New passwords do not match. Please re-enter.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage('');
+
+    try {
+      const identifier = recoveryInfo?.resolvedEmail || recoveryIdentifier.trim();
+      const res = await confirmPasswordReset(identifier, resetOtp.trim(), newPassword);
+
+      if (!res.success) {
+        setErrorMessage(res.error || 'Failed to update password. Verification code may have expired.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Auto sign in shopper
+      const loginRes = await signInCustomer(identifier, newPassword);
+      if (loginRes.success && loginRes.user) {
+        const activeProfile = loginRes.profile || {};
+        const activeName = activeProfile.name || activeProfile.full_name || loginRes.user.user_metadata?.full_name || identifier.split('@')[0];
+        const activePhone = activeProfile.phone || loginRes.user.user_metadata?.phone || '';
+
+        setUserAuth({
+          isLoggedIn: true,
+          name: activeName,
+          email: identifier,
+          phone: activePhone,
+          gender: (activeProfile.gender as any) || 'male',
+          userType: 'shopper',
+        });
+
+        setSelectedGender((activeProfile.gender as any) || 'male');
+
+        confetti({
+          particleCount: 90,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#e6c367', '#10b981', '#ffffff']
+        });
+
+        router.push(redirectTarget);
+        return;
+      }
+
+      setMode('login');
+      setEmail(identifier);
+      setPassword(newPassword);
+      setRecoverySuccessMsg('Password updated successfully! Please sign in with your new password.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error updating password.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-[100dvh] flex flex-col lg:flex-row bg-[var(--bg-primary)]">
       
@@ -461,6 +586,10 @@ function AuthPageContent() {
               <span className="text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold">
                 {mode === 'verify_otp'
                   ? 'Email Confirmation'
+                  : mode === 'forgot_password'
+                  ? 'Account Recovery'
+                  : mode === 'reset_password'
+                  ? 'Set New Password'
                   : mode === 'signup'
                   ? 'Join Ìrísí Club'
                   : 'Welcome Back'}
@@ -469,7 +598,11 @@ function AuthPageContent() {
             
             <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
               {mode === 'verify_otp'
-                ? 'Enter 6-Digit Code'
+                ? 'Enter Confirmation Code'
+                : mode === 'forgot_password'
+                ? 'Reset Your Password'
+                : mode === 'reset_password'
+                ? 'Create New Password'
                 : mode === 'signup'
                 ? 'Create Your Account'
                 : 'Sign in to Ìrísí'}
@@ -477,18 +610,26 @@ function AuthPageContent() {
             
             <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
               {mode === 'verify_otp'
-                ? `We sent a 6-digit confirmation code to ${pendingEmail || email}. Enter it below to activate your account.`
+                ? `We sent a confirmation code to ${pendingEmail || email}. Enter it below to activate your account.`
+                : mode === 'forgot_password'
+                ? 'Enter your registered email address or Nigerian phone number to receive a recovery code.'
+                : mode === 'reset_password'
+                ? `Enter the recovery code sent for ${recoveryInfo?.maskedEmail || recoveryInfo?.resolvedEmail || 'your account'} and choose your new password.`
                 : mode === 'signup'
                 ? 'Join Nigeria’s premier ready-to-wear fashion marketplace with 24-48h dispatch.'
                 : 'Access your saved items, cart, and express checkout.'}
             </p>
           </div>
 
-          {/* Mode Tabs — underline style (Hidden in OTP mode) */}
-          {mode !== 'verify_otp' && (
+          {/* Mode Tabs — underline style (Only on Sign In / Sign Up) */}
+          {(mode === 'login' || mode === 'signup') && (
             <div className="flex border-b border-[var(--border-subtle)]">
               <button
-                onClick={() => { setMode('login'); setErrorMessage(''); }}
+                onClick={() => {
+                  setMode('login');
+                  setErrorMessage('');
+                  setRecoverySuccessMsg('');
+                }}
                 className={`flex-1 pb-3 text-sm font-semibold transition-all border-b-2 -mb-[1px] ${
                   mode === 'login'
                     ? 'border-[var(--text-primary)] text-[var(--text-primary)]'
@@ -498,7 +639,11 @@ function AuthPageContent() {
                 Sign In
               </button>
               <button
-                onClick={() => { setMode('signup'); setErrorMessage(''); }}
+                onClick={() => {
+                  setMode('signup');
+                  setErrorMessage('');
+                  setRecoverySuccessMsg('');
+                }}
                 className={`flex-1 pb-3 text-sm font-semibold transition-all border-b-2 -mb-[1px] ${
                   mode === 'signup'
                     ? 'border-[var(--text-primary)] text-[var(--text-primary)]'
@@ -510,6 +655,22 @@ function AuthPageContent() {
             </div>
           )}
 
+          {/* Success Notification Alert */}
+          {recoverySuccessMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury flex items-center justify-between gap-2.5 animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span>{recoverySuccessMsg}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecoverySuccessMsg('')}
+                className="text-[10px] text-emerald-400/60 hover:text-emerald-300 transition-colors uppercase font-bold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
           {/* Error Message Alert with Auto-Dismiss */}
           {errorMessage && (
@@ -609,6 +770,206 @@ function AuthPageContent() {
               </div>
 
             </form>
+          ) : mode === 'forgot_password' ? (
+
+            /* ======================================================== */
+            /* FORGOT PASSWORD VIEW */
+            /* ======================================================== */
+            <form onSubmit={handleRequestRecovery} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+                  Email Address or Nigerian Phone Number
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    required
+                    value={recoveryIdentifier}
+                    onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                    placeholder="you@email.com or 08012*****"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                </div>
+                <EmailDomainSuggestions email={recoveryIdentifier} onSelectDomain={(full) => setRecoveryIdentifier(full)} />
+                <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5">
+                  Enter your registered shopper email or Nigerian phone number.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !recoveryIdentifier.trim()}
+                className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase tracking-widest font-bold text-xs hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                    <span>Finding Account & Generating Code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Recovery Code</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <div className="pt-3 flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    setRecoverySuccessMsg('');
+                    setMode('login');
+                  }}
+                  className="text-xs font-mono-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Back to Sign In</span>
+                </button>
+
+                <a
+                  href="https://wa.me/2349070332145?text=Hello%20Irisi%20Support,%20I%20need%20assistance%20recovering%20my%20shopper%20account."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-mono-luxury text-[var(--gold-accent)] hover:underline inline-flex items-center gap-1.5"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>Instant WhatsApp Concierge Quick-Assist</span>
+                </a>
+              </div>
+            </form>
+          ) : mode === 'reset_password' ? (
+
+            /* ======================================================== */
+            /* RESET PASSWORD VIEW */
+            /* ======================================================== */
+            <form onSubmit={handleConfirmReset} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)]">
+                    Recovery Verification Code
+                  </label>
+                  {recoveryInfo?.token && (
+                    <button
+                      type="button"
+                      onClick={() => setResetOtp(recoveryInfo.token || '')}
+                      className="text-[10px] font-mono-luxury text-[var(--gold-accent)] underline hover:opacity-80 cursor-pointer"
+                    >
+                      Auto-fill Code ({recoveryInfo.token})
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    required
+                    value={resetOtp}
+                    onChange={(e) => setResetOtp(e.target.value.trim())}
+                    placeholder="Enter verification code"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-mono-luxury tracking-wider focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+                  New Password (min 6 characters)
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                  <input
+                    type={showConfirmNewPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                    aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !resetOtp.trim() || newPassword.length < 6}
+                className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase tracking-widest font-bold text-xs hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                    <span>Updating Password & Entering Shop...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span>Update Password & Enter Shop</span>
+                  </>
+                )}
+              </button>
+
+              <div className="pt-2 flex flex-col items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage('');
+                    setMode('forgot_password');
+                  }}
+                  className="text-xs font-mono-luxury text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCw className="h-3.5 w-3.5" />
+                  <span>Resend Code / Change Identifier</span>
+                </button>
+
+                {recoveryInfo?.supportUrl && (
+                  <a
+                    href={recoveryInfo.supportUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-mono-luxury text-[var(--gold-accent)] hover:underline inline-flex items-center gap-1.5"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>Need Help? Contact Concierge on WhatsApp</span>
+                  </a>
+                )}
+              </div>
+            </form>
           ) : (
             /* MODE: SIGN IN / SIGN UP */
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -696,6 +1057,22 @@ function AuthPageContent() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {mode === 'login' && (
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecoveryIdentifier(email);
+                        setErrorMessage('');
+                        setRecoverySuccessMsg('');
+                        setMode('forgot_password');
+                      }}
+                      className="text-xs font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password (Sign-up only) */}
