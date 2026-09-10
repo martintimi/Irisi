@@ -471,25 +471,15 @@ export default function PublishGarmentPage() {
                 )
               );
             } else {
-              const fallbackB64 = await compressImage(file, 1200, 0.80);
-              setUploadedImages((prev) =>
-                prev.map((img) =>
-                  img.id === tempId
-                    ? { ...img, url: fallbackB64, isUploading: false }
-                    : img
-                )
-              );
+              setUploadedImages((prev) => prev.filter((img) => img.id !== tempId));
+              setErrorMessage('Photo upload failed: ' + (data.error || 'Server error. Please try again.'));
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-          } catch (uploadErr) {
-            console.warn('Direct upload to CDN failed, using compressed fallback:', uploadErr);
-            const fallbackB64 = await compressImage(file, 1200, 0.80);
-            setUploadedImages((prev) =>
-              prev.map((img) =>
-                img.id === tempId
-                  ? { ...img, url: fallbackB64, isUploading: false }
-                  : img
-              )
-            );
+          } catch (uploadErr: any) {
+            console.error('Direct upload to CDN failed:', uploadErr);
+            setUploadedImages((prev) => prev.filter((img) => img.id !== tempId));
+            setErrorMessage('Photo upload failed. Please check your internet connection and re-upload.');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           }
         })();
       }
@@ -790,7 +780,13 @@ export default function PublishGarmentPage() {
 
     try {
       const coverImg = uploadedImages.find((i) => i.isCover) || uploadedImages[0];
-      let finalImageUrl = coverImg?.url || imagePreview || '/images/products/BlackTrapStarHoodie.jpg';
+      const finalImageUrl = coverImg?.url || imagePreview;
+      if (!finalImageUrl || typeof finalImageUrl !== 'string' || !finalImageUrl.trim() || finalImageUrl.startsWith('/images/products/BlackTrapStar')) {
+        setErrorMessage('A valid uploaded product photo is required before publishing.');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setIsSubmitting(false);
+        return;
+      }
 
       const enrichedColorsToSubmit = photoDerivedColors.length > 0
         ? photoDerivedColors
@@ -804,10 +800,20 @@ export default function PublishGarmentPage() {
           }) : (category === 'accessories' ? [] : [{ name: 'As Pictured', hex: '#111111', imageUrl: finalImageUrl }])
         );
 
+      const enhancedTags = Array.from(new Set([
+        ...tags,
+        subCategory,
+        category,
+        ...(subCategory.includes('bag') || subCategory.includes('backpack') ? ['bag', 'backpack', 'travel bag', 'luggage'] : []),
+        ...(subCategory.includes('cap') || subCategory.includes('fila') ? ['cap', 'hat', 'fila'] : []),
+        ...(subCategory.includes('shoe') || subCategory.includes('slide') || subCategory.includes('sneaker') ? ['footwear', 'shoes'] : []),
+      ].filter(Boolean)));
+
       const payload = {
         name: name.trim(),
         price: numericPrice,
         category,
+        subcategory: subCategory,
         genderTarget,
         garmentOriginType: 'ready_made_boutique',
         imageUrl: finalImageUrl,
@@ -819,7 +825,7 @@ export default function PublishGarmentPage() {
         })),
         videoUrl: videoPreview || undefined,
         description: description.trim(),
-        tags,
+        tags: enhancedTags,
         colors: enrichedColorsToSubmit,
         sizes: enabledSizes,
         sizeStock,

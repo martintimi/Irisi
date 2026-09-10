@@ -64,14 +64,18 @@ export default function MarketplaceGrid() {
     } else if (cat === 'all') {
       setSelectedCategory('all');
       setCurrentPage(1);
-    } else if (cat) {
       // If it's a specific subcategory, map to the closest category or search query
       if (['hoodies', 'jackets'].includes(cat)) setSelectedCategory('outerwear');
       else if (['jeans', 'cargo', 'trousers', 'shorts'].includes(cat)) setSelectedCategory('bottoms');
       else if (['slides', 'sneakers', 'loafers', 'heels'].includes(cat)) setSelectedCategory('footwear');
       else if (['bags', 'backpacks', 'chains', 'watches', 'caps', 'fila'].includes(cat)) setSelectedCategory('accessories');
       else if (['senator', 'agbada', 'jalabiya', 'dresses'].includes(cat)) setSelectedCategory('tops');
-      setSearchQuery(cat);
+      
+      if (['bags', 'backpacks', 'men-backpacks', 'women-bags'].includes(cat)) {
+        setSearchQuery('bag');
+      } else {
+        setSearchQuery(cat);
+      }
       setCurrentPage(1);
     }
   }, [searchParams, setSelectedGender]);

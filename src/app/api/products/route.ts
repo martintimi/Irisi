@@ -11,18 +11,7 @@ const NIGERIAN_STATES = [
   'Kebbi', 'Kogi', 'Nasarawa', 'Niger', 'Plateau', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara', 'Bauchi', 'Borno', 'Adamawa'
 ];
 
-export function getSmartFallbackImage(name: string = '', category: string = ''): string {
-  const n = (name || '').toLowerCase();
-  const c = (category || '').toLowerCase();
-  if (n.includes('agbada') || c === 'agbada_robes' || c === 'boubou_kaftans') return '/images/products/BlackAgbada.jpg';
-  if (n.includes('senator') || n.includes('kaftan') || c === 'senator_kaftan') return '/images/products/BlackSenator.jpg';
-  if (n.includes('jean') || n.includes('pant') || n.includes('trouser') || n.includes('cargo') || c === 'jeans_trousers' || c === 'unisex_denim' || c === 'bottoms' || c === 'women_jeans_trousers') return '/images/products/BaggyJean.jpg';
-  if (n.includes('shoe') || n.includes('slide') || n.includes('loafer') || n.includes('sneaker') || n.includes('croc') || n.includes('heel') || n.includes('addidas') || n.includes('adidas') || c === 'footwear' || c === 'men_footwear' || c === 'women_footwear' || c === 'unisex_footwear') return '/images/products/AddidasShoeUnisex.jpg';
-  if (n.includes('cap') || n.includes('beanie') || n.includes('hat') || c === 'accessories' || c === 'men_caps' || c === 'women_bags' || c === 'unisex_accessories') return '/images/products/GucciCap.jpg';
-  if (n.includes('blue') && (n.includes('hoodie') || n.includes('jacket'))) return '/images/products/BlueAndWhiteLosAngelisHoddie.jpg';
-  if (n.includes('brown') || n.includes('white')) return '/images/products/WhiteNdBrownHoodie.jpg';
-  return '/images/products/BlackTrapStarHoodie.jpg';
-}
+
 
 interface CacheEntry {
   data: any;
@@ -200,9 +189,7 @@ export async function GET(request: Request) {
 
     const formatted = (products || []).map((p) => {
       const vendorInfo = vendorMap.get(p.vendor_id);
-      const resolvedImg = p.image_url && p.image_url.trim().length > 0 && p.image_url !== '/images/products/BlackTrapStarHoodie.jpg'
-        ? p.image_url
-        : getSmartFallbackImage(p.name, p.category);
+      const resolvedImg = p.image_url ? p.image_url.trim() : '';
 
       const isAccessory = p.category === 'accessories';
 
@@ -532,7 +519,10 @@ export async function POST(request: Request) {
           ? (typeof item.images[0] === 'string' ? item.images[0] : item.images[0]?.url)
           : undefined;
 
-        const rawCover = item.imageUrl || item.image_url || firstImageInList || getSmartFallbackImage(item.name, item.category);
+        const rawCover = item.imageUrl || item.image_url || firstImageInList;
+        if (!rawCover) {
+          throw new Error(`Product "${item.name || 'item'}" requires an uploaded image.`);
+        }
         const finalImage = await persistMedia(rawCover, `${pId}-cover`);
 
         const rawImagesToSave = item.images;
@@ -681,7 +671,10 @@ export async function POST(request: Request) {
       ? (typeof body.images[0] === 'string' ? body.images[0] : body.images[0]?.url)
       : undefined;
 
-    const rawCover = imageUrl || image_url || firstImageInList || getSmartFallbackImage(name, category);
+    const rawCover = imageUrl || image_url || firstImageInList;
+    if (!rawCover || typeof rawCover !== 'string' || !rawCover.trim()) {
+      return NextResponse.json({ error: 'A valid product image is required. Please upload an image for your piece.' }, { status: 400 });
+    }
     const finalImage = await persistMedia(rawCover, `${productId}-cover`);
 
     // Save additional gallery images & color-linked images into tagsList

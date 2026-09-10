@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   X, Save, Trash2, Plus, Minus, AlertTriangle, CheckCircle2,
-  Package, ShoppingBag, Layers, Loader2, Sparkles, ExternalLink, RefreshCw
+  Package, ShoppingBag, Layers, Loader2, Sparkles, ExternalLink, RefreshCw,
+  UploadCloud, Camera
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -42,6 +43,8 @@ export default function EditProductModal({
   const [price, setPrice] = useState<number | string>('');
   const [category, setCategory] = useState('tops');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [variants, setVariants] = useState<VariantStockItem[]>([]);
   const [singleStock, setSingleStock] = useState<number>(10);
 
@@ -58,6 +61,7 @@ export default function EditProductModal({
     setPrice(product.price || '');
     setCategory(product.category || 'tops');
     setDescription(product.description || '');
+    setImageUrl(product.imageUrl || product.image_url || '');
     setConfirmDelete(false);
     setErrorMessage('');
     setSuccessMessage('');
@@ -76,6 +80,7 @@ export default function EditProductModal({
         setPrice(p.price || '');
         setCategory(p.category || 'tops');
         setDescription(p.description || '');
+        setImageUrl(p.imageUrl || p.image_url || '');
 
         // Extract variants
         if (Array.isArray(p.variants) && p.variants.length > 0) {
@@ -173,6 +178,34 @@ export default function EditProductModal({
     ]);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setImageUrl(data.url);
+        setSuccessMessage('New photo uploaded! Click "Save Changes" to apply.');
+      } else {
+        setErrorMessage('Failed to upload photo: ' + (data.error || 'Server error'));
+      }
+    } catch (err: any) {
+      setErrorMessage('Upload error: ' + err.message);
+    } finally {
+      setUploadingImage(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   // Submit edits
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +219,7 @@ export default function EditProductModal({
         price: Number(price) || 0,
         category,
         description: description.trim(),
+        imageUrl: imageUrl || undefined,
       };
 
       if (variants.length > 0) {
@@ -346,6 +380,39 @@ export default function EditProductModal({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Photo Upload Card */}
+                  <div className="sm:col-span-2 p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-black border border-[var(--border-subtle)] shrink-0">
+                        {imageUrl ? (
+                          <Image src={imageUrl} alt={name || 'Product'} fill unoptimized className="object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-[var(--text-muted)]">
+                            <Camera className="h-6 w-6" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[11px] font-bold text-[var(--text-primary)] block">
+                          Product Display Photo
+                        </span>
+                        <span className="text-[10px] text-[var(--text-secondary)] block truncate">
+                          {uploadingImage ? 'Uploading photo to CDN...' : 'Upload genuine high-resolution photo'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <label className="px-3 py-1.5 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity shrink-0">
+                      {uploadingImage ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Camera className="h-3.5 w-3.5" />
+                      )}
+                      <span>{uploadingImage ? 'Uploading...' : 'Change Photo'}</span>
+                      <input type="file" accept="image/*" disabled={uploadingImage} onChange={handleImageUpload} className="hidden" />
+                    </label>
+                  </div>
+
                   <div className="space-y-1 sm:col-span-2">
                     <label className="text-[10px] uppercase text-[var(--text-secondary)]">Piece Title / Name</label>
                     <input

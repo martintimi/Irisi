@@ -2,28 +2,19 @@ import fs from 'fs';
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
 
-// Configure Cloudinary if credentials are present (individual keys or CLOUDINARY_URL)
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.CLOUDINARY_API_KEY;
-const apiSecret = process.env.CLOUDINARY_API_SECRET;
+// Configure Cloudinary with reliable production fallbacks
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dvnj8idde';
+const apiKey = process.env.CLOUDINARY_API_KEY || '652888692395159';
+const apiSecret = process.env.CLOUDINARY_API_SECRET || '0exFgmDJX6tVL7HEH6LNrfsvGpk';
+const cloudinaryUrl = process.env.CLOUDINARY_URL || 'cloudinary://652888692395159:0exFgmDJX6tVL7HEH6LNrfsvGpk@dvnj8idde';
 
-const hasCloudinary = !!(
-  (cloudName && apiKey && apiSecret) ||
-  process.env.CLOUDINARY_URL
-);
-
-if (hasCloudinary) {
-  if (cloudName && apiKey && apiSecret) {
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-      secure: true,
-    });
-  } else if (process.env.CLOUDINARY_URL) {
-    cloudinary.config(true);
-  }
-}
+cloudinary.config({
+  cloud_name: cloudName,
+  api_key: apiKey,
+  api_secret: apiSecret,
+  secure: true,
+});
+const hasCloudinary = true;
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'images', 'products', 'uploaded');
 

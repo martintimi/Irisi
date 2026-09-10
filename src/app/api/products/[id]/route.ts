@@ -413,6 +413,9 @@ export async function PATCH(
     if (body.description !== undefined) updateData.description = body.description.trim();
     if (body.is_published !== undefined) updateData.is_published = Boolean(body.is_published);
     if (body.tags !== undefined && Array.isArray(body.tags)) updateData.tags = body.tags;
+    if (body.imageUrl !== undefined || body.image_url !== undefined) {
+      updateData.image_url = body.imageUrl || body.image_url;
+    }
 
     if (Object.keys(updateData).length > 0) {
       const { error: prodUpdateErr } = await supabase

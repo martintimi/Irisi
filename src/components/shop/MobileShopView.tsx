@@ -178,6 +178,10 @@ export default function MobileShopView() {
           matchesSpecific = pName.includes('watch') || pTags.some(t => t.includes('watch'));
         } else if (sc === 'chains' || sc === 'jewelry') {
           matchesSpecific = pName.includes('chain') || pName.includes('necklace') || pName.includes('bangle') || pTags.some(t => t.includes('chain'));
+        } else if (sc === 'backpacks' || sc === 'bags' || sc === 'men-backpacks' || sc === 'women-bags' || sc === 'handbags' || sc === 'crossbody' || sc === 'clutches' || sc.includes('bag') || sc.includes('backpack')) {
+          matchesSpecific = pName.includes('bag') || pName.includes('backpack') || pName.includes('travel') || pName.includes('duffel') || pName.includes('tote') || pName.includes('carryall') || pName.includes('crossbody') || pName.includes('clutch') || pTags.some(t => t.includes('bag') || t.includes('backpack') || t.includes('duffel') || t.includes('tote'));
+        } else if (sc === 'caps' || sc === 'men-caps' || sc === 'fila') {
+          matchesSpecific = pName.includes('cap') || pName.includes('hat') || pName.includes('beanie') || pName.includes('fila') || pTags.some(t => t.includes('cap') || t.includes('fila'));
         } else {
           matchesSpecific = pName.includes(sc) || pDesc.includes(sc) || pTags.some(t => t.includes(sc)) || pSub === sc;
         }
