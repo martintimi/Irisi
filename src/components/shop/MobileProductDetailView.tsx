@@ -6,13 +6,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
-  ArrowLeft, Bookmark, Share2, Sparkles, ShieldCheck, MapPin,
+  ArrowLeft, ArrowRight, Bookmark, Share2, Sparkles, ShieldCheck, MapPin,
   Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2,
   ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn,
   Video, Volume2, VolumeX, MessageCircle, User, Layers,
   Play, Pause, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
 
 interface MobileProductDetailViewProps {
@@ -34,6 +35,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     isInVault,
     setOutfitItem,
     setIsCartOpen,
+    userAuth,
   } = useStore();
 
   const isSaved = isInVault(product.id);
@@ -64,6 +66,16 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isVideoBuffering, setIsVideoBuffering] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+  const [showAddedToast, setShowAddedToast] = useState(false);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
   const carouselRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isDraggingCarousel = useRef(false);
@@ -268,12 +280,38 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const handleAddToCart = () => {
     if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
+
+    setIsAdded(true);
+    setShowAddedToast(true);
+
+    try {
+      confetti({
+        particleCount: 25,
+        spread: 50,
+        origin: { y: 0.85 },
+        colors: ['#e6c367', '#10b981', '#ffffff']
+      });
+    } catch {}
+
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+
+    setTimeout(() => {
+      setIsAdded(false);
+    }, 2200);
+
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowAddedToast(false);
+    }, 4500);
   };
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
-    router.push('/checkout');
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+    } else {
+      router.push('/checkout');
+    }
   };
 
   const handleShare = () => {
@@ -814,6 +852,65 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
 
       </div>
 
+      {/* FLOATING ADDED TO BAG CONFIRMATION TOAST BANNER */}
+      <AnimatePresence>
+        {showAddedToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="fixed bottom-[72px] inset-x-3 z-50 p-3 rounded-2xl bg-[#111215] text-white border border-emerald-500/40 shadow-2xl backdrop-blur-xl"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                  <Image
+                    src={selectedColor?.imageUrl || product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span className="text-[11px] font-bold text-emerald-400 font-mono-luxury uppercase tracking-wider">
+                      Added to Bag!
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/90 font-medium truncate max-w-[170px]">
+                    {product.name}
+                  </p>
+                  <span className="text-[10px] text-white/60 font-mono-luxury block">
+                    Size: {selectedSize} • Qty: {quantity}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Link
+                  href="/cart"
+                  className="py-2 px-3.5 rounded-xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-[10px] font-bold hover:opacity-90 active:scale-95 transition-all shadow-md flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View Bag</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowAddedToast(false)}
+                  className="p-1.5 text-white/50 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Dismiss notification"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 8. FIXED FLOATING BOTTOM DOCK */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-[var(--bg-primary)] border-t border-[var(--border-subtle)] p-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.12)]">
         {/* Add to Bag + Instant Buy */}
@@ -847,10 +944,23 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
             type="button"
             onClick={handleAddToCart}
             disabled={isOutOfStock}
-            className="flex-1 py-3 rounded-xl border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer hover:border-[var(--text-primary)]"
+            className={`flex-1 py-3 rounded-xl font-mono-luxury uppercase text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer active:scale-95 ${
+              isAdded
+                ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                : 'border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--text-primary)] bg-[var(--bg-secondary)]'
+            }`}
           >
-            <ShoppingBag className="h-3.5 w-3.5" />
-            <span>{isOutOfStock ? 'Out of Stock' : 'Add to Bag'}</span>
+            {isAdded ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 animate-bounce" />
+                <span className="text-emerald-400 font-extrabold tracking-wider">Added to Bag! ✓</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span>{isOutOfStock ? 'Out of Stock' : 'Add to Bag'}</span>
+              </>
+            )}
           </button>
           <button
             type="button"

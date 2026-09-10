@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import { X, Check, ShoppingBag, ShieldCheck, Zap, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
 
 interface QuickBuyDrawerProps {
@@ -14,7 +15,7 @@ interface QuickBuyDrawerProps {
 
 export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawerProps) {
   const router = useRouter();
-  const { bodyProfile, addToCart, setIsCartOpen } = useStore();
+  const { bodyProfile, addToCart, setIsCartOpen, userAuth } = useStore();
 
   if (!product) return null;
 
@@ -37,6 +38,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || { name: 'Standard', hex: '#111111' });
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
 
   const isOutOfStock = product.stockQuantity === 0;
@@ -44,12 +46,23 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   const handleAddBag = () => {
     if (isOutOfStock) return;
     setIsAdding(true);
+    setIsAdded(true);
     addToCart(product, selectedSize, selectedColor, quantity);
+
+    try {
+      confetti({
+        particleCount: 25,
+        spread: 45,
+        origin: { y: 0.8 },
+        colors: ['#e6c367', '#10b981', '#ffffff']
+      });
+    } catch {}
 
     setTimeout(() => {
       setIsAdding(false);
+      setIsAdded(false);
       onClose();
-    }, 200);
+    }, 750);
   };
 
   const handleInstantBuy = () => {
@@ -57,7 +70,11 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
     addToCart(product, selectedSize, selectedColor, quantity);
 
     onClose();
-    router.push('/checkout');
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+    } else {
+      router.push('/checkout');
+    }
   };
 
   return (
@@ -201,10 +218,23 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
             type="button"
             onClick={handleAddBag}
             disabled={isAdding || isOutOfStock}
-            className="py-3.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md disabled:opacity-40"
+            className={`py-3.5 rounded-full border text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md disabled:opacity-40 active:scale-95 ${
+              isAdded
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                : 'surface-card border-[var(--border-subtle)] hover:border-[var(--gold-accent)]'
+            }`}
           >
-            <ShoppingBag className="h-4 w-4 text-[var(--gold-accent)]" />
-            <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag'}</span>
+            {isAdded ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-400" />
+                <span className="text-emerald-400">Added to Bag! ✓</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="h-4 w-4 text-[var(--gold-accent)]" />
+                <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag'}</span>
+              </>
+            )}
           </button>
 
           <button

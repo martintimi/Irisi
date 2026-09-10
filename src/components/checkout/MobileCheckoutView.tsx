@@ -26,6 +26,18 @@ export default function MobileCheckoutView() {
     fetchProductsFromDb,
   } = useStore();
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !userAuth?.isLoggedIn) {
+      router.replace('/auth?redirect=/checkout');
+    }
+  }, [mounted, userAuth?.isLoggedIn, router]);
+
   const initialDeliveryState = bodyProfile.state || 'Lagos';
   const initialCities = getCitiesForState(initialDeliveryState);
 
@@ -285,6 +297,10 @@ export default function MobileCheckoutView() {
 
   const handleStartPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+      return;
+    }
     if (cart.length === 0) return;
     if (!formData.name || !formData.phone || !formData.city) {
       alert('Please fill in your recipient name, phone, and city.');
@@ -531,6 +547,43 @@ export default function MobileCheckoutView() {
             <span>Continue Shopping</span>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (!mounted) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--gold-accent)]" />
+      </div>
+    );
+  }
+
+  if (!userAuth?.isLoggedIn) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center p-6 text-center space-y-5 max-w-sm mx-auto animate-fadeIn py-16">
+        <div className="h-16 w-16 rounded-full bg-[var(--gold-accent)]/10 border border-[var(--gold-accent)]/30 flex items-center justify-center text-[var(--gold-accent)] animate-pulse">
+          <Lock className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+            Shopper Sign In Required
+          </h2>
+          <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
+            Please log in or create an account to proceed with your checkout, protect your payment in escrow, and track your delivery.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--gold-accent)]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Redirecting to login...</span>
+        </div>
+        <Link
+          href="/auth?redirect=/checkout"
+          className="w-full py-3.5 px-6 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>Sign In to Checkout</span>
+          <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     );
   }

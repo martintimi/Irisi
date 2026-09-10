@@ -5,10 +5,20 @@ import { useStore } from '@/lib/store/useStore';
 import { Trash2, Plus, Minus, Store, Truck, ArrowRight, Sparkles, Check, MapPin, Clock, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import MobileCartView from '@/components/cart/MobileCartView';
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateCartQuantity, clearCart } = useStore();
+  const router = useRouter();
+  const { cart, removeFromCart, updateCartQuantity, clearCart, userAuth } = useStore();
+
+  const handleProceedToCheckout = () => {
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+    } else {
+      router.push('/checkout');
+    }
+  };
 
   // Group items by vendor
   const groupedItems = cart.reduce((acc, item) => {
@@ -208,13 +218,14 @@ export default function CartPage() {
               </div>
             </div>
 
-            <Link
-              href="/checkout"
-              className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2"
+            <button
+              type="button"
+              onClick={handleProceedToCheckout}
+              className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
             >
               <span>Proceed to Checkout</span>
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </button>
 
             <p className="text-[10px] font-mono-luxury text-[var(--text-muted)] text-center flex items-center justify-center gap-1">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />

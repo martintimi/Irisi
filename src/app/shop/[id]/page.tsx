@@ -27,6 +27,7 @@ export default function ProductDetailPage() {
     toggleVaultItem,
     isInVault,
     setOutfitItem,
+    userAuth,
   } = useStore();
 
   const cachedProduct = useMemo(() => {
@@ -215,16 +216,43 @@ export default function ProductDetailPage() {
 
   const currentSizeStock = currentVariantStock;
   const isOutOfStock = currentVariantStock === 0;
+  const [isAdded, setIsAdded] = useState(false);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
+
+    setIsAdded(true);
+    try {
+      confetti({
+        particleCount: 25,
+        spread: 50,
+        origin: { y: 0.85 },
+        colors: ['#e6c367', '#10b981', '#ffffff']
+      });
+    } catch {}
+
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      setIsAdded(false);
+    }, 2200);
   };
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
     addToCart(product, selectedSize, selectedColor, quantity);
-    router.push('/checkout');
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+    } else {
+      router.push('/checkout');
+    }
   };
 
   const rates = product.shippingRates || {
@@ -688,10 +716,23 @@ export default function ProductDetailPage() {
                 type="button"
                 onClick={handleAddToCart}
                 disabled={isOutOfStock}
-                className="py-4 px-6 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)] font-mono-luxury uppercase text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer"
+                className={`py-4 px-6 rounded-full font-mono-luxury uppercase text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer active:scale-95 ${
+                  isAdded
+                    ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                    : 'surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)]'
+                }`}
               >
-                <ShoppingBag className="h-4 w-4" />
-                <span>Add to Bag</span>
+                {isAdded ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 animate-bounce" />
+                    <span className="text-emerald-400 font-extrabold tracking-wider">Added to Bag! ✓</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>{isOutOfStock ? 'Out of Stock' : 'Add to Bag'}</span>
+                  </>
+                )}
               </button>
 
               <button

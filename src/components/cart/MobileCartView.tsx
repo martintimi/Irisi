@@ -12,7 +12,15 @@ import { useRouter } from 'next/navigation';
 
 export default function MobileCartView() {
   const router = useRouter();
-  const { cart, removeFromCart, updateCartQuantity, clearCart } = useStore();
+  const { cart, removeFromCart, updateCartQuantity, clearCart, userAuth } = useStore();
+
+  const handleProceedToCheckout = () => {
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+    } else {
+      router.push('/checkout');
+    }
+  };
 
   // Group items by vendor
   const groupedItems = cart.reduce((acc, item) => {
@@ -231,13 +239,14 @@ export default function MobileCartView() {
             </div>
           </div>
 
-          <Link
-            href="/checkout"
+          <button
+            type="button"
+            onClick={handleProceedToCheckout}
             className="flex-1 max-w-[210px] py-3.5 px-4 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
           >
             <span>Proceed to Checkout</span>
             <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          </button>
         </div>
       )}
 

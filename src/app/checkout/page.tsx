@@ -12,7 +12,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
-import { signInCustomer, signUpCustomer } from '@/lib/services/auth';
 import MobileCheckoutView from '@/components/checkout/MobileCheckoutView';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import { estimateItemWeightKg, getMotorParksForState } from '@/lib/services/logistics';
@@ -31,14 +30,17 @@ export default function CheckoutPage() {
     fetchProductsFromDb,
   } = useStore();
 
-  // Auth Gate State (for unauthenticated visitors)
-  const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authName, setAuthName] = useState('');
-  const [authGender, setAuthGender] = useState<'male' | 'female'>('male');
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authError, setAuthError] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !userAuth?.isLoggedIn) {
+      router.replace('/auth?redirect=/checkout');
+    }
+  }, [mounted, userAuth?.isLoggedIn, router]);
 
   // Customer Delivery Form State (Empty by default with clean placeholders)
   const initialDeliveryState = bodyProfile.state || 'Lagos';
@@ -302,74 +304,14 @@ export default function CheckoutPage() {
     setPackageMethods(prev => ({ ...prev, [vendorId]: method }));
   };
 
-  // Auth Handler
-  const handleQuickAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAuthenticating(true);
-    setAuthError('');
 
-    try {
-      if (authTab === 'login') {
-        const res = await signInCustomer(authEmail, authPassword);
-        if (!res.success) {
-          setAuthError(res.error || 'Invalid credentials');
-          setIsAuthenticating(false);
-          return;
-        }
-
-        const patronName = res.profile?.full_name || authEmail.split('@')[0];
-        setUserAuth({
-          isLoggedIn: true,
-          name: patronName,
-          email: authEmail,
-          userType: 'shopper',
-        });
-        setFormData(prev => ({ ...prev, email: authEmail, name: patronName }));
-      } else {
-        const res = await signUpCustomer({
-          email: authEmail,
-          password: authPassword,
-          fullName: authName || authEmail.split('@')[0],
-          gender: authGender,
-        });
-
-        if (!res.success) {
-          setAuthError(res.error || 'Registration failed');
-          setIsAuthenticating(false);
-          return;
-        }
-
-        const patronName = authName || authEmail.split('@')[0];
-        const twinId = `VY-NIG-${Math.floor(100 + Math.random() * 900)}`;
-
-        setUserAuth({
-          isLoggedIn: true,
-          name: patronName,
-          email: authEmail,
-          gender: authGender,
-          userType: 'shopper',
-        });
-        setSelectedGender(authGender);
-        setBodyProfile({
-          name: patronName,
-          email: authEmail,
-          gender: authGender,
-          twinId,
-          isInitialized: true,
-        });
-        setFormData(prev => ({ ...prev, email: authEmail, name: patronName }));
-      }
-
-      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-    } catch (err: any) {
-      setAuthError(err.message || 'Authentication error');
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
 
   const handleStartPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userAuth?.isLoggedIn) {
+      router.push('/auth?redirect=/checkout');
+      return;
+    }
     if (cart.length === 0) return;
     if (!formData.name || !formData.phone || !formData.city) {
       alert('Please fill in your recipient name, phone number, and city.');
@@ -635,6 +577,43 @@ export default function CheckoutPage() {
     );
   }
 
+  if (!mounted) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--gold-accent)]" />
+      </div>
+    );
+  }
+
+  if (!userAuth?.isLoggedIn) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center p-6 text-center space-y-5 max-w-md mx-auto animate-fadeIn py-16">
+        <div className="h-16 w-16 rounded-full bg-[var(--gold-accent)]/10 border border-[var(--gold-accent)]/30 flex items-center justify-center text-[var(--gold-accent)] animate-pulse">
+          <Lock className="h-8 w-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+            Shopper Sign In Required
+          </h2>
+          <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed max-w-sm mx-auto">
+            Please sign in to your shopper account or create a new account to proceed to checkout and secure your order with Nigerian escrow.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--gold-accent)]">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Redirecting to authentication...</span>
+        </div>
+        <Link
+          href="/auth?redirect=/checkout"
+          className="py-3.5 px-8 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl inline-flex items-center gap-2 cursor-pointer"
+        >
+          <span>Sign In to Continue</span>
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* 1. DEDICATED MOBILE CHECKOUT VIEW */}
@@ -685,73 +664,7 @@ export default function CheckoutPage() {
           {/* LEFT 7 COLS: DELIVERY ADDRESS & DETAILS */}
           <div className="lg:col-span-7 space-y-6">
 
-            {/* Quick Login / Create Account if not logged in */}
-            {!userAuth.isLoggedIn && (
-              <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
-                    Quick Shopper Access (Optional)
-                  </span>
-                  <div className="flex items-center p-0.5 rounded-lg bg-[var(--bg-secondary)] text-[10px] font-mono-luxury font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setAuthTab('login')}
-                      className={`px-2.5 py-1 rounded-md transition-all ${authTab === 'login' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)]'}`}
-                    >
-                      Login
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAuthTab('register')}
-                      className={`px-2.5 py-1 rounded-md transition-all ${authTab === 'register' ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]' : 'text-[var(--text-secondary)]'}`}
-                    >
-                      Sign Up
-                    </button>
-                  </div>
-                </div>
 
-                <form onSubmit={handleQuickAuth} className="space-y-3 text-xs font-mono-luxury">
-                  {authTab === 'register' && (
-                    <input
-                      type="text"
-                      required
-                      value={authName}
-                      onChange={(e) => setAuthName(e.target.value)}
-                      placeholder="Your Full Name"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    />
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="email"
-                      required
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      placeholder="Email Address"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    />
-                    <input
-                      type="password"
-                      required
-                      value={authPassword}
-                      onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="Password"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    />
-                  </div>
-
-                  {authError && <p className="text-rose-400 text-[11px] font-bold">{authError}</p>}
-
-                  <button
-                    type="submit"
-                    disabled={isAuthenticating}
-                    className="w-full py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)] font-bold uppercase text-[10px] transition-all"
-                  >
-                    {isAuthenticating ? 'Authenticating...' : authTab === 'login' ? 'Quick Login' : 'Create Shopper Account'}
-                  </button>
-                </form>
-              </div>
-            )}
 
             {/* Delivery Destination Form */}
             <form onSubmit={handleStartPayment} id="checkout-form" className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-5 shadow-sm">
