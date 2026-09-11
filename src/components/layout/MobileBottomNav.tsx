@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
-import { Home, Search, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
+import { Home, Store, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MobileBottomNav() {
@@ -186,9 +186,9 @@ export default function MobileBottomNav() {
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
             >
-              <Search
-                strokeWidth={isActive('/shop') ? 2.2 : 1.4}
-                className="h-[21px] w-[21px]"
+              <Store
+                strokeWidth={isActive('/shop') ? 2 : 1.3}
+                className={`h-[21px] w-[21px] ${isActive('/shop') ? 'fill-current/10' : ''}`}
               />
               <span className="text-[10px] tracking-tight leading-none">Shop</span>
             </Link>

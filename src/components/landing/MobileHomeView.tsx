@@ -109,10 +109,31 @@ export default function MobileHomeView() {
             link: '/shop?gender=men&category=jeans',
           },
           {
+            id: 's-tees',
+            title: 'Graphic Tees & Tops',
+            subtitle: 'Oversized Street Prints',
+            image: '/images/uploaded/t-shirtsandgraphic.jpeg',
+            link: '/shop?gender=men&category=tshirts',
+          },
+          {
+            id: 's-shorts',
+            title: 'Tactical Shorts',
+            subtitle: 'Multi-Pocket Utility Shorts',
+            image: '/images/uploaded/short.jpeg',
+            link: '/shop?gender=men&category=shorts',
+          },
+          {
+            id: 's-sneakers',
+            title: 'Street Shoes & Canvas',
+            subtitle: 'Retro Trainers & Low-Tops',
+            image: '/images/products/AddidasShoeUnisex.jpg',
+            link: '/shop?category=sneakers',
+          },
+          {
             id: 's-caps',
             title: 'Caps & Beanies',
             subtitle: 'Street Caps & Beanies',
-            image: '/images/products/Cap1.png',
+            image: '/images/uploaded/capshatbeanies.jpeg',
             link: '/shop?gender=men&category=caps',
           },
           {
@@ -164,6 +185,20 @@ export default function MobileHomeView() {
             subtitle: 'Handcrafted Casual Slides',
             image: '/images/products/UnisexSlides.jpg',
             link: '/shop?category=slides',
+          },
+          {
+            id: 'f-crocs',
+            title: 'Crocs & Foam Clogs',
+            subtitle: 'Platform Foam Slip-Ons',
+            image: '/images/categories/crocs_men.jpg',
+            link: '/shop?category=clogs',
+          },
+          {
+            id: 'f-sneakers',
+            title: 'Street Shoes & Canvas',
+            subtitle: 'Casual Sneakers & Runners',
+            image: '/images/products/AddidasShoeUnisex.jpg',
+            link: '/shop?category=sneakers',
           },
           {
             id: 'f-mules',
@@ -302,12 +337,48 @@ export default function MobileHomeView() {
           },
           {
             id: 's-slide-3',
-            tag: 'SNEAKERS',
-            title: 'SNEAKERS & CASUAL SHOES',
-            subtitle: 'STREET TRAINERS & PLATFORMS',
+            tag: 'GRAPHIC TEES',
+            title: 'OVERSIZED GRAPHIC TEES',
+            subtitle: 'VINTAGE WASH & STREET CUTS',
+            highlight: 'HEAVYWEIGHT 240GSM COTTON',
+            image: '/images/uploaded/t-shirtsandgraphic.jpeg',
+            link: '/shop?category=tshirts',
+          },
+          {
+            id: 's-slide-4',
+            tag: 'TWO-PIECE SETS',
+            title: 'OVERSIZED HOODIE & CARGO SETS',
+            subtitle: 'MATCHING TWO-PIECE STREETWEAR',
+            highlight: 'COORDINATED STREETWEAR FIT',
+            image: '/images/uploaded/Oversizedhoodie&cargo.jpeg',
+            link: '/shop?category=cargo',
+          },
+          {
+            id: 's-slide-5',
+            tag: 'CARGO SHORTS',
+            title: 'TACTICAL UTILITY SHORTS',
+            subtitle: 'MULTI-POCKET SUMMER DROPS',
+            highlight: 'RELAXED STREETWEAR COMFORT',
+            image: '/images/uploaded/short.jpeg',
+            link: '/shop?category=shorts',
+          },
+          {
+            id: 's-slide-6',
+            tag: 'SNEAKERS & CANVAS',
+            title: 'CANVAS & STREET SNEAKERS',
+            subtitle: 'RETRO TRAINERS & PLATFORMS',
             highlight: 'CUSHIONED EVERYDAY COMFORT',
             image: '/images/products/AddidasShoeUnisex.jpg',
             link: '/shop?category=sneakers',
+          },
+          {
+            id: 's-slide-7',
+            tag: 'CAPS & BEANIES',
+            title: 'STREET TRUCKERS & BEANIES',
+            subtitle: 'STRUCTURED STREETWEAR HEADWEAR',
+            highlight: 'EMBROIDERED ACCENTS',
+            image: '/images/uploaded/capshatbeanies.jpeg',
+            link: '/shop?category=caps',
           },
         ];
 
@@ -354,6 +425,24 @@ export default function MobileHomeView() {
             link: '/shop?department=footwear',
           },
           {
+            id: 'f-slide-crocs',
+            tag: 'CROCS & CLOGS',
+            title: 'PLATFORM CROCS & CLOGS',
+            subtitle: 'LIGHTWEIGHT FOAM COMFORT',
+            highlight: 'CASUAL ALL-DAY SLIP-ONS',
+            image: '/images/categories/crocs_men.jpg',
+            link: '/shop?category=clogs',
+          },
+          {
+            id: 'f-slide-sneakers',
+            tag: 'STREET SHOES & CANVAS',
+            title: 'CANVAS & STREET SNEAKERS',
+            subtitle: 'RETRO RUNNERS & LOW-TOPS',
+            highlight: 'CUSHIONED PLATFORM SOLES',
+            image: '/images/products/AddidasShoeUnisex.jpg',
+            link: '/shop?category=sneakers',
+          },
+          {
             id: 'f-slide-2',
             tag: 'FORMAL SHOES',
             title: 'SMART MULES & LOAFERS',
@@ -361,6 +450,15 @@ export default function MobileHomeView() {
             highlight: 'ELEGANT LEATHER SILHOUETTES',
             image: '/images/products/BlackSmartShoes.jpg',
             link: '/shop?category=loafers',
+          },
+          {
+            id: 'f-slide-palms',
+            tag: 'PALM SLIPPERS',
+            title: 'DOUBLE-STRAP PALM SLIDES',
+            subtitle: 'EVERYDAY COMFORT WEAR',
+            highlight: 'LIGHTWEIGHT CUSHIONED SOLE',
+            image: '/images/products/AdiletteAquaSlides.jpg',
+            link: '/shop?category=slides',
           },
         ];
 
@@ -619,7 +717,7 @@ export default function MobileHomeView() {
   // Cap trending drops to top 6 (NEVER 30 items)
   const trendingPieces = useMemo(() => productsList.slice(0, 6), [productsList]);
 
-  // Recently Viewed Pieces (stored in localStorage or curated fallback)
+  // Recently Viewed Pieces (strictly from user's local browsing history)
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
 
   useEffect(() => {
@@ -640,10 +738,8 @@ export default function MobileHomeView() {
       }
     } catch (e) {}
 
-    if (productsList && productsList.length > 0) {
-      setRecentlyViewed(productsList.slice(0, 4));
-    }
-  }, [allProducts, productsList]);
+    setRecentlyViewed([]);
+  }, [allProducts]);
 
   return (
     <div className="md:hidden pb-16 bg-white dark:bg-[#0A0A0C] text-black dark:text-white min-h-screen">

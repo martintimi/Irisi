@@ -295,7 +295,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'women-jeans',
     gender: 'women',
     department: 'clothing',
-    imageUrl: '/images/categories/dressesforwomen.jpeg',
+    imageUrl: '/images/categories/jeanforwomen.jpeg',
     subtitle: 'Wide-leg jeans & cargo trousers',
   },
   {
