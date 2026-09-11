@@ -128,7 +128,7 @@ const FOOTWEAR_SIZES = ['39', '40', '41', '42', '43', '44', '45', '46'];
 const ACCESSORY_SIZES = ['One Size'];
 
 export default function PublishGarmentPage() {
-  const { vendorProfile, setVendorProfile } = useStore();
+  const { vendorProfile, setVendorProfile, fetchProductsFromDb } = useStore();
 
   const vendorSpecialty: VendorSpecialty = getVendorSpecialty(vendorProfile);
 
@@ -849,6 +849,9 @@ export default function PublishGarmentPage() {
       if (res.ok && data.success) {
         setCreatedProductId(data.product?.id || `prod-${Date.now()}`);
         setIsSuccess(true);
+        try {
+          fetchProductsFromDb();
+        } catch (e) {}
         confetti({
           particleCount: 100,
           spread: 70,
@@ -1147,6 +1150,26 @@ export default function PublishGarmentPage() {
               >
                 <span>View Live Product</span>
                 <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            )}
+
+            <Link
+              href="/vendor-portal/products"
+              className="px-5 py-2.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] transition-all flex items-center gap-2"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span>Manage Drops & Inventory</span>
+            </Link>
+
+            {vendorProfile?.brandName && (
+              <Link
+                href={`/brand/${encodeURIComponent(vendorProfile.brandName)}`}
+                target="_blank"
+                className="px-5 py-2.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] transition-all flex items-center gap-2"
+              >
+                <Store className="h-3.5 w-3.5" />
+                <span>View Storefront</span>
+                <ExternalLink className="h-3 w-3" />
               </Link>
             )}
 

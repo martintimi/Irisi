@@ -23,6 +23,25 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/vendor-portal/drops',
+        destination: '/vendor-portal/products',
+        permanent: false,
+      },
+      {
+        source: '/product/:id',
+        destination: '/shop/:id',
+        permanent: false,
+      },
+      {
+        source: '/products/:id',
+        destination: '/shop/:id',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -778,7 +778,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: 'Product published to store catalog successfully',
-      product: data,
+      product: data || { id: productId, name, price: Number(price), category, image_url: finalImage, is_published: true },
     });
   } catch (error: any) {
     console.error('Products POST error:', error);

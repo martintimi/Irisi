@@ -8,11 +8,12 @@ import {
   Check, AlertTriangle, ShieldCheck, Camera,
   RefreshCw, Minus, ChevronDown, Sparkle,
   Shirt, Footprints, Gem, Layers, CheckCircle2, ExternalLink,
-  Video, Play
+  Video, Play, Store
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
+import { useStore } from '@/lib/store/useStore';
 import { vendorFetch } from '@/lib/services/apiClient';
 import { compressImage, compressImageToFile } from '@/lib/utils/imageUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
@@ -913,6 +914,9 @@ export default function MobileVendorPublish({
         setPublishedProductId(prodId);
         setLastPublishedName(name.trim());
         setIsPublishSuccess(true);
+        try {
+          useStore.getState().fetchProductsFromDb();
+        } catch (e) {}
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         onPublishSuccess(prodId);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -963,11 +967,23 @@ export default function MobileVendorPublish({
             )}
 
             <Link
-              href="/vendor-portal/drops"
+              href="/vendor-portal/products"
               className="w-full py-3.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] active:scale-98 transition-all flex items-center justify-center gap-2"
             >
+              <Layers className="h-3.5 w-3.5" />
               <span>Manage Inventory Drops</span>
             </Link>
+
+            {vendorProfile?.brandName && (
+              <Link
+                href={`/brand/${encodeURIComponent(vendorProfile.brandName)}`}
+                className="w-full py-3.5 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold hover:border-[var(--gold-accent)] active:scale-98 transition-all flex items-center justify-center gap-2"
+              >
+                <Store className="h-3.5 w-3.5" />
+                <span>View Brand Storefront</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            )}
 
             <button
               type="button"

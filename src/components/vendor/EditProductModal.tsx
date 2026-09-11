@@ -369,7 +369,7 @@ export default function EditProductModal({
                     <span>Piece Details & Pricing</span>
                   </span>
                   <a
-                    href={`/product/${product.id}`}
+                    href={`/shop/${product.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[10px] text-[var(--gold-accent)] hover:underline flex items-center gap-1"

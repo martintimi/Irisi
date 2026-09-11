@@ -474,7 +474,7 @@ export default function VendorProductsCatalogPage() {
 
                   <div className="flex items-center gap-2">
                     <a
-                      href={`/product/${piece.id}`}
+                      href={`/shop/${piece.id}`}
                       target="_blank"
                       rel="noreferrer"
                       className="px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] hover:bg-[var(--surface-hover)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white text-xs font-mono-luxury uppercase font-bold flex items-center gap-1.5 transition-colors"
