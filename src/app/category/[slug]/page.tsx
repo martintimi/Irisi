@@ -90,7 +90,7 @@ const CATEGORY_MAP: Record<string, CategoryConfig> = {
     }
   },
   clogs: {
-    title: 'CLOGS & FOAM SLIP-ONS',
+    title: 'CROCS & FOAM CLOGS',
     subtitle: 'Classic clogs, platform mules, Crocs & foam comfort slip-ons',
     filterFn: (p: any) => {
       const n = (p.name || '').toLowerCase();
