@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
@@ -25,6 +27,10 @@ export async function GET(request: Request) {
       let isProfileSaved = false;
       let approvalStatus = v.is_verified ? 'approved' : 'pending';
       let rejectionReason = '';
+      let specialty = v.specialty || '';
+      let city = '';
+      let state = '';
+      let address = '';
       let socialLinks: any = {
         instagram: '',
         tiktok: '',
@@ -40,10 +46,18 @@ export async function GET(request: Request) {
           isProfileSaved = parsed.isProfileSaved !== undefined ? parsed.isProfileSaved : true;
           approvalStatus = parsed.approvalStatus || (v.is_verified ? 'approved' : 'pending');
           rejectionReason = parsed.rejectionReason || '';
+          specialty = parsed.specialty || parsed.vendorSpecialty || specialty;
+          city = parsed.city || '';
+          state = parsed.state || '';
+          address = parsed.address || '';
         } catch (e) {}
       } else if (bioText && bioText.trim().length > 0) {
         isProfileSaved = true;
         approvalStatus = v.is_verified ? 'approved' : 'pending';
+      }
+
+      if (!specialty) {
+        specialty = v.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear';
       }
 
       const vendorProducts = (dbProducts || []).filter((p: any) => p.vendor_id === v.id);
@@ -56,7 +70,11 @@ export async function GET(request: Request) {
         email: v.email || 'N/A',
         phone: v.phone || 'N/A',
         location: v.location || 'Lagos, Nigeria',
-        vendorType: v.vendor_type || 'fashion_designer',
+        city: city || (v.location ? v.location.split(',')[0]?.trim() : ''),
+        state: state || (v.location && v.location.includes(',') ? v.location.split(',')[1]?.trim() : 'Lagos'),
+        address,
+        vendorType: v.vendor_type || (specialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'),
+        specialty,
         bankName: v.bank_name || 'Not Configured',
         accountNumber: v.account_number || 'N/A',
         accountName: v.account_name || 'N/A',

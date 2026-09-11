@@ -1108,12 +1108,25 @@ export default function SuperAdminPage() {
                     value={adminPass}
                     onChange={(e) => setAdminPass(e.target.value)}
                     placeholder="Enter security key"
-                    className="w-full pl-10 pr-10 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
+                    className="w-full pl-10 pr-12 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowPassword((prev) => !prev);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -2434,13 +2447,13 @@ export default function SuperAdminPage() {
                         className="p-6 sm:p-7 rounded-3xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/40 transition-all space-y-5 shadow-sm"
                       >
                         {/* Header */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="flex items-center gap-3.5">
-                            <div className="h-14 w-14 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl flex items-center justify-center shrink-0">
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                          <div className="flex items-start gap-3.5">
+                            <div className="h-14 w-14 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl flex items-center justify-center shrink-0 mt-0.5">
                               {vendor.name ? vendor.name.charAt(0).toUpperCase() : 'V'}
                             </div>
 
-                            <div>
+                            <div className="space-y-1.5">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
                                   {vendor.name}
@@ -2452,29 +2465,52 @@ export default function SuperAdminPage() {
                                 }`}>
                                   ● {isApproved ? 'Verified & Active' : 'Pending Review'}
                                 </span>
+
+                                {/* Specialty Badge */}
+                                {vendor.specialty === 'native_tailoring' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-[#e6c367]/15 text-[#e6c367] border border-[#e6c367]/30 flex items-center gap-1">
+                                    <span>✂️</span> Bespoke Native Tailoring Atelier
+                                  </span>
+                                ) : vendor.specialty === 'footwear' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                                    <span>👞</span> Footwear & Slides Studio
+                                  </span>
+                                ) : vendor.specialty === 'caps' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                    <span>🧢</span> Caps & Headwear
+                                  </span>
+                                ) : vendor.specialty === 'accessories' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                    <span>💍</span> Jewelry & Accessories
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                                    <span>🧥</span> Ready-to-Wear Boutique
+                                  </span>
+                                )}
+
+                                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono-luxury uppercase text-[var(--text-muted)] bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                                  {vendor.vendorType === 'fashion_designer' ? 'Fashion Designer (Made to Measure)' : 'Boutique Seller (Ready-to-Wear)'}
+                                </span>
                               </div>
 
-                              <div className="flex items-center gap-3 text-xs font-mono-luxury text-[var(--text-secondary)] mt-1 flex-wrap">
-                                <span>Manager: <strong className="text-[var(--text-primary)]">{vendor.designerName}</strong></span>
+                              <div className="flex items-center gap-3 text-xs font-mono-luxury text-[var(--text-secondary)] flex-wrap">
+                                <span>Lead Designer / Manager: <strong className="text-[var(--text-primary)]">{vendor.designerName}</strong></span>
                                 <span>•</span>
-                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-[var(--gold-accent)]" />{vendor.location}</span>
-                                <span>•</span>
-                                <span>{vendor.email}</span>
-                                <span>•</span>
-                                <span>{vendor.phone}</span>
+                                <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-[var(--gold-accent)]" />{vendor.location || `${vendor.city || ''}, ${vendor.state || ''}`}</span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 shrink-0">
                             {isPending && (
                               <button
                                 onClick={() => handleApproveBrand(vendor.id)}
                                 disabled={isActioning}
-                                className="px-4 py-2 rounded-full bg-emerald-500 text-black text-xs font-mono-luxury uppercase font-bold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="px-4 py-2 rounded-full bg-emerald-500 text-black text-xs font-mono-luxury uppercase font-bold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md hover:shadow-lg"
                               >
                                 {isActioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                                <span>Approve Brand</span>
+                                <span>Approve & Activate Brand</span>
                               </button>
                             )}
 
@@ -2497,29 +2533,78 @@ export default function SuperAdminPage() {
                           </div>
                         </div>
 
-                        {/* Bank Settlement Account & Socials */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
+                        {/* Detailed 3-Column Inspection Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
+                          {/* 1. Settlement Banking Details */}
                           <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1">
-                            <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block flex items-center gap-1">
+                            <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold flex items-center gap-1">
                               <Building className="h-3 w-3 text-[var(--gold-accent)]" />
-                              Nigerian Bank Settlement Account
+                              Settlement Bank Account
                             </span>
-                            <div className="text-[var(--text-primary)] font-bold">
-                              {vendor.accountNumber || '0123456789'} • {vendor.bankName || 'GTBank / Moniepoint'}
+                            <div className="text-[var(--text-primary)] font-bold tracking-wider">
+                              {vendor.accountNumber || 'Not provided'} • {vendor.bankName || 'Bank'}
                             </div>
-                            <div className="text-[11px] text-[var(--text-secondary)]">
-                              Beneficiary: {vendor.accountName || vendor.name}
+                            <div className="text-[11px] text-[var(--text-secondary)] truncate">
+                              Beneficiary: <strong className="text-[var(--text-primary)]">{vendor.accountName || vendor.name}</strong>
                             </div>
                           </div>
 
+                          {/* 2. Physical Workshop / Studio Location */}
                           <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1">
-                            <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">
-                              Social & Store Contact
+                            <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-[var(--gold-accent)]" />
+                              Workshop / Studio Address
                             </span>
-                            <div className="flex items-center gap-2 pt-1 flex-wrap">
-                              {vendor.instagram && <span className="inline-flex items-center gap-1 text-[11px]"><InstagramLogo />{vendor.instagram}</span>}
-                              {vendor.tiktok && <span className="inline-flex items-center gap-1 text-[11px]"><TikTokLogo />{vendor.tiktok}</span>}
-                              {vendor.whatsapp && <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400"><Phone className="h-3 w-3" />{vendor.whatsapp}</span>}
+                            <div className="text-[var(--text-primary)] font-bold text-[11px] line-clamp-2">
+                              {vendor.address || vendor.location || 'Address pending'}
+                            </div>
+                            <div className="text-[11px] text-[var(--text-secondary)]">
+                              Region: {vendor.city ? `${vendor.city}, ` : ''}{vendor.state || 'Nigeria'}
+                            </div>
+                          </div>
+
+                          {/* 3. Direct Contact & WhatsApp Concierge */}
+                          <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1.5">
+                            <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-[var(--gold-accent)]" />
+                              Direct Contact & Verification
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                              {vendor.phone && (
+                                <a
+                                  href={`tel:${vendor.phone}`}
+                                  className="px-2 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-colors inline-flex items-center gap-1"
+                                >
+                                  <Phone className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
+                                  <span>{vendor.phone}</span>
+                                </a>
+                              )}
+                              {vendor.email && (
+                                <a
+                                  href={`mailto:${vendor.email}`}
+                                  className="px-2 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-colors inline-flex items-center gap-1"
+                                >
+                                  <Mail className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
+                                  <span className="max-w-[120px] truncate">{vendor.email}</span>
+                                </a>
+                              )}
+                              {(vendor.whatsapp || vendor.phone) && (
+                                <a
+                                  href={`https://wa.me/${(vendor.whatsapp || vendor.phone).replace(/[^0-9]/g, '').replace(/^0/, '234')}?text=${encodeURIComponent(`Hello ${vendor.name}, this is ÌRÍSÍ Merchant Concierge regarding your atelier registration.`)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-400 hover:bg-emerald-500/25 transition-colors inline-flex items-center gap-1 font-bold"
+                                >
+                                  <MessageCircle className="h-2.5 w-2.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 pt-0.5 text-[10px] text-[var(--text-muted)]">
+                              {vendor.instagram && <span>IG: @{vendor.instagram}</span>}
+                              {vendor.tiktok && <span>TT: @{vendor.tiktok}</span>}
+                              <span>•</span>
+                              <span>Joined: {new Date(vendor.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}</span>
                             </div>
                           </div>
                         </div>

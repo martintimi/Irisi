@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
   Building, Scissors, Mail, Phone, Lock, MapPin,
@@ -46,8 +46,9 @@ const vendorEditorialSlides = [
   }
 ];
 
-export default function VendorAuthPage() {
+function VendorAuthPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     setIsVendorLoggedIn,
     setVendorProfile,
@@ -101,13 +102,58 @@ export default function VendorAuthPage() {
     city: 'Ikeja (Allen / Opebi / GRA / Alausa)',
     address: '',
     location: '',
-    vendorType: 'boutique_seller' as 'fashion_designer' | 'boutique_seller',
-    specialty: 'streetwear' as VendorSpecialty,
+    vendorType: 'fashion_designer' as 'fashion_designer' | 'boutique_seller',
+    specialty: 'native_tailoring' as VendorSpecialty,
     bankName: 'Guaranty Trust Bank',
     bankCode: '058',
     accountNumber: '',
     accountName: '',
   });
+
+  // Handle URL search params for direct vendor onboarding links
+  useEffect(() => {
+    if (!searchParams) return;
+    const modeParam = searchParams.get('mode') || searchParams.get('tab') || searchParams.get('action');
+    if (modeParam === 'register' || modeParam === 'signup' || modeParam === 'onboard') {
+      setAuthMode('register');
+    }
+
+    const specialtyParam = searchParams.get('specialty') || searchParams.get('type') || searchParams.get('category');
+    if (specialtyParam) {
+      const lower = specialtyParam.toLowerCase();
+      if (lower.includes('native') || lower.includes('tailor') || lower.includes('atelier')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'native_tailoring',
+          vendorType: 'fashion_designer'
+        }));
+      } else if (lower.includes('street') || lower.includes('boutique')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'streetwear',
+          vendorType: 'boutique_seller'
+        }));
+      } else if (lower.includes('foot') || lower.includes('shoe') || lower.includes('slide')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'footwear',
+          vendorType: 'boutique_seller'
+        }));
+      } else if (lower.includes('cap') || lower.includes('headwear')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'caps',
+          vendorType: 'boutique_seller'
+        }));
+      } else if (lower.includes('access') || lower.includes('jewel')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'accessories',
+          vendorType: 'boutique_seller'
+        }));
+      }
+    }
+  }, [searchParams]);
 
   const [isResolvingBank, setIsResolvingBank] = useState(false);
   const [bankVerified, setBankVerified] = useState(false);
@@ -330,7 +376,16 @@ export default function VendorAuthPage() {
         return;
       }
 
-      // Registration successful! Switch to 6-digit OTP verification screen
+      // Registration successful! Switch to 6-digit OTP confirmation screen
+      setPendingEmail(regForm.email.trim());
+      setOtp(['', '', '', '', '', '']);
+      setResendTimer(30);
+      setRecoverySuccessMsg('A 6-digit verification code has been dispatched to your business email.');
+      setAuthMode('verify_otp');
+      setIsSubmitting(false);
+      return;
+
+      // Fallback
       setPendingEmail(regForm.email.trim());
       setOtp(['', '', '', '', '', '']);
       setResendTimer(30);
@@ -997,8 +1052,20 @@ export default function VendorAuthPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20"
+                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowNewPassword((prev) => !prev);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
                     aria-label={showNewPassword ? 'Hide password' : 'Show password'}
                   >
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1023,8 +1090,20 @@ export default function VendorAuthPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20"
+                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowConfirmNewPassword((prev) => !prev);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
                     aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}
                   >
                     {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1116,8 +1195,20 @@ export default function VendorAuthPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20 select-none flex items-center justify-center"
+                    tabIndex={-1}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowLoginPassword((prev) => !prev);
+                    }}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
                     aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
                   >
                     {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1342,8 +1433,20 @@ export default function VendorAuthPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowRegPassword(!showRegPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20 select-none flex items-center justify-center"
+                      tabIndex={-1}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowRegPassword((prev) => !prev);
+                      }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
                       aria-label={showRegPassword ? 'Hide password' : 'Show password'}
                     >
                       {showRegPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1367,8 +1470,20 @@ export default function VendorAuthPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-20 select-none flex items-center justify-center"
+                      tabIndex={-1}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowRegConfirmPassword((prev) => !prev);
+                      }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
                       aria-label={showRegConfirmPassword ? 'Hide password' : 'Show password'}
                     >
                       {showRegConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -1508,5 +1623,13 @@ export default function VendorAuthPage() {
       </div>
 
     </div>
+  );
+}
+
+export default function VendorAuthPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--bg-primary)]" />}>
+      <VendorAuthPageContent />
+    </Suspense>
   );
 }
