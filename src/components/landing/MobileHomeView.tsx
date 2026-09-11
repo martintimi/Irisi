@@ -946,27 +946,30 @@ export default function MobileHomeView() {
                 className="object-cover scale-105 transition-transform duration-1000"
               />
 
+              {/* Targeted Bottom Scrim: Keeps top 50% of image 100% bright & unaltered while giving text crystal-clear contrast */}
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none" />
+
               <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 px-4 text-center z-10 space-y-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[9px] font-mono tracking-widest uppercase font-bold border border-white/30 shadow-md">
+                <span className="px-3 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[9px] font-mono tracking-widest uppercase font-bold border border-white/30 shadow-md">
                   {slide.tag}
                 </span>
 
-                <span className="text-[11px] font-mono tracking-widest text-neutral-100 uppercase font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                <span className="text-[11px] font-mono tracking-widest text-neutral-200 uppercase font-bold drop-shadow-[0_2px_6px_rgba(0,0,0,1)]">
                   {slide.subtitle}
                 </span>
 
-                <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.9)]">
+                <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-[0_4px_14px_rgba(0,0,0,1)]">
                   {slide.title}
                 </h1>
 
-                <p className="text-xs font-mono font-bold tracking-widest text-amber-300 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                <span className="px-3 py-0.5 rounded-full bg-black/55 backdrop-blur-md text-xs font-mono font-bold tracking-widest text-amber-300 uppercase border border-amber-400/30 shadow-md drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                   {slide.highlight}
-                </p>
+                </span>
 
                 <div className="pt-2">
                   <Link
                     href={slide.link}
-                    className="inline-block px-6 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-amber-300 transition-colors shadow-lg active:scale-95"
+                    className="inline-block px-7 py-2.5 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-amber-300 transition-colors shadow-2xl active:scale-95"
                   >
                     SHOP THIS DROP →
                   </Link>
