@@ -42,39 +42,25 @@ export default function MobileHomeView() {
       case 'women':
         return [
           {
-            id: 'w-couture',
-            title: 'Dresses & Gowns',
-            subtitle: 'Evening Gowns & Bodycons',
-            image: '/images/categories/dressesforwomen.jpeg',
-            link: '/shop?gender=women&category=dresses',
-          },
-          {
-            id: 'w-coord',
-            title: 'Two-Piece Sets',
-            subtitle: 'Matching Co-ords & Suits',
-            image: '/images/categories/women_coord.jpg',
-            link: '/shop?gender=women&category=two-piece',
+            id: 'w-tops',
+            title: 'Tops & Corset',
+            subtitle: 'Corsets, Tops & Blouses',
+            image: '/images/uploaded/Streetwear&topsWomen.jpeg',
+            link: '/shop?gender=women&category=tops',
           },
           {
             id: 'w-jeans',
-            title: 'Jeans & Cargo Pants',
-            subtitle: 'Wide-Leg Denim & Streetwear',
+            title: 'Jeans & Cargo',
+            subtitle: 'Wide-Leg Denim & Cargo',
             image: '/images/categories/jeanforwomen.jpeg',
             link: '/shop?gender=women&category=women-jeans',
           },
           {
-            id: 'w-skirts',
-            title: 'Skirts & Minis',
-            subtitle: 'Pleated Minis & Casual Midis',
-            image: '/images/categories/skirtandminishirts.jpeg',
-            link: '/shop?gender=women&category=skirts',
-          },
-          {
-            id: 'w-boubou',
-            title: 'Boubou & Kaftans',
-            subtitle: 'Adire Silk & Flowing Robes',
-            image: '/images/editorial/nigerian_female_couture.jpg',
-            link: '/shop?gender=women&category=boubou',
+            id: 'w-abaya',
+            title: 'Abaya & Kimonos',
+            subtitle: 'Flowing Abayas & Modest Robes',
+            image: '/images/editorial/female_dress.jpg',
+            link: '/shop?gender=women&category=abayas',
           },
           {
             id: 'w-heels',
@@ -84,32 +70,32 @@ export default function MobileHomeView() {
             link: '/shop?gender=women&category=heels',
           },
           {
-            id: 'w-crocs',
-            title: 'Crocs & Slides',
-            subtitle: 'Platform Clogs & Slides',
-            image: '/images/categories/crocs_women.jpg',
-            link: '/shop?gender=women&category=clogs',
-          },
-          {
-            id: 'w-bags',
-            title: 'Handbags & Totes',
-            subtitle: 'Shoulder Bags & Clutches',
-            image: '/images/uploaded/LeaderbagsWomen.jpeg',
-            link: '/shop?gender=women&department=bags',
+            id: 'w-clutches',
+            title: 'Clutches & Mini Bags',
+            subtitle: 'Evening Clutches & Handbags',
+            image: '/images/categories/women_clutches.jpg',
+            link: '/shop?gender=women&category=clutches',
           },
           {
             id: 'w-jewelry',
-            title: 'Jewelry & Watches',
-            subtitle: 'Necklaces, Rings & Watches',
+            title: 'Jewelry',
+            subtitle: 'Necklaces, Rings & Wristwear',
             image: '/images/uploaded/WomenJewelry.jpeg',
             link: '/shop?gender=women&category=jewelry',
           },
           {
-            id: 'w-street',
-            title: 'Streetwear & Tops',
-            subtitle: 'Casual Tops & Blouses',
-            image: '/images/uploaded/Streetwear&topsWomen.jpeg',
-            link: '/shop?gender=women&category=women-hoodies',
+            id: 'w-coord',
+            title: 'Two-Piece Sets',
+            subtitle: 'Matching Co-ord Sets',
+            image: '/images/categories/women_coord.jpg',
+            link: '/shop?gender=women&category=two-piece',
+          },
+          {
+            id: 'w-slides',
+            title: 'Slides & Flats',
+            subtitle: 'Comfortable Slides & Flats',
+            image: '/images/uploaded/footwear&slideswomen.jpeg',
+            link: '/shop?gender=women&category=women-slides',
           },
         ];
 
@@ -574,6 +560,42 @@ export default function MobileHomeView() {
             image: '/images/products/UnisexSlides.jpg',
             link: '/shop?gender=men&department=footwear',
           },
+          {
+            id: 'm-slide-5',
+            tag: 'POLO & CASUAL',
+            title: 'POLOS & CASUAL SHIRTS',
+            subtitle: 'SMART COLLAR SHIRTS & POLOS',
+            highlight: 'REFINED EVERYDAY CASUALS',
+            image: '/images/uploaded/poloandshirt.jpeg',
+            link: '/shop?gender=men&category=polos',
+          },
+          {
+            id: 'm-slide-6',
+            tag: 'JALABIYA & ROBES',
+            title: 'EMBROIDERED JALABIYAS',
+            subtitle: 'COMFORTABLE FLOWING ROBES',
+            highlight: 'REGAL LEISURE COMFORT',
+            image: '/images/uploaded/jalabmen.jpeg',
+            link: '/shop?gender=men&category=jalabiya',
+          },
+          {
+            id: 'm-slide-7',
+            tag: 'BACKPACKS & BAGS',
+            title: 'LUXURY LEATHER BACKPACKS',
+            subtitle: 'COMMUTER BACKPACKS & DUFFELS',
+            highlight: 'PRACTICAL EVERYDAY UTILITY',
+            image: '/images/uploaded/leaderBags.jpeg',
+            link: '/shop?gender=men&department=bags',
+          },
+          {
+            id: 'm-slide-8',
+            tag: 'CAPS & HATS',
+            title: 'TRUCKERS & STREET CAPS',
+            subtitle: 'DESIGNER BASEBALL CAPS & BEANIES',
+            highlight: 'STATEMENT HEADWEAR ACCENTS',
+            image: '/images/uploaded/capshatbeanies.jpeg',
+            link: '/shop?gender=men&category=caps',
+          },
         ];
     }
   }, [activeTab]);
@@ -813,6 +835,25 @@ export default function MobileHomeView() {
 
     setRecentlyViewed([]);
   }, [allProducts]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const raw = localStorage.getItem('irisi_recently_viewed');
+        if (!raw) setRecentlyViewed([]);
+      } catch (e) {}
+    };
+    window.addEventListener('irisi_recently_viewed_updated', handleSync);
+    return () => window.removeEventListener('irisi_recently_viewed_updated', handleSync);
+  }, []);
+
+  const handleClearRecentlyViewed = () => {
+    try {
+      localStorage.removeItem('irisi_recently_viewed');
+      window.dispatchEvent(new Event('irisi_recently_viewed_updated'));
+    } catch (e) {}
+    setRecentlyViewed([]);
+  };
 
   return (
     <div className="md:hidden pb-16 bg-white dark:bg-[#0A0A0C] text-black dark:text-white min-h-screen">
@@ -1262,12 +1303,21 @@ export default function MobileHomeView() {
                 Continue Browsing Pieces You Explored
               </span>
             </div>
-            <Link
-              href="/shop"
-              className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white"
-            >
-              Shop All →
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleClearRecentlyViewed}
+                className="text-[10px] font-bold text-neutral-400 hover:text-rose-500 uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+              <Link
+                href="/shop"
+                className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white"
+              >
+                Shop All →
+              </Link>
+            </div>
           </div>
 
           <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-2">

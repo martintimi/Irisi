@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Sparkles, Check, ShoppingBag, ShieldCheck, Truck, RotateCcw,
   Star, Heart, ArrowLeft, ArrowRight, Share2, Ruler,
-  Building, Phone, MapPin, CheckCircle2, ChevronRight, Loader2, Store, Clock, Package, Play, User, Layers
+  Building, Phone, MapPin, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, Loader2, Store, Clock, Package, Play, User, Layers
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,6 +14,40 @@ import confetti from 'canvas-confetti';
 import MobileProductDetailView from '@/components/shop/MobileProductDetailView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import Product3DModal from '@/components/3d/Product3DModal';
+
+function getProductArchetype(prod: any): string {
+  if (!prod) return 'other';
+  const text = `${prod.name || ''} ${prod.category || ''} ${prod.department || ''} ${Array.isArray(prod.tags) ? prod.tags.join(' ') : ''}`.toLowerCase();
+
+  if (text.includes('croc') || text.includes('clog') || text.includes('foam')) return 'crocs';
+  if (text.includes('slide') || text.includes('palm') || text.includes('slipper') || text.includes('sandal')) return 'slides';
+  if (text.includes('sneaker') || text.includes('canvas') || text.includes('trainer') || text.includes('runner')) return 'sneakers';
+  if (text.includes('heel') || text.includes('pump') || text.includes('stiletto')) return 'heels';
+  if (text.includes('loafer') || text.includes('mule') || text.includes('oxford') || text.includes('derby') || text.includes('formal shoe')) return 'formal_shoes';
+
+  if (text.includes('hoodie') || text.includes('sweatshirt') || text.includes('fleece')) return 'hoodie';
+  if (text.includes('polo')) return 'polo';
+  if (text.includes('jacket') || text.includes('bomber') || text.includes('vest') || text.includes('coat')) return 'jacket';
+  if (text.includes('senator') || text.includes('agbada') || text.includes('kaftan') || text.includes('jalabiya') || text.includes('fila')) return 'native_men';
+  if (text.includes('boubou') || text.includes('abaya') || text.includes('kimono') || text.includes('ankara') || text.includes('lace')) return 'native_women';
+  if (text.includes('dress') || text.includes('gown') || text.includes('bodycon') || text.includes('maxi')) return 'dress';
+  if (text.includes('corset')) return 'corset';
+  if (text.includes('two-piece') || text.includes('two piece') || text.includes('co-ord')) return 'two_piece';
+  if (text.includes('tee') || text.includes('t-shirt') || text.includes('blouse') || text.includes('top')) return 'tops';
+
+  if (text.includes('jean') || text.includes('denim')) return 'jeans';
+  if (text.includes('cargo') || text.includes('jogger') || text.includes('sweatpant') || text.includes('trouser')) return 'cargo';
+  if (text.includes('short')) return 'shorts';
+  if (text.includes('skirt') || text.includes('mini')) return 'skirts';
+
+  if (text.includes('crossbody') || text.includes('chest') || text.includes('backpack') || text.includes('clutch') || text.includes('tote') || text.includes('bag')) return 'bags';
+  if (text.includes('cuban') || text.includes('chain') || text.includes('necklace') || text.includes('ring') || text.includes('pendant') || text.includes('bracelet') || text.includes('jewelry')) return 'jewelry';
+  if (text.includes('watch')) return 'watches';
+  if (text.includes('sunglass') || text.includes('shades') || text.includes('eyewear')) return 'sunglasses';
+  if (text.includes('cap') || text.includes('hat') || text.includes('beanie')) return 'caps';
+
+  return (prod.category || 'other').toLowerCase();
+}
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -100,9 +134,12 @@ export default function ProductDetailPage() {
     } catch (e) {}
   }, [product?.id]);
 
-  // Similar products recommendation algorithm based on category, department, gender & keywords
+  const [showSimilarProducts, setShowSimilarProducts] = useState(false);
+
+  // Similar products recommendation algorithm based on archetype, category, department, gender & keywords
   const similarProducts = useMemo(() => {
     if (!product || !allProducts || allProducts.length === 0) return [];
+    const pArchetype = getProductArchetype(product);
     const pCat = (product.category || '').toLowerCase().trim();
     const pGender = (product.genderTarget || '').toLowerCase().trim();
     const pVendor = (product.vendorId || product.vendorName || '').toLowerCase().trim();
@@ -119,11 +156,17 @@ export default function ProductDetailPage() {
 
     const scored = candidates.map((cand: any) => {
       let score = 0;
+      const cArchetype = getProductArchetype(cand);
       const cCat = (cand.category || '').toLowerCase().trim();
       const cGender = (cand.genderTarget || '').toLowerCase().trim();
       const cVendor = (cand.vendorId || cand.vendorName || '').toLowerCase().trim();
       const cDepartment = (cand.department || '').toLowerCase().trim();
       const cName = (cand.name || '').toLowerCase();
+
+      // Same fashion archetype (+20 pts massive boost: crocs->crocs, hoodie->hoodie, heels->heels, etc.)
+      if (pArchetype !== 'other' && cArchetype === pArchetype) {
+        score += 20;
+      }
 
       // Category match (+8)
       if (cCat && pCat && cCat === pCat) score += 8;
@@ -134,11 +177,11 @@ export default function ProductDetailPage() {
       // Gender compatibility
       if (pGender && cGender) {
         if (cGender === pGender) {
-          score += 5;
+          score += 6;
         } else if (cGender === 'unisex' || pGender === 'unisex') {
-          score += 3;
+          score += 4;
         } else {
-          score -= 10;
+          score -= 15;
         }
       }
 
@@ -155,10 +198,17 @@ export default function ProductDetailPage() {
 
     scored.sort((a: any, b: any) => b.score - a.score);
 
-    return scored
-      .filter((s: any) => s.score >= 5)
-      .slice(0, 8)
-      .map((s: any) => s.product);
+    const positiveMatches = scored.filter((s: any) => s.score >= 1).map((s: any) => s.product);
+    if (positiveMatches.length > 0) {
+      return positiveMatches.slice(0, 8);
+    }
+
+    return candidates
+      .filter((c: any) => {
+        const cg = (c.genderTarget || '').toLowerCase();
+        return !pGender || !cg || cg === 'unisex' || cg === pGender;
+      })
+      .slice(0, 8);
   }, [product, allProducts]);
 
   // Genuine Recently Viewed products (strictly from localStorage history, ZERO mock fallbacks)
@@ -184,6 +234,25 @@ export default function ProductDetailPage() {
     } catch (e) {}
     setRecentlyViewed([]);
   }, [allProducts, product?.id]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const raw = localStorage.getItem('irisi_recently_viewed');
+        if (!raw) setRecentlyViewed([]);
+      } catch (e) {}
+    };
+    window.addEventListener('irisi_recently_viewed_updated', handleSync);
+    return () => window.removeEventListener('irisi_recently_viewed_updated', handleSync);
+  }, []);
+
+  const handleClearRecentlyViewed = () => {
+    try {
+      localStorage.removeItem('irisi_recently_viewed');
+      window.dispatchEvent(new Event('irisi_recently_viewed_updated'));
+    } catch (e) {}
+    setRecentlyViewed([]);
+  };
 
   // Sync with cachedProduct if it becomes available
   useEffect(() => {
@@ -932,96 +1001,118 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* 4. SIMILAR PIECES YOU MAY LIKE */}
+      {/* 4. SIMILAR PIECES / CHECK SIMILAR PRODUCTS */}
       {similarProducts.length > 0 && (
         <div className="space-y-6 pt-10 border-t border-[var(--border-subtle)]">
-          <div className="flex items-end justify-between">
-            <div className="space-y-1">
-              <span className="text-[11px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
-                Curated Recommendations
-              </span>
-              <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-                Similar Pieces You May Like
-              </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 hover:border-[var(--gold-accent)]/50 transition-all shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 flex items-center justify-center shrink-0">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
+                  Curated Recommendations
+                </span>
+                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+                  Check Similar Products
+                </h3>
+                <span className="text-xs text-[var(--text-muted)] font-mono-luxury">
+                  {similarProducts.length} matching pieces curated based on this style
+                </span>
+              </div>
             </div>
-            <Link
-              href={`/shop?category=${product.category || 'all'}`}
-              className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors"
-            >
-              <span>Explore Collection</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <Link
+                href={`/shop?category=${product.category || 'all'}`}
+                className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors mr-2"
+              >
+                <span>Explore Collection</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setShowSimilarProducts((prev) => !prev)}
+                className="px-5 py-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 font-mono-luxury uppercase text-xs font-bold transition-all flex items-center gap-2 cursor-pointer active:scale-95 shadow-md"
+              >
+                <span>{showSimilarProducts ? 'Hide Similar Pieces' : 'Check Similar Products'}</span>
+                {showSimilarProducts ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {similarProducts.slice(0, 4).map((item: any) => {
-              const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
-              const isItemSaved = isInVault(item.id);
-              return (
-                <div
-                  key={`desktop-similar-${item.id}`}
-                  className="group rounded-2xl surface-card overflow-hidden border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-xl"
-                >
-                  <div className="relative aspect-[3/4] w-full bg-[var(--bg-secondary)] overflow-hidden">
-                    <Link href={`/shop/${item.id}`} className="block w-full h-full">
-                      <Image
-                        src={itemImg}
-                        alt={item.name}
-                        fill
-                        unoptimized
-                        className="object-cover group-hover:scale-105 transition-transform duration-700"
-                      />
-                    </Link>
-                    <div className="absolute top-3 left-3 pointer-events-none">
-                      <span className="px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-[9px] font-mono-luxury uppercase tracking-wider text-white border border-white/10 font-bold">
-                        {item.vendorName || 'Atelier'}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleVaultItem(item);
-                      }}
-                      className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md border transition-all cursor-pointer ${
-                        isItemSaved
-                          ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md'
-                          : 'bg-black/60 text-white/80 border-white/10 hover:text-white hover:bg-black/85'
-                      }`}
-                      aria-label="Curate to Vault"
-                    >
-                      <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-
-                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                    <div>
-                      <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider block">
-                        {item.category}
-                      </span>
-                      <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
-                        <h4 className="font-editorial text-sm sm:text-base font-bold text-[var(--text-primary)] line-clamp-1 mt-0.5">
-                          {item.name}
-                        </h4>
+          {/* When clicked, show the products under */}
+          {showSimilarProducts && (
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-fadeIn">
+              {similarProducts.slice(0, 4).map((item: any) => {
+                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                const isItemSaved = isInVault(item.id);
+                return (
+                  <div
+                    key={`desktop-similar-${item.id}`}
+                    className="group rounded-2xl surface-card overflow-hidden border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-xl"
+                  >
+                    <div className="relative aspect-[3/4] w-full bg-[var(--bg-secondary)] overflow-hidden">
+                      <Link href={`/shop/${item.id}`} className="block w-full h-full">
+                        <Image
+                          src={itemImg}
+                          alt={item.name}
+                          fill
+                          unoptimized
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
                       </Link>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
-                      <span className="font-mono-luxury font-bold text-sm sm:text-base text-[var(--text-primary)]">
-                        ₦{Number(item.price || 0).toLocaleString()}
-                      </span>
-                      <Link
-                        href={`/shop/${item.id}`}
-                        className="px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-primary)] text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)] transition-colors"
+                      <div className="absolute top-3 left-3 pointer-events-none">
+                        <span className="px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-[9px] font-mono-luxury uppercase tracking-wider text-white border border-white/10 font-bold">
+                          {item.vendorName || 'Atelier'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleVaultItem(item);
+                        }}
+                        className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md border transition-all cursor-pointer ${
+                          isItemSaved
+                            ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md'
+                            : 'bg-black/60 text-white/80 border-white/10 hover:text-white hover:bg-black/85'
+                        }`}
+                        aria-label="Curate to Vault"
                       >
-                        View Piece
-                      </Link>
+                        <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-current' : ''}`} />
+                      </button>
+                    </div>
+
+                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                      <div>
+                        <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider block">
+                          {item.category}
+                        </span>
+                        <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
+                          <h4 className="font-editorial text-sm sm:text-base font-bold text-[var(--text-primary)] line-clamp-1 mt-0.5">
+                            {item.name}
+                          </h4>
+                        </Link>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
+                        <span className="font-mono-luxury font-bold text-sm sm:text-base text-[var(--text-primary)]">
+                          ₦{Number(item.price || 0).toLocaleString()}
+                        </span>
+                        <Link
+                          href={`/shop/${item.id}`}
+                          className="px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-primary)] text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)] transition-colors"
+                        >
+                          View Piece
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1037,13 +1128,22 @@ export default function ProductDetailPage() {
                 Recently Viewed
               </h3>
             </div>
-            <Link
-              href="/shop"
-              className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors"
-            >
-              <span>Back to Catalog</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleClearRecentlyViewed}
+                className="text-xs font-mono-luxury uppercase font-bold text-[var(--text-muted)] hover:text-rose-500 transition-colors cursor-pointer"
+              >
+                Clear History
+              </button>
+              <Link
+                href="/shop"
+                className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors"
+              >
+                <span>Back to Catalog</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

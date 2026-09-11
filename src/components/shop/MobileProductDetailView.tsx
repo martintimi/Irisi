@@ -26,6 +26,40 @@ interface MobileProductDetailViewProps {
   };
 }
 
+function getProductArchetype(prod: any): string {
+  if (!prod) return 'other';
+  const text = `${prod.name || ''} ${prod.category || ''} ${prod.department || ''} ${Array.isArray(prod.tags) ? prod.tags.join(' ') : ''}`.toLowerCase();
+
+  if (text.includes('croc') || text.includes('clog') || text.includes('foam')) return 'crocs';
+  if (text.includes('slide') || text.includes('palm') || text.includes('slipper') || text.includes('sandal')) return 'slides';
+  if (text.includes('sneaker') || text.includes('canvas') || text.includes('trainer') || text.includes('runner')) return 'sneakers';
+  if (text.includes('heel') || text.includes('pump') || text.includes('stiletto')) return 'heels';
+  if (text.includes('loafer') || text.includes('mule') || text.includes('oxford') || text.includes('derby') || text.includes('formal shoe')) return 'formal_shoes';
+
+  if (text.includes('hoodie') || text.includes('sweatshirt') || text.includes('fleece')) return 'hoodie';
+  if (text.includes('polo')) return 'polo';
+  if (text.includes('jacket') || text.includes('bomber') || text.includes('vest') || text.includes('coat')) return 'jacket';
+  if (text.includes('senator') || text.includes('agbada') || text.includes('kaftan') || text.includes('jalabiya') || text.includes('fila')) return 'native_men';
+  if (text.includes('boubou') || text.includes('abaya') || text.includes('kimono') || text.includes('ankara') || text.includes('lace')) return 'native_women';
+  if (text.includes('dress') || text.includes('gown') || text.includes('bodycon') || text.includes('maxi')) return 'dress';
+  if (text.includes('corset')) return 'corset';
+  if (text.includes('two-piece') || text.includes('two piece') || text.includes('co-ord')) return 'two_piece';
+  if (text.includes('tee') || text.includes('t-shirt') || text.includes('blouse') || text.includes('top')) return 'tops';
+
+  if (text.includes('jean') || text.includes('denim')) return 'jeans';
+  if (text.includes('cargo') || text.includes('jogger') || text.includes('sweatpant') || text.includes('trouser')) return 'cargo';
+  if (text.includes('short')) return 'shorts';
+  if (text.includes('skirt') || text.includes('mini')) return 'skirts';
+
+  if (text.includes('crossbody') || text.includes('chest') || text.includes('backpack') || text.includes('clutch') || text.includes('tote') || text.includes('bag')) return 'bags';
+  if (text.includes('cuban') || text.includes('chain') || text.includes('necklace') || text.includes('ring') || text.includes('pendant') || text.includes('bracelet') || text.includes('jewelry')) return 'jewelry';
+  if (text.includes('watch')) return 'watches';
+  if (text.includes('sunglass') || text.includes('shades') || text.includes('eyewear')) return 'sunglasses';
+  if (text.includes('cap') || text.includes('hat') || text.includes('beanie')) return 'caps';
+
+  return (prod.category || 'other').toLowerCase();
+}
+
 export default function MobileProductDetailView({ product, reviewsData }: MobileProductDetailViewProps) {
   const router = useRouter();
   const {
@@ -99,9 +133,12 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     }
   }, [allProducts, fetchProductsFromDb]);
 
-  // Similar products recommendation algorithm based on category, department, gender & keywords
+  const [showSimilarProducts, setShowSimilarProducts] = useState(false);
+
+  // Similar products recommendation algorithm based on archetype, category, department, gender & keywords
   const similarProducts = useMemo(() => {
     if (!product || !allProducts || allProducts.length === 0) return [];
+    const pArchetype = getProductArchetype(product);
     const pCat = (product.category || '').toLowerCase().trim();
     const pGender = (product.genderTarget || '').toLowerCase().trim();
     const pVendor = (product.vendorId || product.vendorName || '').toLowerCase().trim();
@@ -118,11 +155,17 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
 
     const scored = candidates.map((cand: any) => {
       let score = 0;
+      const cArchetype = getProductArchetype(cand);
       const cCat = (cand.category || '').toLowerCase().trim();
       const cGender = (cand.genderTarget || '').toLowerCase().trim();
       const cVendor = (cand.vendorId || cand.vendorName || '').toLowerCase().trim();
       const cDepartment = (cand.department || '').toLowerCase().trim();
       const cName = (cand.name || '').toLowerCase();
+
+      // Same fashion archetype (+20 pts massive boost: crocs->crocs, hoodie->hoodie, heels->heels, etc.)
+      if (pArchetype !== 'other' && cArchetype === pArchetype) {
+        score += 20;
+      }
 
       // Category match (+8)
       if (cCat && pCat && cCat === pCat) score += 8;
@@ -133,11 +176,11 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
       // Gender compatibility
       if (pGender && cGender) {
         if (cGender === pGender) {
-          score += 5;
+          score += 6;
         } else if (cGender === 'unisex' || pGender === 'unisex') {
-          score += 3;
+          score += 4;
         } else {
-          score -= 10;
+          score -= 15;
         }
       }
 
@@ -154,10 +197,17 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
 
     scored.sort((a: any, b: any) => b.score - a.score);
 
-    return scored
-      .filter((s: any) => s.score >= 5)
-      .slice(0, 8)
-      .map((s: any) => s.product);
+    const positiveMatches = scored.filter((s: any) => s.score >= 1).map((s: any) => s.product);
+    if (positiveMatches.length > 0) {
+      return positiveMatches.slice(0, 8);
+    }
+
+    return candidates
+      .filter((c: any) => {
+        const cg = (c.genderTarget || '').toLowerCase();
+        return !pGender || !cg || cg === 'unisex' || cg === pGender;
+      })
+      .slice(0, 8);
   }, [product, allProducts]);
 
   // Genuine Recently Viewed products (strictly from localStorage history, ZERO mock fallbacks)
@@ -183,6 +233,25 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     } catch (e) {}
     setRecentlyViewed([]);
   }, [allProducts, product?.id]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const raw = localStorage.getItem('irisi_recently_viewed');
+        if (!raw) setRecentlyViewed([]);
+      } catch (e) {}
+    };
+    window.addEventListener('irisi_recently_viewed_updated', handleSync);
+    return () => window.removeEventListener('irisi_recently_viewed_updated', handleSync);
+  }, []);
+
+  const handleClearRecentlyViewed = () => {
+    try {
+      localStorage.removeItem('irisi_recently_viewed');
+      window.dispatchEvent(new Event('irisi_recently_viewed_updated'));
+    } catch (e) {}
+    setRecentlyViewed([]);
+  };
 
   const handleCarouselTouchStart = (e: React.TouchEvent) => {
     setHasNudged(true);
@@ -943,93 +1012,132 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           <span>Inquire via WhatsApp Concierge</span>
         </a>
 
-        {/* 9. SIMILAR PIECES YOU MAY LIKE */}
+        {/* 9. CHECK SIMILAR PRODUCTS (Expandable on click) */}
         {similarProducts.length > 0 && (
-          <div className="pt-6 border-t border-[var(--border-subtle)] space-y-3.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[9px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
-                  Curated Recommendations
-                </span>
-                <h3 className="font-editorial text-base font-bold text-[var(--text-primary)]">
-                  Similar Pieces You May Like
-                </h3>
+          <div className="pt-4 border-t border-[var(--border-subtle)] space-y-3">
+            <button
+              type="button"
+              onClick={() => setShowSimilarProducts((prev) => !prev)}
+              className="w-full py-3.5 px-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--gold-accent)]/60 text-[var(--text-primary)] transition-all flex items-center justify-between shadow-sm active:scale-[0.99] cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div className="text-left">
+                  <span className="text-xs font-mono-luxury font-bold uppercase tracking-wider block text-[var(--text-primary)]">
+                    Check Similar Products
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono-luxury">
+                    {similarProducts.length} matching pieces curated for you
+                  </span>
+                </div>
               </div>
-              <Link
-                href={`/shop?category=${product.category || 'all'}`}
-                className="text-[10px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center gap-1 uppercase"
-              >
-                <span>More</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
 
-            {/* Horizontal Swipeable Product Cards */}
-            <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
-              {similarProducts.map((item: any) => {
-                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
-                const isItemSaved = isInVault(item.id);
-                return (
-                  <div
-                    key={`similar-${item.id}`}
-                    className="w-36 shrink-0 rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex flex-col group shadow-sm hover:border-[var(--gold-accent)]/50 transition-colors"
-                  >
-                    <Link href={`/shop/${item.id}`} className="relative aspect-[3/4] w-full block bg-black/10 overflow-hidden">
-                      <Image
-                        src={itemImg}
-                        alt={item.name}
-                        fill
-                        unoptimized
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleVaultItem(item);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:text-red-500 transition-colors cursor-pointer"
-                        aria-label="Wishlist"
-                      >
-                        <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-red-500 text-red-500' : ''}`} />
-                      </button>
+              <div className="flex items-center gap-1.5 text-[var(--gold-accent)]">
+                <span className="text-[10px] font-mono-luxury font-bold uppercase">
+                  {showSimilarProducts ? 'Hide' : 'View'}
+                </span>
+                {showSimilarProducts ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </div>
+            </button>
+
+            {/* When clicked, show the products under */}
+            <AnimatePresence>
+              {showSimilarProducts && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeInOut' }}
+                  className="overflow-hidden space-y-3 pt-1"
+                >
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[9px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold">
+                      Matching Pieces
+                    </span>
+                    <Link
+                      href={`/shop?category=${product.category || 'all'}`}
+                      className="text-[10px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center gap-1 uppercase"
+                    >
+                      <span>Explore More</span>
+                      <ArrowRight className="h-3 w-3" />
                     </Link>
-                    <div className="p-2.5 flex flex-col justify-between flex-1 gap-1.5">
-                      <div>
-                        <span className="text-[8px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] font-bold block truncate">
-                          {item.vendorName || 'Atelier'}
-                        </span>
-                        <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
-                          <h4 className="text-[11px] font-medium text-[var(--text-primary)] line-clamp-1">
-                            {item.name}
-                          </h4>
-                        </Link>
-                      </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]/50">
-                        <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
-                          ₦{Number(item.price || 0).toLocaleString()}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const defSize = Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes[0] : 'M';
-                            const defColor = Array.isArray(item.colors) && item.colors.length > 0 ? item.colors[0] : { name: 'Standard', hex: '#111111' };
-                            addToCart(item, defSize, defColor, 1);
-                          }}
-                          className="h-6 w-6 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all text-xs font-bold cursor-pointer"
-                          title="Quick Add to Bag"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Horizontal Swipeable Product Cards */}
+                  <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+                    {similarProducts.map((item: any) => {
+                      const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                      const isItemSaved = isInVault(item.id);
+                      return (
+                        <div
+                          key={`similar-${item.id}`}
+                          className="w-36 shrink-0 rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex flex-col group shadow-sm hover:border-[var(--gold-accent)]/50 transition-colors"
+                        >
+                          <Link href={`/shop/${item.id}`} className="relative aspect-[3/4] w-full block bg-black/10 overflow-hidden">
+                            <Image
+                              src={itemImg}
+                              alt={item.name}
+                              fill
+                              unoptimized
+                              className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleVaultItem(item);
+                              }}
+                              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:text-red-500 transition-colors cursor-pointer"
+                              aria-label="Wishlist"
+                            >
+                              <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                            </button>
+                          </Link>
+                          <div className="p-2.5 flex flex-col justify-between flex-1 gap-1.5">
+                            <div>
+                              <span className="text-[8px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] font-bold block truncate">
+                                {item.vendorName || 'Atelier'}
+                              </span>
+                              <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
+                                <h4 className="text-[11px] font-medium text-[var(--text-primary)] line-clamp-1">
+                                  {item.name}
+                                </h4>
+                              </Link>
+                            </div>
+                            <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]/50">
+                              <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
+                                ₦{Number(item.price || 0).toLocaleString()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const defSize = Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes[0] : 'M';
+                                  const defColor = Array.isArray(item.colors) && item.colors.length > 0 ? item.colors[0] : { name: 'Standard', hex: '#111111' };
+                                  addToCart(item, defSize, defColor, 1);
+                                }}
+                                className="h-6 w-6 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all text-xs font-bold cursor-pointer"
+                                title="Quick Add to Bag"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
@@ -1045,13 +1153,22 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
                   Recently Viewed
                 </h3>
               </div>
-              <Link
-                href="/shop"
-                className="text-[10px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center gap-1 uppercase"
-              >
-                <span>Shop All</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleClearRecentlyViewed}
+                  className="text-[10px] font-mono-luxury font-bold text-[var(--text-muted)] hover:text-rose-500 transition-colors uppercase cursor-pointer"
+                >
+                  Clear
+                </button>
+                <Link
+                  href="/shop"
+                  className="text-[10px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center gap-1 uppercase"
+                >
+                  <span>Shop All</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
 
             {/* Horizontal Swipeable Product Cards */}
