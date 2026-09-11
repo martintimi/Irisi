@@ -390,7 +390,7 @@ export default function VendorProductsCatalogPage() {
                 {/* Left: Thumbnail & Details */}
                 <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
                   {/* High Quality Thumbnail */}
-                  <div className="relative h-20 w-18 sm:h-22 sm:w-20 rounded-2xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)] shadow-md">
+                  <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)] shadow-md">
                     <Image
                       src={productImg}
                       alt={piece.name}

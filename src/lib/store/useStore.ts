@@ -125,6 +125,7 @@ export const defaultVendorProfile: VendorProfile = {
   accountName: '',
   instagram: '',
   bio: '',
+  logoUrl: '',
 };
 
 let fetchProductsPromise: Promise<void> | null = null;

@@ -2,11 +2,12 @@
 
 import { vendorFetch } from '@/lib/services/apiClient';
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import {
   Building, User, Mail, Phone, MapPin, Check,
   ShieldCheck, ExternalLink, Sparkles, Store, Loader2,
-  Clock, AlertCircle, CheckCircle2, Truck, Package, Navigation, X
+  Clock, AlertCircle, CheckCircle2, Truck, Package, Navigation, X, Camera
 } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
@@ -67,9 +68,48 @@ export default function VendorAtelierProfilePage() {
     snapchat: '',
     whatsapp: '',
     bio: '',
+    logoUrl: vendorProfile.logoUrl || '',
     vendorType: vendorProfile.vendorType || 'fashion_designer',
     specialty: 'multi_department' as 'jewelry' | 'footwear' | 'apparel' | 'multi_department'
   });
+
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Logo image exceeds 5MB limit. Please choose a smaller image.');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    setErrorMessage('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.url) {
+        throw new Error(data.error || 'Failed to upload logo.');
+      }
+
+      setForm((prev) => ({ ...prev, logoUrl: data.url }));
+      setSuccessMessage('Brand logo uploaded! Click "Save Store Profile" below to activate on your storefront.');
+    } catch (err: any) {
+      console.error('Logo upload failed:', err);
+      setErrorMessage(err.message || 'Failed to upload logo image.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   // Auto-dismiss alert messages after 10 seconds
   useEffect(() => {
@@ -115,6 +155,7 @@ export default function VendorAtelierProfilePage() {
           snapchat: v.snapchat || v.socialLinks?.snapchat || '',
           whatsapp: v.whatsapp || v.socialLinks?.whatsapp || v.phone || '',
           bio: v.bio || '',
+          logoUrl: v.logoUrl || v.logo || '',
           vendorType: isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer',
           specialty: spec
         });
@@ -137,7 +178,8 @@ export default function VendorAtelierProfilePage() {
           bankName: v.bankName || v.bank_name || 'Guaranty Trust Bank (GTBank)',
           accountNumber: v.accountNumber || v.account_number || '',
           accountName: v.accountName || v.account_name || '',
-          bio: v.bio || ''
+          bio: v.bio || '',
+          logoUrl: v.logoUrl || v.logo || ''
         });
       }
     } catch (err) {
@@ -341,6 +383,70 @@ export default function VendorAtelierProfilePage() {
               1. Store Identity &amp; Specialty
             </span>
 
+            {/* Store Brand Logo */}
+            <div>
+              <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-2 font-bold">
+                Store Brand Logo / Emblem
+              </label>
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+                <div className="relative h-20 w-20 rounded-2xl bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-3xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden">
+                  {form.logoUrl ? (
+                    <Image
+                      src={form.logoUrl}
+                      alt={form.brandName || 'Brand Logo'}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span>{form.brandName ? form.brandName.charAt(0).toUpperCase() : 'B'}</span>
+                  )}
+                  {isUploadingLogo && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 text-[var(--gold-accent)] animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label
+                      htmlFor="desktop-logo-upload-input"
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-mono-luxury uppercase font-bold transition-all shadow-sm ${
+                        isUploadingLogo
+                          ? 'bg-[var(--border-subtle)] text-[var(--text-muted)] cursor-not-allowed'
+                          : 'bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 active:scale-95 cursor-pointer'
+                      }`}
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                      <span>{form.logoUrl ? 'Change Store Logo' : 'Upload Store Logo'}</span>
+                    </label>
+
+                    {form.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, logoUrl: '' })}
+                        className="px-3 py-2 rounded-xl surface-card border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-mono-luxury uppercase font-bold transition-colors cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="desktop-logo-upload-input"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/jpg"
+                    disabled={isUploadingLogo}
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury">
+                    PNG, JPG or WebP (min 300x300px). Displays on your public storefront instead of the first letter monogram.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
                 Store Department &amp; Specialty
@@ -449,17 +555,17 @@ export default function VendorAtelierProfilePage() {
             </div>
           </div>
 
-          {/* 2. Store Location & Automated Logistics */}
+          {/* 2. Store Location & Dispatch Turnaround */}
           <div className="space-y-4 pt-2 border-t border-[var(--border-subtle)]">
             <div>
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
                 <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] font-bold">
-                  2. Store Location &amp; Dispatch Logistics
+                  2. Store Location &amp; Dispatch Turnaround
                 </span>
               </div>
               <p className="text-[11px] text-[var(--text-secondary)] font-mono-luxury mt-0.5">
-                Select your State first, then your City/Town for automated Shipbubble courier pickups and customer deliveries.
+                Set your operating state, city neighborhood, and order processing lead times.
               </p>
             </div>
 
@@ -520,40 +626,6 @@ export default function VendorAtelierProfilePage() {
                   <option value="2-3 business days">2-3 business days</option>
                   <option value="3-5 business days">3-5 business days</option>
                 </select>
-              </div>
-            </div>
-
-            {/* Automated Smart Logistics Notice */}
-            <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
-                  <span className="text-[11px] font-mono-luxury uppercase font-bold text-[var(--text-primary)]">
-                    Automated Smart Logistics & Rates
-                  </span>
-                </div>
-                <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                  Auto-Calculated
-                </span>
-              </div>
-
-              <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-                You don&apos;t have to calculate delivery fees! Ìrísí automatically calculates shipping rates at customer checkout based on your state ({form.state || 'your state'}) and the customer&apos;s delivery location.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1">
-                  <span className="text-xs font-bold text-[var(--text-primary)] block">Doorstep Courier Delivery</span>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    Calculated automatically and prepaid by the customer at online checkout.
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1">
-                  <span className="text-xs font-bold text-[var(--text-primary)] block">Motor Park Bus Waybill</span>
-                  <p className="text-[11px] text-[var(--text-secondary)]">
-                    Customer pays the bus driver directly upon collection at their city motor park.
-                  </p>
-                </div>
               </div>
             </div>
           </div>

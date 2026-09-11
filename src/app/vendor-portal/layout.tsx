@@ -84,7 +84,8 @@ export default function VendorPortalLayout({
             accountNumber: v.accountNumber || v.account_number || vendorProfile.accountNumber,
             accountName: v.accountName || v.account_name || vendorProfile.accountName,
             instagram: v.instagram || vendorProfile.instagram,
-            bio: v.bio || vendorProfile.bio
+            bio: v.bio || vendorProfile.bio,
+            logoUrl: v.logoUrl || v.logo || vendorProfile.logoUrl || ''
           });
         }
       } catch (e) {}

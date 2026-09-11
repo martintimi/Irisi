@@ -85,7 +85,8 @@ export default function VendorOverviewPage() {
             bankName: v.bankName || v.bank_name || vendorProfile.bankName,
             accountNumber: v.accountNumber || v.account_number || vendorProfile.accountNumber,
             accountName: v.accountName || v.account_name || vendorProfile.accountName,
-            bio: v.bio || vendorProfile.bio
+            bio: v.bio || vendorProfile.bio,
+            logoUrl: v.logoUrl || v.logo || vendorProfile.logoUrl || ''
           });
         }
       }

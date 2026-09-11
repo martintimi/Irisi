@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import {
   Building, User, Mail, Phone, MapPin, Check,
   ShieldCheck, ExternalLink, Sparkles, Store, Loader2,
-  Clock, AlertCircle, CheckCircle2, Truck, Navigation, Save
+  Clock, AlertCircle, CheckCircle2, Truck, Navigation, Save, Camera
 } from 'lucide-react';
 import Link from 'next/link';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
@@ -50,6 +51,44 @@ export default function MobileVendorAtelier({
 
   const isVerified = approvalStatus === 'approved';
   const isRejected = approvalStatus === 'rejected';
+
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage?.('Logo image exceeds 5MB limit. Please choose a smaller image.');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    setErrorMessage?.('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.url) {
+        throw new Error(data.error || 'Failed to upload logo.');
+      }
+
+      setForm((prev: any) => ({ ...prev, logoUrl: data.url }));
+      setSuccessMessage?.('Brand logo uploaded! Tap "Save Profile" below to activate on your storefront.');
+    } catch (err: any) {
+      console.error('Logo upload failed:', err);
+      setErrorMessage?.(err.message || 'Failed to upload logo image.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   return (
     <form onSubmit={handleSave} className="space-y-4 animate-fadeIn pb-20 select-none">
@@ -143,6 +182,70 @@ export default function MobileVendorAtelier({
         <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
           1. Brand Identity &amp; Specialty
         </span>
+
+        {/* Store Brand Logo */}
+        <div>
+          <label className="block text-[var(--text-secondary)] uppercase mb-1.5 font-bold">
+            Store Brand Logo / Emblem
+          </label>
+          <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+            <div className="relative h-16 w-16 rounded-2xl bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden">
+              {form.logoUrl ? (
+                <Image
+                  src={form.logoUrl}
+                  alt={form.brandName || 'Brand Logo'}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              ) : (
+                <span>{form.brandName ? form.brandName.charAt(0).toUpperCase() : 'B'}</span>
+              )}
+              {isUploadingLogo && (
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 text-[var(--gold-accent)] animate-spin" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <label
+                  htmlFor="mobile-logo-upload-input"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono-luxury uppercase font-bold transition-all shadow-sm ${
+                    isUploadingLogo
+                      ? 'bg-[var(--border-subtle)] text-[var(--text-muted)] cursor-not-allowed'
+                      : 'bg-[var(--text-primary)] text-[var(--bg-primary)] active:scale-95 cursor-pointer'
+                  }`}
+                >
+                  <Camera className="h-3 w-3" />
+                  <span>{form.logoUrl ? 'Change' : 'Upload Logo'}</span>
+                </label>
+
+                {form.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, logoUrl: '' })}
+                    className="px-2.5 py-1.5 rounded-xl surface-card border border-rose-500/30 text-rose-400 text-[11px] font-mono-luxury uppercase font-bold"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <input
+                id="mobile-logo-upload-input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/jpg"
+                disabled={isUploadingLogo}
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
+              <p className="text-[10px] text-[var(--text-muted)] leading-tight font-mono-luxury">
+                Replaces first letter on your public storefront.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <div>
           <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
@@ -356,16 +459,11 @@ export default function MobileVendorAtelier({
         </div>
       </div>
 
-      {/* 3. Logistics & Dispatch Turnaround */}
+      {/* 3. Dispatch Turnaround Timeline */}
       <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3.5 shadow-sm text-xs font-mono-luxury">
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
-            3. Dispatch Turnaround & Logistics
-          </span>
-          <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            Ìrísí Smart Rates
-          </span>
-        </div>
+        <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
+          3. Dispatch Turnaround Timeline
+        </span>
 
         <div>
           <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
@@ -383,27 +481,6 @@ export default function MobileVendorAtelier({
             <option value="3-5 business days">3-5 business days (Custom Cut)</option>
             <option value="5-7 business days">5-7 business days (Handmade Bespoke)</option>
           </select>
-        </div>
-
-        {/* Automated Logistics Card */}
-        <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
-          <div className="flex items-center gap-2 text-[11px] text-[var(--gold-accent)] font-bold">
-            <Truck className="h-4 w-4" />
-            <span>Automated Logistics & Delivery</span>
-          </div>
-          <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-            You don&apos;t have to calculate delivery fees! Ìrísí automatically calculates shipping at checkout based on destination states.
-          </p>
-          <div className="grid grid-cols-2 gap-2 pt-1 text-[10px]">
-            <div className="p-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-              <span className="font-bold text-[var(--text-primary)] block">Doorstep Courier</span>
-              <span className="text-[var(--text-muted)]">Prepaid at checkout</span>
-            </div>
-            <div className="p-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-              <span className="font-bold text-[var(--text-primary)] block">Park Waybill</span>
-              <span className="text-[var(--text-muted)]">Buyer pays driver</span>
-            </div>
-          </div>
         </div>
       </div>
 

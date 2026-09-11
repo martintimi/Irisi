@@ -107,8 +107,9 @@ export async function GET(
     const vendorId = resolvedVendor?.id || decodedSlug.replace(/\s+/g, '-');
     const brandName = resolvedVendor?.brand_name || cleanBrandName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
-    // Parse bio, location, turnaround and multi-social links
+    // Parse bio, location, turnaround, logo and multi-social links
     let bioText = resolvedVendor?.bio || '';
+    let logoUrl = resolvedVendor?.logo_url || resolvedVendor?.logo || '';
     let city = '';
     let state = '';
     let dispatchDays = '1-2 business days';
@@ -123,6 +124,7 @@ export async function GET(
       try {
         const parsed = JSON.parse(bioText);
         bioText = parsed.bio || '';
+        logoUrl = parsed.logoUrl || parsed.logo || logoUrl;
         city = parsed.city || '';
         state = parsed.state || '';
         dispatchDays = parsed.dispatchDays || '1-2 business days';
@@ -227,6 +229,7 @@ export async function GET(
       city,
       state,
       bio: bioText,
+      logoUrl,
       socialLinks,
       instagram: socialLinks.instagram,
       tiktok: socialLinks.tiktok,

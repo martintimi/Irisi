@@ -109,9 +109,9 @@ export default function MobileBrandView({
         {/* Brand Meta Overlay */}
         <div className="absolute bottom-4 inset-x-4 flex items-end gap-3.5">
           <div className="h-16 w-16 rounded-2xl bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)] flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-xl shrink-0 overflow-hidden relative">
-            {vendorProducts[0]?.imageUrl ? (
+            {vendorProfile?.logoUrl || vendorProfile?.logo ? (
               <Image
-                src={vendorProducts[0].imageUrl}
+                src={vendorProfile.logoUrl || vendorProfile.logo}
                 alt={brandName}
                 fill
                 unoptimized

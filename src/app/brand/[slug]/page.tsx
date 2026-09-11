@@ -213,8 +213,18 @@ export default function BrandStorefrontPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-3xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl sm:text-3xl flex items-center justify-center shrink-0 shadow-lg">
-              {vendor.name ? vendor.name.charAt(0).toUpperCase() : 'V'}
+            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-3xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl sm:text-3xl flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden">
+              {vendor.logoUrl || vendor.logo ? (
+                <Image
+                  src={vendor.logoUrl || vendor.logo}
+                  alt={vendor.name}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              ) : (
+                <span>{vendor.name ? vendor.name.charAt(0).toUpperCase() : 'V'}</span>
+              )}
             </div>
             
             <div className="space-y-2">

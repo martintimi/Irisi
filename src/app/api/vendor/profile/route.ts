@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     let city = '';
     let state = '';
     let dispatchDays = '1-2 business days';
+    let logoUrl = vendor?.logo_url || vendor?.logo || '';
 
     let socialLinks: any = {
       instagram: '',
@@ -65,6 +66,7 @@ export async function GET(request: Request) {
         dispatchDays = parsed.dispatchDays || '1-2 business days';
         const rawSpec = parsed.specialty || parsed.vendorSpecialty || (vendor?.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
         vendorSpecialty = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
+        logoUrl = parsed.logoUrl || parsed.logo || vendor?.logo_url || vendor?.logo || '';
       } catch (e) {}
     } else if (bioText && bioText.trim().length > 0) {
       isProfileSaved = true;
@@ -80,6 +82,7 @@ export async function GET(request: Request) {
         is_verified: verified,
         isVerified: verified,
         bio: bioText,
+        logoUrl,
         specialty: vendorSpecialty,
         vendorSpecialty,
         socialLinks,
@@ -119,9 +122,20 @@ export async function POST(request: Request) {
     };
 
     const specialty = body.specialty || body.vendorSpecialty || 'multi_department';
+    const logoUrl = body.logoUrl || body.logo || '';
+
+    // Fetch existing vendor to preserve verified status if already approved
+    const { data: existingVendor } = await supabase
+      .from('vendors')
+      .select('is_verified, bio')
+      .or(`id.eq.${vendorId},email.eq.${vendorId}`)
+      .maybeSingle();
+
+    const wasVerified = !!existingVendor?.is_verified;
 
     const bioPayload = JSON.stringify({
       bio: body.bio || '',
+      logoUrl,
       specialty,
       vendorSpecialty: specialty,
       socialLinks,
@@ -129,7 +143,7 @@ export async function POST(request: Request) {
       state: body.state || '',
       dispatchDays: body.dispatchDays || '1-2 business days',
       isProfileSaved: true,
-      approvalStatus: 'pending'
+      approvalStatus: wasVerified ? 'approved' : 'pending'
     });
 
     const { data: updated, error } = await supabase
@@ -144,7 +158,7 @@ export async function POST(request: Request) {
         account_number: body.accountNumber,
         account_name: body.accountName,
         bio: bioPayload,
-        is_verified: false,
+        is_verified: wasVerified,
       })
       .or(`id.eq.${vendorId},email.eq.${vendorId}`)
       .select()
@@ -162,14 +176,15 @@ export async function POST(request: Request) {
         specialty,
         vendorSpecialty: specialty,
         bio: body.bio || '',
+        logoUrl,
         socialLinks,
         city: body.city || '',
         state: body.state || '',
         dispatchDays: body.dispatchDays || '1-2 business days',
         isProfileSaved: true,
-        is_verified: false,
-        isVerified: false,
-        approvalStatus: 'pending',
+        is_verified: wasVerified,
+        isVerified: wasVerified,
+        approvalStatus: wasVerified ? 'approved' : 'pending',
         rejectionReason: ''
       }
     });

@@ -398,9 +398,9 @@ export default function MobileVendorOverview({
                 className="p-3 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between gap-3 hover:border-[var(--gold-accent)]/50 transition-all shadow-sm cursor-pointer active:scale-[0.99]"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative h-13 w-12 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
                     <Image
-                      src={piece.imageUrl || piece.image_url || '/images/products/BlackTrapStarHoodie.jpg'}
+                      src={piece.imageUrl || piece.image_url || (Array.isArray(piece.images) && piece.images[0]) || '/images/products/BlackTrapStarHoodie.jpg'}
                       alt={piece.name}
                       fill
                       unoptimized

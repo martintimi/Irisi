@@ -133,6 +133,7 @@ export interface Vendor {
   specialty?: VendorSpecialty;
   vendorSpecialty?: VendorSpecialty;
   phone?: string;
+  logoUrl?: string;
 }
 
 export interface VendorProfile {
@@ -150,6 +151,7 @@ export interface VendorProfile {
   accountName: string;
   instagram: string;
   bio: string;
+  logoUrl?: string;
   subaccountId?: string;
 }
 
