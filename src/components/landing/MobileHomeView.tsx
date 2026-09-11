@@ -91,7 +91,7 @@ export default function MobileHomeView() {
             id: 's-hoodies',
             title: 'Hoodies & Sweats',
             subtitle: 'Heavyweight Boxy Hoodies',
-            image: '/images/products/BlackTrapStarHoodie.jpg',
+            image: '/images/products/uploaded/prod-1788316482065-1-489.jpg',
             link: '/shop?gender=men&category=hoodies',
           },
           {
@@ -237,7 +237,7 @@ export default function MobileHomeView() {
             id: 'm-street',
             title: 'Streetwear & Hoodies',
             subtitle: 'Heavy Hoodies & Sweats',
-            image: '/images/products/BlackTrapStarHoodie.jpg',
+            image: '/images/products/uploaded/prod-1788316482065-1-489.jpg',
             link: '/shop?gender=men&category=hoodies',
           },
           {
@@ -359,7 +359,7 @@ export default function MobileHomeView() {
             title: 'HOODIES & SWEATSHIRTS',
             subtitle: 'HEAVYWEIGHT FLEECE DROPS',
             highlight: 'OVERSIZED & BOXY CUTS',
-            image: '/images/products/BlackTrapStarHoodie.jpg',
+            image: '/images/products/uploaded/prod-1788316482065-1-489.jpg',
             link: '/shop?category=hoodies',
           },
           {
@@ -516,7 +516,7 @@ export default function MobileHomeView() {
             title: 'HOODIES & SWEATSHIRTS',
             subtitle: 'EVERYDAY CASUAL STREETWEAR',
             highlight: 'HEAVYWEIGHT RELAXED FITS',
-            image: '/images/products/BlackTrapStarHoodie.jpg',
+            image: '/images/products/uploaded/prod-1788316482065-1-489.jpg',
             link: '/shop?gender=men&category=hoodies',
           },
           {

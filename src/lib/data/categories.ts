@@ -39,7 +39,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'hoodies',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/products/BlackTrapStarHoodie.jpg',
+    imageUrl: '/images/products/uploaded/prod-1788316482065-1-489.jpg',
     subtitle: 'Heavyweight hoodies & oversized sweatshirts',
     isPopular: true,
   },
