@@ -24,6 +24,7 @@ export default function ProductDetailPage() {
     bodyProfile,
     addToCart,
     allProducts,
+    fetchProductsFromDb,
     toggleVaultItem,
     isInVault,
     setOutfitItem,
@@ -73,6 +74,116 @@ export default function ProductDetailPage() {
     reviews: []
   });
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [isAdded, setIsAdded] = useState(false);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!allProducts || allProducts.length === 0) {
+      fetchProductsFromDb();
+    }
+  }, [allProducts, fetchProductsFromDb]);
+
+  // Track in recently viewed
+  useEffect(() => {
+    if (!product?.id || typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('irisi_recently_viewed');
+      const list: string[] = raw ? JSON.parse(raw) : [];
+      const updated = [String(product.id), ...list.filter((id) => String(id) !== String(product.id))].slice(0, 12);
+      localStorage.setItem('irisi_recently_viewed', JSON.stringify(updated));
+    } catch (e) {}
+  }, [product?.id]);
+
+  // Similar products recommendation algorithm based on category, department, gender & keywords
+  const similarProducts = useMemo(() => {
+    if (!product || !allProducts || allProducts.length === 0) return [];
+    const pCat = (product.category || '').toLowerCase().trim();
+    const pGender = (product.genderTarget || '').toLowerCase().trim();
+    const pVendor = (product.vendorId || product.vendorName || '').toLowerCase().trim();
+    const pDepartment = (product.department || '').toLowerCase().trim();
+    const pName = (product.name || '').toLowerCase();
+
+    const stopWords = new Set(['with', 'from', 'black', 'white', 'luxury', 'classic', 'drop', 'edition', 'the', 'and', 'for', 'men', 'women']);
+    const keywords = pName
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter((w: string) => w.length > 2 && !stopWords.has(w));
+
+    const candidates = allProducts.filter((p: any) => String(p.id) !== String(product.id));
+
+    const scored = candidates.map((cand: any) => {
+      let score = 0;
+      const cCat = (cand.category || '').toLowerCase().trim();
+      const cGender = (cand.genderTarget || '').toLowerCase().trim();
+      const cVendor = (cand.vendorId || cand.vendorName || '').toLowerCase().trim();
+      const cDepartment = (cand.department || '').toLowerCase().trim();
+      const cName = (cand.name || '').toLowerCase();
+
+      // Category match (+8)
+      if (cCat && pCat && cCat === pCat) score += 8;
+
+      // Department match (+6)
+      if (cDepartment && pDepartment && cDepartment === pDepartment) score += 6;
+
+      // Gender compatibility
+      if (pGender && cGender) {
+        if (cGender === pGender) {
+          score += 5;
+        } else if (cGender === 'unisex' || pGender === 'unisex') {
+          score += 3;
+        } else {
+          score -= 10;
+        }
+      }
+
+      // Vendor / Brand (+4)
+      if (cVendor && pVendor && cVendor === pVendor) score += 4;
+
+      // Keyword matches (+3 each)
+      for (const kw of keywords) {
+        if (cName.includes(kw)) score += 3;
+      }
+
+      return { product: cand, score };
+    });
+
+    scored.sort((a: any, b: any) => b.score - a.score);
+
+    return scored
+      .filter((s: any) => s.score >= 5)
+      .slice(0, 8)
+      .map((s: any) => s.product);
+  }, [product, allProducts]);
+
+  // Genuine Recently Viewed products (strictly from localStorage history, ZERO mock fallbacks)
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('irisi_recently_viewed');
+      if (raw && allProducts && allProducts.length > 0) {
+        const ids: string[] = JSON.parse(raw);
+        if (Array.isArray(ids) && ids.length > 0) {
+          const matched = ids
+            .filter((id) => String(id) !== String(product?.id))
+            .map((id) => allProducts.find((p: any) => String(p.id) === String(id)))
+            .filter(Boolean);
+          if (matched.length > 0) {
+            setRecentlyViewed(matched.slice(0, 8));
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+    setRecentlyViewed([]);
+  }, [allProducts, product?.id]);
 
   // Sync with cachedProduct if it becomes available
   useEffect(() => {
@@ -216,14 +327,6 @@ export default function ProductDetailPage() {
 
   const currentSizeStock = currentVariantStock;
   const isOutOfStock = currentVariantStock === 0;
-  const [isAdded, setIsAdded] = useState(false);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    };
-  }, []);
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
@@ -828,6 +931,192 @@ export default function ProductDetailPage() {
           ))}
         </div>
       </div>
+
+      {/* 4. SIMILAR PIECES YOU MAY LIKE */}
+      {similarProducts.length > 0 && (
+        <div className="space-y-6 pt-10 border-t border-[var(--border-subtle)]">
+          <div className="flex items-end justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
+                Curated Recommendations
+              </span>
+              <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                Similar Pieces You May Like
+              </h3>
+            </div>
+            <Link
+              href={`/shop?category=${product.category || 'all'}`}
+              className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors"
+            >
+              <span>Explore Collection</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {similarProducts.slice(0, 4).map((item: any) => {
+              const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+              const isItemSaved = isInVault(item.id);
+              return (
+                <div
+                  key={`desktop-similar-${item.id}`}
+                  className="group rounded-2xl surface-card overflow-hidden border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-xl"
+                >
+                  <div className="relative aspect-[3/4] w-full bg-[var(--bg-secondary)] overflow-hidden">
+                    <Link href={`/shop/${item.id}`} className="block w-full h-full">
+                      <Image
+                        src={itemImg}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    </Link>
+                    <div className="absolute top-3 left-3 pointer-events-none">
+                      <span className="px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-[9px] font-mono-luxury uppercase tracking-wider text-white border border-white/10 font-bold">
+                        {item.vendorName || 'Atelier'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleVaultItem(item);
+                      }}
+                      className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md border transition-all cursor-pointer ${
+                        isItemSaved
+                          ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md'
+                          : 'bg-black/60 text-white/80 border-white/10 hover:text-white hover:bg-black/85'
+                      }`}
+                      aria-label="Curate to Vault"
+                    >
+                      <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider block">
+                        {item.category}
+                      </span>
+                      <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
+                        <h4 className="font-editorial text-sm sm:text-base font-bold text-[var(--text-primary)] line-clamp-1 mt-0.5">
+                          {item.name}
+                        </h4>
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
+                      <span className="font-mono-luxury font-bold text-sm sm:text-base text-[var(--text-primary)]">
+                        ₦{Number(item.price || 0).toLocaleString()}
+                      </span>
+                      <Link
+                        href={`/shop/${item.id}`}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-primary)] text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)] transition-colors"
+                      >
+                        View Piece
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5. RECENTLY VIEWED (Strictly actual user history, ZERO mock fallbacks) */}
+      {recentlyViewed.length > 0 && (
+        <div className="space-y-6 pt-10 border-t border-[var(--border-subtle)]">
+          <div className="flex items-end justify-between">
+            <div className="space-y-1">
+              <span className="text-[11px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
+                Session History
+              </span>
+              <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                Recently Viewed
+              </h3>
+            </div>
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors"
+            >
+              <span>Back to Catalog</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {recentlyViewed.slice(0, 4).map((item: any) => {
+              const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+              const isItemSaved = isInVault(item.id);
+              return (
+                <div
+                  key={`desktop-recent-${item.id}`}
+                  className="group rounded-2xl surface-card overflow-hidden border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 transition-all duration-300 flex flex-col justify-between shadow-sm hover:shadow-xl"
+                >
+                  <div className="relative aspect-[3/4] w-full bg-[var(--bg-secondary)] overflow-hidden">
+                    <Link href={`/shop/${item.id}`} className="block w-full h-full">
+                      <Image
+                        src={itemImg}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    </Link>
+                    <div className="absolute top-3 left-3 pointer-events-none">
+                      <span className="px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-[9px] font-mono-luxury uppercase tracking-wider text-white border border-white/10 font-bold">
+                        {item.vendorName || 'Atelier'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleVaultItem(item);
+                      }}
+                      className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md border transition-all cursor-pointer ${
+                        isItemSaved
+                          ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md'
+                          : 'bg-black/60 text-white/80 border-white/10 hover:text-white hover:bg-black/85'
+                      }`}
+                      aria-label="Curate to Vault"
+                    >
+                      <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-current' : ''}`} />
+                    </button>
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider block">
+                        {item.category}
+                      </span>
+                      <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
+                        <h4 className="font-editorial text-sm sm:text-base font-bold text-[var(--text-primary)] line-clamp-1 mt-0.5">
+                          {item.name}
+                        </h4>
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
+                      <span className="font-mono-luxury font-bold text-sm sm:text-base text-[var(--text-primary)]">
+                        ₦{Number(item.price || 0).toLocaleString()}
+                      </span>
+                      <Link
+                        href={`/shop/${item.id}`}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--text-primary)] text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)] transition-colors"
+                      >
+                        View Piece
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       </div>
 
       {/* 3D WebGL Product Inspector Modal */}

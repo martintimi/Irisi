@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
-  ArrowLeft, ArrowRight, Bookmark, Share2, Sparkles, ShieldCheck, MapPin,
+  ArrowLeft, ArrowRight, Bookmark, Heart, Share2, Sparkles, ShieldCheck, MapPin,
   Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2,
   ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn,
   Video, Volume2, VolumeX, MessageCircle, User, Layers,
@@ -36,6 +36,8 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     setOutfitItem,
     setIsCartOpen,
     userAuth,
+    allProducts,
+    fetchProductsFromDb,
   } = useStore();
 
   const isSaved = isInVault(product.id);
@@ -90,6 +92,97 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
       localStorage.setItem('irisi_recently_viewed', JSON.stringify(updated));
     } catch (e) {}
   }, [product?.id]);
+
+  useEffect(() => {
+    if (!allProducts || allProducts.length === 0) {
+      fetchProductsFromDb();
+    }
+  }, [allProducts, fetchProductsFromDb]);
+
+  // Similar products recommendation algorithm based on category, department, gender & keywords
+  const similarProducts = useMemo(() => {
+    if (!product || !allProducts || allProducts.length === 0) return [];
+    const pCat = (product.category || '').toLowerCase().trim();
+    const pGender = (product.genderTarget || '').toLowerCase().trim();
+    const pVendor = (product.vendorId || product.vendorName || '').toLowerCase().trim();
+    const pDepartment = (product.department || '').toLowerCase().trim();
+    const pName = (product.name || '').toLowerCase();
+
+    const stopWords = new Set(['with', 'from', 'black', 'white', 'luxury', 'classic', 'drop', 'edition', 'the', 'and', 'for', 'men', 'women']);
+    const keywords = pName
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter((w: string) => w.length > 2 && !stopWords.has(w));
+
+    const candidates = allProducts.filter((p: any) => String(p.id) !== String(product.id));
+
+    const scored = candidates.map((cand: any) => {
+      let score = 0;
+      const cCat = (cand.category || '').toLowerCase().trim();
+      const cGender = (cand.genderTarget || '').toLowerCase().trim();
+      const cVendor = (cand.vendorId || cand.vendorName || '').toLowerCase().trim();
+      const cDepartment = (cand.department || '').toLowerCase().trim();
+      const cName = (cand.name || '').toLowerCase();
+
+      // Category match (+8)
+      if (cCat && pCat && cCat === pCat) score += 8;
+
+      // Department match (+6)
+      if (cDepartment && pDepartment && cDepartment === pDepartment) score += 6;
+
+      // Gender compatibility
+      if (pGender && cGender) {
+        if (cGender === pGender) {
+          score += 5;
+        } else if (cGender === 'unisex' || pGender === 'unisex') {
+          score += 3;
+        } else {
+          score -= 10;
+        }
+      }
+
+      // Vendor / Brand (+4)
+      if (cVendor && pVendor && cVendor === pVendor) score += 4;
+
+      // Keyword matches (+3 each)
+      for (const kw of keywords) {
+        if (cName.includes(kw)) score += 3;
+      }
+
+      return { product: cand, score };
+    });
+
+    scored.sort((a: any, b: any) => b.score - a.score);
+
+    return scored
+      .filter((s: any) => s.score >= 5)
+      .slice(0, 8)
+      .map((s: any) => s.product);
+  }, [product, allProducts]);
+
+  // Genuine Recently Viewed products (strictly from localStorage history, ZERO mock fallbacks)
+  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('irisi_recently_viewed');
+      if (raw && allProducts && allProducts.length > 0) {
+        const ids: string[] = JSON.parse(raw);
+        if (Array.isArray(ids) && ids.length > 0) {
+          const matched = ids
+            .filter((id) => String(id) !== String(product?.id))
+            .map((id) => allProducts.find((p: any) => String(p.id) === String(id)))
+            .filter(Boolean);
+          if (matched.length > 0) {
+            setRecentlyViewed(matched.slice(0, 8));
+            return;
+          }
+        }
+      }
+    } catch (e) {}
+    setRecentlyViewed([]);
+  }, [allProducts, product?.id]);
 
   const handleCarouselTouchStart = (e: React.TouchEvent) => {
     setHasNudged(true);
@@ -849,6 +942,186 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           <MessageCircle className="h-4 w-4 fill-emerald-500/20" />
           <span>Inquire via WhatsApp Concierge</span>
         </a>
+
+        {/* 9. SIMILAR PIECES YOU MAY LIKE */}
+        {similarProducts.length > 0 && (
+          <div className="pt-6 border-t border-[var(--border-subtle)] space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[9px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
+                  Curated Recommendations
+                </span>
+                <h3 className="font-editorial text-base font-bold text-[var(--text-primary)]">
+                  Similar Pieces You May Like
+                </h3>
+              </div>
+              <Link
+                href={`/shop?category=${product.category || 'all'}`}
+                className="text-[10px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center gap-1 uppercase"
+              >
+                <span>More</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            {/* Horizontal Swipeable Product Cards */}
+            <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+              {similarProducts.map((item: any) => {
+                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                const isItemSaved = isInVault(item.id);
+                return (
+                  <div
+                    key={`similar-${item.id}`}
+                    className="w-36 shrink-0 rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex flex-col group shadow-sm hover:border-[var(--gold-accent)]/50 transition-colors"
+                  >
+                    <Link href={`/shop/${item.id}`} className="relative aspect-[3/4] w-full block bg-black/10 overflow-hidden">
+                      <Image
+                        src={itemImg}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleVaultItem(item);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:text-red-500 transition-colors cursor-pointer"
+                        aria-label="Wishlist"
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                      </button>
+                    </Link>
+                    <div className="p-2.5 flex flex-col justify-between flex-1 gap-1.5">
+                      <div>
+                        <span className="text-[8px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] font-bold block truncate">
+                          {item.vendorName || 'Atelier'}
+                        </span>
+                        <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
+                          <h4 className="text-[11px] font-medium text-[var(--text-primary)] line-clamp-1">
+                            {item.name}
+                          </h4>
+                        </Link>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]/50">
+                        <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
+                          ₦{Number(item.price || 0).toLocaleString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const defSize = Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes[0] : 'M';
+                            const defColor = Array.isArray(item.colors) && item.colors.length > 0 ? item.colors[0] : { name: 'Standard', hex: '#111111' };
+                            addToCart(item, defSize, defColor, 1);
+                          }}
+                          className="h-6 w-6 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all text-xs font-bold cursor-pointer"
+                          title="Quick Add to Bag"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 10. RECENTLY VIEWED (Strictly user's actual browsing history, ZERO mock fallbacks) */}
+        {recentlyViewed.length > 0 && (
+          <div className="pt-6 border-t border-[var(--border-subtle)] space-y-3.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[9px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
+                  Your Browsing History
+                </span>
+                <h3 className="font-editorial text-base font-bold text-[var(--text-primary)]">
+                  Recently Viewed
+                </h3>
+              </div>
+              <Link
+                href="/shop"
+                className="text-[10px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center gap-1 uppercase"
+              >
+                <span>Shop All</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            {/* Horizontal Swipeable Product Cards */}
+            <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
+              {recentlyViewed.map((item: any) => {
+                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                const isItemSaved = isInVault(item.id);
+                return (
+                  <div
+                    key={`recent-${item.id}`}
+                    className="w-36 shrink-0 rounded-2xl overflow-hidden border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex flex-col group shadow-sm hover:border-[var(--gold-accent)]/50 transition-colors"
+                  >
+                    <Link href={`/shop/${item.id}`} className="relative aspect-[3/4] w-full block bg-black/10 overflow-hidden">
+                      <Image
+                        src={itemImg}
+                        alt={item.name}
+                        fill
+                        unoptimized
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleVaultItem(item);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white hover:text-red-500 transition-colors cursor-pointer"
+                        aria-label="Wishlist"
+                      >
+                        <Heart className={`h-3.5 w-3.5 ${isItemSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                      </button>
+                    </Link>
+                    <div className="p-2.5 flex flex-col justify-between flex-1 gap-1.5">
+                      <div>
+                        <span className="text-[8px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] font-bold block truncate">
+                          {item.vendorName || 'Atelier'}
+                        </span>
+                        <Link href={`/shop/${item.id}`} className="hover:text-[var(--gold-accent)] transition-colors">
+                          <h4 className="text-[11px] font-medium text-[var(--text-primary)] line-clamp-1">
+                            {item.name}
+                          </h4>
+                        </Link>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]/50">
+                        <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
+                          ₦{Number(item.price || 0).toLocaleString()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const defSize = Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes[0] : 'M';
+                            const defColor = Array.isArray(item.colors) && item.colors.length > 0 ? item.colors[0] : { name: 'Standard', hex: '#111111' };
+                            addToCart(item, defSize, defColor, 1);
+                          }}
+                          className="h-6 w-6 rounded-lg bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center hover:opacity-90 active:scale-95 transition-all text-xs font-bold cursor-pointer"
+                          title="Quick Add to Bag"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
       </div>
 
