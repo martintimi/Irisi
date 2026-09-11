@@ -226,11 +226,8 @@ export default function HeroSection() {
                       fill
                       unoptimized
                       priority
-                      className="object-cover object-center brightness-95 group-hover:scale-105 transition-transform duration-700"
+                      className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
                     />
-
-                    {/* Gradient Overlays */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none" />
 
                     {/* Top Origin Badge */}
                     <div className="absolute top-3 left-3 z-10">

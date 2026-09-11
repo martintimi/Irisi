@@ -943,24 +943,23 @@ export default function MobileHomeView() {
                 fill
                 unoptimized
                 priority={idx === 0}
-                className="object-cover opacity-85 scale-105 transition-transform duration-1000"
+                className="object-cover scale-105 transition-transform duration-1000"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-black/15" />
 
               <div className="absolute inset-0 flex flex-col items-center justify-end pb-10 px-4 text-center z-10 space-y-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[9px] font-mono tracking-widest uppercase font-bold border border-white/20">
+                <span className="px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white text-[9px] font-mono tracking-widest uppercase font-bold border border-white/30 shadow-md">
                   {slide.tag}
                 </span>
 
-                <span className="text-[11px] font-mono tracking-widest text-neutral-300 uppercase font-semibold">
+                <span className="text-[11px] font-mono tracking-widest text-neutral-100 uppercase font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                   {slide.subtitle}
                 </span>
 
-                <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-md">
+                <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-[0_3px_8px_rgba(0,0,0,0.9)]">
                   {slide.title}
                 </h1>
 
-                <p className="text-xs font-mono font-bold tracking-widest text-amber-300 uppercase">
+                <p className="text-xs font-mono font-bold tracking-widest text-amber-300 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                   {slide.highlight}
                 </p>
 
