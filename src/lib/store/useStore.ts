@@ -255,45 +255,6 @@ const oldInitialOrders: Order[] = [
 ];
 */
 
-const initialNotifications: NotificationItem[] = [
-  {
-    id: 'notif-1',
-    type: 'review_request',
-    title: 'How did your clothes fit?',
-    message: 'Your ready-to-wear order #VY-ORD-6965 was delivered! Rate your boutique experience and sizing.',
-    timestamp: 'Just now',
-    read: false,
-    orderId: 'ord-1787800513067',
-    actionUrl: '/track-order?orderNumber=%23VY-ORD-6965'
-  },
-  {
-    id: 'notif-2',
-    type: 'order_status',
-    title: 'Package Dispatched with Rider',
-    message: 'Your clothes from Moji Wears are on the way! Rider: 09043*****. Call driver directly for updates.',
-    timestamp: '15 mins ago',
-    read: false,
-    orderId: 'ord-1787800513067'
-  },
-  {
-    id: 'notif-3',
-    type: 'order_status',
-    title: 'Payment Secured via Ìrísí Escrow',
-    message: 'Your payment was locked safely in escrow. Funds are held until you receive and inspect your clothes.',
-    timestamp: '1 hour ago',
-    read: true,
-    orderId: 'ord-1787800513067'
-  },
-  {
-    id: 'notif-4',
-    type: 'order_status',
-    title: 'Order Confirmed at Store',
-    message: 'Boutique received your order and is packaging your ready-to-wear pieces for courier handoff.',
-    timestamp: '2 hours ago',
-    read: true,
-    orderId: 'ord-1787800513067'
-  }
-];
 
 const initialStories: VendorStory[] = [
   {
@@ -612,8 +573,8 @@ export const useStore = create<IrisiState>()(
         }));
       },
 
-      // Notifications Management
-      userNotifications: initialNotifications,
+      // Notifications Management (real user notifications only)
+      userNotifications: [],
       markNotificationAsRead: (notificationId) => {
         set((state) => ({
           userNotifications: state.userNotifications.map((n) =>

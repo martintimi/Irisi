@@ -39,9 +39,13 @@ export default function ProfilePage() {
   // Fetch real orders from PostgreSQL on mount
   useEffect(() => {
     async function loadRealOrders() {
+      const userEmail = (userAuth?.email || bodyProfile?.email || '').trim();
+      if (!userEmail) {
+        setLiveOrders([]);
+        return;
+      }
       try {
-        const userEmail = userAuth?.email || bodyProfile?.email || '';
-        const url = userEmail ? `/api/orders?email=${encodeURIComponent(userEmail)}` : '/api/orders';
+        const url = `/api/orders?email=${encodeURIComponent(userEmail)}`;
         const res = await fetch(url);
         const data = await res.json();
         if (data.success && Array.isArray(data.orders)) {

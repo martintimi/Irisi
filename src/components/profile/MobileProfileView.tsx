@@ -66,23 +66,19 @@ export default function MobileProfileView() {
           }
         }
         
-        // If 0 orders found with email query or no email, fetch recent orders and filter by phone or email
-        if (fetched.length === 0) {
+        // If 0 orders found with email query, filter all orders strictly by current user's email or phone
+        if (fetched.length === 0 && (userEmail || userPhone)) {
           const resAll = await fetch('/api/orders');
           const dataAll = await resAll.json();
           if (dataAll.success && Array.isArray(dataAll.orders)) {
-            if (userEmail || userPhone) {
-              const matched = dataAll.orders.filter((o: any) => {
-                const oEmail = (o.customerEmail || '').toLowerCase();
-                const oPhone = (o.customerPhone || '').replace(/\D/g, '');
-                const cleanPhone = userPhone.replace(/\D/g, '');
-                return (userEmail && oEmail.includes(userEmail.toLowerCase())) ||
-                       (cleanPhone && cleanPhone.length > 5 && oPhone.includes(cleanPhone));
-              });
-              fetched = matched.length > 0 ? matched : dataAll.orders.slice(0, 10);
-            } else {
-              fetched = dataAll.orders.slice(0, 10);
-            }
+            const matched = dataAll.orders.filter((o: any) => {
+              const oEmail = (o.customerEmail || '').toLowerCase().trim();
+              const oPhone = (o.customerPhone || '').replace(/\D/g, '');
+              const cleanPhone = userPhone.replace(/\D/g, '');
+              return (userEmail && oEmail === userEmail.toLowerCase().trim()) ||
+                     (cleanPhone && cleanPhone.length >= 7 && oPhone.includes(cleanPhone));
+            });
+            fetched = matched;
           }
         }
 
