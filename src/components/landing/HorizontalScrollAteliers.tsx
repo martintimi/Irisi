@@ -69,7 +69,7 @@ export default function HorizontalScrollAteliers() {
               <span>FEATURED DESIGNERS & BRANDS</span>
             </div>
             <h2 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
-              Curated Nigerian Designers
+              Top Nigerian Designers & Brands
             </h2>
           </div>
 

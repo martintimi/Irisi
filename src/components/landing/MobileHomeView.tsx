@@ -49,11 +49,46 @@ export default function MobileHomeView() {
             link: '/shop?gender=women&category=dresses',
           },
           {
-            id: 'w-street',
-            title: 'Streetwear & Tops',
-            subtitle: 'Casual Tops & Blouses',
-            image: '/images/uploaded/Streetwear&topsWomen.jpeg',
-            link: '/shop?gender=women&category=women-hoodies',
+            id: 'w-coord',
+            title: 'Two-Piece Sets',
+            subtitle: 'Matching Co-ords & Suits',
+            image: '/images/categories/women_coord.jpg',
+            link: '/shop?gender=women&category=two-piece',
+          },
+          {
+            id: 'w-jeans',
+            title: 'Jeans & Cargo Pants',
+            subtitle: 'Wide-Leg Denim & Streetwear',
+            image: '/images/categories/jeanforwomen.jpeg',
+            link: '/shop?gender=women&category=women-jeans',
+          },
+          {
+            id: 'w-skirts',
+            title: 'Skirts & Minis',
+            subtitle: 'Pleated Minis & Casual Midis',
+            image: '/images/categories/skirtandminishirts.jpeg',
+            link: '/shop?gender=women&category=skirts',
+          },
+          {
+            id: 'w-boubou',
+            title: 'Boubou & Kaftans',
+            subtitle: 'Adire Silk & Flowing Robes',
+            image: '/images/editorial/nigerian_female_couture.jpg',
+            link: '/shop?gender=women&category=boubou',
+          },
+          {
+            id: 'w-heels',
+            title: 'Heels & Pumps',
+            subtitle: 'Stilettos, Blocks & Mules',
+            image: '/images/categories/women_heels.jpg',
+            link: '/shop?gender=women&category=heels',
+          },
+          {
+            id: 'w-crocs',
+            title: 'Crocs & Slides',
+            subtitle: 'Platform Clogs & Slides',
+            image: '/images/categories/crocs_women.jpg',
+            link: '/shop?gender=women&category=clogs',
           },
           {
             id: 'w-bags',
@@ -63,13 +98,6 @@ export default function MobileHomeView() {
             link: '/shop?gender=women&department=bags',
           },
           {
-            id: 'w-shoes',
-            title: 'Shoes & Heels',
-            subtitle: 'Heels, Slides & Sneakers',
-            image: '/images/uploaded/footwear&slideswomen.jpeg',
-            link: '/shop?gender=women&department=footwear',
-          },
-          {
             id: 'w-jewelry',
             title: 'Jewelry & Watches',
             subtitle: 'Necklaces, Rings & Watches',
@@ -77,11 +105,11 @@ export default function MobileHomeView() {
             link: '/shop?gender=women&category=jewelry',
           },
           {
-            id: 'w-shirts',
-            title: 'Two-Piece Sets',
-            subtitle: 'Matching Sets & Loungewear',
-            image: '/images/editorial/female_shirt.jpg',
-            link: '/shop?gender=women&category=tops',
+            id: 'w-street',
+            title: 'Streetwear & Tops',
+            subtitle: 'Casual Tops & Blouses',
+            image: '/images/uploaded/Streetwear&topsWomen.jpeg',
+            link: '/shop?gender=women&category=women-hoodies',
           },
         ];
 
@@ -280,38 +308,83 @@ export default function MobileHomeView() {
           {
             id: 'w-slide-1',
             tag: 'DRESSES & GOWNS',
-            title: 'EVENING GOWNS & LACE',
-            subtitle: 'OCCASION & RECEPTION WEAR',
-            highlight: 'PERFECT FOR OWAMBE & DINNERS',
-            image: '/images/editorial/nigerian_female_couture.jpg',
+            title: 'EVENING GOWNS & MAXI DRESSES',
+            subtitle: 'BODYCONS, SLIPS & COCKTAIL DRESSES',
+            highlight: 'ELEGANT DINNERS & SPECIAL EVENTS',
+            image: '/images/categories/dressesforwomen.jpeg',
             link: '/shop?gender=women&category=dresses',
           },
           {
             id: 'w-slide-2',
-            tag: 'STREETWEAR',
-            title: 'HOODIES, CARGO & DENIM',
-            subtitle: 'CASUAL STREETWEAR DROPS',
-            highlight: 'RELAXED & COMFORTABLE FITS',
-            image: '/images/uploaded/Oversizedhoodie&cargo.jpeg',
-            link: '/shop?gender=women&department=clothing',
+            tag: 'TWO-PIECE SETS',
+            title: 'MATCHING CO-ORD SETS',
+            subtitle: 'MATCHING TOPS & TROUSERS',
+            highlight: 'CHIC RESORT & BRUNCH WEAR',
+            image: '/images/categories/women_coord.jpg',
+            link: '/shop?gender=women&category=two-piece',
           },
           {
             id: 'w-slide-3',
-            tag: 'NATIVE & TRADITIONAL',
-            title: 'SILK BOUBOU & KAFTANS',
-            subtitle: 'ELEGANT TRADITIONAL ROBES',
-            highlight: 'FLOWING & COMFORTABLE DESIGNS',
-            image: '/images/editorial/female_dress.jpg',
-            link: '/shop?gender=women&category=boubou',
+            tag: 'SKIRTS & MINIS',
+            title: 'PLEATED SKIRTS & MINI SKIRTS',
+            subtitle: 'CASUAL MIDIS & STATEMENT MINIS',
+            highlight: 'EFFORTLESS STREET & PARTY FIT',
+            image: '/images/categories/skirtandminishirts.jpeg',
+            link: '/shop?gender=women&category=skirts',
           },
           {
             id: 'w-slide-4',
-            tag: 'LOUNGEWEAR',
-            title: 'TWO-PIECE SETS & SLEEPWEAR',
-            subtitle: 'LUXURY SILK & CASUAL SETS',
-            highlight: 'RELAXED AT-HOME COMFORT',
-            image: '/images/products/women_loungewear_luxury.jpg',
-            link: '/shop?gender=women&category=women-loungewear',
+            tag: 'JEANS & CARGO',
+            title: 'WIDE-LEG JEANS & CARGO PANTS',
+            subtitle: 'HIGH-WAISTED DENIM & STREETWEAR',
+            highlight: 'RELAXED & FLATTERING SILHOUETTES',
+            image: '/images/categories/jeanforwomen.jpeg',
+            link: '/shop?gender=women&category=women-jeans',
+          },
+          {
+            id: 'w-slide-5',
+            tag: 'NATIVE & TRADITIONAL',
+            title: 'SILK BOUBOU & RICH KAFTANS',
+            subtitle: 'FLOWING ADIRE & EMBROIDERED ROBES',
+            highlight: 'WEDDINGS & OWAMBE CELEBRATIONS',
+            image: '/images/editorial/nigerian_female_couture.jpg',
+            link: '/shop?gender=women&category=boubou',
+          },
+          {
+            id: 'w-slide-6',
+            tag: 'HEELS & FOOTWEAR',
+            title: 'HEELS, PUMPS & ELEGANT MULES',
+            subtitle: 'STILETTO HEELS & STRAPPY DRESS SANDALS',
+            highlight: 'HEAD-TO-TOE OCCASION GLAMOUR',
+            image: '/images/categories/women_heels.jpg',
+            link: '/shop?gender=women&category=heels',
+          },
+          {
+            id: 'w-slide-7',
+            tag: 'CROCS & SLIDES',
+            title: 'PLATFORM CROCS & COMFORT SLIDES',
+            subtitle: 'FOAM CLOGS & CASUAL LEATHER SLIDES',
+            highlight: 'LIGHTWEIGHT EVERYDAY COMFORT',
+            image: '/images/categories/crocs_women.jpg',
+            link: '/shop?gender=women&category=clogs',
+          },
+          {
+            id: 'w-slide-8',
+            tag: 'HANDBAGS & TOTES',
+            title: 'LUXURY HANDBAGS & CLUTCHES',
+            subtitle: 'SHOULDER TOTES & EVENING MINIS',
+            highlight: 'STATEMENT LEATHER ACCESSORIES',
+            image: '/images/uploaded/LeaderbagsWomen.jpeg',
+            link: '/shop?gender=women&department=bags',
+          },
+          {
+            id: 'w-slide-9',
+            tag: 'JEWELRY & WATCHES',
+            title: 'GOLD JEWELRY & WATCHES',
+            subtitle: 'NECKLACES, RINGS & STATEMENT ACCENTS',
+            highlight: 'ELEGANT FINISHING TOUCHES',
+            image: '/images/uploaded/WomenJewelry.jpeg',
+            link: '/shop?gender=women&category=jewelry',
           },
         ];
 
@@ -1074,14 +1147,14 @@ export default function MobileHomeView() {
         )}
       </section>
 
-      {/* ── 8. CURATED BY OCCASION (EDITORIAL LIFESTYLE) ──────── */}
+      {/* ── 8. SHOP BY OCCASION ──────────────────────────────── */}
       <section className="px-4 pt-12 space-y-3">
         <div className="border-b border-neutral-200 dark:border-neutral-800 pb-2">
           <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
-            Curated by Occasion
+            Shop by Occasion
           </h2>
           <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-            Head-to-Toe Nigerian Fashion Edits
+            Outfits for Weddings, Streetwear, Work & Weekends
           </span>
         </div>
 

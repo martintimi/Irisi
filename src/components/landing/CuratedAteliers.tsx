@@ -87,7 +87,7 @@ export default function CuratedAteliers() {
             </h2>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed">
-              Curated collections for traditional weddings, everyday streetwear, formal events, and weekend relaxation.
+              Outfits and styles for traditional weddings, everyday streetwear, formal events, and weekend relaxation.
             </p>
           </div>
 
