@@ -200,14 +200,14 @@ export default function MobileHomeView() {
             id: 'n-agbada',
             title: '3-Piece Agbada',
             subtitle: 'Embroidered Native Robes',
-            image: '/images/products/BlackAgbada.jpg',
+            image: '/images/uploaded/agbadaformen.jpeg',
             link: '/shop?gender=men&category=agbada',
           },
           {
             id: 'n-senator',
             title: 'Senator Sets & Kaftans',
             subtitle: 'Tailored Native 2-Piece',
-            image: '/images/products/BlackSenator.jpg',
+            image: '/images/uploaded/senatorformen.jpeg',
             link: '/shop?gender=men&category=senator',
           },
           {
@@ -279,7 +279,7 @@ export default function MobileHomeView() {
             id: 'm-native',
             title: 'Native & Agbada',
             subtitle: 'Senators & 3-Piece Agbada',
-            image: '/images/products/BlackAgbada.jpg',
+            image: '/images/uploaded/agbadaformen.jpeg',
             link: '/shop?gender=men&department=native',
           },
           {
@@ -293,14 +293,14 @@ export default function MobileHomeView() {
             id: 'm-shoes',
             title: 'Shoes & Footwear',
             subtitle: 'Slides, Loafers & Sneakers',
-            image: '/images/products/UnisexSlides.jpg',
+            image: '/images/uploaded/shoefootwareformen.jpeg',
             link: '/shop?gender=men&department=footwear',
           },
           {
             id: 'm-tees',
             title: 'T-Shirts & Polos',
             subtitle: 'Graphic Tees & Polos',
-            image: '/images/uploaded/t-shirtsandgraphic.jpeg',
+            image: '/images/uploaded/tshirtandpoloformen.jpeg',
             link: '/shop?gender=men&category=tshirts',
           },
           {
@@ -475,7 +475,7 @@ export default function MobileHomeView() {
             title: 'ROYAL 3-PIECE AGBADA',
             subtitle: 'WEDDINGS & OWAMBE CELEBRATIONS',
             highlight: 'EMBROIDERED CEREMONIAL ROBES',
-            image: '/images/products/BlackAgbada.jpg',
+            image: '/images/uploaded/agbadaformen.jpeg',
             link: '/shop?gender=men&category=agbada',
           },
           {
@@ -484,7 +484,7 @@ export default function MobileHomeView() {
             title: 'TAILORED SENATOR SETS',
             subtitle: 'OFFICE & SUNDAY BEST',
             highlight: 'CLEAN TWO-PIECE OUTFITS',
-            image: '/images/products/BlackSenator.jpg',
+            image: '/images/uploaded/senatorformen.jpeg',
             link: '/shop?gender=men&category=senator',
           },
           {
@@ -556,7 +556,7 @@ export default function MobileHomeView() {
             title: 'ROYAL 3-PIECE AGBADA',
             subtitle: 'WEDDINGS & CELEBRATIONS',
             highlight: 'EMBROIDERED NIGERIAN ROBES',
-            image: '/images/products/BlackAgbada.jpg',
+            image: '/images/uploaded/agbadaformen.jpeg',
             link: '/shop?gender=men&category=agbada',
           },
           {
@@ -574,7 +574,7 @@ export default function MobileHomeView() {
             title: 'TAILORED SENATOR SETS',
             subtitle: 'OFFICE & SUNDAY BEST',
             highlight: 'CLEAN TWO-PIECE KAFTANS',
-            image: '/images/products/BlackSenator.jpg',
+            image: '/images/uploaded/senatorformen.jpeg',
             link: '/shop?gender=men&category=senator',
           },
           {
@@ -583,7 +583,7 @@ export default function MobileHomeView() {
             title: 'LEATHER SLIDES & SHOES',
             subtitle: 'HANDMADE CALFSKIN FOOTWEAR',
             highlight: 'DURABLE GENUINE LEATHER',
-            image: '/images/products/UnisexSlides.jpg',
+            image: '/images/uploaded/shoefootwareformen.jpeg',
             link: '/shop?gender=men&department=footwear',
           },
           {
@@ -592,7 +592,7 @@ export default function MobileHomeView() {
             title: 'POLOS & CASUAL SHIRTS',
             subtitle: 'SMART COLLAR SHIRTS & POLOS',
             highlight: 'REFINED EVERYDAY CASUALS',
-            image: '/images/uploaded/poloandshirt.jpeg',
+            image: '/images/uploaded/tshirtandpoloformen.jpeg',
             link: '/shop?gender=men&category=polos',
           },
           {
