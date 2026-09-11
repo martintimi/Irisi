@@ -150,14 +150,27 @@ export default function MobileVendorAtelier({
           </label>
           <select
             disabled={isFieldsDisabled}
-            value={form.specialty || 'multi_department'}
-            onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+            value={
+              form.specialty === 'apparel' ? 'streetwear' :
+              form.specialty === 'jewelry' ? 'accessories' :
+              (form.specialty || 'streetwear')
+            }
+            onChange={(e) => {
+              const spec = e.target.value;
+              setForm({
+                ...form,
+                specialty: spec,
+                vendorType: spec === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'
+              });
+            }}
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
-            <option value="jewelry">Jewelry, Watches &amp; Luxury Accessories</option>
-            <option value="footwear">Footwear &amp; Slides Atelier</option>
-            <option value="apparel">Clothing &amp; Streetwear Boutique</option>
-            <option value="multi_department">Multi-Department Boutique</option>
+            <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
+            <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
+            <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
+            <option value="caps">Caps, Hats &amp; Headwear (Fila, Dad Caps, Beanies, Bucket Hats)</option>
+            <option value="accessories">Jewelry, Watches &amp; Luxury Accessories (Chains, Watches, Bags, Belts)</option>
+            <option value="multi_department">Multi-Department Boutique (All Fashion &amp; Accessories)</option>
           </select>
         </div>
 

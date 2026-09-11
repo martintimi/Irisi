@@ -68,7 +68,8 @@ export default function VendorPortalLayout({
             approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending')
           });
           const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
-          const spec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'apparel' : 'multi_department');
+          const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+          const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
           setVendorProfile({
             brandName: v.brandName || v.brand_name || vendorProfile.brandName || 'My Brand',
             designerName: v.designerName || v.designer_name || v.contact_person || vendorProfile.designerName || 'Manager',

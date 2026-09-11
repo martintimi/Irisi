@@ -153,7 +153,7 @@ export async function POST(request: Request) {
           snapchat: '',
           whatsapp: cleanPhone || ''
         },
-        isProfileSaved: false,
+        isProfileSaved: true,
         approvalStatus: 'pending',
         rejectionReason: ''
       };

@@ -94,7 +94,8 @@ export default function VendorAtelierProfilePage() {
       if (res.ok && data.success && data.vendor) {
         const v = data.vendor;
         const rates = v.shippingRates || {};
-        const spec = v.specialty || v.vendorSpecialty || (v.vendor_type === 'fashion_designer' ? 'apparel' : 'multi_department');
+        const rawSpec = v.specialty || v.vendorSpecialty || (v.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+        const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
         setForm({
           brandName: v.brandName || v.brand_name || '',
           designerName: v.designerName || v.designer_name || v.contact_person || '',
@@ -346,7 +347,11 @@ export default function VendorAtelierProfilePage() {
               </label>
               <select
                 disabled={isFieldsDisabled}
-                value={form.specialty || 'streetwear'}
+                value={
+                  form.specialty === 'apparel' ? 'streetwear' :
+                  form.specialty === 'jewelry' ? 'accessories' :
+                  (form.specialty || 'streetwear')
+                }
                 onChange={(e) => {
                   const spec = e.target.value as any;
                   setForm({

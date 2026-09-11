@@ -56,13 +56,15 @@ export async function GET(request: Request) {
         const parsed = JSON.parse(bioText);
         bioText = parsed.bio || '';
         socialLinks = { ...socialLinks, ...parsed.socialLinks };
-        isProfileSaved = parsed.isProfileSaved !== undefined ? parsed.isProfileSaved : true;
+        const hasCoreInfo = !!(vendor?.brand_name && (vendor?.phone || vendor?.email) && vendor?.account_number);
+        isProfileSaved = parsed.isProfileSaved !== undefined ? (parsed.isProfileSaved || hasCoreInfo) : true;
         approvalStatus = parsed.approvalStatus || (vendor?.is_verified ? 'approved' : 'pending');
         rejectionReason = parsed.rejectionReason || '';
         city = parsed.city || '';
         state = parsed.state || '';
         dispatchDays = parsed.dispatchDays || '1-2 business days';
-        vendorSpecialty = parsed.specialty || parsed.vendorSpecialty || (vendor?.vendor_type === 'fashion_designer' ? 'apparel' : 'multi_department');
+        const rawSpec = parsed.specialty || parsed.vendorSpecialty || (vendor?.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+        vendorSpecialty = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
       } catch (e) {}
     } else if (bioText && bioText.trim().length > 0) {
       isProfileSaved = true;
