@@ -170,7 +170,7 @@ export async function POST(request: Request) {
 
     // 3. Strict Role Isolation Check
     if (expectedRole === 'shopper') {
-      if (vendorRecord && !profileRecord && metadataType === 'vendor') {
+      if (vendorRecord || metadataType === 'vendor') {
         return NextResponse.json({
           error: 'This account is registered as a Merchant Atelier. Please sign in via the Partner Portal at /vendor-portal/auth.'
         }, { status: 403 });
@@ -195,13 +195,12 @@ export async function POST(request: Request) {
     }
 
     if (expectedRole === 'vendor') {
-      if (!vendorRecord && (profileRecord || metadataType === 'shopper')) {
-        return NextResponse.json({
-          error: 'This account is registered as a Customer Shopper. Please sign in via the Shopper Storefront at /auth.'
-        }, { status: 403 });
-      }
-
       if (!vendorRecord) {
+        if (profileRecord || metadataType === 'shopper') {
+          return NextResponse.json({
+            error: 'This account is registered as a Customer Shopper. Please sign in via the Shopper Storefront at /auth.'
+          }, { status: 403 });
+        }
         return NextResponse.json({
           error: 'No merchant atelier found for this account. Please register your store first.'
         }, { status: 404 });

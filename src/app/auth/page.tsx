@@ -669,18 +669,28 @@ function AuthPageContent() {
 
           {/* Error Message Alert with Auto-Dismiss */}
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono-luxury flex items-center justify-between gap-2.5 animate-fadeIn">
-              <div className="flex items-center gap-2.5">
-                <div className="h-2 w-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
-                <span>{errorMessage}</span>
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono-luxury flex flex-col gap-2 animate-fadeIn">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-2 w-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
+                  <span>{errorMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMessage('')}
+                  className="text-[10px] text-rose-400/60 hover:text-rose-300 transition-colors uppercase font-bold shrink-0"
+                >
+                  Dismiss
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setErrorMessage('')}
-                className="text-[10px] text-rose-400/60 hover:text-rose-300 transition-colors uppercase font-bold"
-              >
-                Dismiss
-              </button>
+              {errorMessage.includes('vendor-portal/auth') && (
+                <Link
+                  href="/vendor-portal/auth"
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-bold uppercase tracking-wider transition-colors border border-rose-500/40 mt-1"
+                >
+                  Go to Partner Portal Login →
+                </Link>
+              )}
             </div>
           )}
 
