@@ -94,7 +94,7 @@ export default function MarketplaceGrid() {
 
   const brandOptions = useMemo(() => {
     const brandsMap = new Map<string, { id: string; name: string; count: number }>();
-    brandsMap.set('all', { id: 'all', name: 'All Ateliers & Boutiques', count: allProducts.length });
+    brandsMap.set('all', { id: 'all', name: 'All Brands & Designers', count: allProducts.length });
     
     allProducts.forEach(p => {
       const vId = p.vendorId || 'boutique';

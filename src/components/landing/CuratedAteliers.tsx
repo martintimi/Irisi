@@ -22,23 +22,23 @@ const OCCASION_EDITS: OccasionEdit[] = [
   {
     id: 'owambe-ceremonial',
     number: '01',
-    categoryTag: 'CEREMONIAL ROYALTIES',
-    title: 'The Grand Owambe',
-    subtitle: 'Grand Agbadas & Bespoke Kaftans',
-    description: 'Statement 3-piece grand Agbada robes and precision geometric collar Senators tailored for traditional weddings and galas.',
-    pieces: 'Royal Agbada · Geometric Senators · Aso-Oke Fila',
+    categoryTag: 'TRADITIONAL & NATIVE',
+    title: 'Weddings & Owambe',
+    subtitle: 'Agbada Robes & Senator Kaftans',
+    description: 'Statement 3-piece Agbada robes and tailored Senator sets crafted for Nigerian weddings, galas, and celebrations.',
+    pieces: '3-Piece Agbada · Tailored Senators · Aso-Oke Fila',
     image: '/images/editorial/nigerian_male_couture.jpg',
     link: '/category/native',
-    dropsCount: 'Couture Native'
+    dropsCount: 'Native Outfits'
   },
   {
     id: 'lagos-streetwear',
     number: '02',
-    categoryTag: 'URBAN VANGUARD',
-    title: 'Lagos Cyber-Street',
-    subtitle: '450GSM Fleece & Boxy Silhouettes',
-    description: 'Heavyweight dropped-shoulder hoodies, raw selvedge wide-leg denim, and cyber graphics engineered for Lagos nightlife.',
-    pieces: 'Trapstar Hoodies · Baggy Selvedge · Boxy Graphic Tees',
+    categoryTag: 'STREETWEAR',
+    title: 'Streetwear & Drops',
+    subtitle: 'Heavyweight Hoodies & Denim',
+    description: 'Heavyweight oversized hoodies, baggy cargo pants, and graphic tees engineered for everyday street fashion.',
+    pieces: 'Oversized Hoodies · Baggy Jeans · Graphic Tees',
     image: '/images/editorial/modern_male_streetwear.jpg',
     link: '/category/streetwear',
     dropsCount: 'Street Drops'
@@ -46,26 +46,26 @@ const OCCASION_EDITS: OccasionEdit[] = [
   {
     id: 'sunday-executive',
     number: '03',
-    categoryTag: 'QUIET LUXURY',
-    title: 'Sunday Best & Executive',
-    subtitle: 'Merino Kaftans & Clean Tailoring',
-    description: 'Razor-sharp concealed plackets, fine wool kaftans, and pressed formal trousers crafted for corporate boardrooms and Sunday service.',
-    pieces: 'Tailored Kaftans · Formal Trousers · Smart Leather Shoes',
+    categoryTag: 'OFFICE & SUNDAY BEST',
+    title: 'Tailored & Office Wear',
+    subtitle: 'Fine Kaftans & Clean Trousers',
+    description: 'Clean Senator sets, pressed formal trousers, and smart leather shoes crafted for church service and corporate meetings.',
+    pieces: 'Tailored Kaftans · Dress Trousers · Smart Shoes',
     image: '/images/editorial/male_senator.jpg',
     link: '/category/shirts',
-    dropsCount: 'Bespoke Tailoring'
+    dropsCount: 'Tailored Outfits'
   },
   {
     id: 'resort-chilling',
     number: '04',
-    categoryTag: 'COASTAL LIVING',
-    title: 'Weekend Resort Edit',
-    subtitle: 'Fluid Silks & Handcrafted Palms',
-    description: 'Breathable linen boubous, relaxed button-down shirts, and handcrafted Northern calf-leather slides for effortless coastal ease.',
-    pieces: 'Fluid Linen Boubous · Leather Slides · Minimal Jewelry',
+    categoryTag: 'CASUAL & RESORT',
+    title: 'Weekend & Casual',
+    subtitle: 'Relaxed Shirts & Leather Slides',
+    description: 'Breathable linen shirts, lightweight boubous, and comfortable handmade leather slides for easy weekend relaxation.',
+    pieces: 'Linen Shirts · Leather Slides · Casual Slippers',
     image: '/images/editorial/male_shirt.jpg',
     link: '/category/footwear',
-    dropsCount: 'Artisanal Slides'
+    dropsCount: 'Footwear & Slides'
   }
 ];
 
@@ -79,15 +79,15 @@ export default function CuratedAteliers() {
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--gold-accent)] text-xs font-mono-luxury uppercase tracking-widest font-bold">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>CURATED OCCASIONS</span>
+              <span>SHOP BY OCCASION</span>
             </div>
 
             <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl font-normal text-[var(--text-primary)] leading-tight">
-              Dress for the Nigerian Rhythm
+              Dress for Every Nigerian Occasion
             </h2>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed">
-              Four sovereign fashion aesthetics engineered for the weddings, midnight cyber-streets, executive halls, and coastal retreats that define contemporary Nigerian living.
+              Curated collections for traditional weddings, everyday streetwear, formal events, and weekend relaxation.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export default function CuratedAteliers() {
             href="/shop"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] transition-all font-semibold self-start md:self-auto group"
           >
-            <span>Explore All Collections</span>
+            <span>Explore All Outfits</span>
             <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
@@ -152,7 +152,7 @@ export default function CuratedAteliers() {
                 {/* Signature Pieces Tag Strip */}
                 <div className="pt-2 border-t border-white/15 space-y-2">
                   <span className="text-[9px] font-mono-luxury uppercase tracking-widest text-zinc-400 block font-bold">
-                    Signature Silhouettes:
+                    Popular Items:
                   </span>
                   <div className="text-[11px] font-mono-luxury text-white/90 font-semibold line-clamp-1">
                     {occasion.pieces}
@@ -161,7 +161,7 @@ export default function CuratedAteliers() {
 
                 {/* Action Link */}
                 <div className="pt-2 flex items-center justify-between text-xs font-mono-luxury text-[var(--gold-accent)] font-bold uppercase tracking-wider">
-                  <span>Explore Occasion Edit</span>
+                  <span>Shop Collection</span>
                   <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1.5 transition-transform" />
                 </div>
               </div>

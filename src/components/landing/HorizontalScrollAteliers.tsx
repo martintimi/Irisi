@@ -66,15 +66,15 @@ export default function HorizontalScrollAteliers() {
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase tracking-widest font-bold">
               <Sparkles className="h-3 w-3" />
-              <span>THE DESIGN HOUSES</span>
+              <span>FEATURED DESIGNERS & BRANDS</span>
             </div>
             <h2 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
-              Curated Nigerian Ateliers
+              Curated Nigerian Designers
             </h2>
           </div>
 
           <div className="text-xs font-mono-luxury uppercase text-[var(--text-muted)] hidden sm:block">
-            Scroll vertically to explore ateliers →
+            Scroll to explore designers →
           </div>
         </div>
 
