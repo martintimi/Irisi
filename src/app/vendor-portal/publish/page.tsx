@@ -850,7 +850,7 @@ export default function PublishGarmentPage() {
         setCreatedProductId(data.product?.id || `prod-${Date.now()}`);
         setIsSuccess(true);
         try {
-          fetchProductsFromDb();
+          fetchProductsFromDb(true);
         } catch (e) {}
         confetti({
           particleCount: 100,

@@ -915,7 +915,7 @@ export default function MobileVendorPublish({
         setLastPublishedName(name.trim());
         setIsPublishSuccess(true);
         try {
-          useStore.getState().fetchProductsFromDb();
+          useStore.getState().fetchProductsFromDb(true);
         } catch (e) {}
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         onPublishSuccess(prodId);

@@ -22,10 +22,12 @@ export default function VendorReportsPage() {
   useEffect(() => {
     async function loadReportsData() {
       try {
-        setIsLoading(true);
+        const activeVid = getActiveVendorId();
+        const currentVendorId = activeVid || (vendorProfile as any)?.id || vendorProfile.email || 'all';
+
         const [resOrders, resProd] = await Promise.all([
           vendorFetch('/api/orders'),
-          vendorFetch('/api/products')
+          vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId)}`)
         ]);
 
         const dataOrders = await resOrders.json();

@@ -54,7 +54,7 @@ export default function DirectSalesAssistantPage() {
           targetVendorId = profData.vendor.email || profData.vendor.id || vendorProfile.email || '';
         }
 
-        const resProd = await vendorFetch('/api/products');
+        const resProd = await vendorFetch(`/api/products?vendorId=${encodeURIComponent(targetVendorId || 'all')}`);
         const prodData = await resProd.json();
 
         if (prodData.success && Array.isArray(prodData.products)) {

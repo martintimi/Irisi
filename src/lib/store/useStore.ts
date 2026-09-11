@@ -54,7 +54,7 @@ export interface IrisiState {
   isProductsLoading: boolean;
   addCustomProduct: (product: Product) => void;
   setAllProducts: (products: Product[]) => void;
-  fetchProductsFromDb: () => Promise<void>;
+  fetchProductsFromDb: (force?: boolean) => Promise<void>;
 
   // Active Outfit Canvas
   activeOutfit: ActiveOutfit;
@@ -604,19 +604,19 @@ export const useStore = create<IrisiState>()(
       allProducts: [],
       isProductsLoading: true,
       setAllProducts: (products) => set({ allProducts: products }),
-      fetchProductsFromDb: async () => {
+      fetchProductsFromDb: async (force: boolean = false) => {
         if (typeof window === 'undefined') return;
         const state = get();
         const now = Date.now();
 
-        // 1. If products already fetched within the last 30s, reuse in-memory data
-        if (state.allProducts.length > 0 && now - lastProductsFetchTime < 30000) {
+        // 1. If products already fetched within the last 30s and not forced, reuse in-memory data
+        if (!force && state.allProducts.length > 0 && now - lastProductsFetchTime < 30000) {
           if (state.isProductsLoading) set({ isProductsLoading: false });
           return;
         }
 
         // 2. Deduplicate in-flight fetch requests across components
-        if (fetchProductsPromise) {
+        if (fetchProductsPromise && !force) {
           return fetchProductsPromise;
         }
 
@@ -627,7 +627,10 @@ export const useStore = create<IrisiState>()(
 
         fetchProductsPromise = (async () => {
           try {
-            const res = await fetch('/api/products');
+            const res = await fetch('/api/products', {
+              cache: 'no-cache',
+              headers: { 'Cache-Control': 'no-cache' }
+            });
             const data = await res.json();
             lastProductsFetchTime = Date.now();
             if (data.success && Array.isArray(data.products) && data.products.length > 0) {

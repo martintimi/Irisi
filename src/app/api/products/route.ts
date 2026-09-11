@@ -27,10 +27,11 @@ export function invalidateProductsCache() {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    // Note: Vendor filtering must be explicit via query param (?vendorId= or ?id=),
+    // NEVER via ambient x-vendor-id header, to prevent browser HTTP cache poisoning of public /api/products
     const vendorId = 
       searchParams.get('vendorId') || 
-      searchParams.get('id') || 
-      request.headers.get('x-vendor-id');
+      searchParams.get('id');
     const category = searchParams.get('category');
     const gender = searchParams.get('gender');
     const origin = searchParams.get('origin');
@@ -39,9 +40,14 @@ export async function GET(request: Request) {
     const cacheKey = `${vendorId || ''}_${category || ''}_${gender || ''}_${origin || ''}_${limit}`;
     const cached = apiProductsCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      const cacheHeader = (vendorId && vendorId !== 'all')
+        ? 'private, no-cache, no-store, max-age=0, must-revalidate'
+        : 'public, max-age=0, s-maxage=10, stale-while-revalidate=30';
+
       return NextResponse.json(cached.data, {
         headers: {
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+          'Cache-Control': cacheHeader,
+          'Vary': 'Accept-Encoding, x-vendor-id',
           'X-Cache': 'HIT',
         },
       });
@@ -103,7 +109,8 @@ export async function GET(request: Request) {
         notice: 'Serving verified cache while database quota refills'
       }, {
         headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+          'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=30',
+          'Vary': 'Accept-Encoding, x-vendor-id',
         }
       });
     }
@@ -441,11 +448,16 @@ export async function GET(request: Request) {
     };
     apiProductsCache.set(cacheKey, { data: responsePayload, timestamp: Date.now() });
 
+    const cacheHeader = (vendorId && vendorId !== 'all')
+      ? 'private, no-cache, no-store, max-age=0, must-revalidate'
+      : 'public, max-age=0, s-maxage=10, stale-while-revalidate=30';
+
     return NextResponse.json(
       responsePayload,
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+          'Cache-Control': cacheHeader,
+          'Vary': 'Accept-Encoding, x-vendor-id',
           'X-Cache': 'MISS',
         },
       }
