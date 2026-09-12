@@ -5,6 +5,7 @@ import { Bell, Package, DollarSign, Star, CheckCircle, ExternalLink, RefreshCw, 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getActiveVendorId } from '@/lib/services/apiClient';
+import { supabase } from '@/lib/supabase/client';
 
 export default function VendorNotificationBell() {
   const router = useRouter();
@@ -44,9 +45,32 @@ export default function VendorNotificationBell() {
   };
 
   useEffect(() => {
+    // 1. Initial load on mount
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000); // Poll every 15s for live updates
-    return () => clearInterval(interval);
+
+    // 2. Supabase Realtime WebSocket: Only triggers when an order or variant is created/updated
+    // ZERO polling, ZERO server flooding, 100% free included with Supabase
+    const channel = supabase
+      .channel(`vendor-notifs-${activeVendorId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'product_variants' },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeVendorId]);
 
   // Handle outside click to close dropdown
