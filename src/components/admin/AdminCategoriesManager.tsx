@@ -454,7 +454,7 @@ export default function AdminCategoriesManager() {
                     { label: 'Slides', url: '/images/products/UnisexSlides.jpg' },
                     { label: 'Pants & Cargo', url: '/images/uploaded/pantsandcargo.jpeg' },
                     { label: 'Graphic Tees', url: '/images/uploaded/t-shirtsandgraphic.jpeg' },
-                    { label: 'Polos & Shirts', url: '/images/uploaded/poloandshirt.jpeg' },
+                    { label: 'Polos & Shirts', url: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg' },
                     { label: 'Shorts', url: '/images/uploaded/short.jpeg' },
                     { label: 'Men Bag', url: '/images/uploaded/leaderBags.jpeg' },
                     { label: 'Crossbody', url: '/images/products/men_crossbody_bag.jpg' },

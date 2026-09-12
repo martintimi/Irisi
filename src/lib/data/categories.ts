@@ -58,7 +58,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'polos',
     gender: 'men',
     department: 'clothing',
-    imageUrl: '/images/uploaded/poloandshirt.jpeg',
+    imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg',
     subtitle: 'Collar shirts & button-down short sleeves',
   },
   {

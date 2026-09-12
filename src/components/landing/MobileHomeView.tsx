@@ -543,7 +543,7 @@ export default function MobileHomeView() {
             title: 'POLOS & CASUAL SHIRTS',
             subtitle: 'SMART COLLAR SHIRTS & POLOS',
             highlight: 'REFINED EVERYDAY CASUALS',
-            image: '/images/uploaded/poloandshirt.jpeg',
+            image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg',
             link: '/shop?gender=men&category=polos',
           },
           {
