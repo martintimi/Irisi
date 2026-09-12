@@ -14,10 +14,39 @@ import MobileHeader from '@/components/layout/MobileHeader';
 import WardrobeVaultDrawer from '@/components/vault/WardrobeVaultDrawer';
 import AmbientScreenSaver from '@/components/common/AmbientScreenSaver';
 import WhatsAppConciergeWidget from '@/components/common/WhatsAppConciergeWidget';
+import { supabase } from '@/lib/supabase/client';
 
 export default function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { theme, setTheme } = useStore();
+  const { theme, setTheme, fetchProductsFromDb } = useStore();
+
+  // Supabase Realtime: Automatically syncs new product drops live across the app!
+  // When a vendor drops a new piece, shoppers see it instantly without reloading or restarting
+  useEffect(() => {
+    fetchProductsFromDb();
+
+    const channel = supabase
+      .channel('global-live-product-drops')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => {
+          fetchProductsFromDb(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'product_variants' },
+        () => {
+          fetchProductsFromDb(true);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchProductsFromDb]);
   
   // Synchronize default theme: Light mode by default unless user manually toggled
   useEffect(() => {
