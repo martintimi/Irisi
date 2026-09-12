@@ -106,11 +106,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // 3. Mark vendor as verified in PostgreSQL vendors table
-    await adminClient
-      .from('vendors')
-      .update({ is_verified: true })
-      .or(`user_id.eq.${verifiedUser.id},email.eq.${normalizedEmail}`);
+    // 3. Fetch updated profiles (vendor is_verified remains false until Admin approves)
 
     // 4. Fetch updated profiles
     const { data: profile } = await adminClient

@@ -171,7 +171,7 @@ export async function POST(request: Request) {
         bank_name: bankName || 'Guaranty Trust Bank (GTBank)',
         account_number: accountNumber || '',
         account_name: accountName || '',
-        is_verified: false, // Remains UNVERIFIED until OTP is verified
+        is_verified: false, // Remains UNVERIFIED until Admin approves
         bio: JSON.stringify(initialBioObj)
       }, { onConflict: 'id' }).select().single();
 
