@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import MobileTrackOrderView from '@/components/tracking/MobileTrackOrderView';
+import { supabase } from '@/lib/supabase/client';
 
 export default function TrackOrderPage() {
   const searchParams = useSearchParams();
@@ -80,6 +81,31 @@ export default function TrackOrderPage() {
       fetchOrderFromDb(initialOrderNo);
     }
   }, [initialOrderNo]);
+
+  // Supabase Realtime: Updates package tracking live when vendor or courier marks dispatched or delivered
+  useEffect(() => {
+    if (!searchedOrder) return;
+    const orderNum = searchedOrder.order_number || searchedOrder.orderNumber;
+    if (!orderNum) return;
+
+    const channel = supabase
+      .channel(`customer-track-${orderNum}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload) => {
+          const updated = payload.new as any;
+          if (updated && (updated.order_number === orderNum || updated.id === searchedOrder.id)) {
+            fetchOrderFromDb(orderNum);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [searchedOrder]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

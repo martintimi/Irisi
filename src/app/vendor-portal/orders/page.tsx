@@ -15,6 +15,7 @@ import ShippingWaybillModal from '@/components/vendor/ShippingWaybillModal';
 import confetti from 'canvas-confetti';
 
 import { isBoutiqueVendor } from '@/types';
+import { supabase } from '@/lib/supabase/client';
 
 export default function VendorOrdersPage() {
   const { vendorProfile, updateOrderStatus } = useStore();
@@ -66,6 +67,22 @@ export default function VendorOrdersPage() {
 
   useEffect(() => {
     loadVendorDbOrders();
+
+    // Supabase Realtime: Updates vendor orders list live when new orders are placed or status changes
+    const channel = supabase
+      .channel('vendor-orders-live-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          loadVendorDbOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [loadVendorDbOrders]);
 
   // Process returned DB orders

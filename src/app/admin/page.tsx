@@ -19,6 +19,7 @@ import confetti from 'canvas-confetti';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import { getConciergeConfig, saveConciergeConfig, generateWhatsAppUrl, ConciergeConfig } from '@/lib/config/concierge';
 import AdminCategoriesManager from '@/components/admin/AdminCategoriesManager';
+import { supabase } from '@/lib/supabase/client';
 
 const adminEditorialSlides = [
   {
@@ -232,8 +233,31 @@ export default function SuperAdminPage() {
   useEffect(() => {
     if (isAuthenticated) {
       refreshAllData();
+
+      // Supabase Realtime: Automatically updates admin when new vendors apply or orders are placed
+      const channel = supabase
+        .channel('admin-live-feed')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'vendors' },
+          () => {
+            fetchVendorsList();
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          () => {
+            fetchOrdersList();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [isAuthenticated, refreshAllData]);
+  }, [isAuthenticated, refreshAllData, fetchVendorsList, fetchOrdersList]);
 
   // Login handler
   const handleAdminLogin = async (e: React.FormEvent) => {
