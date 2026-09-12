@@ -3,10 +3,11 @@
 import { vendorFetch } from '@/lib/services/apiClient';
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store/useStore';
+import { supabase } from '@/lib/supabase/client';
 import {
   LayoutDashboard, UploadCloud, PackageCheck, BarChart3,
   Building, MessageSquare, DollarSign, LogOut, Sun, Moon,
@@ -55,43 +56,70 @@ export default function VendorPortalLayout({
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  const checkVendorStatus = useCallback(async () => {
+    try {
+      const res = await vendorFetch('/api/vendor/profile');
+      const data = await res.json();
+      if (res.ok && data.success && data.vendor) {
+        const v = data.vendor;
+        const verified = !!v.is_verified || !!v.isVerified;
+        setLiveStatus({
+          isVerified: verified,
+          approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending')
+        });
+        const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
+        const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+        const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
+        setVendorProfile({
+          brandName: v.brandName || v.brand_name || 'My Brand',
+          designerName: v.designerName || v.designer_name || v.contact_person || 'Manager',
+          contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || '',
+          email: v.email || '',
+          phone: v.phone || '',
+          location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : '') || '',
+          vendorType: normalizedType,
+          specialty: spec,
+          vendorSpecialty: spec,
+          bankName: v.bankName || v.bank_name || '',
+          accountNumber: v.accountNumber || v.account_number || '',
+          accountName: v.accountName || v.account_name || '',
+          instagram: v.instagram || '',
+          bio: v.bio || '',
+          logoUrl: v.logoUrl || v.logo || ''
+        });
+      }
+    } catch (e) {}
+  }, [setVendorProfile]);
+
   useEffect(() => {
-    async function checkVendorStatus() {
-      try {
-        const res = await vendorFetch('/api/vendor/profile');
-        const data = await res.json();
-        if (res.ok && data.success && data.vendor) {
-          const v = data.vendor;
-          const verified = !!v.is_verified || !!v.isVerified;
-          setLiveStatus({
-            isVerified: verified,
-            approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending')
-          });
-          const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
-          const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
-          const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
-          setVendorProfile({
-            brandName: v.brandName || v.brand_name || vendorProfile.brandName || 'My Brand',
-            designerName: v.designerName || v.designer_name || v.contact_person || vendorProfile.designerName || 'Manager',
-            contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || vendorProfile.contactPerson,
-            email: v.email || vendorProfile.email,
-            phone: v.phone || vendorProfile.phone,
-            location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : vendorProfile.location) || '',
-            vendorType: normalizedType,
-            specialty: spec,
-            vendorSpecialty: spec,
-            bankName: v.bankName || v.bank_name || vendorProfile.bankName,
-            accountNumber: v.accountNumber || v.account_number || vendorProfile.accountNumber,
-            accountName: v.accountName || v.account_name || vendorProfile.accountName,
-            instagram: v.instagram || vendorProfile.instagram,
-            bio: v.bio || vendorProfile.bio,
-            logoUrl: v.logoUrl || v.logo || vendorProfile.logoUrl || ''
-          });
-        }
-      } catch (e) {}
-    }
     checkVendorStatus();
-  }, [pathname, setVendorProfile]);
+  }, [pathname, checkVendorStatus]);
+
+  // Realtime WebSocket: Updates vendor status live when admin approves/rejects
+  // Zero polling, zero wasted quota — only fires on actual database UPDATE
+  useEffect(() => {
+    const channel = supabase
+      .channel('vendor-live-status-sync')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'vendors' },
+        (payload) => {
+          const updated = payload.new as any;
+          if (
+            !vendorProfile.email ||
+            !updated.email ||
+            updated.email.toLowerCase() === vendorProfile.email.toLowerCase()
+          ) {
+            checkVendorStatus();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [vendorProfile.email, checkVendorStatus]);
 
   // If on the auth page, render without the dashboard shell
   if (pathname === '/vendor-portal/auth') {
