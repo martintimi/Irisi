@@ -249,9 +249,9 @@ export default function MobileHomeView() {
           },
           {
             id: 'm-tees',
-            title: 'T-Shirts & Polos',
-            subtitle: 'Graphic Tees & Polos',
-            image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg',
+            title: 'T-Shirts & Graphic Tees',
+            subtitle: 'Graphic Tees & Tops',
+            image: '/images/uploaded/t-shirtsandgraphic.jpeg',
             link: '/shop?gender=men&category=tshirts',
           },
           {
@@ -543,7 +543,7 @@ export default function MobileHomeView() {
             title: 'POLOS & CASUAL SHIRTS',
             subtitle: 'SMART COLLAR SHIRTS & POLOS',
             highlight: 'REFINED EVERYDAY CASUALS',
-            image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg',
+            image: '/images/uploaded/poloandshirt.jpeg',
             link: '/shop?gender=men&category=polos',
           },
           {

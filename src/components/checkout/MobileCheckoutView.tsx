@@ -812,10 +812,12 @@ export default function MobileCheckoutView() {
                       <>
                         <span>·</span>
                         <span className="flex items-center gap-1">
-                          <span
-                            className="h-2 w-2 rounded-full border border-white/20 inline-block shrink-0"
-                            style={{ backgroundColor: item.selectedColor.hex || '#111111' }}
-                          />
+                          {item.selectedColor.name.toLowerCase() !== 'as pictured' && item.selectedColor.name.toLowerCase() !== 'standard' && (
+                            <span
+                              className="h-2 w-2 rounded-full border border-white/20 inline-block shrink-0"
+                              style={{ backgroundColor: item.selectedColor.hex || '#111111' }}
+                            />
+                          )}
                           <span>{item.selectedColor.name}</span>
                         </span>
                       </>

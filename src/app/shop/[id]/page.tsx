@@ -311,8 +311,8 @@ export default function ProductDetailPage() {
           const defaultSz = p.sizes?.includes(pref) ? pref : (p.sizes?.[0] || 'M');
           setSelectedSize((prev: string) => (p.sizes?.includes(prev) ? prev : defaultSz));
           const initialColor = p.colors?.[0] || { name: 'As Pictured', hex: '#111111' };
-          setSelectedColor((prev: any) => prev || initialColor);
-          setActiveImage((prev: string) => prev || initialColor?.imageUrl || p.imageUrl || '');
+          setSelectedColor(initialColor);
+          setActiveImage(initialColor?.imageUrl || p.imageUrl || '');
 
           // Fetch reviews for this product
           try {
@@ -737,52 +737,80 @@ export default function ProductDetailPage() {
             </p>
           )}
 
-          {/* 1. Color Selector (Only shown when multiple colorways are offered) */}
-          {product.category !== 'accessories' && product.colors && product.colors.length > 1 && !product.colors.every((c: any) => {
-            const name = (typeof c === 'string' ? c : c?.name || '').toLowerCase();
-            return name === 'as pictured' || name === 'standard';
-          }) && (
-            <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-mono-luxury">
-                <span className="text-[var(--text-secondary)] uppercase font-bold">
-                  Select Color: <strong className="text-[var(--text-primary)]">{selectedColor?.name || 'Standard'}</strong>
-                </span>
-                <span className="text-[11px] text-[var(--gold-accent)] font-bold">
-                  {product.colors.length} {product.colors.length === 1 ? 'Option' : 'Options'}
-                </span>
-              </div>
+          {/* 1. Color Section */}
+          {product.category !== 'accessories' && product.colors && product.colors.length > 0 && (
+            product.colors.length > 1 && !product.colors.every((c: any) => {
+              const name = (typeof c === 'string' ? c : c?.name || '').toLowerCase();
+              return name === 'as pictured' || name === 'standard';
+            }) ? (
+              <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm">
+                <div className="flex items-center justify-between text-xs font-mono-luxury">
+                  <span className="text-[var(--text-secondary)] uppercase font-bold">
+                    Select Color: <strong className="text-[var(--text-primary)]">{selectedColor?.name || 'Standard'}</strong>
+                  </span>
+                  <span className="text-[11px] text-[var(--gold-accent)] font-bold">
+                    {product.colors.length} Options
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-3 pt-1 flex-wrap">
-                {product.colors.map((c: any, index: number) => {
-                  const colorName = typeof c === 'string' ? c : (c.name || 'Standard');
-                  const colorHex = typeof c === 'object' && c?.hex ? c.hex : '#111111';
-                  const isSelected = selectedColor?.name === colorName || selectedColor?.hex === colorHex;
-                  return (
-                    <button
-                      key={`color-${colorName}-${index}`}
-                      type="button"
-                      onClick={() => handleSelectColor(c)}
-                      onMouseEnter={() => handleSelectColor(c)}
-                      className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md border-transparent ring-2 ring-[var(--gold-accent)]'
-                          : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)]'
-                      }`}
-                    >
+                <div className="flex items-center gap-3 pt-1 flex-wrap">
+                  {product.colors.map((c: any, index: number) => {
+                    const colorName = typeof c === 'string' ? c : (c.name || 'Standard');
+                    const colorHex = typeof c === 'object' && c?.hex ? c.hex : '#111111';
+                    const isSelected = selectedColor?.name === colorName || selectedColor?.hex === colorHex;
+                    return (
+                      <button
+                        key={`color-${colorName}-${index}`}
+                        type="button"
+                        onClick={() => handleSelectColor(c)}
+                        onMouseEnter={() => handleSelectColor(c)}
+                        className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md border-transparent ring-2 ring-[var(--gold-accent)]'
+                            : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)]'
+                        }`}
+                      >
+                        <span
+                          className="h-4 w-4 rounded-full border border-white/30 shadow-sm shrink-0"
+                          style={{
+                            background: colorName.toLowerCase().includes('multi')
+                              ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                              : colorHex
+                          }}
+                        />
+                        <span className="text-xs font-mono-luxury font-bold">{colorName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono-luxury text-[var(--text-secondary)] uppercase font-bold">
+                    Color:
+                  </span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                    {selectedColor?.name && selectedColor.name.toLowerCase() !== 'as pictured' && selectedColor.name.toLowerCase() !== 'standard' && (
                       <span
-                        className="h-4 w-4 rounded-full border border-white/30 shadow-sm shrink-0"
+                        className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0"
                         style={{
-                          background: colorName.toLowerCase().includes('multi')
+                          background: (selectedColor?.name || '').toLowerCase().includes('multi')
                             ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
-                            : colorHex
+                            : (selectedColor?.hex || '#111111')
                         }}
                       />
-                      <span className="text-xs font-mono-luxury font-bold">{colorName}</span>
-                    </button>
-                  );
-                })}
+                    )}
+                    <span className="text-xs font-bold text-[var(--text-primary)] font-mono-luxury">
+                      {selectedColor?.name || 'Standard'}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[11px] text-emerald-400 font-mono-luxury font-bold uppercase tracking-wider">
+                  {selectedColor?.name && selectedColor.name.toLowerCase() !== 'as pictured' ? 'Single Colorway' : 'As Pictured'}
+                </span>
               </div>
-            </div>
+            )
           )}
 
           {/* 2. Size Selector */}

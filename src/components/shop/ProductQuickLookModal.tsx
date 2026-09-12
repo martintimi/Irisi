@@ -284,6 +284,18 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
                 </div>
               )}
 
+              {product.colors && product.colors.length === 1 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs font-mono-luxury text-[var(--text-secondary)] uppercase font-bold">Color:</span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs font-mono-luxury">
+                    {selectedColor?.name && selectedColor.name.toLowerCase() !== 'as pictured' && selectedColor.name.toLowerCase() !== 'standard' && (
+                      <span className="h-2.5 w-2.5 rounded-full border border-white/20" style={{ backgroundColor: selectedColor.hex || '#111111' }} />
+                    )}
+                    <span className="font-bold text-[var(--text-primary)]">{selectedColor?.name || 'Standard'}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Quantity Stepper */}
               <div className="flex items-center justify-between pt-1">
                 <span className="text-xs font-mono-luxury uppercase font-bold text-[var(--text-secondary)]">

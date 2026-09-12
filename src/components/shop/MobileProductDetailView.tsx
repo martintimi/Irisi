@@ -128,6 +128,19 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   }, [product?.id]);
 
   useEffect(() => {
+    if (product) {
+      const pref = bodyProfile?.preferredSize || 'M';
+      const available = product.sizes && product.sizes.length > 0 ? product.sizes : ['M', 'L', 'XL'];
+      setSelectedSize(available.includes(pref) ? pref : (available[0] || 'M'));
+      if (product.colors && product.colors.length > 0) {
+        setSelectedColor(product.colors[0]);
+      } else {
+        setSelectedColor({ name: 'Standard', hex: '#111111' });
+      }
+    }
+  }, [product?.id, bodyProfile?.preferredSize]);
+
+  useEffect(() => {
     if (!allProducts || allProducts.length === 0) {
       fetchProductsFromDb();
     }
@@ -819,51 +832,79 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           </p>
         )}
 
-        {/* 4. COLOR SELECTOR (Only shown when vendor provides multiple distinct colorways to choose from) */}
-        {product.category !== 'accessories' && product.colors && product.colors.length > 1 && !product.colors.every((c: any) => {
-          const name = (typeof c === 'string' ? c : c?.name || '').toLowerCase();
-          return name === 'as pictured' || name === 'standard';
-        }) && (
-          <div className="p-4 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2.5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-mono-luxury">
-              <span className="text-[var(--text-secondary)] uppercase font-bold">
-                Color: <strong className="text-[var(--text-primary)]">{selectedColor?.name || 'Standard'}</strong>
-              </span>
-              <span className="text-[10px] text-[var(--gold-accent)] font-bold">
-                {product.colors.length} {product.colors.length === 1 ? 'Color' : 'Colors'}
-              </span>
-            </div>
+        {/* 4. COLOR SECTION */}
+        {product.category !== 'accessories' && product.colors && product.colors.length > 0 && (
+          product.colors.length > 1 && !product.colors.every((c: any) => {
+            const name = (typeof c === 'string' ? c : c?.name || '').toLowerCase();
+            return name === 'as pictured' || name === 'standard';
+          }) ? (
+            <div className="p-4 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2.5 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-mono-luxury">
+                <span className="text-[var(--text-secondary)] uppercase font-bold">
+                  Color: <strong className="text-[var(--text-primary)]">{selectedColor?.name || 'Standard'}</strong>
+                </span>
+                <span className="text-[10px] text-[var(--gold-accent)] font-bold">
+                  {product.colors.length} Colors
+                </span>
+              </div>
 
-            <div className="flex items-center gap-2.5 flex-wrap">
-              {product.colors.map((c: any, index: number) => {
-                const colorName = typeof c === 'string' ? c : (c.name || 'Standard');
-                const colorHex = typeof c === 'object' && c?.hex ? c.hex : '#111111';
-                const isChosen = selectedColor?.name === colorName || selectedColor?.hex === colorHex;
-                return (
-                  <button
-                    key={`color-${colorName}-${index}`}
-                    type="button"
-                    onClick={() => handleSelectColor(typeof c === 'object' ? c : { name: colorName, hex: colorHex })}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer ${
-                      isChosen
-                        ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] ring-2 ring-[var(--gold-accent)] shadow-md'
-                        : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)]'
-                    }`}
-                  >
+              <div className="flex items-center gap-2.5 flex-wrap">
+                {product.colors.map((c: any, index: number) => {
+                  const colorName = typeof c === 'string' ? c : (c.name || 'Standard');
+                  const colorHex = typeof c === 'object' && c?.hex ? c.hex : '#111111';
+                  const isChosen = selectedColor?.name === colorName || selectedColor?.hex === colorHex;
+                  return (
+                    <button
+                      key={`color-${colorName}-${index}`}
+                      type="button"
+                      onClick={() => handleSelectColor(typeof c === 'object' ? c : { name: colorName, hex: colorHex })}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all cursor-pointer ${
+                        isChosen
+                          ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] ring-2 ring-[var(--gold-accent)] shadow-md'
+                          : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+                      }`}
+                    >
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-white/30 shrink-0"
+                        style={{
+                          background: colorName.toLowerCase().includes('multi')
+                            ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                            : colorHex
+                        }}
+                      />
+                      <span className="text-[11px] font-mono-luxury font-bold">{colorName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xs font-mono-luxury text-[var(--text-secondary)] uppercase font-bold">
+                  Color:
+                </span>
+                <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                  {selectedColor?.name && selectedColor.name.toLowerCase() !== 'as pictured' && selectedColor.name.toLowerCase() !== 'standard' && (
                     <span
-                      className="h-3.5 w-3.5 rounded-full border border-white/30 shrink-0"
+                      className="h-3 w-3 rounded-full border border-white/20 shrink-0"
                       style={{
-                        background: colorName.toLowerCase().includes('multi')
+                        background: (selectedColor?.name || '').toLowerCase().includes('multi')
                           ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
-                          : colorHex
+                          : (selectedColor?.hex || '#111111')
                       }}
                     />
-                    <span className="text-[11px] font-mono-luxury font-bold">{colorName}</span>
-                  </button>
-                );
-              })}
+                  )}
+                  <span className="text-xs font-bold text-[var(--text-primary)] font-mono-luxury">
+                    {selectedColor?.name || 'Standard'}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] text-emerald-400 font-mono-luxury font-bold uppercase tracking-wider">
+                {selectedColor?.name && selectedColor.name.toLowerCase() !== 'as pictured' ? 'Single Colorway' : 'As Pictured'}
+              </span>
             </div>
-          </div>
+          )
         )}
 
         {/* 5. 1-TAP SIZE SELECTOR */}

@@ -49,7 +49,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'tshirts',
     gender: 'men',
     department: 'clothing',
-    imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg',
+    imageUrl: '/images/uploaded/t-shirtsandgraphic.jpeg',
     subtitle: 'Graphic tees & heavy cotton casual tops',
   },
   {
@@ -58,7 +58,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     slug: 'polos',
     gender: 'men',
     department: 'clothing',
-    imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123518/veyra_categories/tshirtandpoloformen.jpg',
+    imageUrl: '/images/uploaded/poloandshirt.jpeg',
     subtitle: 'Collar shirts & button-down short sleeves',
   },
   {

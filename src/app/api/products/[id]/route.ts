@@ -185,26 +185,29 @@ export async function GET(
     };
 
     function resolveColorHex(name: string = '', fallbackHex?: string): string {
+      const lower = name.toLowerCase().trim();
+      if (lower === 'as pictured' || lower === 'standard' || lower === 'default' || lower === 'none') {
+        return (fallbackHex && fallbackHex.startsWith('#')) ? fallbackHex : '#111111';
+      }
       if (fallbackHex && fallbackHex.startsWith('#') && fallbackHex !== '#111111' && fallbackHex !== '#000000') {
         return fallbackHex;
       }
-      const lower = name.toLowerCase().trim();
       if (COLOR_HEX_MAP[lower]) return COLOR_HEX_MAP[lower];
-      if (lower.includes('khaki') || lower.includes('beige') || lower.includes('cream') || lower.includes('sand')) return '#d4b996';
+      if (lower.includes('khaki') || lower.includes('beige') || lower.includes('cream') || /\bsand\b/i.test(lower)) return '#d4b996';
       if (lower.includes('brown') || lower.includes('chocolate') || lower.includes('coffee')) return '#78350f';
       if (lower.includes('white') || lower.includes('off-white') || lower.includes('off white')) return '#ffffff';
       if (lower.includes('black') || lower.includes('onyx') || lower.includes('noir')) return '#111111';
       if (lower.includes('charcoal') || lower.includes('grey') || lower.includes('gray')) return '#374151';
       if (lower.includes('navy')) return '#1e3a8a';
-      if (lower.includes('sky')) return '#38bdf8';
+      if (/\bsky\b/i.test(lower)) return '#38bdf8';
       if (lower.includes('blue')) return '#2563eb';
       if (lower.includes('olive')) return '#556b2f';
       if (lower.includes('forest') || lower.includes('emerald') || lower.includes('green')) return '#16a34a';
       if (lower.includes('wine') || lower.includes('burgundy') || lower.includes('maroon')) return '#831843';
-      if (lower.includes('red') || lower.includes('crimson')) return '#dc2626';
+      if (/\bred\b/i.test(lower) || lower.includes('crimson')) return '#dc2626';
       if (lower.includes('gold') || lower.includes('mustard') || lower.includes('yellow')) return '#d97706';
       if (lower.includes('purple') || lower.includes('lavender') || lower.includes('violet')) return '#7e22ce';
-      if (lower.includes('pink') || lower.includes('rose') || lower.includes('blush')) return '#f472b6';
+      if (/\bpink\b/i.test(lower) || lower.includes('rose') || lower.includes('blush')) return '#f472b6';
       if (lower.includes('orange')) return '#ea580c';
       if (lower.includes('teal') || lower.includes('turquoise')) return '#0d9488';
       return fallbackHex || '#111111';

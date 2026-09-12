@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import { X, Check, ShoppingBag, ShieldCheck, Zap, Sparkles } from 'lucide-react';
@@ -40,6 +40,19 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
+
+  useEffect(() => {
+    if (product) {
+      const pref = bodyProfile?.preferredSize || 'M';
+      const available = product.sizes && product.sizes.length > 0 ? product.sizes : ['M', 'L', 'XL'];
+      setSelectedSize(available.includes(pref) ? pref : (available[0] || 'M'));
+      if (product.colors && product.colors.length > 0) {
+        setSelectedColor(product.colors[0]);
+      } else {
+        setSelectedColor({ name: 'Standard', hex: '#111111' });
+      }
+    }
+  }, [product?.id, bodyProfile?.preferredSize]);
 
   const isOutOfStock = product.stockQuantity === 0;
 
@@ -153,7 +166,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
           </div>
         </div>
 
-        {/* Colorway Selection if multiple available */}
+        {/* Colorway Selection */}
         {product.colors && product.colors.length > 1 && (
           <div className="space-y-2">
             <span className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] font-bold">
@@ -179,6 +192,29 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
                   />
                 );
               })}
+            </div>
+          </div>
+        )}
+
+        {product.colors && product.colors.length === 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono-luxury uppercase text-[var(--text-secondary)] font-bold">
+              Color:
+            </span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+              {selectedColor?.name && selectedColor.name.toLowerCase() !== 'as pictured' && selectedColor.name.toLowerCase() !== 'standard' && (
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-white/20 shrink-0"
+                  style={{
+                    background: (selectedColor?.name || '').toLowerCase().includes('multi')
+                      ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                      : (selectedColor?.hex || '#111111')
+                  }}
+                />
+              )}
+              <span className="text-xs font-bold text-[var(--text-primary)] font-mono-luxury">
+                {selectedColor?.name || 'Standard'}
+              </span>
             </div>
           </div>
         )}
