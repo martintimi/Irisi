@@ -103,16 +103,32 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const vendorId = 
+    let vendorId = 
       body.vendorId || 
       body.id || 
       request.headers.get('x-vendor-id');
 
-    if (!vendorId) {
-      return NextResponse.json({ error: 'Vendor ID required' }, { status: 400 });
-    }
-
     const supabase = await createClient();
+
+    // If no vendorId was supplied in the body or header, resolve via the
+    // authenticated Supabase session (handles new devices / cleared localStorage)
+    if (!vendorId || vendorId === 'undefined' || vendorId === 'null') {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return NextResponse.json({ error: 'Vendor ID required — please log in again.' }, { status: 400 });
+      }
+      // Look up vendor by user_id or email from the auth session
+      const { data: sessionVendor } = await supabase
+        .from('vendors')
+        .select('id')
+        .or(`user_id.eq.${user.id},email.eq.${user.email}`)
+        .limit(1)
+        .maybeSingle();
+      if (!sessionVendor?.id) {
+        return NextResponse.json({ error: 'No vendor account found for this session.' }, { status: 404 });
+      }
+      vendorId = sessionVendor.id;
+    }
 
     const socialLinks = {
       instagram: body.instagram || body.socialLinks?.instagram || '',

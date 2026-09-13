@@ -1,6 +1,6 @@
 'use client';
 
-import { vendorFetch } from '@/lib/services/apiClient';
+import { vendorFetch, getActiveVendorId } from '@/lib/services/apiClient';
 import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
@@ -203,6 +203,7 @@ export default function VendorAtelierProfilePage() {
       const cleanLoc = form.city && form.state ? `${form.city.trim()}, ${form.state.trim()}` : form.city || form.state || '';
       const payload = {
         ...form,
+        vendorId: getActiveVendorId() || undefined,
         location: cleanLoc,
         approvalStatus: 'pending'
       };

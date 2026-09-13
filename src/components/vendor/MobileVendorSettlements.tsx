@@ -9,7 +9,7 @@ import {
 import confetti from 'canvas-confetti';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
 import { NIGERIAN_BANKS, getBankCodeByName } from '@/lib/data/nigerianBanks';
-import { vendorFetch } from '@/lib/services/apiClient';
+import { vendorFetch, getActiveVendorId } from '@/lib/services/apiClient';
 import { useStore } from '@/lib/store/useStore';
 
 interface MobileVendorSettlementsProps {
@@ -75,6 +75,7 @@ export default function MobileVendorSettlements({
       const res = await vendorFetch('/api/vendor/profile', {
         method: 'POST',
         body: JSON.stringify({
+          vendorId: getActiveVendorId() || undefined,
           bankName: editBankName,
           accountNumber: editAccountNumber,
           accountName: editAccountName,
