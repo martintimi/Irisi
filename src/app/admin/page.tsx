@@ -146,6 +146,7 @@ export default function SuperAdminPage() {
   const [editDeliveryIssue, setEditDeliveryIssue] = useState('');
   const [isSavingShipment, setIsSavingShipment] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -1197,7 +1198,16 @@ export default function SuperAdminPage() {
       
       {/* TOP EXECUTIVE HEADER BAR */}
       <header className="sticky top-0 z-40 w-full border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/90 backdrop-blur-md px-6 sm:px-10 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="md:hidden p-2 rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+            aria-label="Open navigation"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+          </button>
+
           <div className="flex items-center gap-3">
             <span className="font-editorial text-2xl font-bold tracking-[0.26em] text-[var(--text-primary)]">
               Ì R Í S Í
@@ -1254,6 +1264,95 @@ export default function SuperAdminPage() {
           </button>
         </div>
       </header>
+
+      {/* ======================================================== */}
+      {/* MOBILE SLIDE-OUT SIDEBAR DRAWER (md:hidden) */}
+      {/* ======================================================== */}
+      {mobileNavOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          {/* Drawer */}
+          <aside className="fixed top-0 left-0 z-50 h-full w-72 bg-[var(--bg-primary)] border-r border-[var(--border-subtle)] flex flex-col md:hidden shadow-2xl animate-slideInLeft">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
+              <div>
+                <span className="font-editorial text-xl font-bold tracking-[0.2em] text-[var(--text-primary)]">Ì R Í S Í</span>
+                <div className="text-[10px] font-mono-luxury text-rose-400 uppercase font-bold tracking-widest mt-0.5">Super Admin</div>
+              </div>
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                className="p-2 rounded-xl border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Status Badge */}
+            <div className="px-5 py-3 border-b border-[var(--border-subtle)]">
+              <div className="flex items-center gap-2 text-xs font-mono-luxury">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="font-bold text-emerald-400">Platform Live · Operational</span>
+              </div>
+            </div>
+
+            {/* Nav Items */}
+            <nav className="flex-1 overflow-y-auto p-4 space-y-1.5">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveTab(item.id as any); setMobileNavOpen(false); }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-mono-luxury font-bold text-xs uppercase text-left cursor-pointer ${
+                      isActive
+                        ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <Icon className={`h-4 w-4 shrink-0 ${isActive ? '' : 'text-[var(--gold-accent)]'}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ml-1.5 ${
+                        isActive ? 'bg-[var(--bg-primary)] text-[var(--text-primary)]' : item.badgeColor || 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-[var(--border-subtle)] space-y-2">
+              <button
+                onClick={toggleTheme}
+                suppressHydrationWarning
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--border-subtle)] text-xs font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer uppercase"
+              >
+                {mounted ? (
+                  theme === 'dark' ? <Sun className="h-4 w-4 text-amber-400 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />
+                ) : <div className="h-4 w-4" />}
+                <span>{mounted && theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+              <button
+                onClick={() => { handleLogout(); setMobileNavOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-rose-500/30 text-xs font-mono-luxury font-bold text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer uppercase"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span>Lock Session</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* BODY SHELL */}
       <div className="flex-1 flex">

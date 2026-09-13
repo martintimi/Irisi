@@ -50,6 +50,7 @@ const config: Config = {
         'float': 'float 6s ease-in-out infinite',
         'scan': 'scan 3s ease-in-out infinite',
         'shimmer': 'shimmer 2.5s linear infinite',
+        'slideInLeft': 'slideInLeft 0.25s ease-out',
       },
       keyframes: {
         float: {
@@ -63,6 +64,10 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        slideInLeft: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
         },
       },
     },
