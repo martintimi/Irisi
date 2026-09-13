@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       let city = '';
       let state = '';
       let address = '';
+      let logoUrl = v.logo_url || v.logo || '';
       let socialLinks: any = {
         instagram: '',
         tiktok: '',
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
           city = parsed.city || '';
           state = parsed.state || '';
           address = parsed.address || '';
+          logoUrl = parsed.logoUrl || parsed.logo || logoUrl;
         } catch (e) {}
       } else if (bioText && bioText.trim().length > 0) {
         isProfileSaved = true;
@@ -79,6 +81,7 @@ export async function GET(request: Request) {
         accountNumber: v.account_number || 'N/A',
         accountName: v.account_name || 'N/A',
         bio: bioText,
+        logoUrl,
         socialLinks,
         instagram: socialLinks.instagram || '',
         tiktok: socialLinks.tiktok || '',

@@ -2473,8 +2473,12 @@ export default function SuperAdminPage() {
                         {/* Header */}
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                           <div className="flex items-start gap-3.5">
-                            <div className="h-14 w-14 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl flex items-center justify-center shrink-0 mt-0.5">
-                              {vendor.name ? vendor.name.charAt(0).toUpperCase() : 'V'}
+                            <div className="relative h-14 w-14 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl flex items-center justify-center shrink-0 mt-0.5 overflow-hidden">
+                              {vendor.logoUrl ? (
+                                <Image src={vendor.logoUrl} alt={vendor.name} fill unoptimized className="object-cover" />
+                              ) : (
+                                vendor.name ? vendor.name.charAt(0).toUpperCase() : 'V'
+                              )}
                             </div>
 
                             <div className="space-y-1.5">
