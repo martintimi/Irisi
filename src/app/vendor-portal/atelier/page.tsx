@@ -390,14 +390,14 @@ export default function VendorAtelierProfilePage() {
                 Store Brand Logo / Emblem
               </label>
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                <div className="relative h-20 w-20 rounded-2xl bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-3xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden">
+                <div className="relative h-20 w-28 sm:w-32 rounded-2xl bg-black border border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-3xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden p-1.5">
                   {form.logoUrl ? (
                     <Image
                       src={form.logoUrl}
                       alt={form.brandName || 'Brand Logo'}
                       fill
                       unoptimized
-                      className="object-cover"
+                      className="object-contain"
                     />
                   ) : (
                     <span>{form.brandName ? form.brandName.charAt(0).toUpperCase() : 'B'}</span>

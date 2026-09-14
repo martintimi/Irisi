@@ -236,9 +236,9 @@ export async function GET(
       snapchat: socialLinks.snapchat,
       whatsapp: socialLinks.whatsapp || resolvedVendor?.phone,
       productCount: formattedProducts.length,
-      satisfactionRate: 99.4,
+      satisfactionRate: null,
       deliveryDays: dispatchDays,
-      isVerified: true
+      isVerified: !!resolvedVendor?.is_verified
     };
 
     return NextResponse.json({

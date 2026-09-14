@@ -108,14 +108,14 @@ export default function MobileBrandView({
 
         {/* Brand Meta Overlay */}
         <div className="absolute bottom-4 inset-x-4 flex items-end gap-3.5">
-          <div className="h-16 w-16 rounded-2xl bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)] flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-xl shrink-0 overflow-hidden relative">
+          <div className="h-14 w-24 rounded-2xl bg-black border border-[var(--gold-accent)]/50 flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-xl shrink-0 overflow-hidden relative p-1">
             {vendorProfile?.logoUrl || vendorProfile?.logo ? (
               <Image
                 src={vendorProfile.logoUrl || vendorProfile.logo}
                 alt={brandName}
                 fill
                 unoptimized
-                className="object-cover"
+                className="object-contain"
               />
             ) : (
               <span>{brandName.charAt(0)}</span>
@@ -154,8 +154,8 @@ export default function MobileBrandView({
             <span className="font-bold text-sm text-[var(--text-primary)]">{vendorProducts.length} Pieces</span>
           </div>
           <div className="border-x border-[var(--border-subtle)]">
-            <span className="text-[9px] text-[var(--text-muted)] uppercase block">Escrow Rating</span>
-            <span className="font-bold text-sm text-amber-400">5.0 ★</span>
+            <span className="text-[9px] text-[var(--text-muted)] uppercase block">Brand Status</span>
+            <span className="font-bold text-sm text-emerald-400">Verified</span>
           </div>
           <div>
             <span className="text-[9px] text-[var(--text-muted)] uppercase block">Dispatch Hub</span>

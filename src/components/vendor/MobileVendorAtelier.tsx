@@ -189,14 +189,14 @@ export default function MobileVendorAtelier({
             Store Brand Logo / Emblem
           </label>
           <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-            <div className="relative h-16 w-16 rounded-2xl bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden">
+            <div className="relative h-16 w-24 rounded-2xl bg-black border border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden p-1">
               {form.logoUrl ? (
                 <Image
                   src={form.logoUrl}
                   alt={form.brandName || 'Brand Logo'}
                   fill
                   unoptimized
-                  className="object-cover"
+                  className="object-contain"
                 />
               ) : (
                 <span>{form.brandName ? form.brandName.charAt(0).toUpperCase() : 'B'}</span>

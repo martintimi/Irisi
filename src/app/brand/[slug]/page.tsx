@@ -213,14 +213,14 @@ export default function BrandStorefrontPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-3xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] font-editorial font-bold text-2xl sm:text-3xl flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden">
+            <div className="h-16 w-24 sm:h-20 sm:w-32 rounded-2xl bg-black border border-[var(--border-subtle)] text-[var(--gold-accent)] font-editorial font-bold text-2xl sm:text-3xl flex items-center justify-center shrink-0 shadow-lg relative overflow-hidden p-1.5">
               {vendor.logoUrl || vendor.logo ? (
                 <Image
                   src={vendor.logoUrl || vendor.logo}
                   alt={vendor.name}
                   fill
                   unoptimized
-                  className="object-cover"
+                  className="object-contain"
                 />
               ) : (
                 <span>{vendor.name ? vendor.name.charAt(0).toUpperCase() : 'V'}</span>
@@ -248,10 +248,28 @@ export default function BrandStorefrontPage() {
                   <MapPin className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
                   {vendor.origin}
                 </span>
-                <span>•</span>
-                <span className="text-[var(--gold-accent)] font-bold">
-                  {vendor.satisfactionRate}% Rating
-                </span>
+                {vendorReviews.count > 0 ? (
+                  <>
+                    <span>•</span>
+                    <span className="text-[var(--gold-accent)] font-bold">
+                      {vendorReviews.averageRating} ★ ({vendorReviews.count} review{vendorReviews.count !== 1 ? 's' : ''})
+                    </span>
+                  </>
+                ) : vendor.satisfactionRate ? (
+                  <>
+                    <span>•</span>
+                    <span className="text-[var(--gold-accent)] font-bold">
+                      {vendor.satisfactionRate}% Rating
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-bold">
+                      New Verified Partner
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Social Channels with Official Vector App Logos */}
