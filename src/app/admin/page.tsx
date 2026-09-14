@@ -2626,6 +2626,12 @@ export default function SuperAdminPage() {
                                 <span>•</span>
                                 <span className="flex items-center gap-1"><MapPin className="h-3 w-3 text-[var(--gold-accent)]" />{vendor.location || `${vendor.city || ''}, ${vendor.state || ''}`}</span>
                               </div>
+
+                              {vendor.bio && (
+                                <p className="text-xs text-[var(--text-secondary)] font-mono-luxury italic bg-[var(--bg-primary)] px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] line-clamp-2 mt-1">
+                                  &ldquo;{vendor.bio}&rdquo;
+                                </p>
+                              )}
                             </div>
                           </div>
 
@@ -2690,20 +2696,20 @@ export default function SuperAdminPage() {
                             </div>
                           </div>
 
-                          {/* 3. Direct Contact & WhatsApp Concierge */}
+                          {/* 3. Direct Contact & Social Verification */}
                           <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1.5">
                             <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold flex items-center gap-1">
                               <Phone className="h-3 w-3 text-[var(--gold-accent)]" />
-                              Direct Contact & Verification
+                              Direct Contact &amp; Socials
                             </span>
-                            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                               {vendor.phone && (
                                 <a
                                   href={`tel:${vendor.phone}`}
                                   className="px-2 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-colors inline-flex items-center gap-1"
                                 >
                                   <Phone className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
-                                  <span>{vendor.phone}</span>
+                                  <span className="max-w-[110px] truncate">{vendor.phone}</span>
                                 </a>
                               )}
                               {vendor.email && (
@@ -2712,7 +2718,7 @@ export default function SuperAdminPage() {
                                   className="px-2 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[11px] text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-colors inline-flex items-center gap-1"
                                 >
                                   <Mail className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
-                                  <span className="max-w-[120px] truncate">{vendor.email}</span>
+                                  <span className="max-w-[110px] truncate">{vendor.email}</span>
                                 </a>
                               )}
                               {(vendor.whatsapp || vendor.phone) && (
@@ -2720,17 +2726,47 @@ export default function SuperAdminPage() {
                                   href={`https://wa.me/${(vendor.whatsapp || vendor.phone).replace(/[^0-9]/g, '').replace(/^0/, '234')}?text=${encodeURIComponent(`Hello ${vendor.name}, this is ÌRÍSÍ Merchant Concierge regarding your atelier registration.`)}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-400 hover:bg-emerald-500/25 transition-colors inline-flex items-center gap-1 font-bold"
+                                  className="px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-[11px] text-emerald-400 hover:bg-emerald-500/25 transition-colors inline-flex items-center gap-1 font-bold"
                                 >
                                   <MessageCircle className="h-2.5 w-2.5" />
                                   <span>WhatsApp</span>
                                 </a>
                               )}
+                              {vendor.instagram && (
+                                <a
+                                  href={`https://instagram.com/${vendor.instagram.replace(/^@/, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded-lg bg-pink-500/15 border border-pink-500/30 text-[11px] text-pink-400 hover:bg-pink-500/25 transition-colors inline-flex items-center gap-1 font-bold"
+                                >
+                                  <InstagramLogo />
+                                  <span>@{vendor.instagram.replace(/^@/, '')}</span>
+                                </a>
+                              )}
+                              {vendor.tiktok && (
+                                <a
+                                  href={`https://tiktok.com/@${vendor.tiktok.replace(/^@/, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-[11px] text-cyan-400 hover:bg-cyan-500/25 transition-colors inline-flex items-center gap-1 font-bold"
+                                >
+                                  <TikTokLogo />
+                                  <span>@{vendor.tiktok.replace(/^@/, '')}</span>
+                                </a>
+                              )}
+                              {vendor.snapchat && (
+                                <a
+                                  href={`https://snapchat.com/add/${vendor.snapchat.replace(/^@/, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] text-amber-300 hover:bg-amber-500/25 transition-colors inline-flex items-center gap-1 font-bold"
+                                >
+                                  <SnapchatLogo />
+                                  <span>@{vendor.snapchat.replace(/^@/, '')}</span>
+                                </a>
+                              )}
                             </div>
-                            <div className="flex items-center gap-2 pt-0.5 text-[10px] text-[var(--text-muted)]">
-                              {vendor.instagram && <span>IG: @{vendor.instagram}</span>}
-                              {vendor.tiktok && <span>TT: @{vendor.tiktok}</span>}
-                              <span>•</span>
+                            <div className="pt-0.5 text-[10px] text-[var(--text-muted)]">
                               <span>Joined: {new Date(vendor.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}</span>
                             </div>
                           </div>
