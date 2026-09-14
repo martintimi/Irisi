@@ -191,8 +191,6 @@ export async function POST(request: Request) {
         account_name: body.accountName,
         bio: bioPayload,
         is_verified: wasVerified,
-        // Persist logo URL to its own column so admin + storefront can read it directly
-        ...(logoUrl ? { logo_url: logoUrl } : {}),
       })
       .or(`id.eq.${vendorId},email.eq.${vendorId}`)
       .select()
