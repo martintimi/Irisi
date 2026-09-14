@@ -51,8 +51,11 @@ export default function MobileBrandView({
     return p.category === activeCategory;
   });
 
-  const city = vendorProfile?.city || vendorProducts[0]?.vendorCity || 'Lagos';
-  const state = vendorProfile?.state || vendorProducts[0]?.vendorState || 'Lagos State';
+  const isBoutique = vendorProfile?.vendorType === 'boutique_seller' || vendorProfile?.vendor_type === 'boutique_seller' || vendorProfile?.vendorType === 'boutique_merchant' || vendorProfile?.vendor_type === 'boutique_merchant';
+  const rawCity = vendorProfile?.city || vendorProducts[0]?.vendorCity || 'Lagos';
+  const cleanCity = rawCity.replace(/\s*\([^)]*\)/g, '').trim() || 'Lagos';
+  const rawState = vendorProfile?.state || vendorProducts[0]?.vendorState || 'Lagos State';
+  const cleanState = rawState.replace(/\s*State/i, '').replace(/\s*\([^)]*\)/g, '').trim();
   const dispatchDays = vendorProfile?.dispatchDays || vendorProducts[0]?.dispatchDays || '1-2 business days';
 
   return (
@@ -86,7 +89,7 @@ export default function MobileBrandView({
           ) : (
             <>
               <Plus className="h-3.5 w-3.5 stroke-[3]" />
-              <span>Follow Atelier</span>
+              <span>Follow {isBoutique ? 'Boutique' : 'Atelier'}</span>
             </>
           )}
         </button>
@@ -129,13 +132,13 @@ export default function MobileBrandView({
               </h1>
               <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
             </div>
-            <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5 flex items-center gap-2">
+            <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5 flex items-center gap-1.5 flex-wrap">
               <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-[var(--gold-accent)]" />
-                <span>{city}, {state}</span>
+                <MapPin className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
+                <span>{cleanCity}{cleanState ? `, ${cleanState}` : ''}</span>
               </span>
               <span>·</span>
-              <span className="text-emerald-400 font-bold">{dispatchDays}</span>
+              <span className="text-emerald-400 font-bold whitespace-nowrap">{dispatchDays}</span>
             </p>
             {vendorProfile?.bio && (
               <p className="text-xs text-[var(--text-secondary)] font-light mt-1.5 line-clamp-2">
@@ -157,9 +160,9 @@ export default function MobileBrandView({
             <span className="text-[9px] text-[var(--text-muted)] uppercase block">Brand Status</span>
             <span className="font-bold text-sm text-emerald-400">Verified</span>
           </div>
-          <div>
+          <div className="min-w-0 px-1">
             <span className="text-[9px] text-[var(--text-muted)] uppercase block">Dispatch Hub</span>
-            <span className="font-bold text-sm text-[var(--gold-accent)]">{city}</span>
+            <span className="font-bold text-xs sm:text-sm text-[var(--gold-accent)] truncate block" title={cleanCity}>{cleanCity}</span>
           </div>
         </div>
 

@@ -246,7 +246,7 @@ export default function BrandStorefrontPage() {
               <div className="flex items-center gap-4 text-[11px] font-mono-luxury text-[var(--text-muted)] pt-1 flex-wrap">
                 <span className="flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                  {vendor.origin}
+                  {vendor.origin ? vendor.origin.replace(/\s*\([^)]*\)/g, '').replace(/,\s*,/g, ',').trim() : 'Lagos, Nigeria'}
                 </span>
                 {vendorReviews.count > 0 ? (
                   <>
