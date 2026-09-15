@@ -1811,33 +1811,61 @@ export default function MobileVendorPublish({
             const numericPrice = Number(rawPrice.replace(/[^0-9.]/g, ''));
             if (!name.trim()) {
               setErrorMessage('Please enter garment title.');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
               return;
             }
             if (!rawPrice || isNaN(numericPrice) || numericPrice <= 0) {
               setErrorMessage('Please enter a valid price in Naira.');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
               return;
             }
+
+            // Use same image resolution as main submit — uploadedImages is the source of truth
+            if (uploadedImages.some(img => img.isUploading)) {
+              setErrorMessage('Photos are still uploading. Please wait a moment...');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+            }
+            const quickCoverImg = uploadedImages.find(i => i.isCover) || uploadedImages[0];
+            const quickFinalImg = quickCoverImg?.url || imagePreview;
+            if (!quickFinalImg || typeof quickFinalImg !== 'string' || !quickFinalImg.trim() || quickFinalImg.startsWith('/images/products/BlackTrapStar') || quickFinalImg.startsWith('blob:')) {
+              setErrorMessage('Please upload at least one product photo before publishing.');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+            }
+
             setIsSubmitting(true);
             setErrorMessage('');
             try {
               const activeVendorId = getActiveVendorId();
-              const finalImageUrl = imagePreview || '/images/products/BlackTrapStarHoodie.jpg';
               const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled && Number(sizeStock[s]?.quantity) > 0);
-              
+              const safeQuickVideoUrl = videoPreview && typeof videoPreview === 'string' && !videoPreview.startsWith('data:')
+                ? videoPreview
+                : undefined;
+
               const payload = {
                 name: name.trim(),
                 price: numericPrice,
                 category,
+                subcategory: subCategory,
                 genderTarget,
                 garmentOriginType: 'ready_made_boutique',
-                imageUrl: finalImageUrl,
-                image_url: finalImageUrl,
+                imageUrl: quickFinalImg,
+                image_url: quickFinalImg,
+                images: uploadedImages.map(img => ({
+                  url: img.url,
+                  label: img.label || (img.isCover ? 'Cover' : ''),
+                  colorName: img.colorName || undefined,
+                })),
+                videoUrl: safeQuickVideoUrl,
                 description: description.trim(),
                 tags,
-                colors: category === 'accessories' ? [] : selectedColors.map(c => ({ name: c.name, hex: c.hex })),
+                colors: category === 'accessories' ? [] : (photoDerivedColors.length > 0 ? photoDerivedColors : selectedColors.map(c => ({ name: c.name, hex: c.hex, imageUrl: quickFinalImg }))),
                 sizes: enabledSizes.length > 0 ? enabledSizes : ['M', 'L', 'XL'],
                 sizeStock,
                 stockQuantity: totalStock,
+                shipsFrom: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,
+                ships_from: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,
                 vendorId: activeVendorId,
                 vendorName: vendorProfile.brandName || 'Verified Partner',
                 is_published: true,
@@ -1854,18 +1882,26 @@ export default function MobileVendorPublish({
                 confetti({ particleCount: 60, spread: 60, origin: { y: 0.8 } });
                 setSuccessToast(`"${name.trim()}" published! Form cleared for your next piece.`);
                 setTimeout(() => setSuccessToast(''), 4000);
+                // Reset form for next product
                 setName('');
                 setRawPrice('');
                 setDescription('');
                 setImageFile(null);
                 setImagePreview(null);
+                setUploadedImages([]);
+                setSelectedColors([]);
+                setPhotoDerivedColors([]);
+                setVideoPreview(null);
+                setVideoFile(null);
                 setTags([]);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               } else {
                 setErrorMessage(data.error || 'Failed to publish piece');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             } catch (err) {
               setErrorMessage('Network error while publishing');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             } finally {
               setIsSubmitting(false);
             }
