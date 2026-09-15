@@ -1890,7 +1890,6 @@ export default function MobileVendorPublish({
                 setImagePreview(null);
                 setUploadedImages([]);
                 setSelectedColors([]);
-                setPhotoDerivedColors([]);
                 setVideoPreview(null);
                 setVideoFile(null);
                 setTags([]);
