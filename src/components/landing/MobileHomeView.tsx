@@ -653,7 +653,7 @@ export default function MobileHomeView() {
       name: 'Urban Archive',
       origin: 'Yaba',
       focus: '480GSM Heavyweight Streetwear',
-      image: '/images/products/BlackTrapStarHoodie.jpg',
+      image: '/images/no-product.svg',
     },
     {
       id: 'at-3',
@@ -688,7 +688,7 @@ export default function MobileHomeView() {
           vendorName: 'Urban Archive',
           category: 'outerwear',
           genderTarget: 'unisex',
-          imageUrl: '/images/products/BlackTrapStarHoodie.jpg',
+          imageUrl: '/images/no-product.svg',
           stockQuantity: 12,
         } as any,
         {
@@ -1088,7 +1088,7 @@ export default function MobileHomeView() {
         <div className="grid grid-cols-2 gap-2.5">
           {trendingPieces.map((product) => {
             const isFav = isInVault(product.id);
-            const imageSrc = product.imageUrl || (Array.isArray(product.images) && product.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+            const imageSrc = product.imageUrl || (Array.isArray(product.images) && product.images[0]) || '/images/no-product.svg';
 
             return (
               <div
@@ -1301,7 +1301,7 @@ export default function MobileHomeView() {
 
           <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-2">
             {recentlyViewed.map((item) => {
-              const imageSrc = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+              const imageSrc = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/no-product.svg';
               return (
                 <div
                   key={`recent-${item.id}`}

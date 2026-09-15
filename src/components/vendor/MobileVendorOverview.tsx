@@ -400,7 +400,7 @@ export default function MobileVendorOverview({
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
                     <Image
-                      src={piece.imageUrl || piece.image_url || (Array.isArray(piece.images) && piece.images[0]) || '/images/products/BlackTrapStarHoodie.jpg'}
+                      src={piece.imageUrl || piece.image_url || (Array.isArray(piece.images) && piece.images[0]) || '/images/no-product.svg'}
                       alt={piece.name}
                       fill
                       unoptimized

@@ -75,7 +75,7 @@ export default function MobileProductSlider({
       list.push({ type: 'video', url: product.videoUrl });
     }
 
-    return list.length > 0 ? list : [{ type: 'image', url: '/images/products/BlackTrapStarHoodie.jpg' }];
+    return list.length > 0 ? list : [{ type: 'image', url: '/images/no-product.svg' }];
   }, [product.imageUrl, product.images, product.colors, product.videoUrl]);
 
   const hasMultiple = slides.length > 1;

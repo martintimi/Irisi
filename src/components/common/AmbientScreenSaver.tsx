@@ -93,7 +93,7 @@ const DEFAULT_EDITORIAL_SLIDES: EditorialSlide[] = [
     title: 'Trapstar Cyber Heavyweight Hoodie',
     categoryName: 'Urban Streetwear',
     designerName: 'Moji Wears',
-    imageUrl: '/images/products/BlackTrapStarHoodie.jpg',
+    imageUrl: '/images/no-product.svg',
     description: 'Heavyweight brushed cotton fleece with gothic street typography and kangaroo pocket.',
     linkUrl: '/shop'
   },
@@ -259,7 +259,7 @@ export default function AmbientScreenSaver() {
   return (
     <div
       role="dialog"
-      aria-label="Ìrísí Ambient Fashion Screensaver"
+      aria-label="ÃŒrÃ­sÃ­ Ambient Fashion Screensaver"
       onClick={handleWakeUp}
       className={`fixed inset-0 z-[999999] bg-black text-white select-none transition-opacity duration-1000 ease-in-out ${
         isIdle
@@ -267,7 +267,7 @@ export default function AmbientScreenSaver() {
           : 'opacity-0 pointer-events-none'
       }`}
     >
-      {/* ── 1. FULLSCREEN BACKGROUND IMAGES WITH ULTRA-SMOOTH SLOW FADE ── */}
+      {/* â”€â”€ 1. FULLSCREEN BACKGROUND IMAGES WITH ULTRA-SMOOTH SLOW FADE â”€â”€ */}
       <div className="absolute inset-0 overflow-hidden">
         {slides.map((slide, idx) => {
           const isActive = idx === currentSlideIndex;
@@ -312,7 +312,7 @@ export default function AmbientScreenSaver() {
         })}
       </div>
 
-      {/* ── 2. FOREGROUND CONTENT MATCHING SIGNUP PAGE LAYOUT ── */}
+      {/* â”€â”€ 2. FOREGROUND CONTENT MATCHING SIGNUP PAGE LAYOUT â”€â”€ */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between p-6 sm:p-12 lg:p-16">
         
         {/* Top Header Row: Gold Capsule Category Pill */}
@@ -351,7 +351,7 @@ export default function AmbientScreenSaver() {
 
           {/* Micro Footer Bar Matching Signup Page */}
           <div className="pt-4 border-t border-white/15 flex items-center justify-between text-[10px] font-mono-luxury text-white/60 tracking-wider uppercase">
-            <span>Ìrísí Lookbook</span>
+            <span>ÃŒrÃ­sÃ­ Lookbook</span>
             <span>Doorstep Nationwide Delivery</span>
           </div>
 

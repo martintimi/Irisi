@@ -313,7 +313,9 @@ export async function GET(
       });
 
     // Combine images (primary image_url first, then gallery images, plus any color images)
-    const primaryImg = product.image_url || '/images/products/BlackTrapStarHoodie.jpg';
+    // Strip any BlackTrapStar placeholder that was accidentally saved to the DB
+    const rawPrimaryImg = product.image_url || '';
+    const primaryImg = rawPrimaryImg.includes('BlackTrapStar') ? '' : rawPrimaryImg;
     const colorImgs = Array.from(colorImgMap.values());
     const rawImages = Array.isArray(product.images)
       ? product.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean)

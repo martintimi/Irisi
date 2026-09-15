@@ -403,7 +403,7 @@ export default function MobileProfileView() {
                   >
                     <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/40">
                       <Image
-                        src={product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                        src={product.imageUrl || '/images/no-product.svg'}
                         alt={product.name}
                         fill
                         unoptimized
@@ -493,7 +493,7 @@ export default function MobileProfileView() {
                           <div key={itemIdx} className="flex items-center gap-2.5">
                             <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
                               <Image
-                                src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                                src={item.imageUrl || '/images/no-product.svg'}
                                 alt={item.productName || 'Garment'}
                                 fill
                                 unoptimized

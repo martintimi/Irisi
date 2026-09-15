@@ -2041,7 +2041,7 @@ export default function PublishGarmentPage() {
                   setErrorMessage('');
                   try {
                     const activeVendorId = getActiveVendorId();
-                    const finalImageUrl = imagePreview || '/images/products/BlackTrapStarHoodie.jpg';
+                    const finalImageUrl = imagePreview || '/images/no-product.svg';
                     const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled && Number(sizeStock[s]?.quantity) > 0);
                     
                     const payload = {

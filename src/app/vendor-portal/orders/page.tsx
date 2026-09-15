@@ -424,7 +424,7 @@ export default function VendorOrdersPage() {
                   {ord.items.map((item: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
                       <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-subtle)]">
-                        <Image src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'} alt={item.productName} fill unoptimized className="object-cover" />
+                        <Image src={item.imageUrl || '/images/no-product.svg'} alt={item.productName} fill unoptimized className="object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">{item.productName}</h4>

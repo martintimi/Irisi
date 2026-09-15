@@ -95,7 +95,7 @@ export async function GET() {
 
       // If no images found on products, use safe fallback
       if (images.length === 0) {
-        images.push('/images/products/BlackTrapStarHoodie.jpg');
+        images.push('/images/no-product.svg');
       }
 
       // Determine focus and craft tag based on dominant product category

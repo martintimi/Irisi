@@ -184,7 +184,7 @@ export default function MobileVendorOrders({
                   <div key={idx} className="flex items-center gap-3 p-2.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
                     <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
                       <Image
-                        src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                        src={item.imageUrl || '/images/no-product.svg'}
                         alt={item.productName}
                         fill
                         unoptimized

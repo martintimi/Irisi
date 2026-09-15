@@ -168,7 +168,7 @@ export default function WishlistPage() {
                 const imageSrc =
                   product.imageUrl ||
                   (Array.isArray(product.images) && product.images[0]) ||
-                  '/images/products/BlackTrapStarHoodie.jpg';
+                  '/images/no-product.svg';
 
                 return (
                   <div

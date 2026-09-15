@@ -40,7 +40,7 @@ export default function MobileStoriesRow({ onOpenQuickBuy }: { onOpenQuickBuy?: 
                 <div className="p-[2px] rounded-full bg-[var(--bg-primary)]">
                   <div className="relative h-[58px] w-[58px] rounded-full overflow-hidden bg-zinc-200">
                     <Image
-                      src={story.vendorAvatar || story.mediaUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                      src={story.vendorAvatar || story.mediaUrl || '/images/no-product.svg'}
                       alt={story.vendorName}
                       fill
                       unoptimized

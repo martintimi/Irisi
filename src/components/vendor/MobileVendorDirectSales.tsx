@@ -188,7 +188,7 @@ export default function MobileVendorDirectSales({
                 >
                   <div className="relative h-11 w-10 rounded-xl overflow-hidden bg-black shrink-0">
                     <Image
-                      src={p.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                      src={p.imageUrl || '/images/no-product.svg'}
                       alt={p.name}
                       fill
                       unoptimized

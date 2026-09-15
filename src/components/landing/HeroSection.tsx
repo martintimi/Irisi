@@ -51,7 +51,7 @@ const flipGalleryItems: GalleryItem[] = [
     category: 'Ready-to-Wear Streetwear',
     designer: 'Moji Wears',
     price: 48000,
-    image: '/images/products/BlackTrapStarHoodie.jpg',
+    image: '/images/no-product.svg',
     fitScore: 97.8,
     specs: '450gsm Cotton Fleece · Dropped Shoulders',
     badge: 'Ready to Wear'

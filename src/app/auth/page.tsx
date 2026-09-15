@@ -75,7 +75,7 @@ const editorialSlides = [
     tag: 'Jewelry & Watches'
   },
   {
-    image: '/images/products/BlackTrapStarHoodie.jpg',
+    image: '/images/no-product.svg',
     title: 'Trapstar Heavyweight Cyber Hoodie',
     subtitle: 'Heavyweight brushed cotton fleece with gothic street typography and kangaroo pocket.',
     tag: 'Urban Drops'

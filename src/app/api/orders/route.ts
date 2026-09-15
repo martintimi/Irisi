@@ -141,7 +141,7 @@ export async function GET(request: Request) {
           const pId = item.product_id || item.productId;
           const vId = item.vendor_id || item.vendorId || 'moji-wears';
           const pName = item.product_name || item.productName || 'Garment';
-          const matchedImage = item.image_url || item.imageUrl || productImageMap.get(pId) || '/images/products/BlackTrapStarHoodie.jpg';
+          const matchedImage = item.image_url || item.imageUrl || productImageMap.get(pId) || '/images/no-product.svg';
           const rawColor = item.color || item.colorName || 'As Pictured';
           const isHex = typeof rawColor === 'string' && rawColor.startsWith('#');
           const colorName = item.colorName || (isHex ? 'Standard' : rawColor);

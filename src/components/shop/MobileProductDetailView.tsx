@@ -307,7 +307,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     if (product.videoUrl) {
       items.push({ type: 'video', url: product.videoUrl });
     }
-    return items.length > 0 ? items : [{ type: 'image', url: '/images/products/BlackTrapStarHoodie.jpg' }];
+    return items.length > 0 ? items : [{ type: 'image', url: '/images/no-product.svg' }];
   }, [product.imageUrl, product.videoUrl, product.images]);
 
   // Reliable instant video autoplay with Low Power Mode manual unlock
@@ -1113,7 +1113,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
                   {/* Horizontal Swipeable Product Cards */}
                   <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
                     {similarProducts.map((item: any) => {
-                      const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                      const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/no-product.svg';
                       const isItemSaved = isInVault(item.id);
                       return (
                         <div
@@ -1215,7 +1215,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
             {/* Horizontal Swipeable Product Cards */}
             <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-2">
               {recentlyViewed.map((item: any) => {
-                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/no-product.svg';
                 const isItemSaved = isInVault(item.id);
                 return (
                   <div
@@ -1297,7 +1297,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
                   <Image
-                    src={selectedColor?.imageUrl || product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                    src={selectedColor?.imageUrl || product.imageUrl || '/images/no-product.svg'}
                     alt={product.name}
                     fill
                     unoptimized
@@ -1449,7 +1449,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
               {mediaItems[activeMediaIndex]?.type === 'video' ? (
                 <div className="relative w-full h-full max-h-[62vh] rounded-2xl overflow-hidden bg-black flex items-center justify-center">
                   <Image
-                    src={product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                    src={product.imageUrl || '/images/no-product.svg'}
                     alt={product.name}
                     fill
                     unoptimized
@@ -1484,7 +1484,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
                 </div>
               ) : (
                 <Image
-                  src={mediaItems[activeMediaIndex]?.url || product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                  src={mediaItems[activeMediaIndex]?.url || product.imageUrl || '/images/no-product.svg'}
                   alt={product.name}
                   fill
                   unoptimized

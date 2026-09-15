@@ -298,7 +298,7 @@ export default function EditProductModal({
     }
   };
 
-  const productImg = product.imageUrl || product.image_url || '/images/products/BlackTrapStarHoodie.jpg';
+  const productImg = product.imageUrl || product.image_url || '/images/no-product.svg';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">

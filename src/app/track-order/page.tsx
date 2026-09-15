@@ -618,7 +618,7 @@ export default function TrackOrderPage() {
                           <div key={iIdx} className="flex items-center justify-between gap-4 p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex-wrap">
                             <div className="flex items-center gap-3.5">
                               <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-subtle)]">
-                                <Image src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'} alt={item.productName || item.name} fill unoptimized className="object-cover" />
+                                <Image src={item.imageUrl || '/images/no-product.svg'} alt={item.productName || item.name} fill unoptimized className="object-cover" />
                               </div>
                               <div>
                                 <h4 className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">{item.productName || item.name}</h4>

@@ -374,7 +374,7 @@ export default function VendorProductsCatalogPage() {
 
             const isSoldOut = qty === 0;
             const isLowStock = qty > 0 && qty <= 3;
-            const productImg = piece.imageUrl || piece.image_url || '/images/products/BlackTrapStarHoodie.jpg';
+            const productImg = piece.imageUrl || piece.image_url || '/images/no-product.svg';
 
             // Extract sizing variant tags
             const sizeStock = piece.sizeStock || piece.size_stock;

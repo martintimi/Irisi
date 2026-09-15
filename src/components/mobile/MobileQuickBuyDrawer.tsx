@@ -100,7 +100,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
           <div className="flex items-center gap-3.5">
             <div className="relative h-16 w-16 rounded-2xl overflow-hidden bg-black/40 border border-[var(--border-subtle)] shrink-0">
               <Image
-                src={product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                src={product.imageUrl || '/images/no-product.svg'}
                 alt={product.name}
                 fill
                 unoptimized

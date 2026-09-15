@@ -203,7 +203,7 @@ export default function MobileBrandView({
                   <div className="relative aspect-[3/4] w-full bg-black/40 overflow-hidden">
                     <Link href={`/shop/${product.id}`} className="block h-full w-full">
                       <Image
-                        src={product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                        src={product.imageUrl || '/images/no-product.svg'}
                         alt={product.name}
                         fill
                         unoptimized

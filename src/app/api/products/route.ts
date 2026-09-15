@@ -197,7 +197,10 @@ export async function GET(request: Request) {
 
     const formatted = (products || []).map((p) => {
       const vendorInfo = vendorMap.get(p.vendor_id);
-      const resolvedImg = p.image_url ? p.image_url.trim() : '';
+      // Strip any BlackTrapStar placeholder that was accidentally saved to the DB
+      // (caused by the old "Publish & Add Another" bug — treat it as no image)
+      const rawImg = p.image_url ? p.image_url.trim() : '';
+      const resolvedImg = rawImg.includes('BlackTrapStar') ? '' : rawImg;
 
       const isAccessory = p.category === 'accessories';
 

@@ -1750,7 +1750,7 @@ export default function SuperAdminPage() {
                           {(ord.items || []).map((item: any, idx: number) => (
                             <div key={idx} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] shrink-0">
                               <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-black shrink-0">
-                                <Image src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'} alt="" fill unoptimized className="object-cover" />
+                                <Image src={item.imageUrl || '/images/no-product.svg'} alt="" fill unoptimized className="object-cover" />
                               </div>
                               <div className="text-[11px] font-mono-luxury min-w-[120px]">
                                 <div className="font-bold text-[var(--text-primary)] truncate">{item.productName}</div>
@@ -2382,7 +2382,7 @@ export default function SuperAdminPage() {
                             className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-black cursor-pointer"
                           >
                             <Image
-                              src={p.imageUrl || p.image_url || '/images/products/BlackTrapStarHoodie.jpg'}
+                              src={p.imageUrl || p.image_url || '/images/no-product.svg'}
                               alt={p.name}
                               fill
                               unoptimized
@@ -3498,7 +3498,7 @@ export default function SuperAdminPage() {
                   <div key={idx} className="py-3 flex items-center justify-between gap-4 text-xs font-mono-luxury">
                     <div className="flex items-center gap-3">
                       <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-black shrink-0">
-                        <Image src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'} alt="" fill unoptimized className="object-cover" />
+                        <Image src={item.imageUrl || '/images/no-product.svg'} alt="" fill unoptimized className="object-cover" />
                       </div>
                       <div>
                         <div className="font-bold text-[var(--text-primary)]">{item.productName}</div>
@@ -3566,7 +3566,7 @@ export default function SuperAdminPage() {
 
             <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-black">
               <Image
-                src={selectedProductModal.imageUrl || selectedProductModal.image_url || '/images/products/BlackTrapStarHoodie.jpg'}
+                src={selectedProductModal.imageUrl || selectedProductModal.image_url || '/images/no-product.svg'}
                 alt={selectedProductModal.name}
                 fill
                 unoptimized
@@ -3813,7 +3813,7 @@ export default function SuperAdminPage() {
                       {(ord.items || []).map((item: any, idx: number) => (
                         <div key={idx} className="flex items-center gap-2 p-1.5 rounded-xl surface-card border border-[var(--border-subtle)] shrink-0">
                           <div className="relative h-9 w-9 rounded-lg overflow-hidden bg-black shrink-0">
-                            <Image src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'} alt="" fill unoptimized className="object-cover" />
+                            <Image src={item.imageUrl || '/images/no-product.svg'} alt="" fill unoptimized className="object-cover" />
                           </div>
                           <div className="text-[10px] font-mono-luxury pr-2">
                             <div className="font-bold text-[var(--text-primary)] truncate max-w-[110px]">{item.productName}</div>

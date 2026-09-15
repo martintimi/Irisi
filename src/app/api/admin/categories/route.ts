@@ -21,7 +21,7 @@ export async function GET() {
         slug: d.slug,
         gender: d.gender_target || 'unisex',
         department: d.department || 'clothing',
-        imageUrl: d.image_url || '/images/products/BlackTrapStarHoodie.jpg',
+        imageUrl: d.image_url || '/images/no-product.svg',
         subtitle: d.subtitle || d.description || '',
         isPopular: d.is_popular || false,
       }));
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       slug: generatedSlug,
       gender: gender || 'unisex',
       department,
-      imageUrl: imageUrl || '/images/products/BlackTrapStarHoodie.jpg',
+      imageUrl: imageUrl || '/images/no-product.svg',
       subtitle: subtitle || `Curated collection of ${name}`,
       isPopular: false,
     };

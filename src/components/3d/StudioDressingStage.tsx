@@ -58,7 +58,7 @@ const STUDIO_PIECES: StudioPiece[] = [
     name: 'Trap Star Street Hoodie',
     category: 'garment',
     price: 33000,
-    atelier: 'Moji Wears · Lagos',
+    atelier: 'Moji Wears Â· Lagos',
     modelUrl: '/models/hoodie.glb',
     badge: 'Streetwear Drop',
     colors: [
@@ -72,7 +72,7 @@ const STUDIO_PIECES: StudioPiece[] = [
     name: 'Black Senator For Men',
     category: 'garment',
     price: 30000,
-    atelier: 'Arike Brand · Lagos',
+    atelier: 'Arike Brand Â· Lagos',
     modelUrl: '/models/jacket.glb',
     badge: 'Master Tailored',
     colors: [
@@ -86,7 +86,7 @@ const STUDIO_PIECES: StudioPiece[] = [
     name: 'Blacksmartshoes2 Oxford',
     category: 'shoe',
     price: 20000,
-    atelier: 'Moji Wears · Abuja',
+    atelier: 'Moji Wears Â· Abuja',
     modelUrl: '/models/luxury-shoe.glb',
     badge: 'Artisanal Footwear',
     colors: [
@@ -157,7 +157,7 @@ export default function StudioDressingStage() {
       price: currentPiece.price,
       vendorName: currentPiece.atelier,
       category: currentPiece.category,
-      imageUrl: '/images/products/BlackTrapStarHoodie.jpg',
+      imageUrl: '/images/no-product.svg',
       colors: [activeColor],
     } as any);
   };
@@ -187,7 +187,7 @@ export default function StudioDressingStage() {
                 : 'bg-black/60 text-white/80 border-white/15 hover:text-white'
             }`}
           >
-            {showMannequin ? '● Runway Model' : 'Inspect Garment'}
+            {showMannequin ? 'â— Runway Model' : 'Inspect Garment'}
           </button>
         </div>
 
@@ -296,10 +296,10 @@ export default function StudioDressingStage() {
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="font-editorial text-xl sm:text-2xl font-bold text-[var(--gold-accent)]">
-                  ₦{currentPiece.price.toLocaleString()}
+                  â‚¦{currentPiece.price.toLocaleString()}
                 </span>
                 <span className="text-[10px] font-mono-luxury text-emerald-400">
-                  ● Ready for Instant Dispatch
+                  â— Ready for Instant Dispatch
                 </span>
               </div>
             </div>

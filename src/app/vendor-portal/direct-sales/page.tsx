@@ -68,7 +68,7 @@ export default function DirectSalesAssistantPage() {
             category: p.category || 'tops',
             genderTarget: p.gender_target || 'unisex',
             garmentOriginType: p.garment_origin_type || 'ready_made_boutique',
-            imageUrl: p.imageUrl || p.image_url || '/images/products/BlackTrapStarHoodie.jpg',
+            imageUrl: p.imageUrl || p.image_url || '/images/no-product.svg',
             tags: Array.isArray(p.tags) ? p.tags : [],
             colors: Array.isArray(p.colors) ? p.colors : [{ name: 'Black', hex: '#111111' }],
             sizes: Array.isArray(p.sizes) ? p.sizes : ['Custom Fit'],

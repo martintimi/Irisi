@@ -262,13 +262,13 @@ const initialStories: VendorStory[] = [
     id: 'story-moji-1',
     vendorId: 'moji-wears',
     vendorName: 'Moji Wears',
-    vendorAvatar: '/images/products/BlackTrapStarHoodie.jpg',
-    mediaUrl: '/images/products/BlackTrapStarHoodie.jpg',
+    vendorAvatar: '/images/no-product.svg',
+    mediaUrl: '/images/no-product.svg',
     caption: 'Midnight Heavyweight TrapStar Drop ⚡ 480GSM Cotton in Stock now.',
     taggedProductId: 'prod-1787616646574-370',
     taggedProductName: 'Trap Star Street Hoodie',
     taggedProductPrice: 33000,
-    taggedProductImage: '/images/products/BlackTrapStarHoodie.jpg',
+    taggedProductImage: '/images/no-product.svg',
     createdAt: new Date().toISOString()
   },
   {
@@ -673,7 +673,7 @@ export const useStore = create<IrisiState>()(
                   colors: Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : [{ name: 'Default', hex: '#111111' }],
                   sizes: p.sizes || ['S', 'M', 'L', 'XL', 'XXL'],
                   sizeChart: {},
-                  imageUrl: p.imageUrl || p.image_url || '/images/products/BlackTrapStarHoodie.jpg',
+                  imageUrl: p.imageUrl || p.image_url || '/images/no-product.svg',
                   images: Array.isArray(p.images) && p.images.length > 0
                     ? p.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean)
                     : (p.imageUrl ? [p.imageUrl] : []),

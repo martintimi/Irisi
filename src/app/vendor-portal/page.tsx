@@ -489,7 +489,7 @@ export default function VendorOverviewPage() {
                       <div className="flex items-center gap-4 min-w-0">
                         <div className="relative h-16 w-14 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
                           <Image
-                            src={piece.imageUrl || piece.image_url || '/images/products/BlackTrapStarHoodie.jpg'}
+                            src={piece.imageUrl || piece.image_url || '/images/no-product.svg'}
                             alt={piece.name}
                             fill
                             unoptimized

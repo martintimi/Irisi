@@ -145,7 +145,7 @@ export default function MobileCartView() {
                     >
                       <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-black/40 shrink-0 border border-[var(--border-subtle)]">
                         <Image
-                          src={item.product.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                          src={item.product.imageUrl || '/images/no-product.svg'}
                           alt={item.product.name}
                           fill
                           unoptimized

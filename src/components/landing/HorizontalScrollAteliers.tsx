@@ -21,7 +21,7 @@ const ateliers = [
     location: 'Lekki Phase 1, Lagos',
     focus: 'Afro-Streetwear & 450gsm Heavyweight Fleece',
     desc: 'Lagos youth culture engineered into oversized dropped-shoulder hoodies, boxy graphic tees, and cyber streetwear aesthetics.',
-    image: '/images/products/BlackTrapStarHoodie.jpg',
+    image: '/images/no-product.svg',
     tag: 'Ready-to-Wear Street',
     heroPieces: 'Trapstar Hoodies · Boxy Tees · Aqua Slides'
   },

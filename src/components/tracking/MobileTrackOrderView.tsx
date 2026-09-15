@@ -504,7 +504,7 @@ export default function MobileTrackOrderView() {
                     {pkg.items.map((item, iIdx) => (
                       <div key={iIdx} className="flex items-center justify-between gap-3 p-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]/50">
                         <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-black/40 shrink-0">
-                          <Image src={item.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'} alt={item.productName} fill unoptimized className="object-cover" />
+                          <Image src={item.imageUrl || '/images/no-product.svg'} alt={item.productName} fill unoptimized className="object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">{item.productName}</h4>

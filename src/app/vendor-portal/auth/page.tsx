@@ -33,7 +33,7 @@ const vendorEditorialSlides = [
     tag: 'Escrow Protected'
   },
   {
-    image: '/images/products/BlackTrapStarHoodie.jpg',
+    image: '/images/no-product.svg',
     title: 'Ready-to-Wear Drops',
     subtitle: 'Boutiques and streetwear labels sell directly to verified Nigerian shoppers with nationwide delivery.',
     tag: 'Streetwear & Denim'

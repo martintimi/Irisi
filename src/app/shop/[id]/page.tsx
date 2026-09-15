@@ -1073,7 +1073,7 @@ export default function ProductDetailPage() {
           {showSimilarProducts && (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-fadeIn">
               {similarProducts.slice(0, 4).map((item: any) => {
-                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+                const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/no-product.svg';
                 const isItemSaved = isInVault(item.id);
                 return (
                   <div
@@ -1176,7 +1176,7 @@ export default function ProductDetailPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {recentlyViewed.slice(0, 4).map((item: any) => {
-              const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/products/BlackTrapStarHoodie.jpg';
+              const itemImg = item.imageUrl || (Array.isArray(item.images) && item.images[0]) || '/images/no-product.svg';
               const isItemSaved = isInVault(item.id);
               return (
                 <div

@@ -22,7 +22,7 @@ export default function AdminCategoriesManager() {
   const [newSlug, setNewSlug] = useState('');
   const [newGender, setNewGender] = useState<GenderKey>('men');
   const [newDepartment, setNewDepartment] = useState<DepartmentKey>('clothing');
-  const [newImageUrl, setNewImageUrl] = useState('/images/products/BlackTrapStarHoodie.jpg');
+  const [newImageUrl, setNewImageUrl] = useState('/images/no-product.svg');
   const [newSubtitle, setNewSubtitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -260,7 +260,7 @@ export default function AdminCategoriesManager() {
               {/* Image Preview & Badges */}
               <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-black/50 border border-[var(--border-subtle)]">
                 <Image
-                  src={cat.imageUrl || '/images/products/BlackTrapStarHoodie.jpg'}
+                  src={cat.imageUrl || '/images/no-product.svg'}
                   alt={cat.name}
                   fill
                   unoptimized
@@ -447,7 +447,7 @@ export default function AdminCategoriesManager() {
                 <div className="flex items-center gap-2 overflow-x-auto pt-2 no-scrollbar">
                   <span className="text-[10px] text-[var(--text-muted)] shrink-0">Presets:</span>
                   {[
-                    { label: 'Hoodie', url: '/images/products/BlackTrapStarHoodie.jpg' },
+                    { label: 'Hoodie', url: '/images/no-product.svg' },
                     { label: 'Senator', url: '/images/products/BlackSenator.jpg' },
                     { label: 'Agbada', url: '/images/products/BlackAgbada.jpg' },
                     { label: 'Denim', url: '/images/products/BaggyJean.jpg' },

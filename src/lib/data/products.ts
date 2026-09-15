@@ -279,7 +279,7 @@ export const products: Product[] = [
       'L': { chest: [107, 115], shoulder: [52, 54] },
       'XL': { chest: [116, 125], shoulder: [55, 58] },
     },
-    imageUrl: '/images/products/BlackTrapStarHoodie.jpg',
+    imageUrl: '/images/no-product.svg',
     fabricComposition: '100% Heavyweight Cotton Fleece (450 GSM)',
     fitNotes: 'Oversized streetwear silhouette with dropped shoulders.',
     rating: 4.9,
