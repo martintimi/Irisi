@@ -143,6 +143,8 @@ export interface VendorProfile {
   email: string;
   phone: string;
   location: string;
+  city?: string;
+  state?: string;
   vendorType: 'fashion_designer' | 'boutique_seller' | 'boutique_merchant' | string;
   specialty?: VendorSpecialty;
   vendorSpecialty?: VendorSpecialty;
@@ -153,6 +155,17 @@ export interface VendorProfile {
   bio: string;
   logoUrl?: string;
   subaccountId?: string;
+  hasSecondaryHub?: boolean;
+  secondaryCity?: string;
+  secondaryState?: string;
+  approvalStatus?: string;
+  isProfileSaved?: boolean;
+  dispatchDays?: string;
+  whatsapp?: string;
+  tiktok?: string;
+  snapchat?: string;
+  address?: string;
+  hasSensitivePendingUpdate?: boolean;
 }
 
 export function isBoutiqueVendor(vendorOrType: any): boolean {

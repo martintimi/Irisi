@@ -83,7 +83,7 @@ export async function GET(request: Request) {
 
     const [productsResult, vendorsResult] = await Promise.all([
       query,
-      supabase.from('vendors').select('id, brand_name, designer_name, location, bio'),
+      supabase.from('vendors').select('id, brand_name, designer_name, location, bio, is_verified'),
     ]);
 
     const { data: products, error } = productsResult;
@@ -190,6 +190,7 @@ export async function GET(request: Request) {
           state: state || 'Lagos',
           dispatchDays,
           shippingRates,
+          is_verified: !!v.is_verified,
         });
       });
     }
@@ -398,13 +399,20 @@ export async function GET(request: Request) {
         return matchedImg ? { ...col, imageUrl: matchedImg } : col;
       });
 
-      // Filter out internal system tags (video:, img:, color_img:) from public customer tags
+      // Extract ships_from location stored in tags as 'ships_from:<location>'
+      const shipsFromTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('ships_from:'));
+      const shipsFromLocation = shipsFromTag
+        ? shipsFromTag.replace(/^ships_from:/, '')
+        : (vendorInfo?.city && vendorInfo?.state ? `${vendorInfo.city}, ${vendorInfo.state}` : vendorInfo?.city || vendorInfo?.location || 'Lagos');
+
+      // Filter out internal system tags (video:, img:, color_img:, ships_from:) from public customer tags
       const cleanTags = rawTags.filter(
         (t: string) =>
           typeof t === 'string' &&
           !t.startsWith('video:') &&
           !t.startsWith('img:') &&
-          !t.startsWith('color_img:')
+          !t.startsWith('color_img:') &&
+          !t.startsWith('ships_from:')
       );
 
       return {
@@ -428,6 +436,8 @@ export async function GET(request: Request) {
         isCustomizable: Boolean((p as any).is_customizable),
         vendorId: p.vendor_id,
         vendor_id: p.vendor_id,
+        shipsFrom: shipsFromLocation,
+        ships_from: shipsFromLocation,
         vendorName: vendorInfo?.brand_name || p.vendor_id?.replace(/-/g, ' ').toUpperCase() || 'Ìrísí Partner',
         vendor_name: vendorInfo?.brand_name || p.vendor_id?.replace(/-/g, ' ').toUpperCase() || 'Ìrísí Partner',
         vendorLocation: vendorInfo?.location || 'Lagos, Nigeria',
@@ -444,10 +454,21 @@ export async function GET(request: Request) {
       };
     });
 
+    // Public Marketplace Gating: If browsing the public store without a vendor filter,
+    // only return products from approved & verified vendors
+    const isPublicQuery = !vendorId || vendorId === 'all';
+    const finalProducts = isPublicQuery
+      ? formatted.filter(p => {
+          const vInfo = vendorMap.get(p.vendor_id);
+          // Only show verified vendors on public shop (or fallback demo items)
+          return vInfo ? vInfo.is_verified === true : true;
+        })
+      : formatted;
+
     const responsePayload = {
       success: true,
-      count: formatted.length,
-      products: formatted,
+      count: finalProducts.length,
+      products: finalProducts,
     };
     apiProductsCache.set(cacheKey, { data: responsePayload, timestamp: Date.now() });
 
@@ -522,6 +543,11 @@ export async function POST(request: Request) {
         const tagsList = Array.isArray(item.tags)
           ? item.tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
           : ['Ready-to-Wear'];
+
+        const shipsFromToSave = item.shipsFrom || item.ships_from;
+        if (shipsFromToSave && typeof shipsFromToSave === 'string' && shipsFromToSave.trim()) {
+          tagsList.push(`ships_from:${shipsFromToSave.trim()}`);
+        }
 
         const rawVideoToSave = item.videoUrl || item.video_url;
         const videoToSave = normalizeVideoUrl(rawVideoToSave);
@@ -674,6 +700,11 @@ export async function POST(request: Request) {
     const tagsList = Array.isArray(tags)
       ? tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
       : [];
+
+    const shipsFromToSave = body.shipsFrom || body.ships_from;
+    if (shipsFromToSave && typeof shipsFromToSave === 'string' && shipsFromToSave.trim()) {
+      tagsList.push(`ships_from:${shipsFromToSave.trim()}`);
+    }
 
     const rawVideoToSave = body.videoUrl || body.video_url;
     const videoToSave = normalizeVideoUrl(rawVideoToSave);

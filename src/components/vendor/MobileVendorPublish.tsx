@@ -8,7 +8,7 @@ import {
   Check, AlertTriangle, ShieldCheck, Camera,
   RefreshCw, Minus, ChevronDown, Sparkle,
   Shirt, Footprints, Gem, Layers, CheckCircle2, ExternalLink,
-  Video, Play, Store
+  Video, Play, Store, Navigation
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -156,6 +156,16 @@ export default function MobileVendorPublish({
   );
   const [rawPrice, setRawPrice] = useState<string>('');
   
+  // Multi-Hub Dispatch Origin (only active if vendor has 2 dispatch hubs)
+  const [shipsFrom, setShipsFrom] = useState('');
+
+  useEffect(() => {
+    if (vendorProfile?.city && !shipsFrom) {
+      const primary = vendorProfile.city && vendorProfile.state ? `${vendorProfile.city}, ${vendorProfile.state}` : vendorProfile.city;
+      setShipsFrom(primary);
+    }
+  }, [vendorProfile, shipsFrom]);
+
   // Colors (for apparel and footwear)
   const [selectedColors, setSelectedColors] = useState<{ name: string; hex: string }[]>([]);
   const [customHex, setCustomHex] = useState('#2563eb');
@@ -876,6 +886,13 @@ export default function MobileVendorPublish({
         ...(subCategory.includes('shoe') || subCategory.includes('slide') || subCategory.includes('sneaker') ? ['footwear', 'shoes'] : []),
       ].filter(Boolean)));
 
+      // If videoPreview is still a raw base64 data URL (CDN upload failed earlier),
+      // strip it from the payload — sending it would cause Cloudinary to time out server-side
+      // and leave the button spinning forever. Product publishes without video; can re-upload later.
+      const safeVideoUrl = videoPreview && typeof videoPreview === 'string' && !videoPreview.startsWith('data:')
+        ? videoPreview
+        : undefined;
+
       const payload = {
         name: name.trim(),
         price: numericPrice,
@@ -890,13 +907,15 @@ export default function MobileVendorPublish({
           label: img.label || (img.isCover ? 'Cover' : ''),
           colorName: img.colorName || undefined,
         })),
-        videoUrl: videoPreview || undefined,
+        videoUrl: safeVideoUrl,
         description: description.trim(),
         tags: enhancedTags,
         colors: enrichedColorsToSubmit,
         sizes: enabledSizes,
         sizeStock,
         stockQuantity: totalStock,
+        shipsFrom: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,
+        ships_from: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,
         vendorId: activeVendorId,
         vendorName: vendorProfile.brandName || 'Verified Partner',
         is_published: true,
@@ -1471,6 +1490,34 @@ export default function MobileVendorPublish({
             />
           </div>
         </div>
+
+        {/* Multi-Hub Shipping Origin Selector (ONLY shown for vendors with 2 dispatch hubs configured) */}
+        {vendorProfile?.hasSecondaryHub && vendorProfile?.secondaryCity && (
+          <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-1.5 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] uppercase font-bold text-blue-400 flex items-center gap-1.5">
+                <Navigation className="h-3 w-3" />
+                <span>Shipping From (Dispatch Hub)</span>
+              </label>
+              <span className="text-[9px] text-blue-400 font-bold uppercase">Multi-Hub</span>
+            </div>
+            <select
+              value={shipsFrom}
+              onChange={(e) => setShipsFrom(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-blue-500/30 text-xs font-bold text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+            >
+              <option value={vendorProfile.city && vendorProfile.state ? `${vendorProfile.city}, ${vendorProfile.state}` : vendorProfile.city || 'Primary Hub'}>
+                📍 Primary Hub: {vendorProfile.city && vendorProfile.state ? `${vendorProfile.city}, ${vendorProfile.state}` : vendorProfile.city || 'Primary Hub'}
+              </option>
+              <option value={vendorProfile.secondaryCity && vendorProfile.secondaryState ? `${vendorProfile.secondaryCity}, ${vendorProfile.secondaryState}` : vendorProfile.secondaryCity || 'Secondary Hub'}>
+                📍 Secondary Hub: {vendorProfile.secondaryCity && vendorProfile.secondaryState ? `${vendorProfile.secondaryCity}, ${vendorProfile.secondaryState}` : vendorProfile.secondaryCity || 'Secondary Hub'}
+              </option>
+            </select>
+            <p className="text-[10px] text-blue-400 font-mono-luxury">
+              Item will display as dispatching from this hub location.
+            </p>
+          </div>
+        )}
 
         <div>
           <div className="flex items-center justify-between mb-1.5">

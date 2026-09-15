@@ -56,6 +56,9 @@ export default function VendorAtelierProfilePage() {
     phone: vendorProfile.phone || '',
     city: '',
     state: '',
+    hasSecondaryHub: false,
+    secondaryCity: '',
+    secondaryState: '',
     location: '',
     dispatchDays: '1-2 business days',
     sameCityFee: 1000,
@@ -143,6 +146,9 @@ export default function VendorAtelierProfilePage() {
           phone: v.phone || '',
           city: v.city || '',
           state: v.state || '',
+          hasSecondaryHub: !!(v.hasSecondaryHub || (v.secondaryCity && v.secondaryState)),
+          secondaryCity: v.secondaryCity || '',
+          secondaryState: v.secondaryState || '',
           location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : v.city || v.state || ''),
           dispatchDays: v.dispatchDays || '1-2 business days',
           sameCityFee: rates.sameCity !== undefined ? Number(rates.sameCity) : 1000,
@@ -179,7 +185,10 @@ export default function VendorAtelierProfilePage() {
           accountNumber: v.accountNumber || v.account_number || '',
           accountName: v.accountName || v.account_name || '',
           bio: v.bio || '',
-          logoUrl: v.logoUrl || v.logo || ''
+          logoUrl: v.logoUrl || v.logo || '',
+          hasSecondaryHub: !!(v.hasSecondaryHub || (v.secondaryCity && v.secondaryState)),
+          secondaryCity: v.secondaryCity || '',
+          secondaryState: v.secondaryState || ''
         });
       }
     } catch (err) {
@@ -204,8 +213,7 @@ export default function VendorAtelierProfilePage() {
       const payload = {
         ...form,
         vendorId: getActiveVendorId() || undefined,
-        location: cleanLoc,
-        approvalStatus: 'pending'
+        location: cleanLoc
       };
 
       const res = await vendorFetch('/api/vendor/profile', {
@@ -225,8 +233,13 @@ export default function VendorAtelierProfilePage() {
 
       setVendorProfile(payload as any);
       setIsProfileSaved(true);
-      setApprovalStatus('pending');
-      setSuccessMessage('Store profile and delivery zone rates submitted for Super Admin verification!');
+      if (data.isAutoApproved) {
+        setApprovalStatus('approved');
+        setSuccessMessage('Store profile updated and saved live!');
+      } else {
+        setApprovalStatus('pending');
+        setSuccessMessage('Sensitive profile updates submitted for Super Admin verification!');
+      }
       if (typeof window !== 'undefined') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -242,8 +255,7 @@ export default function VendorAtelierProfilePage() {
     }
   };
 
-  // Lock fields when profile is saved and awaiting review or approved. Only unlock when admin rejects!
-  const isFieldsDisabled = isProfileSaved && approvalStatus !== 'rejected';
+  const isFieldsDisabled = false;
 
   if (isLoadingProfile) {
     return <VendorLuxuryLoader label="Loading Store Profile from Database..." />;
@@ -453,7 +465,6 @@ export default function VendorAtelierProfilePage() {
                 Store Department &amp; Specialty
               </label>
               <select
-                disabled={isFieldsDisabled}
                 value={
                   form.specialty === 'apparel' ? 'streetwear' :
                   form.specialty === 'jewelry' ? 'accessories' :
@@ -467,7 +478,7 @@ export default function VendorAtelierProfilePage() {
                     vendorType: spec === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'
                   });
                 }}
-                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
               >
                 <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
                 <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
@@ -486,11 +497,10 @@ export default function VendorAtelierProfilePage() {
                 <input
                   type="text"
                   required
-                  disabled={isFieldsDisabled}
                   value={form.brandName}
                   onChange={(e) => setForm({ ...form, brandName: e.target.value })}
                   placeholder="e.g. Your Brand Name"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
                 />
               </div>
 
@@ -500,11 +510,10 @@ export default function VendorAtelierProfilePage() {
                 </label>
                 <input
                   type="text"
-                  disabled={isFieldsDisabled}
                   value={form.designerName}
                   onChange={(e) => setForm({ ...form, designerName: e.target.value })}
                   placeholder="e.g. Lead Tailor or Store Manager"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
                 />
               </div>
             </div>
@@ -517,11 +526,10 @@ export default function VendorAtelierProfilePage() {
                 <input
                   type="email"
                   required
-                  disabled={isFieldsDisabled}
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="store@example.com"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
                 />
               </div>
 
@@ -532,11 +540,10 @@ export default function VendorAtelierProfilePage() {
                 <input
                   type="tel"
                   required
-                  disabled={isFieldsDisabled}
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="+234 800 000 0000"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
                 />
               </div>
             </div>
@@ -547,11 +554,10 @@ export default function VendorAtelierProfilePage() {
               </label>
               <textarea
                 rows={3}
-                disabled={isFieldsDisabled}
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 placeholder="e.g. Luxury bespoke tailoring, ready-to-wear streetwear drops, and artisanal Nigerian fashion."
-                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none"
               />
             </div>
           </div>
@@ -570,64 +576,150 @@ export default function VendorAtelierProfilePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-              {/* 1. STORE STATE (FIRST) */}
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  1. Store State <strong className="text-rose-400">*</strong>
-                </label>
-                <select
-                  required
-                  disabled={isFieldsDisabled}
-                  value={form.state}
-                  onChange={(e) => {
-                    const newState = e.target.value;
-                    setForm({
-                      ...form,
-                      state: newState,
-                      city: ''
-                    });
-                  }}
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <option value="">-- Select State --</option>
-                  {NIGERIAN_STATES.map((st) => (
-                    <option key={st} value={st}>{st}</option>
-                  ))}
-                </select>
+            {/* Primary Dispatch Hub */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)] uppercase flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                  <span>Primary Dispatch Hub</span>
+                </span>
+                <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)] uppercase px-2 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/20 font-bold">
+                  Main Location
+                </span>
               </div>
 
-              {/* 2. STORE CITY / TOWN (SECOND, DYNAMIC) */}
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  2. Store City / Town <strong className="text-rose-400">*</strong>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* 1. STORE STATE (FIRST) */}
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                    Primary State <strong className="text-rose-400">*</strong>
+                  </label>
+                  <select
+                    required
+                    value={form.state}
+                    onChange={(e) => {
+                      const newState = e.target.value;
+                      setForm({
+                        ...form,
+                        state: newState,
+                        city: ''
+                      });
+                    }}
+                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
+                  >
+                    <option value="">-- Select State --</option>
+                    {NIGERIAN_STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. STORE CITY / TOWN (SECOND, DYNAMIC) */}
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                    Primary City / Town <strong className="text-rose-400">*</strong>
+                  </label>
+                  <SearchableCitySelect
+                    state={form.state}
+                    value={form.city}
+                    onChange={(newCity) => setForm({ ...form, city: newCity })}
+                    placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Secondary Dispatch Hub (Optional Multi-Hub Support) */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)] uppercase flex items-center gap-1.5">
+                    <Navigation className="h-3.5 w-3.5 text-blue-400" />
+                    <span>Secondary Dispatch Hub (Optional)</span>
+                  </span>
+                  <p className="text-[11px] text-[var(--text-secondary)] font-mono-luxury mt-0.5">
+                    For vendors dispatching items from two different workshops/warehouses (e.g. Lagos &amp; Ibadan).
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.hasSecondaryHub}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm({
+                        ...form,
+                        hasSecondaryHub: checked,
+                        secondaryState: checked ? form.secondaryState : '',
+                        secondaryCity: checked ? form.secondaryCity : ''
+                      });
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-[var(--border-subtle)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--gold-accent)]"></div>
                 </label>
-                <SearchableCitySelect
-                  state={form.state}
-                  value={form.city}
-                  onChange={(newCity) => setForm({ ...form, city: newCity })}
-                  disabled={isFieldsDisabled}
-                  placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
-                />
               </div>
 
-              {/* 3. DISPATCHES IN */}
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  3. Dispatches In
-                </label>
-                <select
-                  disabled={isFieldsDisabled}
-                  value={form.dispatchDays}
-                  onChange={(e) => setForm({ ...form, dispatchDays: e.target.value })}
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <option value="Same-day / 1 day">Same-day / 1 business day</option>
-                  <option value="1-2 business days">1-2 business days</option>
-                  <option value="2-3 business days">2-3 business days</option>
-                  <option value="3-5 business days">3-5 business days</option>
-                </select>
-              </div>
+              {form.hasSecondaryHub && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-[var(--border-subtle)] animate-fadeIn">
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                      Secondary State <strong className="text-rose-400">*</strong>
+                    </label>
+                    <select
+                      required={form.hasSecondaryHub}
+                      value={form.secondaryState}
+                      onChange={(e) => {
+                        const newState = e.target.value;
+                        setForm({
+                          ...form,
+                          secondaryState: newState,
+                          secondaryCity: ''
+                        });
+                      }}
+                      className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
+                    >
+                      <option value="">-- Select Secondary State --</option>
+                      {NIGERIAN_STATES.map((st) => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                      Secondary City / Town <strong className="text-rose-400">*</strong>
+                    </label>
+                    <SearchableCitySelect
+                      state={form.secondaryState}
+                      value={form.secondaryCity}
+                      onChange={(newCity) => setForm({ ...form, secondaryCity: newCity })}
+                      placeholder={form.secondaryState ? `Search city in ${form.secondaryState}...` : 'Select state first'}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-mono-luxury">
+                    <span className="font-bold">✨ Multi-Hub Enabled:</span> When publishing new products, you will have the option to choose whether each piece ships from your Primary Hub or Secondary Hub.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Turnaround Lead Time */}
+            <div>
+              <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                Order Turnaround / Lead Time
+              </label>
+              <select
+                value={form.dispatchDays}
+                onChange={(e) => setForm({ ...form, dispatchDays: e.target.value })}
+                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+              >
+                <option value="Same-day / 1 day">Same-day / 1 business day</option>
+                <option value="1-2 business days">1-2 business days</option>
+                <option value="2-3 business days">2-3 business days</option>
+                <option value="3-5 business days">3-5 business days</option>
+              </select>
             </div>
           </div>
 
@@ -650,11 +742,10 @@ export default function VendorAtelierProfilePage() {
                 </label>
                 <input
                   type="text"
-                  disabled={isFieldsDisabled}
                   value={form.instagram}
                   onChange={(e) => setForm({ ...form, instagram: e.target.value })}
                   placeholder="@your_brand"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-pink-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-pink-500 focus:outline-none"
                 />
               </div>
 
@@ -665,11 +756,10 @@ export default function VendorAtelierProfilePage() {
                 </label>
                 <input
                   type="text"
-                  disabled={isFieldsDisabled}
                   value={form.tiktok}
                   onChange={(e) => setForm({ ...form, tiktok: e.target.value })}
                   placeholder="@your_tiktok"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-cyan-400 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-cyan-400 focus:outline-none"
                 />
               </div>
 
@@ -680,11 +770,10 @@ export default function VendorAtelierProfilePage() {
                 </label>
                 <input
                   type="text"
-                  disabled={isFieldsDisabled}
                   value={form.snapchat}
                   onChange={(e) => setForm({ ...form, snapchat: e.target.value })}
                   placeholder="@your_snapchat"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-amber-300 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-amber-300 focus:outline-none"
                 />
               </div>
 
@@ -695,11 +784,10 @@ export default function VendorAtelierProfilePage() {
                 </label>
                 <input
                   type="tel"
-                  disabled={isFieldsDisabled}
                   value={form.whatsapp}
                   onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
                   placeholder="+234 800 000 0000"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none font-bold"
                 />
               </div>
             </div>
@@ -709,35 +797,23 @@ export default function VendorAtelierProfilePage() {
           <div className="pt-4 border-t border-[var(--border-subtle)]">
             <button
               type="submit"
-              disabled={isSaving || isFieldsDisabled}
+              disabled={isSaving}
               className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {isSaving ? (
                 <>
                   <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
-                  <span>Submitting Store Profile...</span>
+                  <span>Saving Store Profile...</span>
                 </>
-              ) : isFieldsDisabled ? (
-                approvalStatus === 'approved' ? (
-                  <>
-                    <Check className="h-4 w-4 text-emerald-400" />
-                    <span>Store Profile Verified & Active</span>
-                  </>
-                ) : (
-                  <>
-                    <Clock className="h-4 w-4 text-amber-400" />
-                    <span>Profile Submitted & Awaiting Super Admin Review</span>
-                  </>
-                )
-              ) : approvalStatus === 'rejected' ? (
+              ) : isProfileSaved ? (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  <span>Resubmit Store Profile for Review</span>
+                  <span>Update &amp; Save Store Profile</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  <span>Save & Submit Store Profile for Review</span>
+                  <span>Save &amp; Submit Store Profile</span>
                 </>
               )}
             </button>

@@ -50,16 +50,23 @@ export async function persistMedia(
 
   // 1. If Cloudinary is configured, upload to Cloudinary CDN
   if (hasCloudinary) {
-    try {
-      const uploadRes: any = await cloudinary.uploader.upload(trimmed, {
-        resource_type: isVideo ? 'video' : 'image',
-        folder: 'veyra_media',
-      });
-      if (uploadRes?.secure_url || uploadRes?.url) {
-        return uploadRes.secure_url || uploadRes.url;
+    // Safety cap: videos larger than ~5MB as base64 strings (~6.6MB encoded) are likely to
+    // exceed serverless function timeouts. Skip to disk fallback instead of hanging.
+    const isTooLargeForCloudinary = isVideo && trimmed.length > 6_000_000;
+    if (!isTooLargeForCloudinary) {
+      try {
+        const uploadRes: any = await cloudinary.uploader.upload(trimmed, {
+          resource_type: isVideo ? 'video' : 'image',
+          folder: 'veyra_media',
+        });
+        if (uploadRes?.secure_url || uploadRes?.url) {
+          return uploadRes.secure_url || uploadRes.url;
+        }
+      } catch (cErr) {
+        console.warn('Cloudinary direct upload failed, falling back to disk storage:', cErr);
       }
-    } catch (cErr) {
-      console.warn('Cloudinary direct upload failed, falling back to disk storage:', cErr);
+    } else {
+      console.warn(`persistMedia: video data URL too large (${Math.round(trimmed.length / 1024)}KB), skipping Cloudinary upload to prevent timeout.`);
     }
   }
 

@@ -9,7 +9,7 @@ import {
   ShoppingBag, Tag, ArrowRight, ExternalLink,
   Wand2, X, Palette, Store, Clock,
   Check, AlertTriangle, ShieldCheck, Shirt, Info, Sparkle, Lock, RotateCcw,
-  Footprints, Gem, Crown, Watch, Layers, Video, Play
+  Footprints, Gem, Crown, Watch, Layers, Video, Play, Navigation
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -138,8 +138,16 @@ export default function PublishGarmentPage() {
     isVerified: boolean;
     approvalStatus: string;
     rejectionReason: string;
+    hasSecondaryHub?: boolean;
+    secondaryCity?: string;
+    secondaryState?: string;
+    city?: string;
+    state?: string;
   } | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  // Multi-Hub Dispatch Origin (only active if vendor has 2 dispatch hubs)
+  const [shipsFrom, setShipsFrom] = useState('');
 
   // Mode: single garment or multi-photo batch drop
   const [uploadMode, setUploadMode] = useState<'single' | 'batch'>('single');
@@ -273,11 +281,19 @@ export default function PublishGarmentPage() {
           vendorSpecialty: spec
         });
 
+        const primaryHub = v.city && v.state ? `${v.city}, ${v.state}` : v.city || v.location || '';
+        setShipsFrom(primaryHub);
+
         setProfileStatus({
           isProfileSaved: !!v.isProfileSaved,
           isVerified: verified,
           approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
-          rejectionReason: v.rejectionReason || ''
+          rejectionReason: v.rejectionReason || '',
+          hasSecondaryHub: !!(v.hasSecondaryHub && v.secondaryCity),
+          secondaryCity: v.secondaryCity || '',
+          secondaryState: v.secondaryState || '',
+          city: v.city || '',
+          state: v.state || ''
         });
 
         if (spec === 'jewelry') {
@@ -812,6 +828,13 @@ export default function PublishGarmentPage() {
         ...(subCategory.includes('shoe') || subCategory.includes('slide') || subCategory.includes('sneaker') ? ['footwear', 'shoes'] : []),
       ].filter(Boolean)));
 
+      // If videoPreview is still a raw base64 data URL (CDN upload failed earlier),
+      // strip it from the payload — sending it would cause Cloudinary to time out server-side
+      // and leave the button spinning forever. Product publishes without video; can re-upload later.
+      const safeVideoUrl = videoPreview && typeof videoPreview === 'string' && !videoPreview.startsWith('data:')
+        ? videoPreview
+        : undefined;
+
       const payload = {
         name: name.trim(),
         price: numericPrice,
@@ -826,7 +849,7 @@ export default function PublishGarmentPage() {
           label: img.label || (img.isCover ? 'Cover' : ''),
           colorName: img.colorName || undefined,
         })),
-        videoUrl: videoPreview || undefined,
+        videoUrl: safeVideoUrl,
         description: description.trim(),
         tags: enhancedTags,
         colors: enrichedColorsToSubmit,
@@ -834,6 +857,8 @@ export default function PublishGarmentPage() {
         sizeStock,
         stockQuantity: totalStockCount,
         weightKg: weightKg && !isNaN(parseFloat(weightKg)) ? parseFloat(weightKg) : undefined,
+        shipsFrom: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,
+        ships_from: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,
         vendorId: activeVendorId,
         vendorName: vendorProfile.brandName || 'Verified Partner',
         is_published: true,
@@ -1612,6 +1637,34 @@ export default function PublishGarmentPage() {
             <p className="text-[10px] text-[var(--text-muted)] font-mono-luxury -mt-3">
               💡 <strong>Weight Note:</strong> Enter actual parcel weight (e.g. 0.15kg for 150g Cuban chain, 0.8kg for slides, 2.2kg for heavy jacket/backpack). Couriers bill by exact scale weight. If left blank, our system uses a safe category estimate.
             </p>
+
+            {/* Multi-Hub Shipping Origin Selector (ONLY shown for vendors with 2 dispatch hubs configured) */}
+            {profileStatus?.hasSecondaryHub && profileStatus?.secondaryCity && (
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 space-y-2 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-mono-luxury uppercase tracking-wider text-blue-400 font-bold flex items-center gap-1.5">
+                    <Navigation className="h-3.5 w-3.5" />
+                    <span>Where are you shipping this piece from?</span>
+                  </label>
+                  <span className="text-[10px] font-mono-luxury text-blue-400/80 font-bold uppercase">Multi-Hub Account</span>
+                </div>
+                <select
+                  value={shipsFrom}
+                  onChange={(e) => setShipsFrom(e.target.value)}
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-blue-500/30 text-xs font-bold text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer font-mono-luxury"
+                >
+                  <option value={profileStatus.city && profileStatus.state ? `${profileStatus.city}, ${profileStatus.state}` : profileStatus.city || 'Primary Hub'}>
+                    📍 Primary Hub: {profileStatus.city && profileStatus.state ? `${profileStatus.city}, ${profileStatus.state}` : profileStatus.city || 'Primary Hub'}
+                  </option>
+                  <option value={profileStatus.secondaryCity && profileStatus.secondaryState ? `${profileStatus.secondaryCity}, ${profileStatus.secondaryState}` : profileStatus.secondaryCity || 'Secondary Hub'}>
+                    📍 Secondary Hub: {profileStatus.secondaryCity && profileStatus.secondaryState ? `${profileStatus.secondaryCity}, ${profileStatus.secondaryState}` : profileStatus.secondaryCity || 'Secondary Hub'}
+                  </option>
+                </select>
+                <p className="text-[10px] text-blue-400/90 font-mono-luxury">
+                  Orders for this item will notify customers that it dispatches from this chosen hub location.
+                </p>
+              </div>
+            )}
 
             {/* Department Category Select */}
             <div>

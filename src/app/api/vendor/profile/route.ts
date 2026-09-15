@@ -66,6 +66,10 @@ export async function GET(request: Request) {
     };
 
     let vendorSpecialty = 'multi_department';
+    let secondaryCity = '';
+    let secondaryState = '';
+    let hasSecondaryHub = false;
+
     if (bioText.startsWith('{') && bioText.endsWith('}')) {
       try {
         const parsed = JSON.parse(bioText);
@@ -76,6 +80,9 @@ export async function GET(request: Request) {
         rejectionReason = parsed.rejectionReason || '';
         city = parsed.city || '';
         state = parsed.state || '';
+        secondaryCity = parsed.secondaryCity || '';
+        secondaryState = parsed.secondaryState || '';
+        hasSecondaryHub = !!(parsed.hasSecondaryHub || (secondaryCity && secondaryState));
         dispatchDays = parsed.dispatchDays || '1-2 business days';
         const rawSpec = parsed.specialty || parsed.vendorSpecialty || (vendor?.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
         vendorSpecialty = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
@@ -101,6 +108,9 @@ export async function GET(request: Request) {
         socialLinks,
         city,
         state,
+        secondaryCity,
+        secondaryState,
+        hasSecondaryHub,
         dispatchDays,
         isProfileSaved: isProfileSaved || verified,
         approvalStatus: finalApprovalStatus,
@@ -155,15 +165,79 @@ export async function POST(request: Request) {
 
     const specialty = body.specialty || body.vendorSpecialty || 'multi_department';
     const logoUrl = (body.logoUrl || body.logo || '').trim();
+    const secondaryCity = (body.secondaryCity || '').trim();
+    const secondaryState = (body.secondaryState || '').trim();
+    const hasSecondaryHub = !!(body.hasSecondaryHub && secondaryCity && secondaryState);
 
-    // Fetch existing vendor to preserve verified status if already approved
+    // Fetch existing vendor to check previous verified status and detect sensitive changes
     const { data: existingVendor } = await adminClient
       .from('vendors')
-      .select('is_verified, bio')
+      .select('*')
       .or(`id.eq.${vendorId},email.eq.${vendorId}`)
       .maybeSingle();
 
     const wasVerified = !!existingVendor?.is_verified;
+
+    // Parse existing bio to compare previous sensitive fields
+    let existingBioObj: any = {};
+    if (existingVendor?.bio && existingVendor.bio.startsWith('{')) {
+      try { existingBioObj = JSON.parse(existingVendor.bio); } catch (e) {}
+    }
+
+    // Check if sensitive fields (banking, phone, social handles, or dispatch hubs) were altered
+    let hasSensitiveChanges = false;
+    if (wasVerified) {
+      const prevBankName = (existingVendor?.bank_name || '').trim().toLowerCase();
+      const newBankName = (body.bankName || '').trim().toLowerCase();
+      const prevAccNum = (existingVendor?.account_number || '').trim();
+      const newAccNum = (body.accountNumber || '').trim();
+      const prevAccName = (existingVendor?.account_name || '').trim().toLowerCase();
+      const newAccName = (body.accountName || '').trim().toLowerCase();
+
+      const prevPhone = (existingVendor?.phone || '').trim();
+      const newPhone = (body.phone || '').trim();
+
+      const prevIg = (existingBioObj.socialLinks?.instagram || existingBioObj.instagram || '').trim().toLowerCase().replace(/^@/, '');
+      const newIg = (socialLinks.instagram || '').toLowerCase().replace(/^@/, '');
+      const prevTt = (existingBioObj.socialLinks?.tiktok || existingBioObj.tiktok || '').trim().toLowerCase().replace(/^@/, '');
+      const newTt = (socialLinks.tiktok || '').toLowerCase().replace(/^@/, '');
+      const prevSnap = (existingBioObj.socialLinks?.snapchat || existingBioObj.snapchat || '').trim().toLowerCase().replace(/^@/, '');
+      const newSnap = (socialLinks.snapchat || '').toLowerCase().replace(/^@/, '');
+      const prevWa = (existingBioObj.socialLinks?.whatsapp || existingBioObj.whatsapp || '').trim().replace(/[^0-9]/g, '');
+      const newWa = (socialLinks.whatsapp || '').replace(/[^0-9]/g, '');
+
+      const prevCity = (existingBioObj.city || '').trim().toLowerCase();
+      const newCity = (body.city || '').trim().toLowerCase();
+      const prevState = (existingBioObj.state || '').trim().toLowerCase();
+      const newState = (body.state || '').trim().toLowerCase();
+      const prevSecCity = (existingBioObj.secondaryCity || '').trim().toLowerCase();
+      const newSecCity = secondaryCity.toLowerCase();
+      const prevSecState = (existingBioObj.secondaryState || '').trim().toLowerCase();
+      const newSecState = secondaryState.toLowerCase();
+
+      if (
+        (newBankName && prevBankName !== newBankName) ||
+        (newAccNum && prevAccNum !== newAccNum) ||
+        (newAccName && prevAccName !== newAccName) ||
+        (newPhone && prevPhone !== newPhone) ||
+        prevIg !== newIg ||
+        prevTt !== newTt ||
+        prevSnap !== newSnap ||
+        prevWa !== newWa ||
+        (newCity && prevCity !== newCity) ||
+        (newState && prevState !== newState) ||
+        prevSecCity !== newSecCity ||
+        prevSecState !== newSecState
+      ) {
+        hasSensitiveChanges = true;
+      }
+    }
+
+    // Determine new verification status:
+    // If an approved vendor changed sensitive fields (bank/socials/hubs), they need Super Admin approval
+    // If only basic fields changed (logo, bio, store name, turnaround), they stay approved immediately!
+    const finalVerified = wasVerified && !hasSensitiveChanges;
+    const finalApprovalStatus = finalVerified ? 'approved' : 'pending';
 
     const bioPayload = JSON.stringify({
       bio: body.bio || '',
@@ -173,9 +247,14 @@ export async function POST(request: Request) {
       socialLinks,
       city: body.city || '',
       state: body.state || '',
+      secondaryCity,
+      secondaryState,
+      hasSecondaryHub,
       dispatchDays: body.dispatchDays || '1-2 business days',
       isProfileSaved: true,
-      approvalStatus: wasVerified ? 'approved' : 'pending'
+      approvalStatus: finalApprovalStatus,
+      rejectionReason: '',
+      hasSensitivePendingUpdate: hasSensitiveChanges
     });
 
     const { data: updated, error } = await adminClient
@@ -190,7 +269,7 @@ export async function POST(request: Request) {
         account_number: body.accountNumber,
         account_name: body.accountName,
         bio: bioPayload,
-        is_verified: wasVerified,
+        is_verified: finalVerified,
       })
       .or(`id.eq.${vendorId},email.eq.${vendorId}`)
       .select()
@@ -203,6 +282,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      isAutoApproved: finalVerified,
+      hasSensitivePendingUpdate: hasSensitiveChanges,
+      message: hasSensitiveChanges
+        ? 'Sensitive details updated and submitted for Super Admin review.'
+        : 'Store profile updated successfully!',
       vendor: {
         ...updated,
         specialty,
@@ -212,11 +296,14 @@ export async function POST(request: Request) {
         socialLinks,
         city: body.city || '',
         state: body.state || '',
+        secondaryCity,
+        secondaryState,
+        hasSecondaryHub,
         dispatchDays: body.dispatchDays || '1-2 business days',
         isProfileSaved: true,
-        is_verified: wasVerified,
-        isVerified: wasVerified,
-        approvalStatus: wasVerified ? 'approved' : 'pending',
+        is_verified: finalVerified,
+        isVerified: finalVerified,
+        approvalStatus: finalApprovalStatus,
         rejectionReason: ''
       }
     });

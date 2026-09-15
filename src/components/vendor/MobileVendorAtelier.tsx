@@ -252,7 +252,6 @@ export default function MobileVendorAtelier({
             Store Specialty &amp; Department
           </label>
           <select
-            disabled={isFieldsDisabled}
             value={
               form.specialty === 'apparel' ? 'streetwear' :
               form.specialty === 'jewelry' ? 'accessories' :
@@ -266,7 +265,7 @@ export default function MobileVendorAtelier({
                 vendorType: spec === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'
               });
             }}
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
           >
             <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
             <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
@@ -284,11 +283,10 @@ export default function MobileVendorAtelier({
           <input
             type="text"
             required
-            disabled={isFieldsDisabled}
             value={form.brandName}
             onChange={(e) => setForm({ ...form, brandName: e.target.value })}
             placeholder="e.g. Moji Wears"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
           />
         </div>
 
@@ -298,11 +296,10 @@ export default function MobileVendorAtelier({
           </label>
           <input
             type="text"
-            disabled={isFieldsDisabled}
             value={form.designerName}
             onChange={(e) => setForm({ ...form, designerName: e.target.value })}
             placeholder="e.g. Full Name"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
           />
         </div>
 
@@ -313,11 +310,10 @@ export default function MobileVendorAtelier({
           <input
             type="email"
             required
-            disabled={isFieldsDisabled}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="store@example.com"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
           />
         </div>
 
@@ -328,55 +324,130 @@ export default function MobileVendorAtelier({
           <input
             type="tel"
             required
-            disabled={isFieldsDisabled}
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
             placeholder="e.g. 08012345678"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {/* 1. STATE (FIRST) */}
-          <div>
-            <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-              1. State <strong className="text-rose-400">*</strong>
+        {/* Primary Dispatch Hub */}
+        <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
+          <span className="text-[11px] uppercase font-bold text-[var(--gold-accent)] flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            <span>Primary Dispatch Location</span>
+          </span>
+          <div className="grid grid-cols-2 gap-2">
+            {/* 1. STATE (FIRST) */}
+            <div>
+              <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
+                1. State <strong className="text-rose-400">*</strong>
+              </label>
+              <select
+                value={form.state}
+                onChange={(e) => {
+                  const newState = e.target.value;
+                  setForm({
+                    ...form,
+                    state: newState,
+                    city: ''
+                  });
+                }}
+                className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
+              >
+                <option value="">Select State</option>
+                {NIGERIAN_STATES.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. CITY (SECOND, DYNAMIC) */}
+            <div>
+              <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
+                2. City / Town <strong className="text-rose-400">*</strong>
+              </label>
+              <SearchableCitySelect
+                state={form.state}
+                value={form.city}
+                onChange={(newCity) => setForm({ ...form, city: newCity })}
+                placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Secondary Dispatch Hub (Optional) */}
+        <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] uppercase font-bold text-blue-400 flex items-center gap-1">
+              <Navigation className="h-3 w-3" />
+              <span>Second Dispatch Hub (Optional)</span>
+            </span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.hasSecondaryHub}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm({
+                    ...form,
+                    hasSecondaryHub: checked,
+                    secondaryState: checked ? form.secondaryState : '',
+                    secondaryCity: checked ? form.secondaryCity : ''
+                  });
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-[var(--border-subtle)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--gold-accent)]"></div>
             </label>
-            <select
-              disabled={isFieldsDisabled}
-              value={form.state}
-              onChange={(e) => {
-                const newState = e.target.value;
-                setForm({
-                  ...form,
-                  state: newState,
-                  city: ''
-                });
-              }}
-              className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <option value="">Select State</option>
-              {NIGERIAN_STATES.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
           </div>
 
-          {/* 2. CITY (SECOND, DYNAMIC) */}
-          <div>
-            <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-              2. City / Town <strong className="text-rose-400">*</strong>
-            </label>
-            <SearchableCitySelect
-              state={form.state}
-              value={form.city}
-              onChange={(newCity) => setForm({ ...form, city: newCity })}
-              disabled={isFieldsDisabled}
-              placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
-            />
-          </div>
+          {form.hasSecondaryHub && (
+            <div className="space-y-2 pt-1 animate-fadeIn">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
+                    2nd State <strong className="text-rose-400">*</strong>
+                  </label>
+                  <select
+                    value={form.secondaryState}
+                    onChange={(e) => {
+                      const newState = e.target.value;
+                      setForm({
+                        ...form,
+                        secondaryState: newState,
+                        secondaryCity: ''
+                      });
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
+                  >
+                    <option value="">Select State</option>
+                    {NIGERIAN_STATES.map((st) => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
+                    2nd City <strong className="text-rose-400">*</strong>
+                  </label>
+                  <SearchableCitySelect
+                    state={form.secondaryState}
+                    value={form.secondaryCity}
+                    onChange={(newCity) => setForm({ ...form, secondaryCity: newCity })}
+                    placeholder={form.secondaryState ? `Search city in ${form.secondaryState}...` : 'Select state first'}
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-blue-400 font-mono-luxury">
+                ✨ When creating a product, you can pick which hub it ships from.
+              </p>
+            </div>
+          )}
         </div>
 
         <div>
@@ -385,11 +456,10 @@ export default function MobileVendorAtelier({
           </label>
           <textarea
             rows={2}
-            disabled={isFieldsDisabled}
             value={form.bio}
             onChange={(e) => setForm({ ...form, bio: e.target.value })}
             placeholder="e.g. Luxury bespoke tailoring and modern Nigerian streetwear."
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none"
           />
         </div>
       </div>
@@ -407,11 +477,10 @@ export default function MobileVendorAtelier({
             </label>
             <input
               type="text"
-              disabled={isFieldsDisabled}
               value={form.instagram}
               onChange={(e) => setForm({ ...form, instagram: e.target.value })}
               placeholder="@brand"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-pink-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-pink-500 focus:outline-none"
             />
           </div>
 
@@ -421,11 +490,10 @@ export default function MobileVendorAtelier({
             </label>
             <input
               type="text"
-              disabled={isFieldsDisabled}
               value={form.tiktok}
               onChange={(e) => setForm({ ...form, tiktok: e.target.value })}
               placeholder="@tiktok"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-cyan-400 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-cyan-400 focus:outline-none"
             />
           </div>
 
@@ -435,11 +503,10 @@ export default function MobileVendorAtelier({
             </label>
             <input
               type="text"
-              disabled={isFieldsDisabled}
               value={form.snapchat}
               onChange={(e) => setForm({ ...form, snapchat: e.target.value })}
               placeholder="@snapchat"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-amber-300 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-amber-300 focus:outline-none"
             />
           </div>
 
@@ -449,11 +516,10 @@ export default function MobileVendorAtelier({
             </label>
             <input
               type="tel"
-              disabled={isFieldsDisabled}
               value={form.whatsapp}
               onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
               placeholder="080..."
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none font-bold"
             />
           </div>
         </div>
@@ -470,10 +536,9 @@ export default function MobileVendorAtelier({
             Dispatch Turnaround Time
           </label>
           <select
-            disabled={isFieldsDisabled}
             value={form.dispatchDays}
             onChange={(e) => setForm({ ...form, dispatchDays: e.target.value })}
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
           >
             <option value="Same-day / 1 day">Same-day / 1 business day</option>
             <option value="1-2 business days">1-2 business days (In Stock / Ready)</option>
@@ -488,35 +553,23 @@ export default function MobileVendorAtelier({
       <div className="pt-2">
         <button
           type="submit"
-          disabled={isSaving || isFieldsDisabled}
+          disabled={isSaving}
           className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold shadow-xl hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
           {isSaving ? (
             <>
               <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
-              <span>Submitting Profile...</span>
+              <span>Saving Profile...</span>
             </>
-          ) : isFieldsDisabled ? (
-            approvalStatus === 'approved' ? (
-              <>
-                <Check className="h-4 w-4 text-emerald-400" />
-                <span>Store Profile Verified & Active</span>
-              </>
-            ) : (
-              <>
-                <Clock className="h-4 w-4 text-amber-400" />
-                <span>Submitted & Awaiting Super Admin Review</span>
-              </>
-            )
-          ) : approvalStatus === 'rejected' ? (
+          ) : isProfileSaved ? (
             <>
-              <Sparkles className="h-4 w-4" />
-              <span>Resubmit Store Profile for Review</span>
+              <Save className="h-4 w-4 stroke-[2.5]" />
+              <span>Update &amp; Save Store Profile</span>
             </>
           ) : (
             <>
               <Save className="h-4 w-4 stroke-[2.5]" />
-              <span>Save & Submit Store Profile</span>
+              <span>Save &amp; Submit Store Profile</span>
             </>
           )}
         </button>

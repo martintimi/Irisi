@@ -2560,8 +2560,9 @@ export default function SuperAdminPage() {
               ) : (
                 <div className="space-y-4">
                   {filteredVendors.map((vendor) => {
-                    const isApproved = vendor.isVerified || vendor.approvalStatus === 'approved';
-                    const isPending = vendor.approvalStatus === 'pending' || !vendor.isVerified;
+                    const hasSensitivePendingUpdate = vendor.hasSensitivePendingUpdate === true;
+                    const isApproved = (vendor.isVerified || vendor.approvalStatus === 'approved') && !hasSensitivePendingUpdate;
+                    const isPending = vendor.approvalStatus === 'pending' || !vendor.isVerified || hasSensitivePendingUpdate;
                     const isActioning = actionLoadingId === vendor.id;
 
                     return (

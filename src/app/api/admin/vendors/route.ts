@@ -51,6 +51,11 @@ export async function GET(request: Request) {
         whatsapp: v.phone || ''
       };
 
+      let secondaryCity = '';
+      let secondaryState = '';
+      let hasSecondaryHub = false;
+      let hasSensitivePendingUpdate = false;
+
       if (bioText.startsWith('{') && bioText.endsWith('}')) {
         try {
           const parsed = JSON.parse(bioText);
@@ -69,6 +74,10 @@ export async function GET(request: Request) {
           specialty = parsed.specialty || parsed.vendorSpecialty || specialty;
           city = parsed.city || '';
           state = parsed.state || '';
+          secondaryCity = parsed.secondaryCity || '';
+          secondaryState = parsed.secondaryState || '';
+          hasSecondaryHub = !!(parsed.hasSecondaryHub || (secondaryCity && secondaryState));
+          hasSensitivePendingUpdate = parsed.hasSensitivePendingUpdate === true;
           address = parsed.address || '';
           logoUrl = parsed.logoUrl || parsed.logo || logoUrl;
         } catch (e) {}
@@ -93,6 +102,10 @@ export async function GET(request: Request) {
         location: v.location || 'Lagos, Nigeria',
         city: city || (v.location ? v.location.split(',')[0]?.trim() : ''),
         state: state || (v.location && v.location.includes(',') ? v.location.split(',')[1]?.trim() : 'Lagos'),
+        secondaryCity,
+        secondaryState,
+        hasSecondaryHub,
+        hasSensitivePendingUpdate,
         address,
         vendorType: v.vendor_type || (specialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'),
         specialty,

@@ -50,7 +50,12 @@ export async function POST(request: Request) {
           {
             resource_type: isVideo ? 'video' : 'image',
             folder: 'veyra_drops',
-            ...(isVideo ? { eager: [{ format: 'mp4', quality: 'auto' }] } : {}),
+            // eager_async: re-encode to mp4 in background — response returns immediately
+            // without waiting for transcoding (avoids serverless timeout on large videos)
+            ...(isVideo ? {
+              eager: [{ format: 'mp4', quality: 'auto' }],
+              eager_async: true,
+            } : {}),
           },
           (error, result) => {
             if (error) reject(error);
