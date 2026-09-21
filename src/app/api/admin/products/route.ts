@@ -6,7 +6,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { productId, price, isFeatured, inStock, name, category } = body;
+    const { productId, price, isFeatured, inStock, name, category, genderTarget, colors, description } = body;
 
     if (!productId) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
@@ -15,9 +15,13 @@ export async function PATCH(request: Request) {
     const updates: Record<string, any> = {};
     if (price !== undefined) updates.price = Number(price);
     if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
     if (category !== undefined) updates.category = category;
     if (inStock !== undefined) updates.in_stock = Boolean(inStock);
     if (isFeatured !== undefined) updates.is_featured = Boolean(isFeatured);
+    if (genderTarget !== undefined) updates.gender_target = genderTarget;
+    // colors is stored as jsonb array in products table
+    if (colors !== undefined) updates.colors = colors;
 
     const { data: updatedProduct, error } = await supabase
       .from('products')

@@ -20,6 +20,7 @@ import confetti from 'canvas-confetti';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import { getConciergeConfig, saveConciergeConfig, generateWhatsAppUrl, ConciergeConfig } from '@/lib/config/concierge';
 import AdminCategoriesManager from '@/components/admin/AdminCategoriesManager';
+import AdminProductEditModal from '@/components/admin/AdminProductEditModal';
 import { supabase } from '@/lib/supabase/client';
 
 const adminEditorialSlides = [
@@ -3594,104 +3595,18 @@ export default function SuperAdminPage() {
       )}
 
       {/* FULL PRODUCT DOSSIER MODAL */}
-      {selectedProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-xl surface-card p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-5 shadow-2xl max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain">
-            
-            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
-              <div>
-                <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">
-                  Product Dossier & Moderation
-                </span>
-                <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-                  {selectedProductModal.name}
-                </h3>
-              </div>
-
-              <button
-                onClick={() => setSelectedProductModal(null)}
-                className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="relative aspect-[4/3] w-full rounded-2xl overflow-hidden bg-black">
-              <Image
-                src={selectedProductModal.imageUrl || selectedProductModal.image_url || '/images/no-product.svg'}
-                alt={selectedProductModal.name}
-                fill
-                unoptimized
-                className="object-contain"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono-luxury">
-              <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase block">Category</span>
-                <strong className="text-[var(--gold-accent)] uppercase">{selectedProductModal.category}</strong>
-              </div>
-              <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase block">Retail Price</span>
-                <strong className="text-[var(--text-primary)] text-base">₦{Number(selectedProductModal.price || 0).toLocaleString()}</strong>
-              </div>
-              <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase block">Designer / Brand</span>
-                <strong className="text-[var(--text-primary)]">{selectedProductModal.vendorName || selectedProductModal.vendor_name || 'Designer Store'}</strong>
-              </div>
-              <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase block">Lookbook Status</span>
-                <strong className={selectedProductModal.is_featured ? 'text-amber-400' : 'text-[var(--text-muted)]'}>
-                  {selectedProductModal.is_featured ? 'Featured on Lookbook' : 'Standard Catalog'}
-                </strong>
-              </div>
-            </div>
-
-            {selectedProductModal.description && (
-              <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-secondary)] space-y-1">
-                <span className="text-[10px] text-[var(--text-muted)] uppercase font-bold block">Product Description</span>
-                <p className="leading-relaxed">{selectedProductModal.description}</p>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border-subtle)]">
-              <button
-                onClick={() => {
-                  handleToggleProductFeatured(selectedProductModal.id, selectedProductModal.is_featured);
-                  setSelectedProductModal({ ...selectedProductModal, is_featured: !selectedProductModal.is_featured });
-                }}
-                className="px-4 py-2 rounded-full border border-[var(--border-subtle)] text-xs font-mono-luxury font-bold uppercase hover:border-[var(--gold-accent)] transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Star className={`h-3.5 w-3.5 ${selectedProductModal.is_featured ? 'fill-amber-400 text-amber-400' : ''}`} />
-                <span>{selectedProductModal.is_featured ? 'Remove from Lookbook' : 'Feature on Lookbook'}</span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/shop/${selectedProductModal.id}`}
-                  target="_blank"
-                  className="px-4 py-2 rounded-full bg-[var(--gold-accent)] text-black text-xs font-mono-luxury font-bold uppercase hover:bg-[#d8b357] transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>Open in Live Shop</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-
-                <button
-                  onClick={() => {
-                    handleDeleteProduct(selectedProductModal.id, selectedProductModal.name);
-                    setSelectedProductModal(null);
-                  }}
-                  className="p-2 rounded-full border border-[var(--border-subtle)] hover:bg-rose-500/10 text-rose-400 cursor-pointer"
-                  title="Delete from Marketplace"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {selectedProductModal && (() => {
+        // Local edit state tracked inside an IIFE-rendered component via closure
+        // We use a nested component pattern to keep edit state isolated
+        return <AdminProductEditModal
+          product={selectedProductModal}
+          onClose={() => setSelectedProductModal(null)}
+          onSaved={(updated) => {
+            setSelectedProductModal(null);
+            setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
+          }}
+        />;
+      })()}
 
       {/* REJECT / RETURN FEEDBACK MODAL */}
       {rejectionModalVendor && (
