@@ -2469,10 +2469,10 @@ export default function SuperAdminPage() {
                         <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
                           <button
                             onClick={() => setSelectedProductModal(p)}
-                            className="px-3 py-1 rounded-xl text-[10px] font-mono-luxury uppercase font-bold surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[var(--text-primary)] transition-all cursor-pointer flex items-center gap-1"
+                            className="px-3 py-1.5 rounded-xl text-[10px] font-mono-luxury uppercase font-black bg-[var(--gold-accent)] text-black hover:opacity-90 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
                           >
-                            <Eye className="h-3 w-3 text-[var(--gold-accent)]" />
-                            <span>View Details</span>
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            <span>Edit Product</span>
                           </button>
 
                           <div className="flex items-center gap-1.5">
@@ -3594,19 +3594,17 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* FULL PRODUCT DOSSIER MODAL */}
-      {selectedProductModal && (() => {
-        // Local edit state tracked inside an IIFE-rendered component via closure
-        // We use a nested component pattern to keep edit state isolated
-        return <AdminProductEditModal
+      {/* FULL PRODUCT EDIT MODAL */}
+      {selectedProductModal && (
+        <AdminProductEditModal
           product={selectedProductModal}
           onClose={() => setSelectedProductModal(null)}
           onSaved={(updated) => {
             setSelectedProductModal(null);
             setProducts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
           }}
-        />;
-      })()}
+        />
+      )}
 
       {/* REJECT / RETURN FEEDBACK MODAL */}
       {rejectionModalVendor && (

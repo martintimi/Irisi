@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { XCircle, Save, ExternalLink, Star, Check } from 'lucide-react';
+import { X, Save, ExternalLink, Star, Check, Sparkles, AlertCircle } from 'lucide-react';
 
 const ADMIN_COLOR_PALETTE = [
   { name: 'Black', hex: '#111111' },
@@ -60,6 +60,24 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Strict scroll lock on mount
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const toggleColor = (colorName: string) => {
     setSelectedColors(prev =>
       prev.includes(colorName) ? prev.filter(c => c !== colorName) : [...prev, colorName]
@@ -76,6 +94,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
         const match = ADMIN_COLOR_PALETTE.find(c => c.name === name);
         return { name, hex: match?.hex || '#111111' };
       });
+
       const res = await fetch('/api/admin/products', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -91,12 +110,28 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           colors: colorsPayload,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data.success) { setSaveError(data.error || 'Failed to save.'); return; }
+      if (!res.ok || !data.success) {
+        setSaveError(data.error || 'Failed to save.');
+        return;
+      }
+
       setSaveSuccess(true);
       setTimeout(() => {
-        onSaved({ ...product, name: editName.trim(), price: Number(editPrice), gender_target: editGender, genderTarget: editGender, category: editCategory, description: editDescription.trim(), in_stock: editInStock, is_featured: editFeatured, colors: colorsPayload });
-      }, 600);
+        onSaved({
+          ...product,
+          name: editName.trim(),
+          price: Number(editPrice),
+          gender_target: editGender,
+          genderTarget: editGender,
+          category: editCategory,
+          description: editDescription.trim(),
+          in_stock: editInStock,
+          is_featured: editFeatured,
+          colors: colorsPayload,
+        });
+      }, 500);
     } catch (err: any) {
       setSaveError(err.message || 'Network error');
     } finally {
@@ -105,76 +140,257 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-2xl surface-card rounded-3xl border border-[var(--border-subtle)] shadow-2xl max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain">
-        <div className="flex items-center justify-between p-6 border-b border-[var(--border-subtle)] sticky top-0 bg-[var(--bg-secondary)] z-10 rounded-t-3xl">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn select-none"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-white"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 1. STICKY TOP HEADER */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-sm shrink-0">
           <div>
-            <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Admin — Edit Product</span>
-            <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)] line-clamp-1">{product.name}</h3>
+            <span className="text-[10px] font-mono-luxury uppercase text-amber-400 font-bold tracking-wider block">
+              Super Admin Control
+            </span>
+            <h3 className="font-editorial text-lg sm:text-xl font-bold text-white line-clamp-1">
+              Edit: {product.name}
+            </h3>
           </div>
-          <button onClick={onClose} className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"><XCircle className="h-5 w-5" /></button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <div className="p-6 space-y-5">
-          <div className="relative aspect-[16/7] w-full rounded-2xl overflow-hidden bg-black border border-[var(--border-subtle)]">
-            <Image src={product.imageUrl || product.image_url || '/images/no-product.svg'} alt={product.name} fill unoptimized className="object-contain" />
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-[9px] font-mono-luxury text-white uppercase">{product.vendorName || product.vendor_name || 'Unknown Vendor'}</div>
+
+        {/* 2. SCROLLABLE EDIT BODY */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5 overscroll-contain">
+
+          {/* Compact Product Header Card (Image + Quick Info) */}
+          <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-neutral-950 border border-neutral-800">
+            <div className="relative h-20 w-20 rounded-xl overflow-hidden bg-black shrink-0 border border-neutral-800">
+              <Image
+                src={product.imageUrl || product.image_url || '/images/no-product.svg'}
+                alt={product.name}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] font-mono-luxury uppercase font-bold text-amber-400 block">
+                Vendor: {product.vendorName || product.vendor_name || 'Independent Atelier'}
+              </span>
+              <p className="text-xs text-neutral-300 truncate font-bold mt-0.5">{product.name}</p>
+              <p className="text-xs text-neutral-400 font-mono-luxury mt-1">
+                Current: <span className="text-white font-bold uppercase">{product.gender_target || product.genderTarget || 'Unisex'}</span> · ₦{Number(product.price || 0).toLocaleString()}
+              </p>
+            </div>
           </div>
+
+          {/* Product Name Input */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Product Name</label>
-            <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm font-mono-luxury text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors" />
+            <label className="text-[10px] font-mono-luxury uppercase text-amber-400 font-bold block tracking-wider">
+              Product Name
+            </label>
+            <input
+              type="text"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-amber-400 transition-colors"
+            />
           </div>
+
+          {/* Price + Category Row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Price (NGN)</label>
-              <input type="number" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm font-mono-luxury text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors" />
+              <label className="text-[10px] font-mono-luxury uppercase text-amber-400 font-bold block tracking-wider">
+                Price (₦)
+              </label>
+              <input
+                type="number"
+                value={editPrice}
+                onChange={e => setEditPrice(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors font-mono-luxury"
+              />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Category</label>
-              <select value={editCategory} onChange={e => setEditCategory(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm font-mono-luxury text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors cursor-pointer">
-                {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+              <label className="text-[10px] font-mono-luxury uppercase text-amber-400 font-bold block tracking-wider">
+                Category
+              </label>
+              <select
+                value={editCategory}
+                onChange={e => setEditCategory(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-sm text-white focus:outline-none focus:border-amber-400 transition-colors cursor-pointer"
+              >
+                {CATEGORY_OPTIONS.map(c => (
+                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
               </select>
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Gender Target <span className="ml-2 text-[9px] text-rose-400 normal-case font-normal">Fix wrong gender here</span></label>
-            <div className="flex gap-2">
-              {GENDER_OPTIONS.map(opt => (
-                <button key={opt.value} type="button" onClick={() => setEditGender(opt.value)} className={`flex-1 py-2.5 rounded-xl text-xs font-mono-luxury font-bold uppercase tracking-wider border transition-all cursor-pointer ${editGender === opt.value ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)]' : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--gold-accent)]'}`}>{opt.label}</button>
-              ))}
+
+          {/* GENDER TARGET — MAIN FIX */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-neutral-950/60 border border-amber-500/30">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-mono-luxury uppercase text-amber-400 font-bold tracking-wider block">
+                Target Gender
+              </label>
+              <span className="text-[10px] text-amber-300 font-medium">
+                Fix misplaced female / male items
+              </span>
             </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Colors <span className="ml-2 text-[9px] text-[var(--text-muted)] normal-case font-normal">{selectedColors.length > 0 ? selectedColors.join(', ') : 'None selected'}</span></label>
-            <div className="flex flex-wrap gap-2 p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-              {ADMIN_COLOR_PALETTE.map(c => {
-                const isSelected = selectedColors.includes(c.name);
+            <div className="grid grid-cols-3 gap-2">
+              {GENDER_OPTIONS.map(opt => {
+                const isSelected = editGender === opt.value;
                 return (
-                  <button key={c.name} type="button" title={c.name} onClick={() => toggleColor(c.name)} className={`relative h-7 w-7 rounded-full border-2 transition-all cursor-pointer active:scale-90 ${isSelected ? 'border-[var(--gold-accent)] scale-110 shadow-md' : 'border-transparent hover:border-white/40'}`} style={{ backgroundColor: c.hex }}>
-                    {isSelected && <span className="absolute inset-0 flex items-center justify-center"><Check className="h-3 w-3 text-white drop-shadow" strokeWidth={3} /></span>}
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setEditGender(opt.value)}
+                    className={`py-3 rounded-xl text-xs font-mono-luxury font-black uppercase tracking-wider transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-amber-400 text-black border-amber-400 shadow-md scale-[1.02]'
+                        : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:border-neutral-700 hover:text-white'
+                    }`}
+                  >
+                    {opt.label}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* COLOR PALETTE SWATCHES */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-mono-luxury uppercase text-amber-400 font-bold tracking-wider block">
+                Available Colors
+              </label>
+              <span className="text-[10px] font-mono-luxury text-neutral-400">
+                {selectedColors.length > 0 ? selectedColors.join(', ') : 'None selected'}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2.5 p-3 rounded-2xl bg-neutral-950 border border-neutral-800">
+              {ADMIN_COLOR_PALETTE.map(c => {
+                const isSelected = selectedColors.includes(c.name);
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    title={c.name}
+                    onClick={() => toggleColor(c.name)}
+                    className={`relative h-7 w-7 rounded-full border-2 transition-all cursor-pointer active:scale-90 ${
+                      isSelected
+                        ? 'border-amber-400 scale-110 shadow-lg ring-2 ring-amber-400/40'
+                        : 'border-transparent hover:border-white/50'
+                    }`}
+                    style={{ backgroundColor: c.hex }}
+                  >
+                    {isSelected && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Description */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block">Description</label>
-            <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors resize-none" />
+            <label className="text-[10px] font-mono-luxury uppercase text-amber-400 font-bold tracking-wider block">
+              Product Description
+            </label>
+            <textarea
+              value={editDescription}
+              onChange={e => setEditDescription(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-amber-400 transition-colors resize-none leading-relaxed"
+            />
           </div>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setEditInStock(p => !p)} className={`flex-1 py-2.5 rounded-xl text-xs font-mono-luxury font-bold uppercase border transition-all cursor-pointer ${editInStock ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'}`}>{editInStock ? 'In Stock' : 'Out of Stock'}</button>
-            <button type="button" onClick={() => setEditFeatured(p => !p)} className={`flex-1 py-2.5 rounded-xl text-xs font-mono-luxury font-bold uppercase border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${editFeatured ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-[var(--bg-primary)] text-[var(--text-muted)] border-[var(--border-subtle)]'}`}>
-              <Star className={`h-3.5 w-3.5 ${editFeatured ? 'fill-amber-400' : ''}`} />{editFeatured ? 'In Lookbook' : 'Not Featured'}
+
+          {/* In Stock & Featured Toggles */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setEditInStock(p => !p)}
+              className={`py-3 px-4 rounded-xl text-xs font-mono-luxury font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+                editInStock
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                  : 'bg-rose-500/15 text-rose-300 border-rose-500/40'
+              }`}
+            >
+              {editInStock ? '✓ In Stock' : '✕ Out of Stock'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setEditFeatured(p => !p)}
+              className={`py-3 px-4 rounded-xl text-xs font-mono-luxury font-bold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                editFeatured
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                  : 'bg-neutral-950 text-neutral-400 border-neutral-800 hover:border-neutral-700'
+              }`}
+            >
+              <Star className={`h-3.5 w-3.5 ${editFeatured ? 'fill-amber-400 text-amber-400' : ''}`} />
+              <span>{editFeatured ? 'In Lookbook' : 'Standard'}</span>
             </button>
           </div>
-          {saveError && <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono-luxury">{saveError}</div>}
-          <div className="flex items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
-            <button onClick={handleSave} disabled={isSaving || saveSuccess} className="flex-1 py-3 rounded-xl bg-[var(--gold-accent)] text-black text-xs font-mono-luxury font-black uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2">
-              {saveSuccess ? <><Check className="h-4 w-4 stroke-[3]" /><span>Saved!</span></> : isSaving ? <span>Saving...</span> : <><Save className="h-3.5 w-3.5" /><span>Save Changes</span></>}
-            </button>
-            <Link href={`/shop/${product.id}`} target="_blank" className="px-4 py-3 rounded-xl border border-[var(--border-subtle)] text-xs font-mono-luxury font-bold uppercase text-[var(--text-secondary)] hover:border-[var(--gold-accent)] transition-all flex items-center gap-1.5 cursor-pointer">
-              <ExternalLink className="h-3.5 w-3.5" /><span>Preview</span>
-            </Link>
-          </div>
+
+          {saveError && (
+            <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 3. STICKY BOTTOM FOOTER (Always visible without scrolling!) */}
+        <div className="p-4 border-t border-neutral-800 bg-neutral-950 flex items-center gap-3 shrink-0 rounded-b-3xl">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || saveSuccess}
+            className="flex-1 py-3 px-5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-mono-luxury font-black uppercase tracking-wider transition-all disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2 shadow-lg active:scale-[0.99]"
+          >
+            {saveSuccess ? (
+              <>
+                <Check className="h-4 w-4 stroke-[3]" />
+                <span>Saved & Updated!</span>
+              </>
+            ) : isSaving ? (
+              <span>Saving to Catalog...</span>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                <span>Save Changes</span>
+              </>
+            )}
+          </button>
+
+          <Link
+            href={`/shop/${product.id}`}
+            target="_blank"
+            className="px-4 py-3 rounded-xl border border-neutral-800 hover:border-amber-400/50 bg-neutral-900 text-xs font-mono-luxury font-bold uppercase text-neutral-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Live Shop</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-3 rounded-xl border border-neutral-800 hover:bg-neutral-800 text-xs font-mono-luxury font-bold uppercase text-neutral-400 hover:text-white transition-all cursor-pointer shrink-0"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     </div>
