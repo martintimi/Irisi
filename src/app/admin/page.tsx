@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
   ShieldCheck, LayoutDashboard, Users, PackageCheck, Scissors,
@@ -42,6 +43,20 @@ const adminEditorialSlides = [
   }
 ];
 
+const adminSectionToTab = {
+  dashboard: 'overview',
+  orders: 'orders',
+  logistics: 'logistics',
+  catalog: 'catalog',
+  categories: 'categories',
+  approvals: 'approvals',
+  finance: 'finance',
+  customers: 'customers',
+  concierge: 'concierge',
+} as const;
+
+type AdminTab = (typeof adminSectionToTab)[keyof typeof adminSectionToTab];
+
 // Vector App Logos
 const InstagramLogo = () => (
   <svg className="h-3.5 w-3.5 shrink-0 text-pink-500 fill-current" viewBox="0 0 24 24">
@@ -62,10 +77,13 @@ const SnapchatLogo = () => (
 );
 
 export default function SuperAdminPage() {
+  const pathname = usePathname();
+  const router = useRouter();
   const { theme, toggleTheme } = useStore();
 
   // Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPass, setAdminPass] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -74,7 +92,19 @@ export default function SuperAdminPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'logistics' | 'catalog' | 'categories' | 'approvals' | 'finance' | 'customers' | 'concierge'>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+
+  const navigateToAdminTab = useCallback((tab: AdminTab) => {
+    const section = tab === 'overview' ? 'dashboard' : tab;
+    setActiveTab(tab);
+    router.push(`/admin/${section}`);
+  }, [router]);
+
+  useEffect(() => {
+    const section = pathname.split('/')[2] || 'dashboard';
+    const tab = adminSectionToTab[section as keyof typeof adminSectionToTab] || 'overview';
+    setActiveTab(tab);
+  }, [pathname]);
 
   // VIP Concierge Settings State
   const [conciergeConfig, setConciergeConfig] = useState<ConciergeConfig>(getConciergeConfig());
@@ -113,6 +143,17 @@ export default function SuperAdminPage() {
   const [productSearch, setProductSearch] = useState('');
   const [productCategoryFilter, setProductCategoryFilter] = useState<string>('all');
   const [selectedProductModal, setSelectedProductModal] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!selectedProductModal) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [selectedProductModal]);
 
   // Live Vendors Data from DB
   const [vendors, setVendors] = useState<any[]>([]);
@@ -173,6 +214,7 @@ export default function SuperAdminPage() {
       if (savedAuth === 'true') {
         setIsAuthenticated(true);
       }
+      setIsAuthChecked(true);
     }
   }, []);
 
@@ -994,6 +1036,16 @@ export default function SuperAdminPage() {
   // ========================================================
   // 1. LOGIN GATEWAY (UNAUTHENTICATED)
   // ========================================================
+  if (!isAuthChecked) {
+    return (
+      <LuxuryLoader
+        fullScreen
+        label="Ì R Í S Í"
+        sublabel="Restoring Executive Session..."
+      />
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="w-full min-h-screen flex flex-col lg:flex-row bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors">
@@ -1307,7 +1359,7 @@ export default function SuperAdminPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => { setActiveTab(item.id as any); setMobileNavOpen(false); }}
+                    onClick={() => { navigateToAdminTab(item.id as AdminTab); setMobileNavOpen(false); }}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-mono-luxury font-bold text-xs uppercase text-left cursor-pointer ${
                       isActive
                         ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
@@ -1395,7 +1447,7 @@ export default function SuperAdminPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id as any)}
+                    onClick={() => navigateToAdminTab(item.id as AdminTab)}
                     className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-bold text-left cursor-pointer ${
                       isActive
                         ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
@@ -1467,7 +1519,7 @@ export default function SuperAdminPage() {
                 
                 {/* 1. GMV -> Takes to Finance */}
                 <button
-                  onClick={() => setActiveTab('finance')}
+                  onClick={() => navigateToAdminTab('finance')}
                   className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] transition-all space-y-2 text-left cursor-pointer group shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center justify-between text-[var(--text-muted)]">
@@ -1485,7 +1537,7 @@ export default function SuperAdminPage() {
 
                 {/* 2. Escrow Locked -> Takes to Finance */}
                 <button
-                  onClick={() => { setFinanceFilter('locked'); setActiveTab('finance'); }}
+                  onClick={() => { setFinanceFilter('locked'); navigateToAdminTab('finance'); }}
                   className="p-6 rounded-3xl surface-card border border-amber-500/20 bg-amber-500/5 hover:border-amber-500/50 transition-all space-y-2 text-left cursor-pointer group shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center justify-between text-amber-400">
@@ -1503,7 +1555,7 @@ export default function SuperAdminPage() {
 
                 {/* 3. Settled to Brands -> Takes to Finance */}
                 <button
-                  onClick={() => { setFinanceFilter('settled'); setActiveTab('finance'); }}
+                  onClick={() => { setFinanceFilter('settled'); navigateToAdminTab('finance'); }}
                   className="p-6 rounded-3xl surface-card border border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/50 transition-all space-y-2 text-left cursor-pointer group shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center justify-between text-emerald-400">
@@ -1521,7 +1573,7 @@ export default function SuperAdminPage() {
 
                 {/* 4. Total Catalog Items -> Takes to Catalog */}
                 <button
-                  onClick={() => setActiveTab('catalog')}
+                  onClick={() => navigateToAdminTab('catalog')}
                   className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] transition-all space-y-2 text-left cursor-pointer group shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center justify-between text-[var(--text-muted)]">
@@ -1539,7 +1591,7 @@ export default function SuperAdminPage() {
 
                 {/* 5. Verified Designers -> Takes to Approvals */}
                 <button
-                  onClick={() => setActiveTab('approvals')}
+                  onClick={() => navigateToAdminTab('approvals')}
                   className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] transition-all space-y-2 text-left cursor-pointer group shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center justify-between text-[var(--text-muted)]">
@@ -1570,7 +1622,7 @@ export default function SuperAdminPage() {
                   </div>
 
                   <button
-                    onClick={() => setActiveTab('orders')}
+                    onClick={() => navigateToAdminTab('orders')}
                     className="text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
                     <span>View All ({orders.length})</span>
@@ -3543,8 +3595,8 @@ export default function SuperAdminPage() {
 
       {/* FULL PRODUCT DOSSIER MODAL */}
       {selectedProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-xl surface-card p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-xl surface-card p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-5 shadow-2xl max-h-[calc(100vh-2rem)] overflow-y-auto overscroll-contain">
             
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
               <div>

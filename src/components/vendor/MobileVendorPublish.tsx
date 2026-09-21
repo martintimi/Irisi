@@ -1255,27 +1255,37 @@ export default function MobileVendorPublish({
                           </button>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          <label
-                            className="relative flex-shrink-0 h-6 w-6 rounded-md border border-white/20 shadow-inner cursor-pointer overflow-hidden"
-                            style={{ backgroundColor: img.colorHex || '#111111' }}
-                            title="Click to adjust color shade"
-                          >
-                            <input
-                              type="color"
-                              value={img.colorHex || '#111111'}
-                              onChange={(e) => handleUpdateColorHex(img.id, e.target.value)}
-                              className="opacity-0 absolute inset-0 cursor-pointer w-full h-full"
-                            />
-                          </label>
-                          <input
-                            type="text"
-                            list="fashion-colors-list-mobile"
-                            placeholder="e.g. Red, Black, Gold"
-                            value={img.colorName || ''}
-                            onChange={(e) => handleAssignColor(img.id, e.target.value)}
-                            className="flex-1 min-w-0 px-2 py-0.5 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
-                          />
+                        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                          {/* Color swatch picker — tap to select, no free typing */}
+                          {FASHION_COLOR_PALETTE.slice(0, 16).map((c) => {
+                            const isSelected = (img.colorName || '').toLowerCase() === c.name.toLowerCase();
+                            return (
+                              <button
+                                key={c.name}
+                                type="button"
+                                title={c.name}
+                                onClick={() => handleAssignColor(img.id, c.name)}
+                                className={`relative h-6 w-6 rounded-full border-2 transition-all cursor-pointer active:scale-90 flex-shrink-0 ${
+                                  isSelected
+                                    ? 'border-[var(--gold-accent)] scale-110 shadow-md'
+                                    : 'border-transparent hover:border-white/60'
+                                }`}
+                                style={{ backgroundColor: c.hex }}
+                              >
+                                {isSelected && (
+                                  <span className="absolute inset-0 flex items-center justify-center">
+                                    <span className="h-2 w-2 rounded-full bg-white/80" />
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                          {/* Show selected name */}
+                          {img.colorName && (
+                            <span className="text-[9px] font-mono-luxury font-bold text-[var(--gold-accent)] ml-1 uppercase tracking-wider">
+                              {img.colorName}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1283,11 +1293,6 @@ export default function MobileVendorPublish({
                 </div>
               ))}
 
-              <datalist id="fashion-colors-list-mobile">
-                {FASHION_COLOR_PALETTE.map((c) => (
-                  <option key={c.name} value={c.name} />
-                ))}
-              </datalist>
 
               {/* Add More Photos Card */}
               <div

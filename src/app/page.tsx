@@ -1,35 +1,16 @@
-import HeroSection from '@/components/landing/HeroSection';
-import KineticMarquee from '@/components/landing/KineticMarquee';
-import CuratedAteliers from '@/components/landing/CuratedAteliers';
-import ProblemSolution from '@/components/landing/ProblemSolution';
-import BrandShowcase from '@/components/landing/BrandShowcase';
 import MobileHomeView from '@/components/landing/MobileHomeView';
+import DesktopHomeView from '@/components/landing/DesktopHomeView';
 
 export default function Home() {
   return (
     <>
-      {/* 1. DEDICATED MOBILE HOME VIEW (Option A: High Fashion Editorial Lookbook) */}
+      {/* Mobile Home View */}
       <div className="block md:hidden">
         <MobileHomeView />
       </div>
 
-      {/* 2. DESKTOP LUXURY LANDING VIEW */}
-      <div className="hidden md:flex flex-col">
-        {/* Hero Section with Automated Morphing FLIP Lookbook */}
-        <HeroSection />
-
-        {/* Dual-Row Velocity Kinetic Marquee */}
-        <KineticMarquee />
-
-        {/* Curated Nigerian Designers (Featured Designers) */}
-        <CuratedAteliers />
-
-        {/* The Ìrísí Standards Luxury Pillars (The Complete Nigerian Drip) */}
-        <ProblemSolution />
-
-        {/* Partner Brands & Fast Delivery Matrix */}
-        <BrandShowcase />
-      </div>
+      {/* Desktop Home View — same structure as mobile, proper desktop layout */}
+      <DesktopHomeView />
     </>
   );
 }

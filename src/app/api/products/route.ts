@@ -289,35 +289,56 @@ export async function GET(request: Request) {
 
       let normalizedColors: { name: string; hex: string }[] = [];
       if (Array.isArray(p.colors) && p.colors.length > 0) {
-        normalizedColors = p.colors.map((c: any) => {
+        // Helper: parse one raw color entry into one or more {name, hex} objects
+        // Handles the "Black,Blue" bug where vendor typed comma-separated names as one color
+        const parseColorEntry = (c: any): { name: string; hex: string }[] => {
           if (typeof c === 'string') {
             const trimmed = c.trim();
             if (trimmed.startsWith('#')) {
               const hexLower = trimmed.toLowerCase();
               const foundKey = Object.keys(COLOR_HEX_MAP).find(k => COLOR_HEX_MAP[k] === hexLower);
               const name = foundKey ? foundKey.charAt(0).toUpperCase() + foundKey.slice(1) : trimmed;
-              return { name, hex: trimmed };
+              return [{ name, hex: trimmed }];
             }
-            const hex = resolveColorHex(trimmed);
-            const formattedName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-            return { name: formattedName, hex };
+            // Split comma-combined names e.g. "Black,Blue" or "Black, Blue"
+            const parts = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+            return parts.map(part => {
+              const hex = resolveColorHex(part);
+              return { name: part.charAt(0).toUpperCase() + part.slice(1), hex };
+            });
           }
           if (typeof c === 'object' && c !== null) {
             const rawName = String(c.name || '').trim();
             if (rawName && !rawName.toLowerCase().startsWith('colorway')) {
-              const hex = resolveColorHex(rawName, c.hex);
-              return { name: rawName, hex };
+              // Split comma-combined names in object color names too
+              const parts = rawName.split(',').map((s: string) => s.trim()).filter(Boolean);
+              return parts.map(part => {
+                const hex = resolveColorHex(part, parts.length === 1 ? c.hex : undefined);
+                return { name: part.charAt(0).toUpperCase() + part.slice(1), hex };
+              });
             }
             if (c.hex) {
               const hexLower = String(c.hex).toLowerCase().trim();
               const foundKey = Object.keys(COLOR_HEX_MAP).find(k => COLOR_HEX_MAP[k] === hexLower);
               const name = foundKey ? foundKey.charAt(0).toUpperCase() + foundKey.slice(1) : (rawName || 'Standard');
-              return { name, hex: c.hex };
+              return [{ name, hex: c.hex }];
             }
-            return { name: rawName || 'Standard', hex: resolveColorHex(rawName) };
+            return [{ name: rawName || 'Standard', hex: resolveColorHex(rawName) }];
           }
-          return { name: 'Standard', hex: '#111111' };
-        });
+          return [{ name: 'Standard', hex: '#111111' }];
+        };
+
+        // Flatten all entries and deduplicate by lowercase name
+        const seen = new Set<string>();
+        for (const c of p.colors) {
+          for (const entry of parseColorEntry(c)) {
+            const key = entry.name.toLowerCase().trim();
+            if (!seen.has(key)) {
+              seen.add(key);
+              normalizedColors.push(entry);
+            }
+          }
+        }
       }
 
       if (normalizedColors.length === 0) {
