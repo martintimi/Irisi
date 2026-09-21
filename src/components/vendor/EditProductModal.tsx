@@ -5,7 +5,7 @@ import Image from 'next/image';
 import {
   X, Save, Trash2, Plus, Minus, AlertTriangle, CheckCircle2,
   Package, ShoppingBag, Layers, Loader2, Sparkles, ExternalLink, RefreshCw,
-  UploadCloud, Camera
+  UploadCloud, Camera, Star, Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -23,6 +23,25 @@ interface EditProductModalProps {
   onProductUpdated?: (updatedProduct: any) => void;
   onProductDeleted?: (productId: string) => void;
 }
+
+const COLOR_PALETTE = [
+  { name: 'Black', hex: '#111111' },
+  { name: 'White', hex: '#ffffff' },
+  { name: 'Gold', hex: '#d4af37' },
+  { name: 'Silver', hex: '#c0c0c0' },
+  { name: 'Navy Blue', hex: '#1e3a8a' },
+  { name: 'Royal Blue', hex: '#2563eb' },
+  { name: 'Sky Blue', hex: '#38bdf8' },
+  { name: 'Heather Grey', hex: '#9ca3af' },
+  { name: 'Charcoal Grey', hex: '#374151' },
+  { name: 'Khaki / Beige', hex: '#d4b996' },
+  { name: 'Chocolate Brown', hex: '#451a03' },
+  { name: 'Forest Green', hex: '#065f46' },
+  { name: 'Olive Green', hex: '#4d7c0f' },
+  { name: 'Wine / Burgundy', hex: '#831843' },
+  { name: 'Crimson Red', hex: '#dc2626' },
+  { name: 'Multi-Color / Pattern', hex: '#6366f1' },
+];
 
 export default function EditProductModal({
   product,
@@ -42,8 +61,10 @@ export default function EditProductModal({
   const [name, setName] = useState('');
   const [price, setPrice] = useState<number | string>('');
   const [category, setCategory] = useState('tops');
+  const [genderTarget, setGenderTarget] = useState('unisex');
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [variants, setVariants] = useState<VariantStockItem[]>([]);
   const [singleStock, setSingleStock] = useState<number>(10);
@@ -60,13 +81,26 @@ export default function EditProductModal({
     setName(product.name || '');
     setPrice(product.price || '');
     setCategory(product.category || 'tops');
+    setGenderTarget(product.genderTarget || product.gender_target || 'unisex');
     setDescription(product.description || '');
-    setImageUrl(product.imageUrl || product.image_url || '');
+
+    const rawImages = Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : Array.isArray(product.gallery) && product.gallery.length > 0
+      ? product.gallery
+      : [product.imageUrl || product.image_url].filter(Boolean);
+    setImages(rawImages);
+
+    const rawCols = Array.isArray(product.colors)
+      ? product.colors.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean)
+      : [];
+    setSelectedColors(rawCols);
+
     setConfirmDelete(false);
     setErrorMessage('');
     setSuccessMessage('');
 
-    // Fetch full product details including variants
+    // Fetch full product details including variants & all images
     async function loadFreshDetails() {
       try {
         setLoading(true);
@@ -79,8 +113,19 @@ export default function EditProductModal({
         setName(p.name || '');
         setPrice(p.price || '');
         setCategory(p.category || 'tops');
+        setGenderTarget(p.genderTarget || p.gender_target || 'unisex');
         setDescription(p.description || '');
-        setImageUrl(p.imageUrl || p.image_url || '');
+
+        const fetchedImgs = Array.isArray(p.images) && p.images.length > 0
+          ? p.images
+          : Array.isArray(p.gallery) && p.gallery.length > 0
+          ? p.gallery
+          : [p.imageUrl || p.image_url].filter(Boolean);
+        setImages(fetchedImgs);
+
+        if (Array.isArray(p.colors)) {
+          setSelectedColors(p.colors.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean));
+        }
 
         // Extract variants
         if (Array.isArray(p.variants) && p.variants.length > 0) {
@@ -179,31 +224,49 @@ export default function EditProductModal({
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setUploadingImage(true);
     setErrorMessage('');
     setSuccessMessage('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setImageUrl(data.url);
-        setSuccessMessage('New photo uploaded! Click "Save Changes" to apply.');
-      } else {
-        setErrorMessage('Failed to upload photo: ' + (data.error || 'Server error'));
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          uploadedUrls.push(data.url);
+        } else {
+          throw new Error(data.error || 'Failed to upload photo');
+        }
       }
+      setImages(prev => [...prev, ...uploadedUrls]);
+      setSuccessMessage(`${uploadedUrls.length} new photo${uploadedUrls.length > 1 ? 's' : ''} added! Remember to click "Save Changes".`);
     } catch (err: any) {
       setErrorMessage('Upload error: ' + err.message);
     } finally {
       setUploadingImage(false);
       if (e.target) e.target.value = '';
     }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleSetCover = (indexToCover: number) => {
+    setImages(prev => {
+      if (indexToCover === 0) return prev;
+      const target = prev[indexToCover];
+      const rest = prev.filter((_, idx) => idx !== indexToCover);
+      return [target, ...rest];
+    });
   };
 
   // Submit edits
@@ -219,7 +282,8 @@ export default function EditProductModal({
         price: Number(price) || 0,
         category,
         description: description.trim(),
-        imageUrl: imageUrl || undefined,
+        images: images,
+        imageUrl: images[0] || undefined,
       };
 
       if (variants.length > 0) {
@@ -260,6 +324,8 @@ export default function EditProductModal({
           price: payload.price,
           category: payload.category,
           description: payload.description,
+          images: images,
+          imageUrl: images[0] || product.imageUrl,
           stockQuantity: computedTotalStock,
           stock_quantity: computedTotalStock,
         });
@@ -298,7 +364,7 @@ export default function EditProductModal({
     }
   };
 
-  const productImg = product.imageUrl || product.image_url || '/images/no-product.svg';
+  const productImg = images[0] || product.imageUrl || product.image_url || '/images/no-product.svg';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -380,37 +446,124 @@ export default function EditProductModal({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Photo Upload Card */}
-                  <div className="sm:col-span-2 p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-black border border-[var(--border-subtle)] shrink-0">
-                        {imageUrl ? (
-                          <Image src={imageUrl} alt={name || 'Product'} fill unoptimized className="object-cover" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-[var(--text-muted)]">
-                            <Camera className="h-6 w-6" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[11px] font-bold text-[var(--text-primary)] block">
-                          Product Display Photo
-                        </span>
-                        <span className="text-[10px] text-[var(--text-secondary)] block truncate">
-                          {uploadingImage ? 'Uploading photo to CDN...' : 'Upload genuine high-resolution photo'}
-                        </span>
-                      </div>
+                  {/* Multi-Photo Gallery Manager */}
+                  <div className="sm:col-span-2 space-y-2.5 p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider flex items-center gap-1.5">
+                        <Camera className="h-3.5 w-3.5" />
+                        <span>Product Photos & Gallery ({images.length})</span>
+                      </label>
+                      <span className="text-[10px] text-[var(--text-secondary)]">
+                        {images.length === 0 ? 'No photos' : `${images.length} photo${images.length > 1 ? 's' : ''} (First is Cover)`}
+                      </span>
                     </div>
 
-                    <label className="px-3 py-1.5 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity shrink-0">
-                      {uploadingImage ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Camera className="h-3.5 w-3.5" />
-                      )}
-                      <span>{uploadingImage ? 'Uploading...' : 'Change Photo'}</span>
-                      <input type="file" accept="image/*" disabled={uploadingImage} onChange={handleImageUpload} className="hidden" />
-                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {images.map((imgUrl, idx) => (
+                        <div
+                          key={`${imgUrl}-${idx}`}
+                          className={`group relative aspect-square rounded-2xl overflow-hidden border transition-all ${
+                            idx === 0
+                              ? 'border-[var(--gold-accent)] ring-2 ring-[var(--gold-accent)]/30 shadow-md'
+                              : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] hover:border-[var(--text-secondary)]'
+                          }`}
+                        >
+                          <Image
+                            src={imgUrl}
+                            alt={`Product photo ${idx + 1}`}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+
+                          {/* Index / Cover badge */}
+                          <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1">
+                            {idx === 0 ? (
+                              <span className="px-2 py-0.5 rounded-md bg-[var(--gold-accent)] text-black text-[9px] font-black uppercase tracking-wider shadow-sm flex items-center gap-0.5">
+                                <Star className="h-2.5 w-2.5 fill-black" />
+                                <span>Cover</span>
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-white text-[9px] font-bold">
+                                #{idx + 1}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Action buttons (Delete & Make Cover) */}
+                          <div className="absolute top-1.5 right-1.5 z-10 flex items-center gap-1">
+                            {idx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleSetCover(idx)}
+                                className="p-1.5 rounded-lg bg-black/75 hover:bg-[var(--gold-accent)] text-white hover:text-black transition-colors shadow-sm cursor-pointer"
+                                title="Make this photo the primary cover"
+                              >
+                                <Star className="h-3 w-3" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-colors shadow-sm cursor-pointer"
+                              title="Delete this photo"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+
+                          {/* Bottom hover bar to set cover */}
+                          {idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetCover(idx)}
+                              className="absolute inset-x-0 bottom-0 py-1 bg-black/80 text-[9px] text-amber-200 text-center font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            >
+                              Set as Cover
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Upload New Photo(s) Box */}
+                      <label
+                        className={`aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-3 text-center transition-all cursor-pointer ${
+                          uploadingImage
+                            ? 'border-[var(--gold-accent)] bg-[var(--gold-accent)]/5 cursor-wait'
+                            : 'border-[var(--border-subtle)] hover:border-[var(--gold-accent)] bg-[var(--bg-primary)] hover:bg-[var(--bg-secondary)]'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          disabled={uploadingImage}
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                        {uploadingImage ? (
+                          <>
+                            <Loader2 className="h-6 w-6 animate-spin text-[var(--gold-accent)] mb-1" />
+                            <span className="text-[10px] font-bold text-[var(--gold-accent)]">Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-8 w-8 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-center mb-1 text-[var(--gold-accent)]">
+                              <Plus className="h-4 w-4" />
+                            </div>
+                            <span className="text-[10px] font-bold text-[var(--text-primary)] leading-tight">
+                              Add Photos
+                            </span>
+                            <span className="text-[8px] text-[var(--text-secondary)] mt-0.5">
+                              1 or multiple
+                            </span>
+                          </>
+                        )}
+                      </label>
+                    </div>
+                    <p className="text-[9px] text-[var(--text-secondary)] italic">
+                      Click the red trash icon on any unwanted photo to remove it. Click the star icon to set as primary storefront cover.
+                    </p>
                   </div>
 
                   <div className="space-y-1 sm:col-span-2">

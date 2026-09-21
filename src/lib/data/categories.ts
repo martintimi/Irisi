@@ -443,6 +443,20 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     imageUrl: '/images/categories/women_sunglasses.jpg',
     subtitle: 'Cat-eye frames, dark shades & sun wear',
   },
+
+  // ──────────────────────────────────────────
+  // 3. UNISEX CATEGORIES
+  // ──────────────────────────────────────────
+  {
+    id: 'unisex-clogs',
+    name: 'Crocs & Foam Clogs',
+    slug: 'clogs',
+    gender: 'unisex',
+    department: 'footwear',
+    imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123513/veyra_categories/crocsformen.jpg',
+    subtitle: 'Crocs, foam clogs & comfort slip-ons',
+    isPopular: true,
+  },
 ];
 
 // Helper: Get categories for specific gender

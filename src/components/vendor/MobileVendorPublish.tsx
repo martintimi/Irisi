@@ -62,6 +62,7 @@ const MALE_CATEGORIES = [
   { id: 'men_slides_palms', label: 'Slides, Palms & Slippers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'men_shoes_sneakers', label: 'Sneakers & Street Trainers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'men_shoes_loafers', label: 'Loafers, Shoes & Mules', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'men_shoes_clogs', label: 'Crocs & Foam Clogs', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   // Bags
   { id: 'men_bags_backpacks', label: 'Backpacks & Travel Bags', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
   { id: 'men_bags_crossbody', label: 'Crossbody & Chest Rigs', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
@@ -89,6 +90,7 @@ const FEMALE_CATEGORIES = [
   { id: 'women_heels_mules', label: 'Heels, Pumps & Mules', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'women_slides_palms', label: 'Slides, Palms & Flats', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'women_sneakers', label: 'Designer Sneakers', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'women_shoes_clogs', label: 'Crocs & Foam Clogs', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   // Bags
   { id: 'women_bags_handbags', label: 'Handbags & Totes', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
   { id: 'women_bags_clutches', label: 'Clutches & Crossbody Minis', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
@@ -105,7 +107,8 @@ const UNISEX_CATEGORIES = [
   { id: 'unisex_tees', label: 'Graphic Tees & Oversized Shirts', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'unisex_denim', label: 'Denim Jeans & Cargo Pants', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   // Footwear
-  { id: 'unisex_slides_palms', label: 'Slides, Palms & Crocs', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'unisex_slides_palms', label: 'Slides & Palms', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'unisex_shoes_clogs', label: 'Crocs & Foam Clogs', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'unisex_sneakers', label: 'Sneakers & Casual Shoes', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   // Accessories & Jewelry
   { id: 'unisex_jewelry', label: 'Chains, Rings & Jewelry', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },

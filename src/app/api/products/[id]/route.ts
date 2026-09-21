@@ -417,9 +417,36 @@ export async function PATCH(
     if (body.genderTarget !== undefined) updateData.gender_target = body.genderTarget;
     if (body.description !== undefined) updateData.description = body.description.trim();
     if (body.is_published !== undefined) updateData.is_published = Boolean(body.is_published);
-    if (body.tags !== undefined && Array.isArray(body.tags)) updateData.tags = body.tags;
+    if (body.colors !== undefined) updateData.colors = body.colors;
+
+    // Handle multiple gallery images
+    if (Array.isArray(body.images)) {
+      const cleanImages = body.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0);
+      updateData.image_url = cleanImages[0] || '';
+
+      // Get current tags to preserve video:, ships_from:, etc.
+      const { data: currentProduct } = await supabase
+        .from('products')
+        .select('tags')
+        .eq('id', id)
+        .maybeSingle();
+
+      const existingTags: string[] = Array.isArray(currentProduct?.tags) ? currentProduct.tags : [];
+      const preservedTags = existingTags.filter(
+        (t: string) => typeof t === 'string' && !t.startsWith('img:')
+      );
+
+      // Add gallery images as 'img:<url>' tags for index > 0
+      const newImgTags = cleanImages.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
+      updateData.tags = [...preservedTags, ...newImgTags];
+    } else if (body.tags !== undefined && Array.isArray(body.tags)) {
+      updateData.tags = body.tags;
+    }
+
     if (body.imageUrl !== undefined || body.image_url !== undefined) {
-      updateData.image_url = body.imageUrl || body.image_url;
+      if (!Array.isArray(body.images)) {
+        updateData.image_url = body.imageUrl || body.image_url;
+      }
     }
 
     if (Object.keys(updateData).length > 0) {
