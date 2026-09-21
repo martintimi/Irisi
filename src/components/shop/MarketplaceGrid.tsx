@@ -16,6 +16,60 @@ import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
 
 const ITEMS_PER_PAGE = 24;
 
+const isNativeProduct = (p: any): boolean => {
+  const c = String(p.category || '').toLowerCase();
+  const sub = String(p.subCategory || p.subcategory || '').toLowerCase();
+  const name = String(p.name || '').toLowerCase();
+  const tags: string[] = Array.isArray(p.tags) ? p.tags.map((t: any) => String(t).toLowerCase()) : [];
+
+  const nativeKeywords = ['senator', 'agbada', 'kaftan', 'jalabiya', 'boubou', 'bubu', 'ankara', 'lace', 'native', 'aso-oke', 'fila', 'thobe', 'dashiki'];
+  
+  if (c === 'native' || c.includes('senator') || c.includes('agbada') || c.includes('kaftan') || c.includes('boubou') || c.includes('jalabiya') || c.includes('lace_ankara')) {
+    return true;
+  }
+  if (nativeKeywords.some(kw => sub.includes(kw))) return true;
+  if (tags.some((t: string) => nativeKeywords.some(kw => t.includes(kw)))) return true;
+  if (nativeKeywords.some(kw => name.includes(kw))) return true;
+  return false;
+};
+
+const matchesCategoryFilter = (p: any, cat: string): boolean => {
+  if (cat === 'all') return true;
+  const isNative = isNativeProduct(p);
+  const pCat = String(p.category || '').toLowerCase();
+  const pSub = String(p.subCategory || p.subcategory || '').toLowerCase();
+
+  if (cat === 'native') {
+    return isNative;
+  }
+
+  if (cat === 'tops') {
+    // Standard Tops: Shirts, T-Shirts, Graphic Tees, Polos, Blouses, Corsets (NOT Native)
+    if (isNative) return false;
+    return pCat === 'tops' || pCat.includes('tshirts') || pCat.includes('shirts') || pCat.includes('tees') || pCat.includes('polos') || pCat.includes('corsets') || pCat.includes('dresses') || pSub.includes('shirt') || pSub.includes('tee') || pSub.includes('top') || pSub.includes('polo');
+  }
+
+  if (cat === 'outerwear') {
+    // Streetwear Hoodies, Sweaters, Jackets, Blazers (NOT Native Agbada/Boubou)
+    if (isNative) return false;
+    return pCat === 'outerwear' || pCat.includes('hoodie') || pCat.includes('jacket') || pCat.includes('sweat') || pCat.includes('blazer') || pCat.includes('suit') || pCat.includes('coat') || pSub.includes('hoodie') || pSub.includes('jacket') || pSub.includes('coat');
+  }
+
+  if (cat === 'bottoms') {
+    return pCat === 'bottoms' || pCat.includes('jeans') || pCat.includes('trouser') || pCat.includes('pants') || pCat.includes('cargo') || pCat.includes('jogger') || pCat.includes('shorts') || pCat.includes('skirts') || pSub.includes('trouser') || pSub.includes('jeans') || pSub.includes('cargo') || pSub.includes('shorts');
+  }
+
+  if (cat === 'footwear') {
+    return pCat === 'footwear' || pCat.includes('shoe') || pCat.includes('slide') || pCat.includes('palm') || pCat.includes('sneaker') || pCat.includes('loafer') || pCat.includes('clog') || pCat.includes('croc') || pCat.includes('heel') || pCat.includes('mule') || pSub.includes('slide') || pSub.includes('shoe') || pSub.includes('sneaker') || pSub.includes('clog');
+  }
+
+  if (cat === 'accessories') {
+    return pCat === 'accessories' || pCat.includes('bag') || pCat.includes('jewelry') || pCat.includes('watch') || pCat.includes('chain') || pCat.includes('glasses') || pCat.includes('sunglasses') || pCat.includes('cap') || pCat.includes('hat') || pSub.includes('bag') || pSub.includes('jewelry') || pSub.includes('watch') || pSub.includes('cap');
+  }
+
+  return pCat === cat;
+};
+
 export default function MarketplaceGrid() {
   const {
     bodyProfile,
@@ -42,7 +96,7 @@ export default function MarketplaceGrid() {
   const router = useRouter();
 
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
-  const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'native' | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [quickLookProduct, setQuickLookProduct] = useState<any>(null);
@@ -58,19 +112,20 @@ export default function MarketplaceGrid() {
     }
 
     const cat = searchParams.get('category')?.toLowerCase();
-    if (cat && ['tops', 'bottoms', 'outerwear', 'footwear', 'accessories'].includes(cat)) {
-      setSelectedCategory(cat as GarmentCategory);
+    if (cat && ['tops', 'bottoms', 'outerwear', 'footwear', 'accessories', 'native'].includes(cat)) {
+      setSelectedCategory(cat as any);
       setCurrentPage(1);
     } else if (cat === 'all') {
       setSelectedCategory('all');
       setCurrentPage(1);
     } else if (cat) {
       // If it's a specific subcategory, map to the closest category or search query
-      if (['hoodies', 'jackets'].includes(cat)) setSelectedCategory('outerwear');
-      else if (['jeans', 'cargo', 'trousers', 'shorts'].includes(cat)) setSelectedCategory('bottoms');
-      else if (['slides', 'sneakers', 'loafers', 'heels', 'clogs', 'crocs'].includes(cat)) setSelectedCategory('footwear');
-      else if (['bags', 'backpacks', 'chains', 'watches', 'caps', 'fila', 'clutches'].includes(cat)) setSelectedCategory('accessories');
-      else if (['senator', 'agbada', 'jalabiya', 'dresses'].includes(cat)) setSelectedCategory('tops');
+      if (['senator', 'agbada', 'kaftan', 'jalabiya', 'boubou', 'bubu', 'native', 'ankara', 'lace'].includes(cat)) setSelectedCategory('native');
+      else if (['hoodies', 'jackets', 'outerwear', 'blazers', 'sweaters'].includes(cat)) setSelectedCategory('outerwear');
+      else if (['jeans', 'cargo', 'trousers', 'shorts', 'bottoms'].includes(cat)) setSelectedCategory('bottoms');
+      else if (['slides', 'sneakers', 'loafers', 'heels', 'clogs', 'crocs', 'footwear'].includes(cat)) setSelectedCategory('footwear');
+      else if (['bags', 'backpacks', 'chains', 'watches', 'caps', 'fila', 'clutches', 'accessories', 'jewelry'].includes(cat)) setSelectedCategory('accessories');
+      else if (['tshirts', 'tees', 'shirts', 'polos', 'tops', 'blouse'].includes(cat)) setSelectedCategory('tops');
       
       if (['bags', 'backpacks', 'men-backpacks', 'women-bags', 'clutches'].includes(cat)) {
         setSearchQuery('bag');
@@ -83,10 +138,11 @@ export default function MarketplaceGrid() {
     }
   }, [searchParams, setSelectedGender]);
 
-  const categories: { id: GarmentCategory | 'all'; label: string }[] = [
+  const categories: { id: GarmentCategory | 'native' | 'all'; label: string }[] = [
     { id: 'all', label: 'All Items & Drops' },
-    { id: 'tops', label: selectedGender === 'female' ? 'Dresses & Tops' : 'Senator & Tops' },
-    { id: 'outerwear', label: selectedGender === 'female' ? 'Boubou & Robes' : 'Agbada & Hoodies' },
+    { id: 'native', label: selectedGender === 'female' ? 'Boubou, Lace & Natives' : 'Senator & Native Sets' },
+    { id: 'tops', label: selectedGender === 'female' ? 'Tops & Blouses' : 'Shirts & Graphic Tees' },
+    { id: 'outerwear', label: 'Streetwear & Hoodies' },
     { id: 'bottoms', label: 'Trousers & Jeans' },
     { id: 'footwear', label: 'Slides, Palms & Shoes' },
     { id: 'accessories', label: 'Caps, Jewelry & Bags' },
@@ -126,7 +182,7 @@ export default function MarketplaceGrid() {
         (sOrigin === 'ready_made_boutique' && pOrigin === 'ready_made_boutique') ||
         pOrigin === sOrigin;
 
-      const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
+      const matchesCat = matchesCategoryFilter(p, selectedCategory);
 
       const pVendorName = String(p.vendorName || '').toLowerCase();
       const pVendorId = String(p.vendorId || '').toLowerCase();
@@ -149,7 +205,7 @@ export default function MarketplaceGrid() {
     setCurrentPage(1);
   };
 
-  const handleCategoryChange = (catId: GarmentCategory | 'all') => {
+  const handleCategoryChange = (catId: GarmentCategory | 'native' | 'all') => {
     setSelectedCategory(catId);
     setCurrentPage(1);
   };
@@ -388,7 +444,7 @@ export default function MarketplaceGrid() {
         /* PRODUCT GRID (2-COLUMNS ON MOBILE, 4-COLUMNS ON DESKTOP) */
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
           {paginatedProducts.map((product) => {
-            const isWorn = activeOutfit[product.category]?.id === product.id;
+            const isWorn = Boolean(product.category && (activeOutfit as any)[product.category]?.id === product.id);
             const fitResult = calculateFitMatch(bodyProfile, product);
             const productImagesList: string[] = Array.isArray(product.images)
               ? product.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean)

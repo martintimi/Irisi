@@ -47,6 +47,7 @@ export interface BodyProfile {
 }
 
 export type GarmentCategory = 'tops' | 'bottoms' | 'outerwear' | 'footwear' | 'accessories';
+export type ShopCategory = GarmentCategory | 'native' | 'all';
 export type GarmentOriginType = 'handmade_designer' | 'ready_made_boutique';
 export type GenderTarget = 'male' | 'female' | 'unisex';
 
