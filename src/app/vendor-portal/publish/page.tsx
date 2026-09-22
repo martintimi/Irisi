@@ -33,7 +33,7 @@ export const MALE_CATEGORIES = [
   { id: 'jalabiya_tunics', label: 'Jalabiya & Tunics', generalCat: 'tops' as GarmentCategory, group: 'native' },
   { id: 'men_caps_fila', label: 'Aso-Oke Fila & Traditional Caps', generalCat: 'accessories' as GarmentCategory, group: 'native' },
   // Apparel
-  { id: 'streetwear_hoodie', label: 'Streetwear Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'streetwear_hoodie', label: 'Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'suits_blazers', label: 'Suits, Tuxedos & Blazers', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'tshirts_tees', label: 'T-Shirts & Graphic Tees', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'shirts_polos', label: 'Luxury Polos & Button-Downs', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
@@ -48,7 +48,7 @@ export const MALE_CATEGORIES = [
   { id: 'men_shoes_loafers', label: 'Loafers & Dress Shoes', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'men_shoes_clogs', label: 'Clogs & Foam Slip-Ons (Crocs, Mules)', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   // Bags
-  { id: 'men_bags_backpacks', label: 'Backpacks & Duffels', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
+  { id: 'men_bags_backpacks', label: 'Backpacks & Travel Bags', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
   { id: 'men_bags_crossbody', label: 'Crossbody & Chest Rigs', generalCat: 'accessories' as GarmentCategory, group: 'bags' },
   // Accessories & Jewelry
   { id: 'men_jewelry_chains', label: 'Chains, Necklaces & Rings', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
@@ -64,8 +64,8 @@ export const FEMALE_CATEGORIES = [
   // Apparel
   { id: 'dresses_gowns', label: 'Dresses, Gowns & Maxis', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'two_piece_sets', label: 'Two-Piece Co-ord Sets', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'corsets_tops', label: 'Corsets, Crop Tops & Blouses', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'female_streetwear', label: 'Female Hoodies & Sweats', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'corsets_tops', label: 'Tops, Corsets & Blouses', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
+  { id: 'female_streetwear', label: 'Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'women_jeans_trousers', label: 'High-Waist Jeans & Cargo', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   { id: 'skirts_minis', label: 'Skirts & Mini Skirts', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   { id: 'women_shorts', label: 'Shorts & Biker Sets', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
@@ -87,7 +87,7 @@ export const FEMALE_CATEGORIES = [
 
 export const UNISEX_CATEGORIES = [
   // Apparel
-  { id: 'unisex_hoodie', label: 'Streetwear Hoodies & Sweaters', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'unisex_hoodie', label: 'Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'unisex_tees', label: 'Graphic Tees & Oversized Shirts', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'unisex_denim', label: 'Denim Jeans & Cargo Pants', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   { id: 'unisex_jackets', label: 'Jackets & Windbreakers', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },

@@ -55,25 +55,28 @@ type DropMode = 'apparel' | 'footwear' | 'jewelry';
 
 const ALL_CATEGORY_OPTIONS = [
   // Tops / Streetwear
-  { id: 'streetwear_hoodie', label: 'Streetwear Hoodies & Sweaters', generalCat: 'outerwear' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
+  { id: 'streetwear_hoodie', label: 'Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
   { id: 'unisex_tees', label: 'Graphic Tees & Shirts', generalCat: 'tops' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
   { id: 'senator_kaftan', label: 'Senator & Kaftan Sets', generalCat: 'tops' as GarmentCategory, dept: 'male' as GenderTarget, group: 'apparel' },
   { id: 'boubou_kaftans', label: 'Silk Boubou & Kaftans', generalCat: 'outerwear' as GarmentCategory, dept: 'female' as GenderTarget, group: 'apparel' },
   { id: 'two_piece_sets', label: 'Two-Piece Co-ord Sets', generalCat: 'tops' as GarmentCategory, dept: 'female' as GenderTarget, group: 'apparel' },
+  { id: 'corsets_tops', label: 'Tops, Corsets & Blouses', generalCat: 'tops' as GarmentCategory, dept: 'female' as GenderTarget, group: 'apparel' },
   { id: 'dresses_gowns', label: 'Dresses, Gowns & Maxis', generalCat: 'tops' as GarmentCategory, dept: 'female' as GenderTarget, group: 'apparel' },
   { id: 'suits_blazers', label: 'Suits, Tuxedos & Blazers', generalCat: 'outerwear' as GarmentCategory, dept: 'male' as GenderTarget, group: 'apparel' },
   // Bottoms
   { id: 'unisex_denim', label: 'Denim Jeans & Cargo Pants', generalCat: 'bottoms' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
+  { id: 'shorts_sets', label: 'Shorts & Casual Sets', generalCat: 'bottoms' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
   { id: 'skirts_minis', label: 'Skirts & Mini Skirts', generalCat: 'bottoms' as GarmentCategory, dept: 'female' as GenderTarget, group: 'apparel' },
   // Footwear
   { id: 'unisex_slides_palms', label: 'Slides, Palms & Slippers', generalCat: 'footwear' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'footwear' },
+  { id: 'unisex_shoes_clogs', label: 'Crocs & Foam Clogs', generalCat: 'footwear' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'footwear' },
   { id: 'unisex_sneakers', label: 'Sneakers & Shoes', generalCat: 'footwear' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'footwear' },
   { id: 'women_heels_mules', label: 'Heels & Mules', generalCat: 'footwear' as GarmentCategory, dept: 'female' as GenderTarget, group: 'footwear' },
   // Accessories & Jewelry
   { id: 'unisex_jewelry', label: 'Jewelry, Chains & Bracelets', generalCat: 'accessories' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'jewelry' },
   { id: 'unisex_watches', label: 'Luxury Watches & Timepieces', generalCat: 'accessories' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'jewelry' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Hats', generalCat: 'accessories' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'jewelry' },
-  { id: 'unisex_bags', label: 'Bags & Backpacks', generalCat: 'accessories' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'jewelry' },
+  { id: 'unisex_bags', label: 'Backpacks, Handbags & Bags', generalCat: 'accessories' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'jewelry' },
 ];
 
 const POPULAR_SWATCHES = [

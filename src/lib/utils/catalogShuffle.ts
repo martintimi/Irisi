@@ -1,4 +1,9 @@
 import { Product } from '@/types';
+import {
+  isNativeProduct,
+  matchesCategoryFilter,
+  matchesSpecificCategory
+} from '@/lib/utils/categoryMatcher';
 
 /**
  * Smart Catalog Diversification & Shuffle:
@@ -15,99 +20,21 @@ export function diversifyCatalog(products: Product[]): Product[] {
   
   // Categorize each product into distinct fashion pillars
   products.forEach((p) => {
-    const cat = (p.category || '').toLowerCase();
-    const sub = ((p as any).subCategory || (p as any).subcategory || '').toLowerCase();
-    const name = (p.name || '').toLowerCase();
-    const desc = (p.description || '').toLowerCase();
-    const tags = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
-    const fullText = `${name} ${cat} ${sub} ${desc} ${tags}`;
-    
     let poolKey = 'tops';
 
-    if (
-      fullText.includes('senator') ||
-      fullText.includes('kaftan') ||
-      fullText.includes('agbada') ||
-      fullText.includes('boubou') ||
-      fullText.includes('bubu') ||
-      fullText.includes('lace') ||
-      fullText.includes('jalabiya') ||
-      fullText.includes('ankara') ||
-      fullText.includes('dashiki') ||
-      fullText.includes('aso-oke') ||
-      cat === 'native'
-    ) {
+    if (isNativeProduct(p)) {
       poolKey = 'native';
-    } else if (
-      cat === 'footwear' ||
-      fullText.includes('slide') ||
-      fullText.includes('shoe') ||
-      fullText.includes('sneaker') ||
-      fullText.includes('clog') ||
-      fullText.includes('croc') ||
-      fullText.includes('loafer') ||
-      fullText.includes('heel') ||
-      fullText.includes('mule') ||
-      fullText.includes('slipper') ||
-      fullText.includes('pump')
-    ) {
+    } else if (matchesCategoryFilter(p, 'footwear')) {
       poolKey = 'footwear';
-    } else if (
-      cat === 'outerwear' ||
-      fullText.includes('hoodie') ||
-      fullText.includes('jacket') ||
-      fullText.includes('sweatshirt') ||
-      fullText.includes('pullover') ||
-      fullText.includes('windbreaker') ||
-      fullText.includes('coat')
-    ) {
+    } else if (matchesSpecificCategory(p, 'hoodies') || matchesCategoryFilter(p, 'outerwear')) {
       poolKey = 'outerwear';
-    } else if (
-      cat === 'bottoms' ||
-      fullText.includes('jean') ||
-      fullText.includes('denim') ||
-      fullText.includes('cargo') ||
-      fullText.includes('trouser') ||
-      fullText.includes('pant') ||
-      fullText.includes('jogger') ||
-      fullText.includes('short') ||
-      fullText.includes('skirt')
-    ) {
+    } else if (matchesCategoryFilter(p, 'bottoms')) {
       poolKey = 'bottoms';
-    } else if (
-      fullText.includes('bag') ||
-      fullText.includes('backpack') ||
-      fullText.includes('tote') ||
-      fullText.includes('crossbody') ||
-      fullText.includes('clutch') ||
-      fullText.includes('duffel') ||
-      fullText.includes('purse')
-    ) {
+    } else if (matchesSpecificCategory(p, 'bags') || matchesSpecificCategory(p, 'backpacks') || matchesSpecificCategory(p, 'crossbody')) {
       poolKey = 'bags';
-    } else if (
-      cat === 'accessories' ||
-      fullText.includes('watch') ||
-      fullText.includes('chain') ||
-      fullText.includes('cap') ||
-      fullText.includes('fila') ||
-      fullText.includes('jewelry') ||
-      fullText.includes('sunglass') ||
-      fullText.includes('glasses') ||
-      fullText.includes('necklace') ||
-      fullText.includes('bangle') ||
-      fullText.includes('ring') ||
-      fullText.includes('hat') ||
-      fullText.includes('beanie')
-    ) {
+    } else if (matchesCategoryFilter(p, 'accessories')) {
       poolKey = 'accessories';
-    } else if (
-      fullText.includes('dress') ||
-      fullText.includes('gown') ||
-      fullText.includes('maxi') ||
-      fullText.includes('two-piece') ||
-      fullText.includes('two piece') ||
-      fullText.includes('coord')
-    ) {
+    } else if (matchesSpecificCategory(p, 'dresses') || matchesSpecificCategory(p, 'two-piece')) {
       poolKey = 'dresses';
     } else {
       poolKey = 'tops';

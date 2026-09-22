@@ -15,7 +15,14 @@ import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
 import { products as fallbackProducts } from '@/lib/data/products';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
 
-// Category metadata mapping for title and filtering
+import {
+  matchesCategoryFilter,
+  matchesSpecificCategory,
+  matchesDepartment,
+  isNativeProduct,
+} from '@/lib/utils/categoryMatcher';
+
+// Category metadata mapping for title, subtitle and filtering
 interface CategoryConfig {
   title: string;
   subtitle: string;
@@ -24,160 +31,239 @@ interface CategoryConfig {
 
 const CATEGORY_MAP: Record<string, CategoryConfig> = {
   shirts: {
-    title: 'SHIRTS',
+    title: 'SHIRTS & TOPS',
     subtitle: 'Button-downs, polo shirts & casual tops',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
-      if (n.includes('agbada') || n.includes('senator') || n.includes('hoodie')) return false;
-      return (
-        n.includes('shirt') ||
-        n.includes('tee') ||
-        n.includes('top') ||
-        n.includes('lace') ||
-        tags.some((t: string) => t.includes('shirt') || t.includes('tee') || t.includes('top') || t.includes('lace'))
-      );
-    }
+    filterFn: (p: any) => matchesSpecificCategory(p, 'polos') || matchesCategoryFilter(p, 'tops')
+  },
+  tshirts: {
+    title: 'T-SHIRTS & GRAPHIC TEES',
+    subtitle: 'Heavy cotton tees, graphic drops & oversized shirts',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'tshirts')
+  },
+  polos: {
+    title: 'POLOS & CASUAL SHIRTS',
+    subtitle: 'Collar shirts & button-down short sleeves',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'polos')
+  },
+  hoodies: {
+    title: 'HOODIES & SWEATSHIRTS',
+    subtitle: 'Heavyweight streetwear hoodies & oversized sweatshirts',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'hoodies')
+  },
+  'women-hoodies': {
+    title: 'HOODIES & SWEATSHIRTS',
+    subtitle: 'Oversized hoodies & cropped fleece sweatshirts',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-hoodies')
   },
   streetwear: {
-    title: 'STREETWEAR',
-    subtitle: 'Heavyweight hoodies, graphic drops & urban sets',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
-      return (
-        n.includes('hoodie') ||
-        n.includes('sweatshirt') ||
-        n.includes('trapstar') ||
-        n.includes('street') ||
-        n.includes('kokolee') ||
-        tags.some((t: string) => t.includes('hoodie') || t.includes('streetwear') || t.includes('street'))
-      );
-    }
+    title: 'STREETWEAR & HOODIES',
+    subtitle: 'Heavyweight hoodies, graphic drops & urban drops',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'hoodies') || matchesCategoryFilter(p, 'outerwear')
+  },
+  jackets: {
+    title: 'JACKETS & OUTERWEAR',
+    subtitle: 'Bomber jackets, utility vests & windbreakers',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'jackets')
+  },
+  jeans: {
+    title: 'JEANS & DENIM',
+    subtitle: 'Baggy wide-leg denim, straight-cut & selvedge jeans',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'jeans')
+  },
+  'women-jeans': {
+    title: 'JEANS & CARGO PANTS',
+    subtitle: 'High-waist wide-leg denim & utility cargo trousers',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-jeans')
+  },
+  cargo: {
+    title: 'CARGO & JOGGERS',
+    subtitle: 'Comfortable fleece joggers & utility cargo pants',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'cargo')
+  },
+  shorts: {
+    title: 'SHORTS & CASUAL',
+    subtitle: 'Casual sweat shorts, cargo shorts & trunks',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'shorts')
+  },
+  skirts: {
+    title: 'SKIRTS & MINI SKIRTS',
+    subtitle: 'Pleated mini skirts & casual midi skirts',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'skirts')
+  },
+  'two-piece': {
+    title: 'TWO-PIECE SETS',
+    subtitle: 'Matching top & trousers, resort co-ord sets',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'two-piece')
+  },
+  tops: {
+    title: 'TOPS & CORSETS',
+    subtitle: 'Corsets, casual tops & elegant blouses',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'tops')
+  },
+  underwears: {
+    title: 'UNDERWEAR & LOUNGEWEAR',
+    subtitle: 'Boxers, trunks, singlets & home loungewear',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'underwears')
+  },
+  'women-loungewear': {
+    title: 'LOUNGEWEAR & SLEEPWEAR',
+    subtitle: 'Comfortable two-piece home sets & robes',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-loungewear')
   },
   native: {
     title: 'NATIVE & AGBADA',
     subtitle: 'Senator kaftans, royal Agbadas & bespoke tailoring',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
-      return (
-        n.includes('agbada') ||
-        n.includes('senator') ||
-        n.includes('kaftan') ||
-        n.includes('native') ||
-        tags.some((t: string) => t.includes('native') || t.includes('agbada') || t.includes('senator'))
-      );
-    }
+    filterFn: (p: any) => isNativeProduct(p)
+  },
+  senator: {
+    title: 'SENATOR & KAFTAN SETS',
+    subtitle: 'Tailored Senator kaftan sets & bespoke suits',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'senator')
+  },
+  agbada: {
+    title: 'GRAND AGBADA 3-PIECE',
+    subtitle: '3-piece embroidered royal Agbada sets',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'agbada')
+  },
+  jalabiya: {
+    title: 'JALABIYA & LOUNGEWEAR',
+    subtitle: 'Comfortable embroidered Jalabiya robes & tunics',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'jalabiya')
+  },
+  fila: {
+    title: 'ASO-OKE FILA & CAPS',
+    subtitle: 'Traditional Aso-Oke caps for Agbada & Senator',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'fila')
+  },
+  boubou: {
+    title: 'BOUBOU & KAFTANS',
+    subtitle: 'Flowing Adire boubous & elegant silk kaftans',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'boubou')
+  },
+  ankara: {
+    title: 'LACE & ANKARA SETS',
+    subtitle: 'Lace styles & wedding reception outfits',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'ankara')
+  },
+  abayas: {
+    title: 'ABAYA & KIMONOS',
+    subtitle: 'Flowing abayas, kimonos & modest drapes',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'abayas')
   },
   footwear: {
     title: 'FOOTWEAR & SLIDES',
     subtitle: 'Handcrafted cowhide slides, mules & sneakers',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const c = (p.category || '').toLowerCase();
-      return (
-        c === 'footwear' ||
-        n.includes('slide') ||
-        n.includes('shoe') ||
-        n.includes('adilette') ||
-        n.includes('sneaker') ||
-        n.includes('loafer') ||
-        n.includes('palm') ||
-        n.includes('clog') ||
-        n.includes('croc')
-      );
-    }
+    filterFn: (p: any) => matchesCategoryFilter(p, 'footwear')
+  },
+  slides: {
+    title: 'SLIDES, PALMS & SLIPPERS',
+    subtitle: 'Leather slides, sandals & casual slippers',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'slides')
+  },
+  'women-slides': {
+    title: 'SLIDES & FLATS',
+    subtitle: 'Comfortable leather slides, flats & slip-ons',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-slides')
   },
   clogs: {
     title: 'CROCS & FOAM CLOGS',
     subtitle: 'Classic clogs, platform mules, Crocs & foam comfort slip-ons',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
-      return (
-        n.includes('clog') ||
-        n.includes('croc') ||
-        n.includes('foam') ||
-        n.includes('mule') ||
-        tags.some((t: string) => t.includes('clog') || t.includes('croc') || t.includes('foam'))
-      );
-    }
+    filterFn: (p: any) => matchesSpecificCategory(p, 'clogs')
   },
-  trousers: {
-    title: 'TROUSERS & DENIM',
-    subtitle: 'Baggy selvedge denim, cargo pants & tailored trousers',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const c = (p.category || '').toLowerCase();
-      return (
-        c === 'bottoms' ||
-        n.includes('jean') ||
-        n.includes('pant') ||
-        n.includes('cargo') ||
-        n.includes('trouser') ||
-        n.includes('jogger') ||
-        n.includes('adiddas')
-      );
-    }
+  sneakers: {
+    title: 'STREET SNEAKERS',
+    subtitle: 'Casual trainers & street sneakers',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'sneakers')
+  },
+  'women-sneakers': {
+    title: 'SNEAKERS & CASUAL SHOES',
+    subtitle: 'Platform sneakers & everyday trainers',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-sneakers')
+  },
+  loafers: {
+    title: 'LOAFERS & DRESS SHOES',
+    subtitle: 'Formal dress shoes, loafers & office footwear',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'loafers')
+  },
+  heels: {
+    title: 'HEELS & PUMPS',
+    subtitle: 'Stiletto heels, block heels & dress sandals',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'heels')
+  },
+  backpacks: {
+    title: 'BACKPACKS & TRAVEL BAGS',
+    subtitle: 'Backpacks, travel duffels & gym bags',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'backpacks')
+  },
+  crossbody: {
+    title: 'CROSSBODY & CHEST BAGS',
+    subtitle: 'Chest bags & compact crossbody bags',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'crossbody')
+  },
+  handbags: {
+    title: 'HANDBAGS & TOTES',
+    subtitle: 'Shoulder bags, leather totes & daily bags',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'handbags')
+  },
+  clutches: {
+    title: 'CLUTCHES & MINI BAGS',
+    subtitle: 'Evening clutches & mini bags',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'clutches')
   },
   accessories: {
     title: 'CAPS & ACCESSORIES',
     subtitle: 'Monogram caps, Cuban links & luxury accessories',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const c = (p.category || '').toLowerCase();
-      return (
-        c === 'accessories' ||
-        n.includes('cap') ||
-        n.includes('watch') ||
-        n.includes('chain') ||
-        n.includes('neckless') ||
-        n.includes('necklace') ||
-        n.includes('ring') ||
-        n.includes('hat')
-      );
-    }
+    filterFn: (p: any) => matchesCategoryFilter(p, 'accessories')
   },
   jewelry: {
     title: 'JEWELRY & WATCHES',
     subtitle: 'Cuban links, signet rings & luxury timepieces',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      return (
-        n.includes('watch') ||
-        n.includes('chain') ||
-        n.includes('neckless') ||
-        n.includes('necklace') ||
-        n.includes('ring') ||
-        n.includes('bracelet') ||
-        n.includes('rolex')
-      );
-    }
+    filterFn: (p: any) => matchesSpecificCategory(p, 'jewelry') || matchesSpecificCategory(p, 'chains')
+  },
+  chains: {
+    title: 'CUBAN CHAINS & JEWELRY',
+    subtitle: 'Cuban links, chains & pendant necklaces',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'chains')
+  },
+  watches: {
+    title: 'LUXURY WATCHES',
+    subtitle: 'Gold, silver & leather strap watches',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'watches')
+  },
+  'women-watches': {
+    title: 'WOMEN’S WATCHES',
+    subtitle: 'Gold, silver & leather strap timepieces',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-watches')
+  },
+  sunglasses: {
+    title: 'SUNGLASSES & EYEWEAR',
+    subtitle: 'Designer sunglasses & tinted frames',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'sunglasses')
+  },
+  'women-sunglasses': {
+    title: 'SUNGLASSES & SHADES',
+    subtitle: 'Cat-eye frames, dark shades & sun wear',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-sunglasses')
+  },
+  caps: {
+    title: 'CAPS, HATS & BEANIES',
+    subtitle: 'Baseball caps, trucker hats & beanies',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'caps')
   },
   dresses: {
     title: 'DRESSES & GOWNS',
     subtitle: 'Silk boubous, two-piece sets & evening gowns',
-    filterFn: (p: any) => {
-      const n = (p.name || '').toLowerCase();
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
-      return (
-        n.includes('dress') ||
-        n.includes('gown') ||
-        n.includes('boubou') ||
-        n.includes('bubu') ||
-        tags.some((t: string) => t.includes('dress') || t.includes('boubou') || t.includes('maxidress'))
-      );
-    }
+    filterFn: (p: any) => matchesSpecificCategory(p, 'dresses')
   }
 };
 
 const ALL_CATEGORY_LINKS = [
   { slug: 'native', label: 'Native & Agbada' },
-  { slug: 'streetwear', label: 'Streetwear' },
-  { slug: 'shirts', label: 'Shirts & Tops' },
+  { slug: 'hoodies', label: 'Hoodies & Sweatshirts' },
+  { slug: 'tshirts', label: 'T-Shirts & Tops' },
   { slug: 'footwear', label: 'Footwear & Slides' },
-  { slug: 'trousers', label: 'Trousers & Denim' },
+  { slug: 'jeans', label: 'Jeans & Denim' },
+  { slug: 'backpacks', label: 'Bags & Backpacks' },
   { slug: 'accessories', label: 'Accessories' },
 ];
 

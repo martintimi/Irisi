@@ -29,7 +29,7 @@ const MALE_CATEGORIES = [
   { id: 'jalabiya_tunics', label: 'Jalabiya & Tunics', generalCat: 'tops' as GarmentCategory, group: 'native' },
   { id: 'men_caps_fila', label: 'Aso-Oke Fila & Caps', generalCat: 'accessories' as GarmentCategory, group: 'native' },
   // Apparel
-  { id: 'streetwear_hoodie', label: 'Streetwear Hoodies & Sweats', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'streetwear_hoodie', label: 'Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'suits_blazers', label: 'Suits, Tuxedos & Blazers', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'tshirts_tees', label: 'T-Shirts & Graphic Tees', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'shirts_polos', label: 'Luxury Shirts & Polos', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
@@ -60,8 +60,8 @@ const FEMALE_CATEGORIES = [
   // Apparel
   { id: 'dresses_gowns', label: 'Dresses, Gowns & Maxis', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
   { id: 'two_piece_sets', label: 'Two-Piece Co-ord Sets', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'corsets_tops', label: 'Corsets, Tops & Blouses', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
-  { id: 'female_streetwear', label: 'Female Streetwear & Hoodies', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
+  { id: 'corsets_tops', label: 'Tops, Corsets & Blouses', generalCat: 'tops' as GarmentCategory, group: 'apparel' },
+  { id: 'female_streetwear', label: 'Hoodies & Sweatshirts', generalCat: 'outerwear' as GarmentCategory, group: 'apparel' },
   { id: 'women_jeans_trousers', label: 'Jeans, Cargo & Pants', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   { id: 'skirts_minis', label: 'Skirts & Mini Skirts', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
   { id: 'women_shorts', label: 'Shorts & Biker Sets', generalCat: 'bottoms' as GarmentCategory, group: 'apparel' },
@@ -284,8 +284,10 @@ export default function MobileVendorPublish({
       { keywords: ['watch', 'wristwatch', 'rolex', 'timepiece', 'chronograph'], match: id => id.includes('watches') },
       { keywords: ['sunglasses', 'glasses', 'shades', 'eyewear', 'spectacles'], match: id => id.includes('sunglasses') || id.includes('eyewear') },
       { keywords: ['chain', 'necklace', 'pendant', 'cuban', 'ring', 'bangle', 'bracelet', 'earring', 'jewelry', 'jewellery'], match: id => id.includes('jewelry') || id.includes('chains') },
-      { keywords: ['crossbody', 'chest rig', 'waist bag', 'fanny pack', 'clutch'], match: id => id.includes('crossbody') || id.includes('clutches') },
-      { keywords: ['backpack', 'tote', 'handbag', 'duffle', 'travel bag', 'briefcase', 'leather bag'], match: id => id.includes('backpacks') || id.includes('handbags') || id.includes('bags') },
+      { keywords: ['backpack', 'duffel', 'travel bag', 'gym bag', 'rucksack'], match: id => id.includes('backpacks') },
+      { keywords: ['crossbody', 'chest rig', 'waist bag', 'fanny pack', 'sling bag'], match: id => id.includes('crossbody') },
+      { keywords: ['handbag', 'tote bag', 'shoulder bag', 'tote', 'leather tote'], match: id => id.includes('handbags') },
+      { keywords: ['clutch', 'mini bag', 'evening clutch', 'wristlet'], match: id => id.includes('clutches') },
       
       // Apparel
       { keywords: ['hoodie', 'sweatshirt', 'sweat jacket', 'pullover'], match: id => id.includes('hoodie') || id.includes('streetwear') },
@@ -293,7 +295,8 @@ export default function MobileVendorPublish({
       { keywords: ['tee', 't-shirt', 'graphic tee', 'oversized tee'], match: id => id.includes('tees') || id.includes('tshirts') },
       { keywords: ['polo', 'button down', 'oxford shirt', 'dress shirt', 'collar shirt', 'shirt'], match: id => id.includes('polos') || id.includes('shirts') },
       { keywords: ['jacket', 'windbreaker', 'bomber', 'varsity', 'coat'], match: id => id.includes('jackets') },
-      { keywords: ['cargo', 'jeans', 'denim', 'baggy'], match: id => id.includes('jeans') || id.includes('denim') },
+      { keywords: ['skirt', 'mini skirt', 'pleated skirt', 'skirts'], match: id => id.includes('skirts') },
+      { keywords: ['cargo', 'jeans', 'denim', 'baggy jean', 'baggy pants'], match: id => id.includes('jeans') || id.includes('denim') },
       { keywords: ['jogger', 'sweatpants', 'track pants'], match: id => id.includes('joggers') },
       { keywords: ['shorts', 'short set', 'biker short'], match: id => id.includes('shorts') },
       { keywords: ['dress', 'gown', 'maxi', 'midi', 'mini dress'], match: id => id.includes('dresses') },

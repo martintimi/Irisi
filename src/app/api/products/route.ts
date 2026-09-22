@@ -372,16 +372,19 @@ export async function GET(request: Request) {
       const shipsFromTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('ships_from:'));
       const shipsFromLocation = shipsFromTag
         ? shipsFromTag.replace(/^ships_from:/, '')
-        : (vendorInfo?.city && vendorInfo?.state ? `${vendorInfo.city}, ${vendorInfo.state}` : vendorInfo?.city || vendorInfo?.location || 'Lagos');
+        : undefined;
+      const subcatTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('subcat:'));
+      const resolvedSubCategory = (p as any).subcategory || (p as any).sub_category || (subcatTag ? subcatTag.replace(/^subcat:/, '') : undefined);
 
-      // Filter out internal system tags (video:, img:, color_img:, ships_from:) from public customer tags
+      // Filter out internal system tags (video:, img:, color_img:, ships_from:, subcat:) from public customer tags
       const cleanTags = rawTags.filter(
         (t: string) =>
           typeof t === 'string' &&
           !t.startsWith('video:') &&
           !t.startsWith('img:') &&
           !t.startsWith('color_img:') &&
-          !t.startsWith('ships_from:')
+          !t.startsWith('ships_from:') &&
+          !t.startsWith('subcat:')
       );
 
       return {
@@ -389,6 +392,8 @@ export async function GET(request: Request) {
         name: p.name,
         price: Number(p.price),
         category: p.category,
+        subCategory: resolvedSubCategory,
+        subcategory: resolvedSubCategory,
         genderTarget: p.gender_target,
         garmentOriginType: p.garment_origin_type,
         imageUrl: resolvedImg,
@@ -511,6 +516,11 @@ export async function POST(request: Request) {
         const tagsList = Array.isArray(item.tags)
           ? item.tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
           : ['Ready-to-Wear'];
+
+        const subcatToSave = item.subcategory || item.subCategory;
+        if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
+          tagsList.push(`subcat:${subcatToSave.trim()}`);
+        }
 
         const shipsFromToSave = item.shipsFrom || item.ships_from;
         if (shipsFromToSave && typeof shipsFromToSave === 'string' && shipsFromToSave.trim()) {
@@ -667,6 +677,11 @@ export async function POST(request: Request) {
     const tagsList = Array.isArray(tags)
       ? tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
       : [];
+
+    const subcatToSave = body.subcategory || body.subCategory;
+    if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
+      tagsList.push(`subcat:${subcatToSave.trim()}`);
+    }
 
     const shipsFromToSave = body.shipsFrom || body.ships_from;
     if (shipsFromToSave && typeof shipsFromToSave === 'string' && shipsFromToSave.trim()) {
