@@ -142,12 +142,11 @@ export default function BatchProductUploadView({
     }
   }, [errorMessage]);
 
-  // Filter Categories by Active Drop Mode / Specialty
+  // Filter Categories by Active Drop Mode
   const availableCategories = ALL_CATEGORY_OPTIONS.filter(c => {
-    if (vendorSpecialty === 'caps') return c.group === 'jewelry' && (c.id.includes('cap') || c.id.includes('hat') || c.id.includes('fila'));
-    if (vendorSpecialty === 'jewelry' || vendorSpecialty === 'accessories' || dropMode === 'jewelry') return c.group === 'jewelry';
-    if (vendorSpecialty === 'footwear' || dropMode === 'footwear') return c.group === 'footwear';
-    if (vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear' || vendorSpecialty === 'apparel' || dropMode === 'apparel') return c.group === 'apparel';
+    if (dropMode === 'jewelry') return c.group === 'jewelry';
+    if (dropMode === 'footwear') return c.group === 'footwear';
+    if (dropMode === 'apparel') return c.group === 'apparel';
     return true;
   });
 
@@ -699,52 +698,46 @@ export default function BatchProductUploadView({
       </div>
 
       {/* 1-TAP DROP TYPE SELECTOR (Apparel / Slides & Footwear / Jewelry & Accessories) */}
-      {(vendorSpecialty === 'multi_department' || items.length === 0) && (
+      {items.length === 0 && (
         <div className="p-1.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono-luxury text-xs">
-          {(vendorSpecialty === 'multi_department' || vendorSpecialty === 'footwear') && (
-            <button
-              type="button"
-              onClick={() => handleSwitchDropMode('footwear')}
-              className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
-                dropMode === 'footwear'
-                  ? 'bg-[var(--gold-accent)] text-black shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Footprints className="h-3.5 w-3.5" />
-              <span>Slides &amp; Footwear</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => handleSwitchDropMode('footwear')}
+            className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
+              dropMode === 'footwear'
+                ? 'bg-[var(--gold-accent)] text-black shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Footprints className="h-3.5 w-3.5" />
+            <span>Slides &amp; Footwear</span>
+          </button>
 
-          {(vendorSpecialty === 'multi_department' || vendorSpecialty === 'apparel' || vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear') && (
-            <button
-              type="button"
-              onClick={() => handleSwitchDropMode('apparel')}
-              className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
-                dropMode === 'apparel'
-                  ? 'bg-[var(--gold-accent)] text-black shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Shirt className="h-3.5 w-3.5" />
-              <span>Clothing Drop</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => handleSwitchDropMode('apparel')}
+            className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
+              dropMode === 'apparel'
+                ? 'bg-[var(--gold-accent)] text-black shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Shirt className="h-3.5 w-3.5" />
+            <span>Clothing Drop</span>
+          </button>
 
-          {(vendorSpecialty === 'multi_department' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps' || vendorSpecialty === 'accessories') && (
-            <button
-              type="button"
-              onClick={() => handleSwitchDropMode('jewelry')}
-              className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
-                dropMode === 'jewelry'
-                  ? 'bg-[var(--gold-accent)] text-black shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Caps, Bags &amp; Accessories</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => handleSwitchDropMode('jewelry')}
+            className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
+              dropMode === 'jewelry'
+                ? 'bg-[var(--gold-accent)] text-black shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Caps, Bags &amp; Accessories</span>
+          </button>
         </div>
       )}
 

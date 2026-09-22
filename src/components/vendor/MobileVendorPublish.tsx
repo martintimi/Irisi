@@ -255,33 +255,8 @@ export default function MobileVendorPublish({
   const currentCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
 
   const filteredCategoryList = useMemo(() => {
-    return currentCategoryList.filter((c) => {
-      if (vendorSpecialty === 'native_tailoring') {
-        return c.group === 'native' || c.id.includes('senator') || c.id.includes('agbada') || c.id.includes('kaftan') || c.id.includes('boubou') || c.id.includes('lace') || c.id.includes('fila');
-      }
-      if (vendorSpecialty === 'streetwear') {
-        return c.group === 'apparel' && !c.id.includes('fila');
-      }
-      if (vendorSpecialty === 'footwear') {
-        return c.group === 'footwear';
-      }
-      if (vendorSpecialty === 'caps') {
-        return c.id.includes('cap') || c.id.includes('hat') || c.id.includes('fila') || c.id.includes('beanie');
-      }
-      if (vendorSpecialty === 'jewelry') {
-        return c.id.includes('jewelry') || c.id.includes('chains') || c.id.includes('watches') || c.id.includes('ring') || c.id.includes('necklace') || c.id.includes('bangle');
-      }
-      if (vendorSpecialty === 'accessories') {
-        return c.group === 'accessories' || c.group === 'bags';
-      }
-      // multi_department or general
-      if (catFilterTab === 'all') return true;
-      if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'native';
-      if (catFilterTab === 'footwear') return c.group === 'footwear';
-      if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
-      return true;
-    });
-  }, [currentCategoryList, vendorSpecialty, catFilterTab]);
+    return currentCategoryList;
+  }, [currentCategoryList]);
 
   const [smartDetectedCat, setSmartDetectedCat] = useState<string | null>(null);
 
@@ -1614,11 +1589,60 @@ export default function MobileVendorPublish({
             }}
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
           >
-            {filteredCategoryList.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.label}
-              </option>
-            ))}
+            {/* Native & Cultural */}
+            {filteredCategoryList.some(c => c.group === 'native') && (
+              <optgroup label="Native & Cultural Wear">
+                {filteredCategoryList.filter(c => c.group === 'native').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {/* Apparel & Streetwear */}
+            {filteredCategoryList.some(c => c.group === 'apparel') && (
+              <optgroup label="Apparel & Streetwear">
+                {filteredCategoryList.filter(c => c.group === 'apparel').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {/* Footwear & Shoes */}
+            {filteredCategoryList.some(c => c.group === 'footwear') && (
+              <optgroup label="Footwear, Slides & Shoes">
+                {filteredCategoryList.filter(c => c.group === 'footwear').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {/* Bags */}
+            {filteredCategoryList.some(c => c.group === 'bags') && (
+              <optgroup label="Bags & Backpacks">
+                {filteredCategoryList.filter(c => c.group === 'bags').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {/* Accessories & Jewelry */}
+            {filteredCategoryList.some(c => c.group === 'accessories') && (
+              <optgroup label="Accessories, Caps & Jewelry">
+                {filteredCategoryList.filter(c => c.group === 'accessories').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 

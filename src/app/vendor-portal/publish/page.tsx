@@ -321,22 +321,21 @@ export default function PublishGarmentPage() {
     }
   }, [errorMessage]);
 
-  // Update categories when genderTarget or vendorSpecialty changes
+  // Update categories when genderTarget or catFilterTab changes
   useEffect(() => {
     const list = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
     const allowed = list.filter(c => {
-      if (vendorSpecialty === 'caps') return c.group === 'accessories' && (c.id.includes('cap') || c.id.includes('hat') || c.id.includes('fila'));
-      if (vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry') return c.group === 'accessories';
-      if (vendorSpecialty === 'footwear') return c.group === 'footwear';
-      if (vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear' || vendorSpecialty === 'apparel') return c.group === 'apparel';
       if (catFilterTab === 'all') return true;
+      if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'native';
+      if (catFilterTab === 'footwear') return c.group === 'footwear';
+      if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
       return c.group === catFilterTab;
     });
 
     if (allowed.length > 0 && !allowed.some(c => c.id === subCategory)) {
       handleCategorySelect(allowed[0].id, allowed[0].generalCat);
     }
-  }, [genderTarget, vendorSpecialty, catFilterTab]);
+  }, [genderTarget, catFilterTab]);
 
   const currentSizeList = useMemo(() => {
     const base = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
@@ -960,11 +959,10 @@ export default function PublishGarmentPage() {
 
   const currentCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
   const filteredCategoryList = currentCategoryList.filter(c => {
-    if (vendorSpecialty === 'caps') return c.group === 'accessories' && (c.id.includes('cap') || c.id.includes('hat') || c.id.includes('fila'));
-    if (vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry') return c.group === 'accessories';
-    if (vendorSpecialty === 'footwear') return c.group === 'footwear';
-    if (vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear' || vendorSpecialty === 'apparel') return c.group === 'apparel';
     if (catFilterTab === 'all') return true;
+    if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'native';
+    if (catFilterTab === 'footwear') return c.group === 'footwear';
+    if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
     return c.group === catFilterTab;
   });
   const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled);
@@ -1746,10 +1744,10 @@ export default function PublishGarmentPage() {
               {/* Category Segment Tabs with Lucide Icons */}
               <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
                 {[
-                  { id: 'all', label: 'All Categories', icon: Layers, allowed: vendorSpecialty === 'multi_department' },
-                  { id: 'apparel', label: 'Apparel & Sets', icon: Shirt, allowed: vendorSpecialty === 'multi_department' || vendorSpecialty === 'apparel' || vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear' },
-                  { id: 'footwear', label: 'Footwear & Slides', icon: Footprints, allowed: vendorSpecialty === 'multi_department' || vendorSpecialty === 'footwear' },
-                  { id: 'accessories', label: 'Caps, Bags & Jewelry', icon: Sparkles, allowed: vendorSpecialty === 'multi_department' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' },
+                  { id: 'all', label: 'All Categories', icon: Layers, allowed: true },
+                  { id: 'apparel', label: 'Apparel & Sets', icon: Shirt, allowed: true },
+                  { id: 'footwear', label: 'Footwear & Slides', icon: Footprints, allowed: true },
+                  { id: 'accessories', label: 'Caps, Bags & Jewelry', icon: Sparkles, allowed: true },
                 ].filter(t => t.allowed).map((tab) => {
                   const IconComp = tab.icon;
                   return (
