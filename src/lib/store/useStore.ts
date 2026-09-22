@@ -5,6 +5,8 @@ import {
   GarmentOriginType, Order, NotificationItem, VendorProfile, VendorStory
 } from '@/types';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
+import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
+import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 export interface UserAuth {
   isLoggedIn: boolean;
@@ -670,7 +672,7 @@ export const useStore = create<IrisiState>()(
                   price: Number(p.price) || 0,
                   description: p.description || '',
                   tags: Array.isArray(p.tags) ? p.tags : ['Ready-to-Wear'],
-                  colors: Array.isArray(p.colors) && p.colors.length > 0 ? p.colors : [{ name: 'Default', hex: '#111111' }],
+                  colors: parseAndNormalizeColors(p.colors),
                   sizes: p.sizes || ['S', 'M', 'L', 'XL', 'XXL'],
                   sizeChart: {},
                   imageUrl: p.imageUrl || p.image_url || '/images/no-product.svg',
@@ -687,9 +689,10 @@ export const useStore = create<IrisiState>()(
                 };
               });
 
-              // Set strictly to live PostgreSQL database products and heal cart items with real DB images
+              // Set strictly to live PostgreSQL database products (diversified and balanced across categories & designers)
+              const diversified = diversifyCatalog(dbProducts);
               set((state) => ({
-                allProducts: dbProducts,
+                allProducts: diversified,
                 cart: state.cart.map((cartItem) => {
                   const dbMatch = dbProducts.find((dp) => dp.id === cartItem.product?.id);
                   if (dbMatch) {

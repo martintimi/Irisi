@@ -13,6 +13,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
+import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
 
 const ITEMS_PER_PAGE = 24;
 
@@ -70,6 +71,40 @@ const matchesCategoryFilter = (p: any, cat: string): boolean => {
   return pCat === cat;
 };
 
+const MEN_DESKTOP_CATEGORIES: { id: string; label: string; type: 'cat' | 'sub' }[] = [
+  { id: 'all', label: 'All Items & Drops', type: 'cat' },
+  { id: 'senator', label: 'Senator & Kaftans', type: 'sub' },
+  { id: 'agbada', label: 'Grand Agbada', type: 'sub' },
+  { id: 'tops', label: 'Shirts & Polos', type: 'cat' },
+  { id: 'tshirts', label: 'T-Shirts & Tees', type: 'sub' },
+  { id: 'hoodies', label: 'Streetwear Hoodies', type: 'sub' },
+  { id: 'jeans', label: 'Jeans & Denim', type: 'sub' },
+  { id: 'cargo', label: 'Cargo & Joggers', type: 'sub' },
+  { id: 'slides', label: 'Slides, Palms & Shoes', type: 'sub' },
+  { id: 'clogs', label: 'Crocs & Clogs', type: 'sub' },
+  { id: 'sneakers', label: 'Sneakers & Trainers', type: 'sub' },
+  { id: 'backpacks', label: 'Bags & Backpacks', type: 'sub' },
+  { id: 'chains', label: 'Chains & Jewelry', type: 'sub' },
+  { id: 'watches', label: 'Watches', type: 'sub' },
+  { id: 'caps', label: 'Caps & Traditional Hats', type: 'sub' },
+];
+
+const WOMEN_DESKTOP_CATEGORIES: { id: string; label: string; type: 'cat' | 'sub' }[] = [
+  { id: 'all', label: 'All Items & Drops', type: 'cat' },
+  { id: 'boubou', label: 'Silk Boubou & Abayas', type: 'sub' },
+  { id: 'lace_ankara', label: 'Lace & Ankara', type: 'sub' },
+  { id: 'dresses', label: 'Dresses & Maxis', type: 'sub' },
+  { id: 'two-piece', label: 'Two-Piece Sets', type: 'sub' },
+  { id: 'tops', label: 'Corsets & Tops', type: 'cat' },
+  { id: 'women-hoodies', label: 'Hoodies & Sweatshirts', type: 'sub' },
+  { id: 'women-jeans', label: 'Jeans & Cargo Pants', type: 'sub' },
+  { id: 'heels', label: 'Heels, Pumps & Mules', type: 'sub' },
+  { id: 'women-slides', label: 'Slides & Flats', type: 'sub' },
+  { id: 'clogs', label: 'Crocs & Clogs', type: 'sub' },
+  { id: 'women-bags', label: 'Handbags & Totes', type: 'sub' },
+  { id: 'jewelry', label: 'Jewelry & Watches', type: 'sub' },
+];
+
 export default function MarketplaceGrid() {
   const {
     bodyProfile,
@@ -97,6 +132,7 @@ export default function MarketplaceGrid() {
 
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'native' | 'all'>('all');
+  const [specificCategory, setSpecificCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [quickLookProduct, setQuickLookProduct] = useState<any>(null);
@@ -114,39 +150,22 @@ export default function MarketplaceGrid() {
     const cat = searchParams.get('category')?.toLowerCase();
     if (cat && ['tops', 'bottoms', 'outerwear', 'footwear', 'accessories', 'native'].includes(cat)) {
       setSelectedCategory(cat as any);
+      setSpecificCategory(null);
       setCurrentPage(1);
     } else if (cat === 'all') {
       setSelectedCategory('all');
+      setSpecificCategory(null);
       setCurrentPage(1);
     } else if (cat) {
-      // If it's a specific subcategory, map to the closest category or search query
-      if (['senator', 'agbada', 'kaftan', 'jalabiya', 'boubou', 'bubu', 'native', 'ankara', 'lace'].includes(cat)) setSelectedCategory('native');
-      else if (['hoodies', 'jackets', 'outerwear', 'blazers', 'sweaters'].includes(cat)) setSelectedCategory('outerwear');
-      else if (['jeans', 'cargo', 'trousers', 'shorts', 'bottoms'].includes(cat)) setSelectedCategory('bottoms');
-      else if (['slides', 'sneakers', 'loafers', 'heels', 'clogs', 'crocs', 'footwear'].includes(cat)) setSelectedCategory('footwear');
-      else if (['bags', 'backpacks', 'chains', 'watches', 'caps', 'fila', 'clutches', 'accessories', 'jewelry'].includes(cat)) setSelectedCategory('accessories');
-      else if (['tshirts', 'tees', 'shirts', 'polos', 'tops', 'blouse'].includes(cat)) setSelectedCategory('tops');
-      
-      if (['bags', 'backpacks', 'men-backpacks', 'women-bags', 'clutches'].includes(cat)) {
-        setSearchQuery('bag');
-      } else if (cat === 'clogs' || cat === 'crocs') {
-        setSearchQuery('clog');
-      } else {
-        setSearchQuery(cat);
-      }
+      setSelectedCategory('all');
+      setSpecificCategory(cat);
       setCurrentPage(1);
+    } else {
+      setSpecificCategory(null);
     }
   }, [searchParams, setSelectedGender]);
 
-  const categories: { id: GarmentCategory | 'native' | 'all'; label: string }[] = [
-    { id: 'all', label: 'All Items & Drops' },
-    { id: 'native', label: selectedGender === 'female' ? 'Boubou, Lace & Natives' : 'Senator & Native Sets' },
-    { id: 'tops', label: selectedGender === 'female' ? 'Tops & Blouses' : 'Shirts & Graphic Tees' },
-    { id: 'outerwear', label: 'Streetwear & Hoodies' },
-    { id: 'bottoms', label: 'Trousers & Jeans' },
-    { id: 'footwear', label: 'Slides, Palms & Shoes' },
-    { id: 'accessories', label: 'Caps, Jewelry & Bags' },
-  ];
+  const categories = selectedGender === 'female' ? WOMEN_DESKTOP_CATEGORIES : MEN_DESKTOP_CATEGORIES;
 
   const brandOptions = useMemo(() => {
     const brandsMap = new Map<string, { id: string; name: string; count: number }>();
@@ -165,7 +184,7 @@ export default function MarketplaceGrid() {
   }, [allProducts]);
 
   const filteredProducts = useMemo(() => {
-    return allProducts.filter((p) => {
+    let list = allProducts.filter((p) => {
       const pGender = String(p.genderTarget || '').toLowerCase();
       const sGender = String(selectedGender || '').toLowerCase();
       const matchesGender = 
@@ -184,6 +203,59 @@ export default function MarketplaceGrid() {
 
       const matchesCat = matchesCategoryFilter(p, selectedCategory);
 
+      // Specific subcategory filter
+      let matchesSpecific = true;
+      if (specificCategory) {
+        const sc = specificCategory.toLowerCase();
+        const pName = (p.name || '').toLowerCase();
+        const pDesc = (p.description || '').toLowerCase();
+        const pTags = (p.tags || []).map((t: string) => (t || '').toLowerCase());
+        const pSub = ((p as any).subcategory || (p as any).subCategory || '').toLowerCase();
+        const isNative = isNativeProduct(p);
+
+        if (sc === 'hoodies' || sc === 'women-hoodies') {
+          matchesSpecific = pName.includes('hoodie') || pName.includes('sweat') || pTags.some(t => t.includes('hoodie'));
+        } else if (sc === 'senator') {
+          matchesSpecific = pName.includes('senator') || pName.includes('kaftan') || pTags.some(t => t.includes('senator') || t.includes('kaftan'));
+        } else if (sc === 'agbada') {
+          matchesSpecific = pName.includes('agbada') || pTags.some(t => t.includes('agbada'));
+        } else if (sc === 'slides' || sc === 'women-slides') {
+          matchesSpecific = pName.includes('slide') || pName.includes('palm') || pName.includes('slipper') || pTags.some(t => t.includes('slide') || t.includes('palm'));
+        } else if (sc === 'jeans' || sc === 'women-jeans') {
+          matchesSpecific = pName.includes('jean') || pName.includes('denim') || pName.includes('cargo') || pTags.some(t => t.includes('jean') || t.includes('denim'));
+        } else if (sc === 'cargo') {
+          matchesSpecific = pName.includes('cargo') || pName.includes('jogger') || pName.includes('sweatpant') || pTags.some(t => t.includes('cargo') || t.includes('jogger'));
+        } else if (sc === 'tshirts') {
+          matchesSpecific = !isNative && (pName.includes('tee') || pName.includes('t-shirt') || pName.includes('tshirt') || pName.includes('graphic') || pTags.some(t => t.includes('tee') || t.includes('t-shirt')));
+        } else if (sc === 'sneakers') {
+          matchesSpecific = pName.includes('sneaker') || pName.includes('trainer') || pTags.some(t => t.includes('sneaker'));
+        } else if (sc === 'dresses') {
+          matchesSpecific = pName.includes('dress') || pName.includes('gown') || pName.includes('maxi') || pTags.some(t => t.includes('dress') || t.includes('gown'));
+        } else if (sc === 'two-piece' || sc === 'two_piece') {
+          matchesSpecific = pName.includes('two') || pName.includes('set') || pName.includes('coord') || pTags.some(t => t.includes('two') || t.includes('set') || t.includes('coord'));
+        } else if (sc === 'boubou') {
+          matchesSpecific = pName.includes('boubou') || pName.includes('bubu') || pName.includes('kaftan') || pName.includes('abaya') || pTags.some(t => t.includes('boubou') || t.includes('bubu') || t.includes('abaya'));
+        } else if (sc === 'lace_ankara' || sc === 'ankara' || sc === 'lace') {
+          matchesSpecific = pName.includes('lace') || pName.includes('ankara') || pTags.some(t => t.includes('lace') || t.includes('ankara')) || pSub.includes('lace') || pSub.includes('ankara');
+        } else if (sc === 'heels') {
+          matchesSpecific = pName.includes('heel') || pName.includes('pump') || pName.includes('mule') || pTags.some(t => t.includes('heel') || t.includes('pump'));
+        } else if (sc === 'clogs' || sc === 'crocs') {
+          matchesSpecific = pName.includes('clog') || pName.includes('croc') || pName.includes('foam') || pName.includes('mule') || pTags.some(t => t.includes('clog') || t.includes('croc') || t.includes('foam'));
+        } else if (sc === 'watches' || sc === 'women-watches') {
+          matchesSpecific = pName.includes('watch') || pTags.some(t => t.includes('watch'));
+        } else if (sc === 'chains') {
+          matchesSpecific = pName.includes('chain') || pName.includes('necklace') || pName.includes('cuban') || pTags.some(t => t.includes('chain'));
+        } else if (sc === 'jewelry') {
+          matchesSpecific = pName.includes('jewelry') || pName.includes('chain') || pName.includes('necklace') || pName.includes('earring') || pName.includes('bangle') || pName.includes('ring') || pName.includes('watch') || pTags.some(t => t.includes('jewelry') || t.includes('chain') || t.includes('earring') || t.includes('watch'));
+        } else if (sc === 'backpacks' || sc === 'bags' || sc === 'men-backpacks' || sc === 'women-bags' || sc === 'handbags' || sc === 'crossbody' || sc === 'clutches' || sc.includes('bag') || sc.includes('backpack')) {
+          matchesSpecific = pName.includes('bag') || pName.includes('backpack') || pName.includes('travel') || pName.includes('duffel') || pName.includes('tote') || pName.includes('carryall') || pName.includes('crossbody') || pName.includes('clutch') || pTags.some(t => t.includes('bag') || t.includes('backpack') || t.includes('duffel') || t.includes('tote'));
+        } else if (sc === 'caps' || sc === 'men-caps' || sc === 'fila') {
+          matchesSpecific = pName.includes('cap') || pName.includes('hat') || pName.includes('beanie') || pName.includes('fila') || pTags.some(t => t.includes('cap') || t.includes('fila'));
+        } else {
+          matchesSpecific = pName.includes(sc) || pDesc.includes(sc) || pTags.some(t => t.includes(sc)) || pSub === sc;
+        }
+      }
+
       const pVendorName = String(p.vendorName || '').toLowerCase();
       const pVendorId = String(p.vendorId || '').toLowerCase();
       const sBrand = String(selectedBrand || '').toLowerCase();
@@ -195,9 +267,16 @@ export default function MarketplaceGrid() {
                            String(p.description || '').toLowerCase().includes(q) ||
                            (Array.isArray(p.tags) && p.tags.some(t => String(t).toLowerCase().includes(q)));
 
-      return matchesGender && matchesOrigin && matchesCat && matchesBrand && matchesQuery;
+      return matchesGender && matchesOrigin && matchesCat && matchesSpecific && matchesBrand && matchesQuery;
     });
-  }, [allProducts, selectedGender, selectedOriginType, selectedCategory, selectedBrand, searchQuery]);
+
+    // Shuffle & Diversify catalog display across categories & vendors
+    if (!searchQuery && selectedCategory === 'all' && !specificCategory) {
+      list = diversifyCatalog(list);
+    }
+
+    return list;
+  }, [allProducts, selectedGender, selectedOriginType, selectedCategory, specificCategory, selectedBrand, searchQuery]);
 
   // Reset page when filters change
   const handleBrandChange = (brandId: string) => {
@@ -205,14 +284,35 @@ export default function MarketplaceGrid() {
     setCurrentPage(1);
   };
 
-  const handleCategoryChange = (catId: GarmentCategory | 'native' | 'all') => {
-    setSelectedCategory(catId);
+  const handleCategoryItemClick = (cat: { id: string; label: string; type: 'cat' | 'sub' }) => {
     setCurrentPage(1);
+    if (cat.id === 'all') {
+      setSelectedCategory('all');
+      setSpecificCategory(null);
+      router.replace(`/shop?gender=${selectedGender === 'male' ? 'men' : 'women'}`);
+    } else if (cat.type === 'cat') {
+      setSelectedCategory(cat.id as any);
+      setSpecificCategory(null);
+      router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}`);
+    } else {
+      setSelectedCategory('all');
+      setSpecificCategory(cat.id);
+      router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}`);
+    }
+  };
+
+  const handleGenderChange = (g: 'male' | 'female') => {
+    setSelectedGender(g);
+    setSelectedCategory('all');
+    setSpecificCategory(null);
+    setCurrentPage(1);
+    router.replace(`/shop?gender=${g === 'male' ? 'men' : 'women'}`);
   };
 
   const handleResetFilters = () => {
     setSelectedBrand('all');
     setSelectedCategory('all');
+    setSpecificCategory(null);
     setSelectedOriginType('all');
     setSearchQuery('');
     setCurrentPage(1);
@@ -298,11 +398,8 @@ export default function MarketplaceGrid() {
           {/* Gender Switcher */}
           <div className="flex items-center p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
             <button
-              onClick={() => {
-                setSelectedGender('male');
-                setCurrentPage(1);
-              }}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all ${
+              onClick={() => handleGenderChange('male')}
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all cursor-pointer ${
                 selectedGender === 'male'
                   ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -311,11 +408,8 @@ export default function MarketplaceGrid() {
               Men&apos;s
             </button>
             <button
-              onClick={() => {
-                setSelectedGender('female');
-                setCurrentPage(1);
-              }}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all ${
+              onClick={() => handleGenderChange('female')}
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all cursor-pointer ${
                 selectedGender === 'female'
                   ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -377,19 +471,26 @@ export default function MarketplaceGrid() {
       {/* 3. CATEGORY PILL SELECTOR */}
       {/* ======================================================== */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => handleCategoryChange(cat.id)}
-            className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all ${
-              selectedCategory === cat.id
-                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
-                : 'surface-card text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const isSelected =
+            (cat.id === 'all' && selectedCategory === 'all' && !specificCategory) ||
+            (cat.type === 'cat' && selectedCategory === cat.id && !specificCategory) ||
+            (cat.type === 'sub' && specificCategory === cat.id);
+
+          return (
+            <button
+              key={cat.id}
+              onClick={() => handleCategoryItemClick(cat)}
+              className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                isSelected
+                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
+                  : 'surface-card text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
+              }`}
+            >
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ======================================================== */}

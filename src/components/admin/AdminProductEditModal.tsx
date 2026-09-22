@@ -3,29 +3,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Save, ExternalLink, Star, Check, AlertCircle, Layers, CheckCircle2, Camera, Trash2, Plus, Loader2 } from 'lucide-react';
+import { X, Save, ExternalLink, Star, Check, AlertCircle, Layers, CheckCircle2, Camera, Trash2, Plus, Loader2, Palette } from 'lucide-react';
 import { INITIAL_CATEGORIES } from '@/lib/data/categories';
+import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
 
-const ADMIN_COLOR_PALETTE = [
-  { name: 'Black', hex: '#111111' },
-  { name: 'White', hex: '#ffffff' },
-  { name: 'Gold', hex: '#d4af37' },
-  { name: 'Silver', hex: '#c0c0c0' },
-  { name: 'Rose Gold', hex: '#b76e79' },
-  { name: 'Navy Blue', hex: '#1e3a8a' },
-  { name: 'Royal Blue', hex: '#2563eb' },
-  { name: 'Sky Blue', hex: '#38bdf8' },
-  { name: 'Heather Grey', hex: '#9ca3af' },
-  { name: 'Charcoal Grey', hex: '#374151' },
-  { name: 'Khaki / Beige', hex: '#d4b996' },
-  { name: 'Chocolate Brown', hex: '#451a03' },
-  { name: 'Tan / Camel', hex: '#c19a6b' },
-  { name: 'Forest Green', hex: '#065f46' },
-  { name: 'Olive Green', hex: '#4d7c0f' },
-  { name: 'Wine / Burgundy', hex: '#831843' },
-  { name: 'Crimson Red', hex: '#dc2626' },
-  { name: 'Multi-Color / Pattern', hex: '#6366f1' },
-];
+const ADMIN_COLOR_PALETTE = STANDARD_FASHION_COLORS;
 
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
@@ -178,10 +160,14 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     return list;
   }, [editGender, apiCategories, editCategory]);
 
-  const initialColors: string[] = Array.isArray(product.colors)
-    ? product.colors.map((c: any) => (typeof c === 'string' ? c : c.name || '')).filter(Boolean)
-    : [];
+  const initialColors: string[] = useMemo(() => {
+    return parseAndNormalizeColors(product.colors).map(c => c.name);
+  }, [product.colors]);
+
   const [selectedColors, setSelectedColors] = useState<string[]>(initialColors);
+  const [showCustomColor, setShowCustomColor] = useState(false);
+  const [customColorName, setCustomColorName] = useState('');
+  const [customColorHex, setCustomColorHex] = useState('#2563eb');
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -209,9 +195,27 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   }, [onClose]);
 
   const toggleColor = (colorName: string) => {
+    const clean = colorName.trim();
+    if (!clean) return;
     setSelectedColors(prev =>
-      prev.includes(colorName) ? prev.filter(c => c !== colorName) : [...prev, colorName]
+      prev.some(c => c.toLowerCase() === clean.toLowerCase())
+        ? prev.filter(c => c.toLowerCase() !== clean.toLowerCase())
+        : [...prev, clean]
     );
+  };
+
+  const removeColor = (colorName: string) => {
+    setSelectedColors(prev => prev.filter(c => c.toLowerCase() !== colorName.toLowerCase()));
+  };
+
+  const addCustomColor = () => {
+    const clean = customColorName.trim();
+    if (!clean) return;
+    if (!selectedColors.some(c => c.toLowerCase() === clean.toLowerCase())) {
+      setSelectedColors(prev => [...prev, clean]);
+    }
+    setCustomColorName('');
+    setShowCustomColor(false);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,10 +271,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     setSaveSuccess(false);
 
     try {
-      const colorsPayload = selectedColors.map(name => {
-        const match = ADMIN_COLOR_PALETTE.find(c => c.name.toLowerCase() === name.toLowerCase());
-        return { name, hex: match?.hex || '#111111' };
-      });
+      const colorsPayload = selectedColors;
 
       const res = await fetch('/api/admin/products', {
         method: 'PATCH',
@@ -311,7 +312,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           is_published: editInStock,
           in_stock: editInStock,
           is_featured: editFeatured,
-          colors: colorsPayload,
+          colors: parseAndNormalizeColors(selectedColors),
           images: editImages,
           imageUrl: editImages[0] || product.imageUrl,
         });
@@ -604,19 +605,111 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
             </div>
           </div>
 
-          {/* COLOR PALETTE SWATCHES */}
-          <div className="space-y-2">
+          {/* COLOR MANAGEMENT SECTION */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-mono-luxury uppercase text-amber-700 dark:text-amber-400 font-bold tracking-wider block">
-                Available Colors
+              <label className="text-[10px] font-mono-luxury uppercase text-amber-700 dark:text-amber-400 font-bold tracking-wider flex items-center gap-1.5">
+                <Palette className="h-3.5 w-3.5" />
+                <span>Available Colors ({selectedColors.length})</span>
               </label>
-              <span className="text-[10px] font-mono-luxury text-neutral-600 dark:text-neutral-400 font-medium">
-                {selectedColors.length > 0 ? selectedColors.join(', ') : 'None selected'}
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowCustomColor(!showCustomColor)}
+                className="text-[10px] font-mono-luxury font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                <span>{showCustomColor ? 'Close' : '+ Custom Shade'}</span>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2.5 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+
+            {/* Active Selected Colors with Remove Buttons */}
+            {selectedColors.length > 0 && (
+              <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-1.5">
+                <span className="text-[9px] font-mono-luxury uppercase font-bold text-neutral-500 block">
+                  Active Piece Colorways
+                </span>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {selectedColors.map((colName) => {
+                    const hex = resolveColorNameToHex(colName);
+                    const isMulti = colName.toLowerCase().includes('multi');
+                    return (
+                      <div
+                        key={colName}
+                        className="px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-neutral-900 dark:text-white text-xs font-mono-luxury font-bold flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span
+                          className="h-3 w-3 rounded-full border border-white/20 shrink-0"
+                          style={{
+                            background: isMulti
+                              ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                              : hex
+                          }}
+                        />
+                        <span>{colName}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeColor(colName)}
+                          className="p-0.5 rounded-full hover:bg-rose-500/20 text-neutral-400 hover:text-rose-500 cursor-pointer ml-0.5"
+                          title={`Remove ${colName}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Custom Shade Input */}
+            {showCustomColor && (
+              <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-amber-500/40 flex items-center gap-2 animate-fadeIn">
+                <input
+                  type="color"
+                  value={customColorHex}
+                  onChange={(e) => setCustomColorHex(e.target.value)}
+                  className="h-8 w-8 rounded-lg border border-neutral-300 dark:border-neutral-700 cursor-pointer bg-transparent shrink-0"
+                />
+                <input
+                  type="text"
+                  value={customColorName}
+                  onChange={(e) => setCustomColorName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCustomColor();
+                    }
+                  }}
+                  placeholder="Type custom color name (e.g. Sage Green, Pale Pink)"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-white dark:bg-[#121214] border border-neutral-300 dark:border-neutral-800 text-xs font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={addCustomColor}
+                  disabled={!customColorName.trim()}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-400 text-black font-mono-luxury font-bold text-xs uppercase cursor-pointer disabled:opacity-40 hover:bg-amber-300"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomColor(false);
+                    setCustomColorName('');
+                  }}
+                  className="p-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Standard Color Swatches */}
+            <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
               {ADMIN_COLOR_PALETTE.map(c => {
                 const isSelected = selectedColors.some(sc => sc.toLowerCase() === c.name.toLowerCase());
+                const isMulti = c.name.toLowerCase().includes('multi');
                 return (
                   <button
                     key={c.name}
@@ -628,7 +721,11 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
                         ? 'border-amber-500 scale-110 shadow-lg ring-2 ring-amber-400/50'
                         : 'border-neutral-300 dark:border-neutral-700 hover:border-neutral-500'
                     }`}
-                    style={{ backgroundColor: c.hex }}
+                    style={{
+                      background: isMulti
+                        ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                        : c.hex
+                    }}
                   >
                     {isSelected && (
                       <span className="absolute inset-0 flex items-center justify-center">

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { invalidateProductsCache } from '../route';
 import { products as fallbackCatalog } from '@/lib/data/products';
+import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -213,42 +214,7 @@ export async function GET(
       return fallbackHex || '#111111';
     }
 
-    let normalizedColors: { name: string; hex: string }[] = [];
-    if (Array.isArray(product.colors) && product.colors.length > 0) {
-      normalizedColors = product.colors.map((c: any) => {
-        if (typeof c === 'string') {
-          const trimmed = c.trim();
-          if (trimmed.startsWith('#')) {
-            const hexLower = trimmed.toLowerCase();
-            const foundKey = Object.keys(COLOR_HEX_MAP).find(k => COLOR_HEX_MAP[k] === hexLower);
-            const name = foundKey ? foundKey.charAt(0).toUpperCase() + foundKey.slice(1) : trimmed;
-            return { name, hex: trimmed };
-          }
-          const hex = resolveColorHex(trimmed);
-          const formattedName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-          return { name: formattedName, hex };
-        }
-        if (typeof c === 'object' && c !== null) {
-          const rawName = String(c.name || '').trim();
-          if (rawName && !rawName.toLowerCase().startsWith('colorway')) {
-            const hex = resolveColorHex(rawName, c.hex);
-            return { name: rawName, hex };
-          }
-          if (c.hex) {
-            const hexLower = String(c.hex).toLowerCase().trim();
-            const foundKey = Object.keys(COLOR_HEX_MAP).find(k => COLOR_HEX_MAP[k] === hexLower);
-            const name = foundKey ? foundKey.charAt(0).toUpperCase() + foundKey.slice(1) : (rawName || 'Standard');
-            return { name, hex: c.hex };
-          }
-          return { name: rawName || 'Standard', hex: resolveColorHex(rawName) };
-        }
-        return { name: 'Standard', hex: '#111111' };
-      });
-    }
-
-    if (normalizedColors.length === 0) {
-      normalizedColors = [{ name: 'As Featured', hex: '#111111' }];
-    }
+    let normalizedColors = parseAndNormalizeColors(product.colors);
 
     const isAccessory = product.category === 'accessories';
 
@@ -417,7 +383,10 @@ export async function PATCH(
     if (body.genderTarget !== undefined) updateData.gender_target = body.genderTarget;
     if (body.description !== undefined) updateData.description = body.description.trim();
     if (body.is_published !== undefined) updateData.is_published = Boolean(body.is_published);
-    if (body.colors !== undefined) updateData.colors = body.colors;
+    if (body.colors !== undefined) {
+      const norm = parseAndNormalizeColors(body.colors);
+      updateData.colors = norm.map((c) => c.name);
+    }
 
     // Handle multiple gallery images
     if (Array.isArray(body.images)) {

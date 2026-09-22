@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,7 +37,10 @@ export async function PATCH(request: Request) {
     if (description !== undefined) updates.description = String(description).trim();
     if (category !== undefined) updates.category = String(category).trim();
     if (genderTarget !== undefined) updates.gender_target = String(genderTarget).trim().toLowerCase();
-    if (colors !== undefined) updates.colors = colors;
+    if (colors !== undefined) {
+      const norm = parseAndNormalizeColors(colors);
+      updates.colors = norm.map((c) => c.name);
+    }
 
     // Use is_published (real DB column) for stock/published state
     if (isPublished !== undefined) {

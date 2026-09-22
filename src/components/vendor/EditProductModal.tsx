@@ -5,9 +5,10 @@ import Image from 'next/image';
 import {
   X, Save, Trash2, Plus, Minus, AlertTriangle, CheckCircle2,
   Package, ShoppingBag, Layers, Loader2, Sparkles, ExternalLink, RefreshCw,
-  UploadCloud, Camera, Star, Check
+  UploadCloud, Camera, Star, Check, Palette
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
 
 interface VariantStockItem {
   id?: string;
@@ -23,25 +24,6 @@ interface EditProductModalProps {
   onProductUpdated?: (updatedProduct: any) => void;
   onProductDeleted?: (productId: string) => void;
 }
-
-const COLOR_PALETTE = [
-  { name: 'Black', hex: '#111111' },
-  { name: 'White', hex: '#ffffff' },
-  { name: 'Gold', hex: '#d4af37' },
-  { name: 'Silver', hex: '#c0c0c0' },
-  { name: 'Navy Blue', hex: '#1e3a8a' },
-  { name: 'Royal Blue', hex: '#2563eb' },
-  { name: 'Sky Blue', hex: '#38bdf8' },
-  { name: 'Heather Grey', hex: '#9ca3af' },
-  { name: 'Charcoal Grey', hex: '#374151' },
-  { name: 'Khaki / Beige', hex: '#d4b996' },
-  { name: 'Chocolate Brown', hex: '#451a03' },
-  { name: 'Forest Green', hex: '#065f46' },
-  { name: 'Olive Green', hex: '#4d7c0f' },
-  { name: 'Wine / Burgundy', hex: '#831843' },
-  { name: 'Crimson Red', hex: '#dc2626' },
-  { name: 'Multi-Color / Pattern', hex: '#6366f1' },
-];
 
 export default function EditProductModal({
   product,
@@ -65,9 +47,43 @@ export default function EditProductModal({
   const [description, setDescription] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [showCustomColor, setShowCustomColor] = useState(false);
+  const [customColorInput, setCustomColorInput] = useState('');
+  const [customColorHex, setCustomColorHex] = useState('#2563eb');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [variants, setVariants] = useState<VariantStockItem[]>([]);
   const [singleStock, setSingleStock] = useState<number>(10);
+  const [showAddCustomSize, setShowAddCustomSize] = useState(false);
+  const [newSizeInput, setNewSizeInput] = useState('');
+  const [newSizeStock, setNewSizeStock] = useState('10');
+
+  // Complete background scroll lock on both body and html
+  useEffect(() => {
+    if (!isOpen) return;
+    const origBody = document.body.style.overflow;
+    const origHtml = document.documentElement.style.overflow;
+    const origTouch = document.body.style.touchAction;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.body.style.overflow = origBody;
+      document.documentElement.style.overflow = origHtml;
+      document.body.style.touchAction = origTouch;
+    };
+  }, [isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
 
   // Initialize or load fresh product details
   useEffect(() => {
@@ -91,10 +107,8 @@ export default function EditProductModal({
       : [product.imageUrl || product.image_url].filter(Boolean);
     setImages(rawImages);
 
-    const rawCols = Array.isArray(product.colors)
-      ? product.colors.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean)
-      : [];
-    setSelectedColors(rawCols);
+    const normalizedCols = parseAndNormalizeColors(product.colors).map(c => c.name);
+    setSelectedColors(normalizedCols);
 
     setConfirmDelete(false);
     setErrorMessage('');
@@ -123,9 +137,8 @@ export default function EditProductModal({
           : [p.imageUrl || p.image_url].filter(Boolean);
         setImages(fetchedImgs);
 
-        if (Array.isArray(p.colors)) {
-          setSelectedColors(p.colors.map((c: any) => typeof c === 'string' ? c : c.name).filter(Boolean));
-        }
+        const fetchedNormalizedCols = parseAndNormalizeColors(p.colors).map(c => c.name);
+        setSelectedColors(fetchedNormalizedCols);
 
         // Extract variants
         if (Array.isArray(p.variants) && p.variants.length > 0) {
@@ -208,8 +221,36 @@ export default function EditProductModal({
     setVariants(updated);
   };
 
+  const handleVariantSizeNameChange = (index: number, newSize: string) => {
+    const updated = [...variants];
+    updated[index].size = newSize;
+    setVariants(updated);
+  };
+
+  const handleAddCustomVariant = () => {
+    const trimmed = newSizeInput.trim();
+    if (!trimmed) return;
+    const qty = Math.max(0, parseInt(newSizeStock, 10) || 0);
+
+    setVariants([
+      ...variants,
+      {
+        size: trimmed,
+        color: variants[0]?.color || 'Standard',
+        stock_quantity: qty,
+      }
+    ]);
+    setNewSizeInput('');
+    setNewSizeStock('10');
+    setShowAddCustomSize(false);
+  };
+
+  const handleRemoveVariant = (indexToRemove: number) => {
+    setVariants(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleAddNewSizeVariant = () => {
-    const defaultSizes = category === 'footwear' ? ['40', '41', '42', '43', '44', '45'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    const defaultSizes = category === 'footwear' ? ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
     const existingSizes = new Set(variants.map(v => v.size));
     const nextAvailable = defaultSizes.find(s => !existingSizes.has(s)) || `Size-${variants.length + 1}`;
     
@@ -269,6 +310,33 @@ export default function EditProductModal({
     });
   };
 
+  const handleToggleColor = (colorName: string) => {
+    const clean = colorName.trim();
+    if (!clean) return;
+    setSelectedColors(prev => {
+      const exists = prev.some(c => c.toLowerCase() === clean.toLowerCase());
+      if (exists) {
+        return prev.filter(c => c.toLowerCase() !== clean.toLowerCase());
+      } else {
+        return [...prev, clean];
+      }
+    });
+  };
+
+  const handleRemoveColor = (colorName: string) => {
+    setSelectedColors(prev => prev.filter(c => c.toLowerCase() !== colorName.toLowerCase()));
+  };
+
+  const handleAddCustomColor = () => {
+    const trimmed = customColorInput.trim();
+    if (!trimmed) return;
+    if (!selectedColors.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      setSelectedColors(prev => [...prev, trimmed]);
+    }
+    setCustomColorInput('');
+    setShowCustomColor(false);
+  };
+
   // Submit edits
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,6 +352,7 @@ export default function EditProductModal({
         description: description.trim(),
         images: images,
         imageUrl: images[0] || undefined,
+        colors: selectedColors,
       };
 
       if (variants.length > 0) {
@@ -326,6 +395,7 @@ export default function EditProductModal({
           description: payload.description,
           images: images,
           imageUrl: images[0] || product.imageUrl,
+          colors: selectedColors,
           stockQuantity: computedTotalStock,
           stock_quantity: computedTotalStock,
         });
@@ -367,8 +437,16 @@ export default function EditProductModal({
   const productImg = images[0] || product.imageUrl || product.image_url || '/images/no-product.svg';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="surface-card border border-[var(--border-subtle)] rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn select-none overflow-hidden"
+      onClick={onClose}
+      onWheel={(e) => e.stopPropagation()}
+    >
+      <div
+        className="surface-card border border-[var(--border-subtle)] rounded-3xl w-full max-w-2xl h-[88vh] max-h-[88vh] min-h-0 flex flex-col shadow-2xl overflow-hidden my-auto"
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+      >
         
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-[var(--border-subtle)] flex items-center justify-between gap-3 bg-[var(--bg-secondary)]/50 shrink-0">
@@ -401,8 +479,11 @@ export default function EditProductModal({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs font-mono-luxury">
+        {/* Modal Body with smooth scrolling and min-h-0 */}
+        <div
+          className="p-4 sm:p-6 overflow-y-auto overscroll-contain min-h-0 space-y-6 flex-1 text-xs font-mono-luxury"
+          onWheel={(e) => e.stopPropagation()}
+        >
           
           {/* Status Messages */}
           {errorMessage && (
@@ -619,7 +700,152 @@ export default function EditProductModal({
                 </div>
               </div>
 
-              {/* 2. Variant Inventory & Stock Management */}
+              {/* 2. Colorways & Finishes */}
+              {category !== 'accessories' && (
+                <div className="space-y-3 pt-2 border-t border-[var(--border-subtle)]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <Palette className="h-4 w-4 text-[var(--gold-accent)]" />
+                      <span>Colorways &amp; Finishes</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomColor(!showCustomColor)}
+                        className="text-[10px] text-[var(--gold-accent)] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>{showCustomColor ? 'Close' : '+ Custom Shade'}</span>
+                      </button>
+                      <span className="text-[10px] text-[var(--text-secondary)]">
+                        {selectedColors.length === 0 ? 'Default / As Pictured' : `${selectedColors.length} selected`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Active Selected Colors Pills with remove X */}
+                  {selectedColors.length > 0 && (
+                    <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-1.5">
+                      <label className="text-[9px] uppercase font-bold text-[var(--text-secondary)] block">
+                        Active Piece Colors (Shoppers will pick from these)
+                      </label>
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {selectedColors.map((colName) => {
+                          const hex = resolveColorNameToHex(colName);
+                          const isMulti = colName.toLowerCase().includes('multi');
+                          return (
+                            <div
+                              key={colName}
+                              className="px-2.5 py-1 rounded-xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/50 text-[var(--text-primary)] text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                            >
+                              <span
+                                className="h-3 w-3 rounded-full border border-white/20 shrink-0 shadow-xs"
+                                style={{
+                                  background: isMulti
+                                    ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                                    : hex
+                                }}
+                              />
+                              <span>{colName}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveColor(colName)}
+                                className="p-0.5 rounded-full hover:bg-rose-500/20 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer ml-0.5"
+                                title={`Remove ${colName}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom Shade Adder Form */}
+                  {showCustomColor && (
+                    <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/50 flex items-center gap-2 animate-fadeIn">
+                      <input
+                        type="color"
+                        value={customColorHex}
+                        onChange={(e) => setCustomColorHex(e.target.value)}
+                        className="h-8 w-8 rounded-lg border border-white/20 cursor-pointer bg-transparent shrink-0"
+                        title="Pick visual color shade"
+                      />
+                      <input
+                        type="text"
+                        value={customColorInput}
+                        onChange={(e) => setCustomColorInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomColor();
+                          }
+                        }}
+                        placeholder="Type color name (e.g. Sage Green, Peach, Baby Pink, Neon Lime)"
+                        className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-sans"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomColor}
+                        disabled={!customColorInput.trim()}
+                        className="px-3.5 py-1.5 rounded-xl bg-[var(--gold-accent)] text-black font-bold text-xs uppercase cursor-pointer disabled:opacity-40 hover:bg-amber-400"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomColor(false);
+                          setCustomColorInput('');
+                        }}
+                        className="p-1.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Standard Quick Palette Swatches */}
+                  <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1.5">
+                    <label className="text-[9px] uppercase font-bold text-[var(--text-secondary)] block">
+                      Quick Palette Selector (Tap to toggle)
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {STANDARD_FASHION_COLORS.map((c) => {
+                        const isSel = selectedColors.some(sc => sc.toLowerCase() === c.name.toLowerCase());
+                        const isMulti = c.name.toLowerCase().includes('multi');
+                        return (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => handleToggleColor(c.name)}
+                            className={`px-2.5 py-1 rounded-xl border text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
+                              isSel
+                                ? 'border-[var(--gold-accent)] bg-[var(--bg-primary)] text-[var(--text-primary)] font-bold ring-1 ring-[var(--gold-accent)] shadow-sm'
+                                : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:border-[var(--text-secondary)]'
+                            }`}
+                          >
+                            <span
+                              className="h-3 w-3 rounded-full border border-white/20 shrink-0"
+                              style={{
+                                background: isMulti
+                                  ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                                  : c.hex
+                              }}
+                            />
+                            <span>{c.name}</span>
+                            {isSel && <Check className="h-3 w-3 text-[var(--gold-accent)] stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Variant Inventory & Stock Management */}
               <div className="space-y-4 pt-2 border-t border-[var(--border-subtle)]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
@@ -654,9 +880,13 @@ export default function EditProductModal({
                         className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
                         <div className="flex items-center gap-2.5">
-                          <span className="h-8 px-2.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-center font-bold text-xs text-[var(--gold-accent)]">
-                            {v.size}
-                          </span>
+                          <input
+                            type="text"
+                            value={v.size}
+                            onChange={(e) => handleVariantSizeNameChange(idx, e.target.value)}
+                            title="Edit size label"
+                            className="h-8 w-16 px-2 text-center rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] font-bold text-xs text-[var(--gold-accent)] focus:outline-none focus:border-[var(--gold-accent)]"
+                          />
                           <div>
                             <span className="font-bold text-[var(--text-primary)] block text-xs">
                               {v.color && v.color !== 'Standard' ? `${v.color} · Size ${v.size}` : `Size ${v.size}`}
@@ -667,8 +897,8 @@ export default function EditProductModal({
                           </div>
                         </div>
 
-                        {/* Increment / Decrement / Quick Chips */}
-                        <div className="flex items-center gap-2 justify-end">
+                        {/* Increment / Decrement / Quick Chips / Delete */}
+                        <div className="flex items-center gap-2 justify-end flex-wrap">
                           <button
                             type="button"
                             onClick={() => handleQuickAdd(idx, -1)}
@@ -713,18 +943,80 @@ export default function EditProductModal({
                           >
                             Sold Out
                           </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveVariant(idx)}
+                            className="h-8 w-8 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-rose-500 text-rose-400 flex items-center justify-center transition-colors cursor-pointer"
+                            title="Delete this size variant"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
                     ))}
 
-                    <div className="pt-1">
+                    {/* Custom Size Adder Form */}
+                    {showAddCustomSize && (
+                      <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/50 flex flex-col sm:flex-row items-center gap-2.5 animate-fadeIn">
+                        <div className="flex-1 w-full">
+                          <label className="text-[10px] text-[var(--text-secondary)] uppercase block mb-1 font-bold">Custom Size Name</label>
+                          <input
+                            type="text"
+                            value={newSizeInput}
+                            onChange={(e) => setNewSizeInput(e.target.value)}
+                            placeholder={category === 'footwear' ? "e.g. 41.5, 47, 11 US, Bespoke" : "e.g. 3XL, Petite, Custom"}
+                            className="w-full px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="w-full sm:w-28">
+                          <label className="text-[10px] text-[var(--text-secondary)] uppercase block mb-1 font-bold">Initial Stock</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={newSizeStock}
+                            onChange={(e) => setNewSizeStock(e.target.value)}
+                            placeholder="10"
+                            className="w-full px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 pt-4 sm:pt-4 w-full sm:w-auto justify-end">
+                          <button
+                            type="button"
+                            onClick={handleAddCustomVariant}
+                            className="px-3.5 py-2 rounded-xl bg-[var(--gold-accent)] text-black font-bold text-xs uppercase cursor-pointer hover:bg-amber-400"
+                          >
+                            Add Size
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowAddCustomSize(false); setNewSizeInput(''); }}
+                            className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-1 flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCustomSize(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/40 hover:border-[var(--gold-accent)] text-[10px] font-bold text-[var(--gold-accent)] uppercase transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>{category === 'footwear' ? '+ Add Custom Shoe Size' : '+ Add Custom Size'}</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={handleAddNewSizeVariant}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl surface-card border border-dashed border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[10px] font-bold text-[var(--gold-accent)] uppercase transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl surface-card border border-dashed border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[10px] font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] uppercase transition-colors cursor-pointer"
                       >
                         <Plus className="h-3 w-3" />
-                        <span>Add Another Size Option</span>
+                        <span>+ Standard Next Size</span>
                       </button>
                     </div>
                   </div>

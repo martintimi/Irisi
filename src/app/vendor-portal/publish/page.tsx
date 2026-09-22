@@ -20,30 +20,10 @@ import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import { compressImage, compressImageToFile } from '@/lib/utils/imageUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
 import { trimVideoInBrowser } from '@/lib/utils/clientVideoTrimmer';
+import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
 
 // Standard Apparel Colors Palette for Boutiques & Designers
-const STANDARD_COLORS = [
-  { name: 'Black', hex: '#111111' },
-  { name: 'White', hex: '#ffffff' },
-  { name: 'Gold', hex: '#d4af37' },
-  { name: 'Silver', hex: '#c0c0c0' },
-  { name: 'Rose Gold', hex: '#b76e79' },
-  { name: 'Black & White', hex: '#111111' },
-  { name: 'Multi-Color / Pattern', hex: '#6366f1' },
-  { name: 'Khaki / Beige', hex: '#d4b996' },
-  { name: 'Chocolate Brown', hex: '#451a03' },
-  { name: 'Tan / Camel', hex: '#c19a6b' },
-  { name: 'Navy Blue', hex: '#1e3a8a' },
-  { name: 'Heather Grey', hex: '#9ca3af' },
-  { name: 'Charcoal Grey', hex: '#374151' },
-  { name: 'Royal Blue', hex: '#2563eb' },
-  { name: 'Sky Blue', hex: '#38bdf8' },
-  { name: 'Forest Green', hex: '#065f46' },
-  { name: 'Olive Green', hex: '#4d7c0f' },
-  { name: 'Wine / Burgundy', hex: '#831843' },
-  { name: 'Crimson Red', hex: '#dc2626' },
-  { name: 'Emerald Gold', hex: '#e6c367' },
-];
+const STANDARD_COLORS = STANDARD_FASHION_COLORS;
 
 // Department-Specific Categories
 export const MALE_CATEGORIES = [
@@ -124,7 +104,7 @@ export const UNISEX_CATEGORIES = [
 ];
 
 const APPAREL_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
-const FOOTWEAR_SIZES = ['39', '40', '41', '42', '43', '44', '45', '46'];
+const FOOTWEAR_SIZES = ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'];
 const ACCESSORY_SIZES = ['One Size'];
 
 export default function PublishGarmentPage() {
@@ -190,11 +170,14 @@ export default function PublishGarmentPage() {
   const [showCustomColorPicker, setShowCustomColorPicker] = useState(false);
 
   // Dynamic Adaptive Size Stock State
+  const [customSizeInput, setCustomSizeInput] = useState('');
+  const [showCustomSizeInput, setShowCustomSizeInput] = useState(false);
   const [sizeStock, setSizeStock] = useState<{ [size: string]: { enabled: boolean; quantity: number | string } }>(
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry'
       ? { 'One Size': { enabled: true, quantity: 20 } }
       : vendorSpecialty === 'footwear'
       ? {
+          '38': { enabled: false, quantity: 0 },
           '39': { enabled: true, quantity: 5 },
           '40': { enabled: true, quantity: 10 },
           '41': { enabled: true, quantity: 10 },
@@ -203,6 +186,8 @@ export default function PublishGarmentPage() {
           '44': { enabled: true, quantity: 5 },
           '45': { enabled: false, quantity: 0 },
           '46': { enabled: false, quantity: 0 },
+          '47': { enabled: false, quantity: 0 },
+          '48': { enabled: false, quantity: 0 },
         }
       : {
           'S': { enabled: true, quantity: 10 },
@@ -223,6 +208,7 @@ export default function PublishGarmentPage() {
     isCover?: boolean;
     showColorTag?: boolean;
     isDetectingColor?: boolean;
+    isAiDetected?: boolean;
     isUploading?: boolean;
   }>>([]);
   const [isProcessingImages, setIsProcessingImages] = useState(false);
@@ -352,6 +338,36 @@ export default function PublishGarmentPage() {
     }
   }, [genderTarget, vendorSpecialty, catFilterTab]);
 
+  const currentSizeList = useMemo(() => {
+    const base = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
+    const custom = Object.keys(sizeStock).filter((sz) => !base.includes(sz) && sz !== 'One Size');
+    return [...base, ...custom];
+  }, [category, sizeStock]);
+
+  const handleAddCustomSize = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = customSizeInput.trim();
+    if (!trimmed) return;
+
+    setSizeStock((prev) => ({
+      ...prev,
+      [trimmed]: {
+        enabled: true,
+        quantity: prev[trimmed]?.quantity !== undefined && prev[trimmed]?.quantity !== '' ? prev[trimmed].quantity : 10,
+      },
+    }));
+    setCustomSizeInput('');
+    setShowCustomSizeInput(false);
+  };
+
+  const handleRemoveCustomSize = (sizeToRemove: string) => {
+    setSizeStock((prev) => {
+      const copy = { ...prev };
+      delete copy[sizeToRemove];
+      return copy;
+    });
+  };
+
   // Adaptive Sizing Initializer based on category type
   const handleCategorySelect = (selectedSubCatId: string, generalCat: GarmentCategory) => {
     setSubCategory(selectedSubCatId);
@@ -359,6 +375,7 @@ export default function PublishGarmentPage() {
 
     if (generalCat === 'footwear') {
       setSizeStock({
+        '38': { enabled: false, quantity: 0 },
         '39': { enabled: true, quantity: 5 },
         '40': { enabled: true, quantity: 10 },
         '41': { enabled: true, quantity: 10 },
@@ -367,6 +384,8 @@ export default function PublishGarmentPage() {
         '44': { enabled: true, quantity: 5 },
         '45': { enabled: false, quantity: 0 },
         '46': { enabled: false, quantity: 0 },
+        '47': { enabled: false, quantity: 0 },
+        '48': { enabled: false, quantity: 0 },
       });
     } else if (generalCat === 'accessories') {
       setSizeStock({
@@ -598,12 +617,15 @@ export default function PublishGarmentPage() {
     if (!img) return;
 
     setUploadedImages((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isDetectingColor: true } : item))
+      prev.map((item) => (item.id === id ? { ...item, isDetectingColor: true, isAiDetected: false } : item))
     );
 
     try {
       const detected = await detectGarmentColor(img.url);
       handleAssignColor(id, detected.name, detected.hex);
+      setUploadedImages((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isAiDetected: true } : item))
+      );
     } catch (e) {
       console.error('AI color detection error:', e);
     } finally {
@@ -717,19 +739,27 @@ export default function PublishGarmentPage() {
     }
   };
 
+  const removeColor = (colorName: string) => {
+    setSelectedColors(prev => prev.filter(c => c.name.toLowerCase() !== colorName.toLowerCase()));
+  };
+
   const toggleColor = (color: { name: string; hex: string }) => {
-    const exists = selectedColors.some(c => c.name.toLowerCase() === color.name.toLowerCase());
+    const clean = color.name.trim();
+    if (!clean) return;
+    const exists = selectedColors.some(c => c.name.toLowerCase() === clean.toLowerCase());
     if (exists) {
-      setSelectedColors(selectedColors.filter(c => c.name.toLowerCase() !== color.name.toLowerCase()));
+      setSelectedColors(selectedColors.filter(c => c.name.toLowerCase() !== clean.toLowerCase()));
     } else {
-      setSelectedColors([...selectedColors, color]);
+      setSelectedColors([...selectedColors, { name: clean, hex: color.hex || resolveColorNameToHex(clean) }]);
     }
   };
 
   const handleAddCustomColor = () => {
-    if (!customColorName.trim()) return;
-    const newColor = { name: customColorName.trim(), hex: customColorHex };
-    setSelectedColors([...selectedColors, newColor]);
+    const clean = customColorName.trim();
+    if (!clean) return;
+    if (!selectedColors.some(c => c.name.toLowerCase() === clean.toLowerCase())) {
+      setSelectedColors(prev => [...prev, { name: clean, hex: customColorHex || resolveColorNameToHex(clean) }]);
+    }
     setCustomColorName('');
     setShowCustomColorPicker(false);
   };
@@ -807,17 +837,33 @@ export default function PublishGarmentPage() {
         return;
       }
 
-      const enrichedColorsToSubmit = photoDerivedColors.length > 0
-        ? photoDerivedColors
-        : (selectedColors.length > 0 ? selectedColors.map(c => {
-            const matchedImg = uploadedImages.find(img => img.colorName && img.colorName.toLowerCase() === c.name.toLowerCase());
-            return {
-              name: c.name,
-              hex: c.hex,
-              imageUrl: matchedImg?.url || finalImageUrl
-            };
-          }) : (category === 'accessories' ? [] : [{ name: 'As Pictured', hex: '#111111', imageUrl: finalImageUrl }])
-        );
+      const mergedColorMap = new Map<string, { name: string; hex: string; imageUrl?: string }>();
+      
+      // 1. Add explicitly selected colors
+      selectedColors.forEach(c => {
+        const key = c.name.trim().toLowerCase();
+        if (key && !mergedColorMap.has(key)) {
+          const matchedImg = uploadedImages.find(img => img.colorName && img.colorName.toLowerCase() === key);
+          mergedColorMap.set(key, {
+            name: c.name.trim(),
+            hex: c.hex || resolveColorNameToHex(c.name),
+            imageUrl: matchedImg?.url || finalImageUrl,
+          });
+        }
+      });
+
+      // 2. Add photo-derived colors if not already present
+      photoDerivedColors.forEach(c => {
+        const key = c.name.trim().toLowerCase();
+        if (key && !mergedColorMap.has(key)) {
+          mergedColorMap.set(key, c);
+        }
+      });
+
+      const enrichedColorsToSubmit = Array.from(mergedColorMap.values());
+      if (enrichedColorsToSubmit.length === 0 && category !== 'accessories') {
+        enrichedColorsToSubmit.push({ name: 'As Pictured', hex: '#111111', imageUrl: finalImageUrl });
+      }
 
       const enhancedTags = Array.from(new Set([
         ...tags,
@@ -921,7 +967,6 @@ export default function PublishGarmentPage() {
     if (catFilterTab === 'all') return true;
     return c.group === catFilterTab;
   });
-  const currentSizeList = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
   const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled);
 
   const totalStockCount = Object.values(sizeStock)
@@ -1350,16 +1395,16 @@ export default function PublishGarmentPage() {
 
                         {/* Optional Color Tagging (Only shown if vendor clicks + Color Tag) */}
                         {(img.showColorTag || img.colorName) && (
-                          <div className="pt-1.5 border-t border-[var(--border-subtle)]/60 space-y-1.5 animate-fadeIn">
+                          <div className="pt-2 border-t border-[var(--border-subtle)]/60 space-y-2 animate-fadeIn">
                             <div className="flex items-center justify-between">
                               <span className="text-[9px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
-                                Optional Colorway
+                                Colorway
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleAiDetectForImage(img.id)}
                                 disabled={img.isDetectingColor}
-                                className="text-[9px] font-mono-luxury font-bold text-[var(--gold-accent)] hover:text-amber-300 flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
+                                className="text-[9px] font-mono-luxury font-bold text-[var(--gold-accent)] hover:text-amber-300 flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer px-2 py-0.5 rounded bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/20"
                               >
                                 {img.isDetectingColor ? (
                                   <>
@@ -1375,9 +1420,17 @@ export default function PublishGarmentPage() {
                               </button>
                             </div>
 
+                            {/* AI Detection Success Feedback Badge */}
+                            {img.isAiDetected && img.colorName && (
+                              <div className="flex items-center gap-1 text-[8px] font-mono-luxury font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded animate-fadeIn">
+                                <Sparkles className="h-2.5 w-2.5 text-emerald-400 shrink-0" />
+                                <span>AI Detected: {img.colorName}</span>
+                              </div>
+                            )}
+
                             <div className="flex items-center gap-1.5">
                               <label
-                                className="relative flex-shrink-0 h-6 w-6 rounded-md border border-white/20 shadow-inner cursor-pointer overflow-hidden"
+                                className="relative flex-shrink-0 h-6 w-6 rounded-md border border-white/20 shadow-inner cursor-pointer overflow-hidden transition-transform active:scale-90"
                                 style={{ backgroundColor: img.colorHex || '#111111' }}
                                 title="Click to adjust color shade"
                               >
@@ -1391,11 +1444,24 @@ export default function PublishGarmentPage() {
                               <input
                                 type="text"
                                 list="fashion-colors-list-desktop"
-                                placeholder="e.g. Red, Black, Gold"
+                                placeholder="e.g. Black, Navy Blue, Wine"
                                 value={img.colorName || ''}
                                 onChange={(e) => handleAssignColor(img.id, e.target.value)}
-                                className="flex-1 min-w-0 px-2 py-0.5 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
+                                className="flex-1 min-w-0 px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
                               />
+                              {img.colorName && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleAssignColor(img.id, '');
+                                    handleToggleColorTag(img.id);
+                                  }}
+                                  className="p-1 rounded text-neutral-400 hover:text-rose-400 text-xs cursor-pointer"
+                                  title="Remove color tag"
+                                >
+                                  ✕
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1768,111 +1834,173 @@ export default function PublishGarmentPage() {
 
           {/* Section 4: Colorway / Metal Tone Variations */}
           <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
-            {photoDerivedColors.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] font-bold flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                      <span>4. Tagged Colorways ({photoDerivedColors.length} Linked From Photos)</span>
-                    </span>
-                    <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-1">
-                      These colorways are linked to your uploaded photos. Shoppers tapping each color will view its matching photo.
-                    </p>
-                  </div>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] font-bold flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-[var(--gold-accent)]" />
+                  <span>4. Available Colors / Metal Tone</span>
+                </span>
+                <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-1">
+                  Select or add the shades available for this piece. Shoppers will choose from these colorways when buying.
+                </p>
+              </div>
 
-                <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                  {photoDerivedColors.map((c: { name: string; hex: string; imageUrl?: string }) => (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomColorPicker(!showCustomColorPicker)}
+                  className="px-3 py-1.5 rounded-xl border border-dashed border-[var(--gold-accent)]/50 hover:border-[var(--gold-accent)] bg-[var(--gold-subtle)]/30 text-xs font-mono-luxury text-[var(--gold-accent)] font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>{showCustomColorPicker ? 'Close' : '+ Custom Shade'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Active Selected Colors with Remove Buttons */}
+            {selectedColors.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
+                <span className="text-[10px] font-mono-luxury uppercase font-bold text-[var(--text-secondary)] block">
+                  Active Piece Colorways ({selectedColors.length})
+                </span>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {selectedColors.map((col) => {
+                    const hex = col.hex || resolveColorNameToHex(col.name);
+                    const isMulti = col.name.toLowerCase().includes('multi');
+                    return (
+                      <div
+                        key={col.name}
+                        className="px-3 py-1.5 rounded-xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/50 text-[var(--text-primary)] text-xs font-mono-luxury font-bold flex items-center gap-2 shadow-sm"
+                      >
+                        <span
+                          className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0 shadow-xs"
+                          style={{
+                            background: isMulti
+                              ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                              : hex
+                          }}
+                        />
+                        <span>{col.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeColor(col.name)}
+                          className="p-0.5 rounded-full hover:bg-rose-500/20 text-[var(--text-muted)] hover:text-rose-400 cursor-pointer ml-1"
+                          title={`Remove ${col.name}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Photo-derived Colorways (if any photo is tagged) */}
+            {photoDerivedColors.length > 0 && (
+              <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1.5">
+                <span className="text-[10px] font-mono-luxury uppercase font-bold text-emerald-400 block flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Linked to Uploaded Photos ({photoDerivedColors.length})</span>
+                </span>
+                <div className="flex flex-wrap gap-2 pt-0.5">
+                  {photoDerivedColors.map((c) => (
                     <div
                       key={c.name}
-                      className="px-3.5 py-2 rounded-xl border border-[var(--gold-accent)]/50 bg-[var(--gold-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury font-bold flex items-center gap-2.5 shadow-sm"
+                      className="px-2.5 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-[11px] font-mono-luxury font-bold flex items-center gap-1.5"
                     >
                       <span
-                        className="h-3.5 w-3.5 rounded-full border border-white/30 shrink-0"
+                        className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
                         style={{ backgroundColor: c.hex }}
                       />
                       <span>{c.name}</span>
-                      <span className="text-[10px] text-emerald-400 font-normal">✓ Linked</span>
+                      <span className="text-[9px] text-emerald-400 font-normal">✓ Linked</span>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : (
-              <div>
-                <div>
-                  <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] font-bold block">
-                    4. Available Colors / Metal Tone (Optional)
-                  </span>
-                  <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5">
-                    Select the shade or finish for this piece (e.g. Gold, Silver, Black, Tan). Leave unselected for single-piece / as pictured.
-                  </p>
-                </div>
+            )}
 
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  {STANDARD_COLORS.map((c) => {
-                    const isSelected = selectedColors.some(sc => sc.name.toLowerCase() === c.name.toLowerCase());
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => toggleColor(c)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-mono-luxury flex items-center gap-2 transition-all cursor-pointer ${
-                          isSelected
-                            ? 'border-[var(--gold-accent)] bg-[var(--bg-primary)] text-[var(--text-primary)] font-bold shadow-sm ring-1 ring-[var(--gold-accent)]'
-                            : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
-                        }`}
-                      >
-                        <span
-                          className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0"
-                          style={{
-                            background: c.name.toLowerCase().includes('multi')
-                              ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
-                              : c.hex
-                          }}
-                        />
-                        <span>{c.name}</span>
-                        {isSelected && <Check className="h-3 w-3 text-[var(--gold-accent)]" />}
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomColorPicker(!showCustomColorPicker)}
-                    className="px-3 py-1.5 rounded-xl border border-dashed border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury text-[var(--gold-accent)] flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span>Custom Shade</span>
-                  </button>
-                </div>
-
-                {showCustomColorPicker && (
-                  <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center gap-3 animate-fadeIn mt-3">
-                    <input
-                      type="color"
-                      value={customColorHex}
-                      onChange={(e) => setCustomColorHex(e.target.value)}
-                      className="h-9 w-9 rounded-lg border border-[var(--border-subtle)] cursor-pointer bg-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={customColorName}
-                      onChange={(e) => setCustomColorName(e.target.value)}
-                      placeholder="e.g. Royal Emerald, 18K Yellow Gold"
-                      className="px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none flex-1 font-bold"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomColor}
-                      className="px-4 py-2 rounded-xl bg-[var(--gold-accent)] text-black text-xs font-mono-luxury uppercase font-bold cursor-pointer"
-                    >
-                      Add
-                    </button>
-                  </div>
-                )}
+            {/* Custom Shade Adder Form */}
+            {showCustomColorPicker && (
+              <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/50 flex items-center gap-3 animate-fadeIn">
+                <input
+                  type="color"
+                  value={customColorHex}
+                  onChange={(e) => setCustomColorHex(e.target.value)}
+                  className="h-9 w-9 rounded-lg border border-[var(--border-subtle)] cursor-pointer bg-transparent"
+                  title="Pick visual shade"
+                />
+                <input
+                  type="text"
+                  value={customColorName}
+                  onChange={(e) => setCustomColorName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomColor();
+                    }
+                  }}
+                  placeholder="e.g. Royal Emerald, Sage Green, Baby Pink, 18K Yellow Gold"
+                  className="px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] flex-1 font-bold font-sans"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomColor}
+                  disabled={!customColorName.trim()}
+                  className="px-4 py-2 rounded-xl bg-[var(--gold-accent)] text-black text-xs font-mono-luxury uppercase font-bold cursor-pointer disabled:opacity-40 hover:bg-amber-400"
+                >
+                  Add Shade
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomColorPicker(false);
+                    setCustomColorName('');
+                  }}
+                  className="p-2 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             )}
+
+            {/* Quick Palette Swatches */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] font-mono-luxury uppercase font-bold text-[var(--text-muted)] block">
+                Quick Palette Selector (Tap to toggle)
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {STANDARD_COLORS.map((c) => {
+                  const isSelected = selectedColors.some(sc => sc.name.toLowerCase() === c.name.toLowerCase());
+                  const isMulti = c.name.toLowerCase().includes('multi');
+                  return (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => toggleColor(c)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-mono-luxury flex items-center gap-2 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-[var(--gold-accent)] bg-[var(--bg-primary)] text-[var(--text-primary)] font-bold shadow-sm ring-1 ring-[var(--gold-accent)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:border-[var(--text-primary)]'
+                      }`}
+                    >
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0"
+                        style={{
+                          background: isMulti
+                            ? 'conic-gradient(from 180deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ef4444, #ec4899)'
+                            : c.hex
+                        }}
+                      />
+                      <span>{c.name}</span>
+                      {isSelected && <Check className="h-3 w-3 text-[var(--gold-accent)] stroke-[3]" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Section 5: Adaptive Size Stock & Inventory */}
@@ -1895,11 +2023,59 @@ export default function PublishGarmentPage() {
                 </p>
               </div>
 
-              <div className="text-right">
-                <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Total Available</span>
-                <span className="text-base font-editorial font-bold text-[var(--gold-accent)]">{totalStockCount} Units</span>
+              <div className="flex items-center gap-3">
+                {category !== 'accessories' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomSizeInput(!showCustomSizeInput)}
+                    className="px-3 py-1.5 rounded-xl border border-dashed border-[var(--gold-accent)]/50 hover:border-[var(--gold-accent)] bg-[var(--gold-subtle)]/30 text-xs font-mono-luxury text-[var(--gold-accent)] font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>{showCustomSizeInput ? 'Cancel' : category === 'footwear' ? '+ Custom Shoe Size' : '+ Custom Size'}</span>
+                  </button>
+                )}
+                <div className="text-right">
+                  <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Total Available</span>
+                  <span className="text-base font-editorial font-bold text-[var(--gold-accent)]">{totalStockCount} Units</span>
+                </div>
               </div>
             </div>
+
+            {showCustomSizeInput && category !== 'accessories' && (
+              <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/50 flex items-center gap-3 animate-fadeIn">
+                <input
+                  type="text"
+                  value={customSizeInput}
+                  onChange={(e) => setCustomSizeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCustomSize();
+                    }
+                  }}
+                  placeholder={category === 'footwear' ? "e.g. 41.5, 42.5, 48, 10.5 US, Bespoke" : "e.g. 3XL, Petite, Custom Fit"}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomSize}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--gold-accent)] text-black font-bold text-xs font-mono-luxury uppercase cursor-pointer hover:bg-amber-400 active:scale-95 shrink-0"
+                >
+                  Add Size
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomSizeInput(false);
+                    setCustomSizeInput('');
+                  }}
+                  className="p-2.5 rounded-xl bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             {/* If Accessory: Super Simple Single Quantity Input */}
             {category === 'accessories' ? (
@@ -1929,18 +2105,34 @@ export default function PublishGarmentPage() {
                   {currentSizeList.map((size) => {
                     const isEnabled = sizeStock[size]?.enabled;
                     const qty = sizeStock[size]?.quantity;
+                    const isCustom = category === 'footwear' ? !FOOTWEAR_SIZES.includes(size) : !APPAREL_SIZES.includes(size);
 
                     return (
                       <div
                         key={size}
-                        className={`p-3 rounded-2xl border transition-all ${
+                        className={`p-3 rounded-2xl border transition-all relative ${
                           isEnabled
                             ? 'border-[var(--gold-accent)] bg-[var(--bg-primary)] shadow-sm'
                             : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] opacity-50'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-editorial text-base font-bold text-[var(--text-primary)]">{size}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-editorial text-base font-bold text-[var(--text-primary)]">{size}</span>
+                            {isCustom && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveCustomSize(size);
+                                }}
+                                className="p-0.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded cursor-pointer"
+                                title="Remove custom size"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
                           <input
                             type="checkbox"
                             checked={isEnabled}
