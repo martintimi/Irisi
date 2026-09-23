@@ -14,7 +14,7 @@ import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 
 export default function WishlistPage() {
   const router = useRouter();
-  const { vault, toggleVaultItem, addToCart, cart, allProducts } = useStore();
+  const { vault, toggleVaultItem, clearVault, addToCart, cart, allProducts } = useStore();
 
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
   const [movedMessage, setMovedMessage] = useState<string | null>(null);
@@ -36,6 +36,12 @@ export default function WishlistPage() {
     });
     setMovedMessage(`All ${vault.length} pieces moved to your shopping bag!`);
     setTimeout(() => setMovedMessage(null), 4000);
+  };
+
+  const handleClearWishlist = () => {
+    clearVault();
+    setMovedMessage('Wishlist cleared');
+    setTimeout(() => setMovedMessage(null), 3000);
   };
 
   return (
@@ -80,18 +86,29 @@ export default function WishlistPage() {
 
         {/* Action sub-bar if wishlist has items */}
         {vault.length > 0 && (
-          <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-950 flex items-center justify-between text-xs">
+          <div className="px-4 py-2 border-t border-neutral-100 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-950 flex items-center justify-between text-xs flex-wrap gap-2">
             <span className="text-neutral-500 font-mono text-[11px]">
               Total Value: <strong className="text-black dark:text-white">₦{vault.reduce((s, p) => s + Number(p.price || 0), 0).toLocaleString()}</strong>
             </span>
 
-            <button
-              type="button"
-              onClick={handleMoveAllToBag}
-              className="text-[11px] font-bold uppercase tracking-wider text-black dark:text-white underline underline-offset-2 hover:text-amber-500 transition-colors cursor-pointer"
-            >
-              Move All to Bag
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleMoveAllToBag}
+                className="text-[11px] font-bold uppercase tracking-wider text-black dark:text-white underline underline-offset-2 hover:text-amber-500 transition-colors cursor-pointer"
+              >
+                Move All to Bag
+              </button>
+
+              <button
+                type="button"
+                onClick={handleClearWishlist}
+                className="text-[11px] font-bold uppercase tracking-wider text-rose-500 hover:text-rose-600 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span>Clear Wishlist</span>
+              </button>
+            </div>
           </div>
         )}
       </header>

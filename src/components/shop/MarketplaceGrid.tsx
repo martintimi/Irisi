@@ -91,36 +91,64 @@ export default function MarketplaceGrid() {
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'native' | 'all'>('all');
   const [specificCategory, setSpecificCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const p = parseInt(searchParams?.get('page') || '1', 10);
+    return isNaN(p) || p < 1 ? 1 : p;
+  });
   const [quickLookProduct, setQuickLookProduct] = useState<any>(null);
 
   useEffect(() => {
     const gen = searchParams.get('gender')?.toLowerCase();
     if (gen === 'male' || gen === 'men') {
       setSelectedGender('male');
-      setCurrentPage(1);
+      try { localStorage.setItem('irisi_selected_gender', 'male'); } catch (e) {}
     } else if (gen === 'female' || gen === 'women') {
       setSelectedGender('female');
-      setCurrentPage(1);
+      try { localStorage.setItem('irisi_selected_gender', 'female'); } catch (e) {}
+    } else {
+      const savedGender = selectedGender || (typeof window !== 'undefined' ? localStorage.getItem('irisi_selected_gender') : null);
+      if (String(savedGender || '').toLowerCase() === 'female' || String(savedGender || '').toLowerCase() === 'women') {
+        setSelectedGender('female');
+      }
+    }
+
+    const pageParam = parseInt(searchParams.get('page') || '', 10);
+    if (!isNaN(pageParam) && pageParam >= 1) {
+      setCurrentPage(pageParam);
     }
 
     const cat = searchParams.get('category')?.toLowerCase();
     if (cat && ['tops', 'bottoms', 'outerwear', 'footwear', 'accessories', 'native'].includes(cat)) {
       setSelectedCategory(cat as any);
       setSpecificCategory(null);
-      setCurrentPage(1);
     } else if (cat === 'all') {
       setSelectedCategory('all');
       setSpecificCategory(null);
-      setCurrentPage(1);
     } else if (cat) {
       setSelectedCategory('all');
       setSpecificCategory(cat);
-      setCurrentPage(1);
     } else {
       setSpecificCategory(null);
     }
-  }, [searchParams, setSelectedGender]);
+  }, [searchParams, selectedGender, setSelectedGender]);
+
+  const updateQueryParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v === null || v === undefined || v === '') {
+        params.delete(k);
+      } else {
+        params.set(k, v);
+      }
+    });
+    router.replace(`/shop?${params.toString()}`, { scroll: false });
+  };
+
+  const handlePageChange = (pageNum: number) => {
+    setCurrentPage(pageNum);
+    updateQueryParams({ page: pageNum > 1 ? String(pageNum) : null });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const categories = selectedGender === 'female' ? WOMEN_DESKTOP_CATEGORIES : MEN_DESKTOP_CATEGORIES;
 
@@ -196,24 +224,25 @@ export default function MarketplaceGrid() {
     if (cat.id === 'all') {
       setSelectedCategory('all');
       setSpecificCategory(null);
-      router.replace(`/shop?gender=${selectedGender === 'male' ? 'men' : 'women'}`);
+      router.replace(`/shop?gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
     } else if (cat.type === 'cat') {
       setSelectedCategory(cat.id as any);
       setSpecificCategory(null);
-      router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}`);
+      router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
     } else {
       setSelectedCategory('all');
       setSpecificCategory(cat.id);
-      router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}`);
+      router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
     }
   };
 
   const handleGenderChange = (g: 'male' | 'female') => {
     setSelectedGender(g);
+    try { localStorage.setItem('irisi_selected_gender', g); } catch (e) {}
     setSelectedCategory('all');
     setSpecificCategory(null);
     setCurrentPage(1);
-    router.replace(`/shop?gender=${g === 'male' ? 'men' : 'women'}`);
+    router.replace(`/shop?gender=${g === 'male' ? 'men' : 'women'}&page=1`);
   };
 
   const handleResetFilters = () => {
@@ -699,9 +728,9 @@ export default function MarketplaceGrid() {
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 pt-8 border-t border-[var(--border-subtle)]">
           <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             <span>Prev</span>
@@ -711,8 +740,8 @@ export default function MarketplaceGrid() {
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
               <button
                 key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`h-9 w-9 rounded-full text-xs font-mono-luxury font-bold transition-all flex items-center justify-center ${
+                onClick={() => handlePageChange(pageNum)}
+                className={`h-9 w-9 rounded-full text-xs font-mono-luxury font-bold transition-all flex items-center justify-center cursor-pointer ${
                   currentPage === pageNum
                     ? 'bg-black dark:bg-white text-white dark:text-black font-bold shadow-md scale-105'
                     : 'surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold-accent)]'
@@ -724,9 +753,9 @@ export default function MarketplaceGrid() {
           </div>
 
           <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
           >
             <span>Next</span>
             <ChevronRight className="h-3.5 w-3.5" />

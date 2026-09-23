@@ -41,15 +41,31 @@ export default function MobileShopView() {
     isInVault,
     fetchProductsFromDb,
     addToCart,
+    selectedGender,
+    setSelectedGender,
   } = useStore();
 
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [genderFilter, setGenderFilter] = useState<'male' | 'female'>('male');
+  const [genderFilter, setGenderFilter] = useState<'male' | 'female'>(() => {
+    const gen = searchParams?.get('gender')?.toLowerCase();
+    if (gen === 'female' || gen === 'women') return 'female';
+    if (gen === 'male' || gen === 'men') return 'male';
+    if (selectedGender === 'female') return 'female';
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('irisi_selected_gender');
+      if (saved === 'female' || saved === 'women') return 'female';
+    }
+    return 'male';
+  });
+
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'native' | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const p = parseInt(searchParams?.get('page') || '1', 10);
+    return isNaN(p) || p < 1 ? 1 : p;
+  });
   const [isRefineOpen, setIsRefineOpen] = useState(false);
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
   const [burstingHearts, setBurstingHearts] = useState<Set<string>>(new Set());
@@ -100,16 +116,27 @@ export default function MobileShopView() {
     const gen = searchParams.get('gender')?.toLowerCase();
     if (gen === 'male' || gen === 'men') {
       setGenderFilter('male');
-      setCurrentPage(1);
+      setSelectedGender('male');
+      try { localStorage.setItem('irisi_selected_gender', 'male'); } catch (e) {}
     } else if (gen === 'female' || gen === 'women') {
       setGenderFilter('female');
-      setCurrentPage(1);
+      setSelectedGender('female');
+      try { localStorage.setItem('irisi_selected_gender', 'female'); } catch (e) {}
+    } else {
+      const savedGender = selectedGender || (typeof window !== 'undefined' ? localStorage.getItem('irisi_selected_gender') : null);
+      if (String(savedGender || '').toLowerCase() === 'female' || String(savedGender || '').toLowerCase() === 'women') {
+        setGenderFilter('female');
+      }
+    }
+
+    const pageParam = parseInt(searchParams.get('page') || '', 10);
+    if (!isNaN(pageParam) && pageParam >= 1) {
+      setCurrentPage(pageParam);
     }
 
     const dept = searchParams.get('department') || searchParams.get('dept');
     if (dept) {
       setDepartmentFilter(dept.toLowerCase());
-      setCurrentPage(1);
     } else {
       setDepartmentFilter(null);
     }
@@ -127,7 +154,6 @@ export default function MobileShopView() {
         setSelectedCategory('all');
         setSpecificCategory(c);
       }
-      setCurrentPage(1);
     } else {
       setSpecificCategory(null);
     }
@@ -135,9 +161,26 @@ export default function MobileShopView() {
     const occ = searchParams.get('occasion');
     if (occ) {
       setSearchQuery(occ);
-      setCurrentPage(1);
     }
-  }, [searchParams]);
+  }, [searchParams, selectedGender, setSelectedGender]);
+
+  const updateQueryParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v === null || v === undefined || v === '') {
+        params.delete(k);
+      } else {
+        params.set(k, v);
+      }
+    });
+    router.replace(`/shop?${params.toString()}`, { scroll: false });
+  };
+
+  const handlePageChange = (pageNum: number) => {
+    setCurrentPage(pageNum);
+    updateQueryParams({ page: pageNum > 1 ? String(pageNum) : null });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const MEN_REALTIME_CATEGORIES: { id: string; label: string; type: 'cat' | 'sub' }[] = [
     { id: 'all', label: 'All Items', type: 'cat' },
@@ -239,11 +282,13 @@ export default function MobileShopView() {
 
   const handleGenderChange = (g: 'male' | 'female') => {
     setGenderFilter(g);
+    setSelectedGender(g);
+    try { localStorage.setItem('irisi_selected_gender', g); } catch (e) {}
     setSelectedCategory('all');
     setSpecificCategory(null);
     setDepartmentFilter(null);
     setCurrentPage(1);
-    router.replace(`/shop?gender=${g === 'male' ? 'men' : 'women'}`);
+    router.replace(`/shop?gender=${g === 'male' ? 'men' : 'women'}&page=1`);
   };
 
   const handleCategoryItemClick = (cat: { id: string; label: string; type: 'cat' | 'sub' }) => {
@@ -252,17 +297,17 @@ export default function MobileShopView() {
       setSelectedCategory('all');
       setSpecificCategory(null);
       setDepartmentFilter(null);
-      router.replace(`/shop?gender=${genderFilter === 'male' ? 'men' : 'women'}`);
+      router.replace(`/shop?gender=${genderFilter === 'male' ? 'men' : 'women'}&page=1`);
     } else if (cat.type === 'cat') {
       setSelectedCategory(cat.id as any);
       setSpecificCategory(null);
       setDepartmentFilter(null);
-      router.replace(`/shop?category=${cat.id}&gender=${genderFilter === 'male' ? 'men' : 'women'}`);
+      router.replace(`/shop?category=${cat.id}&gender=${genderFilter === 'male' ? 'men' : 'women'}&page=1`);
     } else {
       setSelectedCategory('all');
       setSpecificCategory(cat.id);
       setDepartmentFilter(null);
-      router.replace(`/shop?category=${cat.id}&gender=${genderFilter === 'male' ? 'men' : 'women'}`);
+      router.replace(`/shop?category=${cat.id}&gender=${genderFilter === 'male' ? 'men' : 'women'}&page=1`);
     }
   };
 
@@ -581,10 +626,7 @@ export default function MobileShopView() {
               <button
                 type="button"
                 disabled={currentPage === 1}
-                onClick={() => {
-                  setCurrentPage(p => Math.max(1, p - 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 className="p-2.5 rounded-xl surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all cursor-pointer"
                 aria-label="Previous Page"
               >
@@ -596,10 +638,7 @@ export default function MobileShopView() {
                   <button
                     key={pageNum}
                     type="button"
-                    onClick={() => {
-                      setCurrentPage(pageNum);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
+                    onClick={() => handlePageChange(pageNum)}
                     className={`h-8 min-w-[32px] px-2 rounded-xl text-xs font-mono-luxury font-bold transition-all cursor-pointer ${
                       currentPage === pageNum
                         ? 'bg-[var(--gold-accent)] text-black shadow-md'
@@ -614,10 +653,7 @@ export default function MobileShopView() {
               <button
                 type="button"
                 disabled={currentPage === totalPages}
-                onClick={() => {
-                  setCurrentPage(p => Math.min(totalPages, p + 1));
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 className="p-2.5 rounded-xl surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] disabled:opacity-30 disabled:pointer-events-none active:scale-90 transition-all cursor-pointer"
                 aria-label="Next Page"
               >

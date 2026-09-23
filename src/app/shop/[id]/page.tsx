@@ -468,13 +468,20 @@ export default function ProductDetailPage() {
           <span className="text-[var(--text-primary)] font-bold truncate max-w-[200px]">{product.name}</span>
         </div>
 
-        <Link
-          href="/shop"
-          className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-bold uppercase text-xs"
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/shop');
+            }
+          }}
+          className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-bold uppercase text-xs cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Back to Shop</span>
-        </Link>
+        </button>
       </div>
 
       {/* Main 2-Column Product Showcase */}
