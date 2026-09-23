@@ -64,7 +64,7 @@ export default function DesktopHomeView() {
       case 'footwear': return [
         { id: 'f-1', tag: 'SLIDES & PALMS', title: 'SLIDES & COMFORT PALMS', subtitle: 'CASUAL ALL-DAY SLIP-ONS', highlight: 'CUSHIONED SLIP-ON FOOTBED', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123513/veyra_categories/sides_palm.jpg', link: '/shop?department=footwear' },
         { id: 'f-2', tag: 'STREET SHOES', title: 'CANVAS & STREET SNEAKERS', subtitle: 'RETRO RUNNERS & LOW-TOPS', highlight: 'CUSHIONED PLATFORM SOLES', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123512/veyra_categories/shoefootwareformen.jpg', link: '/shop?category=sneakers' },
-        { id: 'f-3', tag: 'FORMAL SHOES', title: 'SMART MULES & LOAFERS', subtitle: 'OCCASION & SUNDAY BEST', highlight: 'ELEGANT LEATHER SILHOUETTES', image: '/images/products/BlackSmartShoes.jpg', link: '/shop?category=loafers' },
+        { id: 'f-3', tag: 'FORMAL SHOES', title: 'SMART MULES & LOAFERS', subtitle: 'OCCASION & SUNDAY BEST', highlight: 'ELEGANT LEATHER SILHOUETTES', image: '/images/products/BlackSmartShoes.jpg', link: '/shop?category=sneakers' },
       ];
       case 'men':
       default: return [
@@ -111,7 +111,7 @@ export default function DesktopHomeView() {
       case 'footwear': return [
         { id: 'f-slides', title: 'Slides & Palms', subtitle: 'Casual All-Day Slip-Ons', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123513/veyra_categories/sides_palm.jpg', link: '/shop?department=footwear' },
         { id: 'f-sneakers', title: 'Canvas & Sneakers', subtitle: 'Retro Runners & Low-Tops', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123512/veyra_categories/shoefootwareformen.jpg', link: '/shop?category=sneakers' },
-        { id: 'f-loafers', title: 'Mules & Loafers', subtitle: 'Smart Occasion Footwear', image: '/images/products/BlackSmartShoes.jpg', link: '/shop?category=loafers' },
+        { id: 'f-loafers', title: 'Mules & Loafers', subtitle: 'Smart Occasion Footwear', image: '/images/products/BlackSmartShoes.jpg', link: '/shop?category=sneakers' },
         { id: 'f-crocs', title: 'Crocs & Clogs', subtitle: 'Lightweight Foam Comfort', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123513/veyra_categories/crocsformen.jpg', link: '/shop?category=clogs' },
       ];
       case 'men':

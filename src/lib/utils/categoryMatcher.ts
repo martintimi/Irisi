@@ -468,11 +468,14 @@ export function matchesSpecificCategory(p: ProductLike, specificCat: string): bo
     return hasWordMatch(name, clogRegex) || hasWordMatch(cleanTagsString, clogRegex);
   }
 
-  // 20. SNEAKERS
-  if (sc === 'sneakers' || sc === 'men-sneakers' || sc === 'women-sneakers' || sc === 'men_shoes_sneakers' || sc === 'women_sneakers' || sc === 'unisex_sneakers') {
-    if (rawSubSlug === 'sneakers') return true;
-    if (subCategory.includes('sneakers')) return true;
-    const sneakerRegex = /\b(sneaker|sneakers|trainer|trainers|kicks|running shoes|court shoes)\b/i;
+  // 20. SNEAKERS & ALL CASUAL SHOES (canvas, Timberlands, loafers, boots, oxfords — everything that isn't slides/clogs)
+  if (sc === 'sneakers' || sc === 'men-sneakers' || sc === 'women-sneakers' || sc === 'men_shoes_sneakers' || sc === 'women_sneakers' || sc === 'unisex_sneakers' || sc === 'loafers' || sc === 'men-loafers' || sc === 'men_shoes_loafers') {
+    if (rawSubSlug === 'sneakers' || rawSubSlug === 'loafers') return true;
+    if (subCategory.includes('sneakers') || subCategory.includes('loafers')) return true;
+    // Catch-all for any shoe type — if it's footwear and NOT slides/palms and NOT clogs, it belongs here
+    const isFootwear = getRawCategoryDepartment(category) === 'footwear';
+    if (isFootwear && rawSubSlug !== 'slides' && rawSubSlug !== 'clogs') return true;
+    const sneakerRegex = /\b(sneaker|sneakers|trainer|trainers|kicks|canvas|canvas shoe|running shoes|court shoes|timberland|timberlands|boot|boots|loafer|loafers|dress shoe|dress shoes|oxford|oxfords|brogue|brogues|derby|derbies|monk strap|high-?top|low-?top|chunky shoe|platform shoe)\b/i;
     return hasWordMatch(name, sneakerRegex) || hasWordMatch(cleanTagsString, sneakerRegex);
   }
 

@@ -181,19 +181,19 @@ const CATEGORY_MAP: Record<string, CategoryConfig> = {
     filterFn: (p: any) => matchesSpecificCategory(p, 'clogs')
   },
   sneakers: {
-    title: 'STREET SNEAKERS',
-    subtitle: 'Casual trainers & street sneakers',
+    title: 'SNEAKERS & CASUAL SHOES',
+    subtitle: 'Sneakers, canvas shoes, Timberlands, loafers, dress shoes & all footwear',
     filterFn: (p: any) => matchesSpecificCategory(p, 'sneakers')
   },
   'women-sneakers': {
     title: 'SNEAKERS & CASUAL SHOES',
-    subtitle: 'Platform sneakers & everyday trainers',
+    subtitle: 'Platform sneakers, canvas shoes & everyday trainers',
     filterFn: (p: any) => matchesSpecificCategory(p, 'women-sneakers')
   },
   loafers: {
-    title: 'LOAFERS & DRESS SHOES',
-    subtitle: 'Formal dress shoes, loafers & office footwear',
-    filterFn: (p: any) => matchesSpecificCategory(p, 'loafers')
+    title: 'SNEAKERS & CASUAL SHOES',
+    subtitle: 'Sneakers, canvas shoes, Timberlands, loafers & dress shoes',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'sneakers')
   },
   heels: {
     title: 'HEELS & PUMPS',

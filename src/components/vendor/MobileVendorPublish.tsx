@@ -40,8 +40,7 @@ const MALE_CATEGORIES = [
   { id: 'men_underwears', label: 'Underwear & Loungewear (clothing)', generalCat: 'clothing' as GarmentCategory, group: 'clothing' },
   // Footwear
   { id: 'men_slides_palms', label: 'Slides, Palms & Slippers (footwear)', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
-  { id: 'men_shoes_sneakers', label: 'Sneakers & Street Trainers (footwear)', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
-  { id: 'men_shoes_loafers', label: 'Loafers, Shoes & Mules (footwear)', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
+  { id: 'men_shoes_sneakers', label: 'Sneakers, Loafers & All Shoes (footwear)', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   { id: 'men_shoes_clogs', label: 'Crocs & Foam Clogs (footwear)', generalCat: 'footwear' as GarmentCategory, group: 'footwear' },
   // Bags
   { id: 'men_bags_backpacks', label: 'Backpacks & Travel Bags (bags)', generalCat: 'bags' as GarmentCategory, group: 'bags' },

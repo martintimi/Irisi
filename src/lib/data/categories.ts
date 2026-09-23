@@ -148,7 +148,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     subtitle: 'Traditional Aso-Oke caps for Agbada & Senator',
   },
 
-  // Shoes & Footwear (Men)
+  // Shoes & Footwear (Men) — exactly 3 subcategories
   {
     id: 'men-slides',
     name: 'Slides, Palms & Slippers',
@@ -156,26 +156,18 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     gender: 'men',
     department: 'footwear',
     imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123513/veyra_categories/sides_palm.jpg',
-    subtitle: 'Leather slides, sandals & casual slippers',
+    subtitle: 'Leather slides, palms, sandals & casual slippers',
     isPopular: true,
   },
   {
     id: 'men-sneakers',
-    name: 'Street Sneakers',
+    name: 'Sneakers & Casual Shoes',
     slug: 'sneakers',
     gender: 'men',
     department: 'footwear',
     imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123512/veyra_categories/shoefootwareformen.jpg',
-    subtitle: 'Casual trainers & street sneakers',
-  },
-  {
-    id: 'men-loafers',
-    name: 'Loafers & Dress Shoes',
-    slug: 'loafers',
-    gender: 'men',
-    department: 'footwear',
-    imageUrl: '/images/products/BlackSmartShoes.jpg',
-    subtitle: 'Formal dress shoes, loafers & office footwear',
+    subtitle: 'Sneakers, canvas shoes, Timberlands, loafers & all casual shoes',
+    isPopular: true,
   },
   {
     id: 'men-clogs',
@@ -444,25 +436,12 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     subtitle: 'Cat-eye frames, dark shades & sun wear',
   },
 
-  // ──────────────────────────────────────────
-  // 3. UNISEX CATEGORIES
-  // ──────────────────────────────────────────
-  {
-    id: 'unisex-clogs',
-    name: 'Crocs & Foam Clogs',
-    slug: 'clogs',
-    gender: 'unisex',
-    department: 'footwear',
-    imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123513/veyra_categories/crocsformen.jpg',
-    subtitle: 'Crocs, foam clogs & comfort slip-ons',
-    isPopular: true,
-  },
 ];
 
 // Helper: Get categories for specific gender
 export function getCategoriesByGender(gender: GenderKey = 'men'): CategoryItem[] {
   if (gender === 'unisex') return INITIAL_CATEGORIES;
-  return INITIAL_CATEGORIES.filter((c) => c.gender === gender || c.gender === 'unisex');
+  return INITIAL_CATEGORIES.filter((c) => c.gender === gender);
 }
 
 // Helper: Get categories grouped by department for a specific gender

@@ -205,7 +205,7 @@ export default function MobileHomeView() {
             title: 'Mules & Loafers',
             subtitle: 'Smart Slip-On Shoes',
             image: '/images/products/BlackSmartShoes.jpg',
-            link: '/shop?category=loafers',
+            link: '/shop?category=sneakers',
           },
           {
             id: 'f-palms',
@@ -219,7 +219,7 @@ export default function MobileHomeView() {
             title: 'Dress & Formal Shoes',
             subtitle: 'Oxford & Derby Leather Shoes',
             image: '/images/products/BlackSmartShoes2.jpg',
-            link: '/shop?category=loafers',
+            link: '/shop?category=sneakers',
           },
         ];
 
@@ -485,7 +485,7 @@ export default function MobileHomeView() {
             subtitle: 'OCCASION & SUNDAY BEST',
             highlight: 'ELEGANT LEATHER SILHOUETTES',
             image: '/images/products/BlackSmartShoes.jpg',
-            link: '/shop?category=loafers',
+            link: '/shop?category=sneakers',
           },
           {
             id: 'f-slide-palms',
