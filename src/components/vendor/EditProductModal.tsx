@@ -200,269 +200,347 @@ export default function EditProductModal({
         const fetchedNormalizedCols = parseAndNormalizeColors(p.colors).map(c => c.name);
         setSelectedColors(fetchedNormalizedCols);
 
-        // Extract variants
-        if (Array.isArray(p.variants) && p.variants.length > 0) {
-          setVariants(
-            p.variants.map((v: any) => ({
-              id: v.id,
-              size: v.size || 'Standard',
-              color: v.color || 'Standard',
-              stock_quantity: Number(v.stock_quantity) || 0,
-            }))
-          );
-        } else if (p.sizeStock && typeof p.sizeStock === 'object') {
-          const varMap = p.sizeStock.variants || {};
-          const vList: VariantStockItem[] = [];
+    const isFootwear = (cat?: string, n?: string) => {
+      const c = String(cat || '').toLowerCase();
+      const nm = String(n || '').toLowerCase();
+      return (
+        c === 'footwear' || c === 'clogs' || c === 'slides' || c === 'sneakers' || c === 'loafers' || c === 'heels' ||
+        c.includes('shoe') || c.includes('footwear') || c.includes('clog') || c.includes('croc') ||
+        c.includes('sneaker') || c.includes('slide') || c.includes('palm') || c.includes('heel') || c.includes('slipper') ||
+        nm.includes('croc') || nm.includes('clog') || nm.includes('shoe') || nm.includes('sneaker') || nm.includes('slide') || nm.includes('palm')
+      );
+    };
 
-          if (Object.keys(varMap).length > 0) {
-            Object.entries(varMap).forEach(([key, qty]: [string, any]) => {
-              const parts = key.split('_');
-              const col = parts.length > 1 ? parts[0] : 'Standard';
-              const sz = parts.length > 1 ? parts.slice(1).join('_') : parts[0];
-              vList.push({
-                size: sz,
-                color: col,
-                stock_quantity: Number(qty) || 0,
-              });
-            });
-          } else {
-            Object.entries(p.sizeStock).forEach(([sz, val]: [string, any]) => {
-              if (sz === 'variants') return;
-              const q = typeof val === 'object' ? Number(val?.quantity) : Number(val);
-              vList.push({
-                size: sz,
-                color: 'Standard',
-                stock_quantity: isNaN(q) ? 0 : q,
-              });
-            });
-          }
+    const isAccessory = (cat?: string, n?: string) => {
+      const c = String(cat || '').toLowerCase();
+      return c === 'accessories' || c === 'bags' || c === 'jewelry' || c === 'watches' || c === 'caps' || c.includes('bag') || c.includes('watch') || c.includes('chain') || c.includes('cap');
+    };
 
-          if (vList.length > 0) {
-            setVariants(vList);
-          } else {
-            setSingleStock(Number(p.stockQuantity ?? p.stock_quantity) || 10);
-          }
-        } else {
-          setSingleStock(Number(p.stockQuantity ?? p.stock_quantity) || 10);
-        }
-      } catch (err) {
-        console.error('Error loading product details:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
+    // Extract variants
+    if (Array.isArray(p.variants) && p.variants.length > 0) {
+      setVariants(
+        p.variants.map((v: any) => ({
+          id: v.id,
+          size: v.size || 'Standard',
+          color: v.color || 'Standard',
+          stock_quantity: Number(v.stock_quantity) || 0,
+        }))
+      );
+    } else if (p.sizeStock && typeof p.sizeStock === 'object') {
+      const varMap = p.sizeStock.variants || {};
+      const vList: VariantStockItem[] = [];
 
-    loadFreshDetails();
-  }, [isOpen, product]);
-
-  if (!isOpen || !product) return null;
-
-  // Calculate total inventory live
-  const computedTotalStock = variants.length > 0
-    ? variants.reduce((acc, v) => acc + (Number(v.stock_quantity) || 0), 0)
-    : Number(singleStock) || 0;
-
-  const handleVariantStockChange = (index: number, newQty: number) => {
-    const updated = [...variants];
-    updated[index].stock_quantity = Math.max(0, newQty);
-    setVariants(updated);
-  };
-
-  const handleQuickAdd = (index: number, delta: number) => {
-    const updated = [...variants];
-    const cur = Number(updated[index].stock_quantity) || 0;
-    updated[index].stock_quantity = Math.max(0, cur + delta);
-    setVariants(updated);
-  };
-
-  const handleSetSoldOut = (index: number) => {
-    const updated = [...variants];
-    updated[index].stock_quantity = 0;
-    setVariants(updated);
-  };
-
-  const handleVariantSizeNameChange = (index: number, newSize: string) => {
-    const updated = [...variants];
-    updated[index].size = newSize;
-    setVariants(updated);
-  };
-
-  const handleAddCustomVariant = () => {
-    const trimmed = newSizeInput.trim();
-    if (!trimmed) return;
-    const qty = Math.max(0, parseInt(newSizeStock, 10) || 0);
-
-    setVariants([
-      ...variants,
-      {
-        size: trimmed,
-        color: variants[0]?.color || 'Standard',
-        stock_quantity: qty,
-      }
-    ]);
-    setNewSizeInput('');
-    setNewSizeStock('10');
-    setShowAddCustomSize(false);
-  };
-
-  const handleRemoveVariant = (indexToRemove: number) => {
-    setVariants(prev => prev.filter((_, idx) => idx !== indexToRemove));
-  };
-
-  const handleAddNewSizeVariant = () => {
-    const defaultSizes = category === 'footwear' ? ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-    const existingSizes = new Set(variants.map(v => v.size));
-    const nextAvailable = defaultSizes.find(s => !existingSizes.has(s)) || `Size-${variants.length + 1}`;
-    
-    setVariants([
-      ...variants,
-      {
-        size: nextAvailable,
-        color: variants[0]?.color || 'Standard',
-        stock_quantity: 10,
-      }
-    ]);
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    setUploadingImage(true);
-    setErrorMessage('');
-    setSuccessMessage('');
-    try {
-      const newItems: EditProductImageItem[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await res.json();
-        if (res.ok && data.url) {
-          const isFirst = uploadedImages.length === 0 && newItems.length === 0;
-          newItems.push({
-            id: `img-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
-            url: data.url,
-            label: isFirst ? 'Front' : undefined,
-            isCover: isFirst,
-            colorHex: '#111111',
-            showColorTag: false,
-            isDetectingColor: false,
-            isAiDetected: false,
+      if (Object.keys(varMap).length > 0) {
+        Object.entries(varMap).forEach(([key, qty]: [string, any]) => {
+          const parts = key.split('_');
+          const col = parts.length > 1 ? parts[0] : 'Standard';
+          const sz = parts.length > 1 ? parts.slice(1).join('_') : parts[0];
+          vList.push({
+            size: sz,
+            color: col,
+            stock_quantity: Number(qty) || 0,
           });
-        } else {
-          throw new Error(data.error || 'Failed to upload photo');
-        }
+        });
+      } else {
+        Object.entries(p.sizeStock).forEach(([sz, val]: [string, any]) => {
+          if (sz === 'variants') return;
+          const q = typeof val === 'object' ? Number(val?.quantity) : Number(val);
+          vList.push({
+            size: sz,
+            color: 'Standard',
+            stock_quantity: isNaN(q) ? 0 : q,
+          });
+        });
       }
-      setUploadedImages(prev => [...prev, ...newItems]);
-      setSuccessMessage(`${newItems.length} new photo${newItems.length > 1 ? 's' : ''} added! Remember to click "Save Changes".`);
-    } catch (err: any) {
-      setErrorMessage('Upload error: ' + err.message);
-    } finally {
-      setUploadingImage(false);
-      if (e.target) e.target.value = '';
+
+      if (vList.length > 0) {
+        setVariants(vList);
+      } else if (isAccessory(p.category, p.name)) {
+        setVariants([{ size: 'One Size', color: 'Standard', stock_quantity: 20 }]);
+      } else if (isFootwear(p.category, p.name)) {
+        setVariants([
+          { size: '40', color: 'Standard', stock_quantity: 10 },
+          { size: '41', color: 'Standard', stock_quantity: 10 },
+          { size: '42', color: 'Standard', stock_quantity: 10 },
+          { size: '43', color: 'Standard', stock_quantity: 10 },
+          { size: '44', color: 'Standard', stock_quantity: 10 },
+        ]);
+      } else {
+        setVariants([
+          { size: 'S', color: 'Standard', stock_quantity: 10 },
+          { size: 'M', color: 'Standard', stock_quantity: 10 },
+          { size: 'L', color: 'Standard', stock_quantity: 10 },
+          { size: 'XL', color: 'Standard', stock_quantity: 10 },
+        ]);
+      }
+    } else if (isAccessory(p.category, p.name)) {
+      setVariants([{ size: 'One Size', color: 'Standard', stock_quantity: 20 }]);
+    } else if (isFootwear(p.category, p.name)) {
+      setVariants([
+        { size: '40', color: 'Standard', stock_quantity: 10 },
+        { size: '41', color: 'Standard', stock_quantity: 10 },
+        { size: '42', color: 'Standard', stock_quantity: 10 },
+        { size: '43', color: 'Standard', stock_quantity: 10 },
+        { size: '44', color: 'Standard', stock_quantity: 10 },
+      ]);
+    } else {
+      setVariants([
+        { size: 'S', color: 'Standard', stock_quantity: 10 },
+        { size: 'M', color: 'Standard', stock_quantity: 10 },
+        { size: 'L', color: 'Standard', stock_quantity: 10 },
+        { size: 'XL', color: 'Standard', stock_quantity: 10 },
+      ]);
     }
-  };
+  } catch (err) {
+    console.error('Error loading product details:', err);
+  } finally {
+    setLoading(false);
+  }
+}
 
-  const handleRemoveImage = (id: string) => {
-    setUploadedImages((prev) => {
-      const filtered = prev.filter((img) => img.id !== id);
-      if (filtered.length > 0 && !filtered.some((img) => img.isCover)) {
-        filtered[0].isCover = true;
-      }
-      return filtered;
+loadFreshDetails();
+}, [isOpen, product]);
+
+if (!isOpen || !product) return null;
+
+// Calculate total inventory live
+const computedTotalStock = variants.length > 0
+? variants.reduce((acc, v) => acc + (Number(v.stock_quantity) || 0), 0)
+: Number(singleStock) || 0;
+
+const handleVariantStockChange = (index: number, newQty: number) => {
+const updated = [...variants];
+updated[index].stock_quantity = Math.max(0, newQty);
+setVariants(updated);
+};
+
+const handleQuickAdd = (index: number, delta: number) => {
+const updated = [...variants];
+const cur = Number(updated[index].stock_quantity) || 0;
+updated[index].stock_quantity = Math.max(0, cur + delta);
+setVariants(updated);
+};
+
+const handleSetSoldOut = (index: number) => {
+const updated = [...variants];
+updated[index].stock_quantity = 0;
+setVariants(updated);
+};
+
+const handleVariantSizeNameChange = (index: number, newSize: string) => {
+const updated = [...variants];
+updated[index].size = newSize;
+setVariants(updated);
+};
+
+const handleAddCustomVariant = () => {
+const trimmed = newSizeInput.trim();
+if (!trimmed) return;
+const qty = Math.max(0, parseInt(newSizeStock, 10) || 0);
+
+setVariants([
+  ...variants,
+  {
+    size: trimmed,
+    color: variants[0]?.color || 'Standard',
+    stock_quantity: qty,
+  }
+]);
+setNewSizeInput('');
+setNewSizeStock('10');
+setShowAddCustomSize(false);
+};
+
+const handleRemoveVariant = (indexToRemove: number) => {
+setVariants(prev => prev.filter((_, idx) => idx !== indexToRemove));
+};
+
+const handleAddNewSizeVariant = () => {
+const isFootwearCat = category.toLowerCase().includes('footwear') || category.toLowerCase().includes('shoe') || category.toLowerCase().includes('clog') || category.toLowerCase().includes('croc') || category.toLowerCase().includes('slide') || category.toLowerCase().includes('sneaker') || category.toLowerCase().includes('heel') || (product?.name || '').toLowerCase().includes('croc') || (product?.name || '').toLowerCase().includes('shoe');
+const defaultSizes = isFootwearCat ? ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+const existingSizes = new Set(variants.map(v => v.size.toUpperCase()));
+const nextAvailable = defaultSizes.find(s => !existingSizes.has(s.toUpperCase())) || `Size-${variants.length + 1}`;
+
+setVariants([
+  ...variants,
+  {
+    size: nextAvailable,
+    color: variants[0]?.color || 'Standard',
+    stock_quantity: 10,
+  }
+]);
+};
+
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const files = e.target.files;
+if (!files || files.length === 0) return;
+setUploadingImage(true);
+setErrorMessage('');
+setSuccessMessage('');
+try {
+  const newItems: EditProductImageItem[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
     });
-  };
-
-  const handleSetCover = (id: string) => {
-    setUploadedImages((prev) => {
-      const target = prev.find((img) => img.id === id);
-      if (!target) return prev;
-      const rest = prev.filter((img) => img.id !== id);
-      return [{ ...target, isCover: true }, ...rest.map((img) => ({ ...img, isCover: false }))];
-    });
-  };
-
-  const handleUpdateImageLabel = (id: string, preset: string) => {
-    setUploadedImages((prev) =>
-      prev.map((img) => (img.id === id ? { ...img, label: img.label === preset ? undefined : preset } : img))
-    );
-  };
-
-  const handleToggleColorTag = (id: string) => {
-    setUploadedImages((prev) =>
-      prev.map((img) =>
-        img.id === id
-          ? {
-              ...img,
-              showColorTag: !img.showColorTag,
-              colorName: img.showColorTag ? undefined : (img.colorName || ''),
-            }
-          : img
-      )
-    );
-  };
-
-  const handleAssignColor = (id: string, colorName: string, customHex?: string) => {
-    const matched = FASHION_COLOR_PALETTE.find(
-      (c) => c.name.toLowerCase() === colorName.toLowerCase()
-    );
-    const existingImg = uploadedImages.find((i) => i.id === id);
-    const resolvedHex = customHex || (matched ? matched.hex : (resolveColorNameToHex(colorName) || existingImg?.colorHex || '#111111'));
-
-    setUploadedImages((prev) =>
-      prev.map((img) =>
-        img.id === id ? { ...img, colorName, colorHex: resolvedHex } : img
-      )
-    );
-
-    if (colorName && colorName.trim() && colorName !== 'none' && colorName !== 'General / All Colors') {
-      setSelectedColors((prev) => {
-        if (!prev.some((c) => c.toLowerCase() === colorName.trim().toLowerCase())) {
-          return [...prev, colorName.trim()];
-        }
-        return prev;
+    const data = await res.json();
+    if (res.ok && data.url) {
+      const isFirst = uploadedImages.length === 0 && newItems.length === 0;
+      newItems.push({
+        id: `img-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+        url: data.url,
+        label: isFirst ? 'Front' : undefined,
+        isCover: isFirst,
+        colorHex: '#111111',
+        showColorTag: false,
+        isDetectingColor: false,
+        isAiDetected: false,
       });
+    } else {
+      throw new Error(data.error || 'Failed to upload photo');
     }
-  };
+  }
+  setUploadedImages(prev => [...prev, ...newItems]);
+  setSuccessMessage(`${newItems.length} new photo${newItems.length > 1 ? 's' : ''} added! Remember to click "Save Changes".`);
+} catch (err: any) {
+  setErrorMessage('Upload error: ' + err.message);
+} finally {
+  setUploadingImage(false);
+  if (e.target) e.target.value = '';
+}
+};
 
-  const handleUpdateColorHex = (id: string, hex: string) => {
-    setUploadedImages((prev) =>
-      prev.map((img) => (img.id === id ? { ...img, colorHex: hex } : img))
-    );
-    const img = uploadedImages.find((i) => i.id === id);
-    if (img && img.colorName) {
-      setSelectedColors((prev) =>
-        prev.map((c) => (c.toLowerCase() === img.colorName?.toLowerCase() ? c : c))
-      );
+const handleRemoveImage = (id: string) => {
+setUploadedImages((prev) => {
+  const filtered = prev.filter((img) => img.id !== id);
+  if (filtered.length > 0 && !filtered.some((img) => img.isCover)) {
+    filtered[0].isCover = true;
+  }
+  return filtered;
+});
+};
+
+const handleSetCover = (id: string) => {
+setUploadedImages((prev) => {
+  const target = prev.find((img) => img.id === id);
+  if (!target) return prev;
+  const rest = prev.filter((img) => img.id !== id);
+  return [{ ...target, isCover: true }, ...rest.map((img) => ({ ...img, isCover: false }))];
+});
+};
+
+const handleUpdateImageLabel = (id: string, preset: string) => {
+setUploadedImages((prev) =>
+  prev.map((img) => (img.id === id ? { ...img, label: img.label === preset ? undefined : preset } : img))
+);
+};
+
+const handleToggleColorTag = (id: string) => {
+setUploadedImages((prev) =>
+  prev.map((img) =>
+    img.id === id
+      ? {
+          ...img,
+          showColorTag: !img.showColorTag,
+          colorName: img.showColorTag ? undefined : (img.colorName || ''),
+        }
+      : img
+  )
+);
+};
+
+// Updates the typing string in real-time WITHOUT polluting selectedColors with partial keystrokes
+const handleImageColorNameChange = (id: string, colorName: string) => {
+const matched = FASHION_COLOR_PALETTE.find(
+  (c) => c.name.toLowerCase() === colorName.trim().toLowerCase()
+);
+const existingImg = uploadedImages.find((i) => i.id === id);
+const resolvedHex = matched ? matched.hex : (resolveColorNameToHex(colorName) || existingImg?.colorHex || '#111111');
+
+setUploadedImages((prev) =>
+  prev.map((img) =>
+    img.id === id ? { ...img, colorName, colorHex: resolvedHex } : img
+  )
+);
+
+if (matched) {
+  handleCommitImageColor(id, matched.name, matched.hex);
+}
+};
+
+// Commits a clean color name to selectedColors and image
+const handleCommitImageColor = (id: string, colorName: string, customHex?: string) => {
+const clean = colorName.trim();
+const matched = FASHION_COLOR_PALETTE.find(
+  (c) => c.name.toLowerCase() === clean.toLowerCase()
+);
+const existingImg = uploadedImages.find((i) => i.id === id);
+const resolvedHex = customHex || (matched ? matched.hex : (resolveColorNameToHex(clean) || existingImg?.colorHex || '#111111'));
+
+setUploadedImages((prev) =>
+  prev.map((img) =>
+    img.id === id ? { ...img, colorName: clean, colorHex: resolvedHex, showColorTag: Boolean(clean) } : img
+  )
+);
+
+if (clean && clean !== 'none' && clean !== 'General / All Colors') {
+  setSelectedColors((prev) => {
+    if (!prev.some((c) => c.toLowerCase() === clean.toLowerCase())) {
+      return [...prev, clean];
     }
-  };
+    return prev;
+  });
+}
+};
 
-  const handleAiDetectForImage = async (id: string) => {
-    const img = uploadedImages.find((i) => i.id === id);
-    if (!img) return;
+const handleRemoveImageColorTag = (id: string) => {
+const target = uploadedImages.find(i => i.id === id);
+const removedName = target?.colorName;
 
-    setUploadedImages((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, isDetectingColor: true, isAiDetected: false } : item))
-    );
+setUploadedImages(prev =>
+  prev.map(img => (img.id === id ? { ...img, colorName: '', showColorTag: false } : img))
+);
 
-    try {
-      const detected = await detectGarmentColor(img.url);
-      handleAssignColor(id, detected.name, detected.hex);
-      setUploadedImages((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, isAiDetected: true } : item))
-      );
-    } catch (e) {
-      console.error('AI color detection error:', e);
-    } finally {
-      setUploadedImages((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, isDetectingColor: false } : item))
-      );
-    }
-  };
+if (removedName) {
+  const isUsedElsewhere = uploadedImages.some(img => img.id !== id && img.colorName?.toLowerCase() === removedName.toLowerCase());
+  if (!isUsedElsewhere) {
+    setSelectedColors(prev => prev.filter(c => c.toLowerCase() !== removedName.toLowerCase()));
+  }
+}
+};
+
+const handleUpdateColorHex = (id: string, hex: string) => {
+setUploadedImages((prev) =>
+  prev.map((img) => (img.id === id ? { ...img, colorHex: hex } : img))
+);
+};
+
+const handleAiDetectForImage = async (id: string) => {
+const img = uploadedImages.find((i) => i.id === id);
+if (!img) return;
+
+setUploadedImages((prev) =>
+  prev.map((item) => (item.id === id ? { ...item, isDetectingColor: true, isAiDetected: false } : item))
+);
+
+try {
+  const detected = await detectGarmentColor(img.url);
+  handleCommitImageColor(id, detected.name, detected.hex);
+  setUploadedImages((prev) =>
+    prev.map((item) => (item.id === id ? { ...item, isAiDetected: true } : item))
+  );
+} catch (e) {
+  console.error('AI color detection error:', e);
+} finally {
+  setUploadedImages((prev) =>
+    prev.map((item) => (item.id === id ? { ...item, isDetectingColor: false } : item))
+  );
+}
+};
 
   const handleToggleColor = (colorName: string) => {
     const clean = colorName.trim();
@@ -843,17 +921,25 @@ export default function EditProductModal({
                                     list="fashion-colors-list-edit-vendor"
                                     placeholder="e.g. Black, Navy Blue, Wine"
                                     value={img.colorName || ''}
-                                    onChange={(e) => handleAssignColor(img.id, e.target.value)}
+                                    onChange={(e) => handleImageColorNameChange(img.id, e.target.value)}
+                                    onBlur={(e) => {
+                                      if (e.target.value.trim()) {
+                                        handleCommitImageColor(img.id, e.target.value);
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleCommitImageColor(img.id, (e.target as HTMLInputElement).value);
+                                      }
+                                    }}
                                     className="flex-1 min-w-0 px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
                                   />
 
                                   {img.colorName && (
                                     <button
                                       type="button"
-                                      onClick={() => {
-                                        handleAssignColor(img.id, '');
-                                        handleToggleColorTag(img.id);
-                                      }}
+                                      onClick={() => handleRemoveImageColorTag(img.id)}
                                       className="p-1 rounded text-neutral-400 hover:text-rose-400 text-xs cursor-pointer"
                                       title="Remove color tag"
                                     >

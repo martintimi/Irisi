@@ -190,6 +190,42 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#2563eb');
 
+  const isFootwearCategory = (cat?: string, name?: string) => {
+    const c = String(cat || '').toLowerCase();
+    const n = String(name || '').toLowerCase();
+    return (
+      c === 'footwear' ||
+      c === 'clogs' ||
+      c === 'slides' ||
+      c === 'sneakers' ||
+      c === 'loafers' ||
+      c === 'heels' ||
+      c.includes('shoe') ||
+      c.includes('footwear') ||
+      c.includes('clog') ||
+      c.includes('croc') ||
+      c.includes('sneaker') ||
+      c.includes('slide') ||
+      c.includes('palm') ||
+      c.includes('heel') ||
+      c.includes('slipper') ||
+      n.includes('croc') ||
+      n.includes('clog') ||
+      n.includes('shoe') ||
+      n.includes('sneaker') ||
+      n.includes('slide') ||
+      n.includes('palm') ||
+      n.includes('slipper') ||
+      n.includes('heel')
+    );
+  };
+
+  const isAccessoryCategory = (cat?: string, name?: string) => {
+    const c = String(cat || '').toLowerCase();
+    const n = String(name || '').toLowerCase();
+    return c === 'accessories' || c === 'bags' || c === 'jewelry' || c === 'watches' || c === 'caps' || c.includes('bag') || c.includes('watch') || c.includes('chain') || c.includes('cap') || c.includes('hat');
+  };
+
   // Variant Sizing & Stock Inventory State
   const [variants, setVariants] = useState<VariantStockItem[]>(() => {
     if (Array.isArray(product.variants) && product.variants.length > 0) {
@@ -229,7 +265,22 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
       if (vList.length > 0) return vList;
     }
     
-    // Default size set if no variants exist
+    // Smart default sizes based on product category & title
+    const prodCat = product.category || product.subCategory || '';
+    const prodName = product.name || '';
+    if (isAccessoryCategory(prodCat, prodName)) {
+      return [{ size: 'One Size', color: 'Standard', stock_quantity: 20 }];
+    }
+    if (isFootwearCategory(prodCat, prodName)) {
+      return [
+        { size: '40', color: 'Standard', stock_quantity: 10 },
+        { size: '41', color: 'Standard', stock_quantity: 10 },
+        { size: '42', color: 'Standard', stock_quantity: 10 },
+        { size: '43', color: 'Standard', stock_quantity: 10 },
+        { size: '44', color: 'Standard', stock_quantity: 10 },
+      ];
+    }
+
     return [
       { size: 'S', color: 'Standard', stock_quantity: 10 },
       { size: 'M', color: 'Standard', stock_quantity: 10 },
@@ -295,7 +346,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   };
 
   const handleAddNewSizeVariant = () => {
-    const isShoes = editCategory.toLowerCase().includes('shoes') || editCategory.toLowerCase().includes('footwear') || editCategory.toLowerCase().includes('sneakers') || editCategory.toLowerCase().includes('slides') || editCategory.toLowerCase().includes('heels');
+    const isShoes = isFootwearCategory(editCategory, editName);
     const defaultSizes = isShoes ? ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
     const existingSizes = new Set(variants.map(v => v.size.toUpperCase()));
     const nextAvailable = defaultSizes.find(s => !existingSizes.has(s.toUpperCase())) || `Size-${variants.length + 1}`;
@@ -439,12 +490,13 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     );
   };
 
-  const handleAssignColor = (id: string, colorName: string, customHex?: string) => {
+  // Updates the typing string in real-time WITHOUT polluting selectedColors with partial keystrokes
+  const handleImageColorNameChange = (id: string, colorName: string) => {
     const matched = FASHION_COLOR_PALETTE.find(
-      (c) => c.name.toLowerCase() === colorName.toLowerCase()
+      (c) => c.name.toLowerCase() === colorName.trim().toLowerCase()
     );
     const existingImg = uploadedImages.find((i) => i.id === id);
-    const resolvedHex = customHex || (matched ? matched.hex : (resolveColorNameToHex(colorName) || existingImg?.colorHex || '#111111'));
+    const resolvedHex = matched ? matched.hex : (resolveColorNameToHex(colorName) || existingImg?.colorHex || '#111111');
 
     setUploadedImages((prev) =>
       prev.map((img) =>
@@ -452,13 +504,51 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
       )
     );
 
-    if (colorName && colorName.trim() && colorName !== 'none' && colorName !== 'General / All Colors') {
+    // If an exact standard color was selected (e.g. from dropdown), sync it
+    if (matched) {
+      handleCommitImageColor(id, matched.name, matched.hex);
+    }
+  };
+
+  // Commits a clean color name to selectedColors and image
+  const handleCommitImageColor = (id: string, colorName: string, customHex?: string) => {
+    const clean = colorName.trim();
+    const matched = FASHION_COLOR_PALETTE.find(
+      (c) => c.name.toLowerCase() === clean.toLowerCase()
+    );
+    const existingImg = uploadedImages.find((i) => i.id === id);
+    const resolvedHex = customHex || (matched ? matched.hex : (resolveColorNameToHex(clean) || existingImg?.colorHex || '#111111'));
+
+    setUploadedImages((prev) =>
+      prev.map((img) =>
+        img.id === id ? { ...img, colorName: clean, colorHex: resolvedHex, showColorTag: Boolean(clean) } : img
+      )
+    );
+
+    if (clean && clean !== 'none' && clean !== 'General / All Colors') {
       setSelectedColors((prev) => {
-        if (!prev.some((c) => c.toLowerCase() === colorName.trim().toLowerCase())) {
-          return [...prev, colorName.trim()];
+        if (!prev.some((c) => c.toLowerCase() === clean.toLowerCase())) {
+          return [...prev, clean];
         }
         return prev;
       });
+    }
+  };
+
+  const handleRemoveImageColorTag = (id: string) => {
+    const target = uploadedImages.find(i => i.id === id);
+    const removedName = target?.colorName;
+
+    setUploadedImages(prev =>
+      prev.map(img => (img.id === id ? { ...img, colorName: '', showColorTag: false } : img))
+    );
+
+    if (removedName) {
+      // Check if any other image still uses this color
+      const isUsedElsewhere = uploadedImages.some(img => img.id !== id && img.colorName?.toLowerCase() === removedName.toLowerCase());
+      if (!isUsedElsewhere) {
+        setSelectedColors(prev => prev.filter(c => c.toLowerCase() !== removedName.toLowerCase()));
+      }
     }
   };
 
@@ -466,12 +556,6 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     setUploadedImages((prev) =>
       prev.map((img) => (img.id === id ? { ...img, colorHex: hex } : img))
     );
-    const img = uploadedImages.find((i) => i.id === id);
-    if (img && img.colorName) {
-      setSelectedColors((prev) =>
-        prev.map((c) => (c.toLowerCase() === img.colorName?.toLowerCase() ? c : c))
-      );
-    }
   };
 
   const handleAiDetectForImage = async (id: string) => {
@@ -484,7 +568,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
 
     try {
       const detected = await detectGarmentColor(img.url);
-      handleAssignColor(id, detected.name, detected.hex);
+      handleCommitImageColor(id, detected.name, detected.hex);
       setUploadedImages((prev) =>
         prev.map((item) => (item.id === id ? { ...item, isAiDetected: true } : item))
       );
@@ -794,17 +878,25 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
                             list="fashion-colors-list-edit-admin"
                             placeholder="e.g. Black, Navy Blue, Wine"
                             value={img.colorName || ''}
-                            onChange={(e) => handleAssignColor(img.id, e.target.value)}
+                            onChange={(e) => handleImageColorNameChange(img.id, e.target.value)}
+                            onBlur={(e) => {
+                              if (e.target.value.trim()) {
+                                handleCommitImageColor(img.id, e.target.value);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleCommitImageColor(img.id, (e.target as HTMLInputElement).value);
+                              }
+                            }}
                             className="flex-1 min-w-0 px-2 py-1 rounded bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-[10px] font-mono-luxury font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500"
                           />
 
                           {img.colorName && (
                             <button
                               type="button"
-                              onClick={() => {
-                                handleAssignColor(img.id, '');
-                                handleToggleColorTag(img.id);
-                              }}
+                              onClick={() => handleRemoveImageColorTag(img.id)}
                               className="p-1 rounded text-neutral-400 hover:text-rose-400 text-xs cursor-pointer"
                               title="Remove color tag"
                             >

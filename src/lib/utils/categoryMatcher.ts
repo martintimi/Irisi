@@ -138,7 +138,8 @@ function getRawCategorySubSlug(category: string): string | null {
   if (c.includes('tshirt') || c.includes('t-shirt') || c === 'tshirts') return 'tshirts';
   if (c.includes('polo') || c.includes('shirts_polos')) return 'polos';
   if (c.includes('jean') || c.includes('denim')) return 'jeans';
-  if (c.includes('cargo') || c.includes('jogger') || c.includes('sweatpant') || c.includes('trouser') || c.includes('trackpant')) return 'cargo';
+  if (c === 'cargo' || c.includes('cargo') || c.includes('trouser') || c.includes('trackpant')) return 'cargo';
+  if (c.includes('jogger') || c.includes('sweatpant') || c === 'joggers_sweats') return 'joggers';
   if (c === 'shorts' || c.includes('shorts_set') || c === 'shorts_sets') return 'shorts';
   if (c.includes('skirt')) return 'skirts';
   if (c.includes('dress') || c.includes('gown')) return 'dresses';
@@ -405,13 +406,23 @@ export function matchesSpecificCategory(p: ProductLike, specificCat: string): bo
     return hasWordMatch(name, jeanRegex) || hasWordMatch(cleanTagsString, jeanRegex);
   }
 
-  // 12. CARGO & JOGGERS / SWEATPANTS
-  if (sc === 'cargo' || sc === 'men-joggers' || sc === 'joggers_sweats' || sc === 'joggers' || sc === 'trousers') {
+  // 12. JOGGERS & SWEATPANTS only — NO cargo pants
+  if (sc === 'joggers' || sc === 'men-joggers' || sc === 'joggers_sweats') {
+    if (category === 'accessories') return false;
+    if (rawSubSlug === 'cargo' && !String(p.category || '').toLowerCase().includes('jogger') && !String(p.category || '').toLowerCase().includes('sweat')) return false;
+    if (subCategory === 'joggers_sweats') return true;
+    if (category === 'joggers' || category === 'sweatpants') return true;
+
+    const joggersRegex = /\b(jogger|joggers|sweatpant|sweatpants|trackpant|trackpants|fleece pant|jogger pants?)\b/i;
+    return hasWordMatch(name, joggersRegex) || hasWordMatch(cleanTagsString, joggersRegex);
+  }
+
+  // 12b. CARGO & TROUSERS only — NO joggers/sweatpants
+  if (sc === 'cargo' || sc === 'trousers') {
     if (category === 'accessories') return false;
     if (rawSubSlug === 'cargo') return true;
-    if (subCategory === 'joggers_sweats') return true;
 
-    const cargoRegex = /\b(cargo|cargos|jogger|joggers|sweatpant|sweatpants|trackpant|trackpants|trouser|trousers|pant|pants)\b/i;
+    const cargoRegex = /\b(cargo|cargos|trouser|trousers)\b/i;
     return hasWordMatch(name, cargoRegex) || hasWordMatch(cleanTagsString, cargoRegex);
   }
 

@@ -570,12 +570,13 @@ export default function PublishGarmentPage() {
     });
   };
 
-  const handleAssignColor = (id: string, colorName: string, customHex?: string) => {
+  // Updates typing string without polluting selectedColors with partial keystrokes
+  const handleImageColorNameChange = (id: string, colorName: string) => {
     const matched = FASHION_COLOR_PALETTE.find(
-      (c) => c.name.toLowerCase() === colorName.toLowerCase()
+      (c) => c.name.toLowerCase() === colorName.trim().toLowerCase()
     );
     const existingImg = uploadedImages.find((i) => i.id === id);
-    const resolvedHex = customHex || (matched ? matched.hex : existingImg?.colorHex || '#111111');
+    const resolvedHex = matched ? matched.hex : (resolveColorNameToHex(colorName) || existingImg?.colorHex || '#111111');
 
     setUploadedImages((prev) =>
       prev.map((img) =>
@@ -583,17 +584,53 @@ export default function PublishGarmentPage() {
       )
     );
 
-    if (colorName && colorName !== 'none' && colorName !== 'General / All Colors') {
+    if (matched) {
+      handleCommitImageColor(id, matched.name, matched.hex);
+    }
+  };
+
+  // Commits clean color name to selectedColors and image
+  const handleCommitImageColor = (id: string, colorName: string, customHex?: string) => {
+    const clean = colorName.trim();
+    const matched = FASHION_COLOR_PALETTE.find(
+      (c) => c.name.toLowerCase() === clean.toLowerCase()
+    );
+    const existingImg = uploadedImages.find((i) => i.id === id);
+    const resolvedHex = customHex || (matched ? matched.hex : (resolveColorNameToHex(clean) || existingImg?.colorHex || '#111111'));
+
+    setUploadedImages((prev) =>
+      prev.map((img) =>
+        img.id === id ? { ...img, colorName: clean, colorHex: resolvedHex, showColorTag: Boolean(clean) } : img
+      )
+    );
+
+    if (clean && clean !== 'none' && clean !== 'General / All Colors') {
       setSelectedColors((prev) => {
-        if (prev.some((c) => c.name.toLowerCase() === colorName.toLowerCase())) {
+        if (prev.some((c) => c.name.toLowerCase() === clean.toLowerCase())) {
           return prev.map((c) =>
-            c.name.toLowerCase() === colorName.toLowerCase()
+            c.name.toLowerCase() === clean.toLowerCase()
               ? { ...c, hex: resolvedHex }
               : c
           );
         }
-        return [...prev, { name: colorName, hex: resolvedHex }];
+        return [...prev, { name: clean, hex: resolvedHex }];
       });
+    }
+  };
+
+  const handleRemoveImageColorTag = (id: string) => {
+    const target = uploadedImages.find(i => i.id === id);
+    const removedName = target?.colorName;
+
+    setUploadedImages(prev =>
+      prev.map(img => (img.id === id ? { ...img, colorName: '', showColorTag: false } : img))
+    );
+
+    if (removedName) {
+      const isUsedElsewhere = uploadedImages.some(img => img.id !== id && img.colorName?.toLowerCase() === removedName.toLowerCase());
+      if (!isUsedElsewhere) {
+        setSelectedColors(prev => prev.filter(c => c.name.toLowerCase() !== removedName.toLowerCase()));
+      }
     }
   };
 
@@ -622,7 +659,7 @@ export default function PublishGarmentPage() {
 
     try {
       const detected = await detectGarmentColor(img.url);
-      handleAssignColor(id, detected.name, detected.hex);
+      handleCommitImageColor(id, detected.name, detected.hex);
       setUploadedImages((prev) =>
         prev.map((item) => (item.id === id ? { ...item, isAiDetected: true } : item))
       );
@@ -1445,16 +1482,24 @@ export default function PublishGarmentPage() {
                                 list="fashion-colors-list-desktop"
                                 placeholder="e.g. Black, Navy Blue, Wine"
                                 value={img.colorName || ''}
-                                onChange={(e) => handleAssignColor(img.id, e.target.value)}
+                                onChange={(e) => handleImageColorNameChange(img.id, e.target.value)}
+                                onBlur={(e) => {
+                                  if (e.target.value.trim()) {
+                                    handleCommitImageColor(img.id, e.target.value);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleCommitImageColor(img.id, (e.target as HTMLInputElement).value);
+                                  }
+                                }}
                                 className="flex-1 min-w-0 px-2 py-1 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)]"
                               />
                               {img.colorName && (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    handleAssignColor(img.id, '');
-                                    handleToggleColorTag(img.id);
-                                  }}
+                                  onClick={() => handleRemoveImageColorTag(img.id)}
                                   className="p-1 rounded text-neutral-400 hover:text-rose-400 text-xs cursor-pointer"
                                   title="Remove color tag"
                                 >

@@ -83,7 +83,7 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
   {
     id: 'men-joggers',
     name: 'Joggers & Sweatpants',
-    slug: 'cargo',
+    slug: 'joggers',
     gender: 'men',
     department: 'clothing',
     imageUrl: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123510/veyra_categories/joggersformen.jpg',

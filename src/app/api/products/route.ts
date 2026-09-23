@@ -315,12 +315,16 @@ export async function GET(request: Request) {
         dynamicSizeStock.variants = variantStockMap;
       }
 
+      const pCatLower = String(p.category || '').toLowerCase();
+      const pNameLower = String(p.name || '').toLowerCase();
+      const isFootwear = pCatLower === 'footwear' || pCatLower === 'clogs' || pCatLower === 'crocs' || pCatLower === 'slides' || pCatLower === 'sneakers' || pCatLower === 'loafers' || pCatLower === 'heels' || pCatLower.includes('shoe') || pCatLower.includes('footwear') || pCatLower.includes('clog') || pCatLower.includes('slide') || pCatLower.includes('palm') || pNameLower.includes('croc') || pNameLower.includes('clog') || pNameLower.includes('shoe') || pNameLower.includes('sneaker') || pNameLower.includes('slide') || pNameLower.includes('palm');
+
       let resolvedSizes: string[] = ['M', 'L', 'XL'];
       if (isAccessory) {
         resolvedSizes = ['One Size'];
       } else if (Object.keys(dynamicSizeStock).filter(k => k !== 'variants').length > 0) {
         resolvedSizes = Object.keys(dynamicSizeStock).filter(k => k !== 'variants');
-      } else if (p.category === 'footwear') {
+      } else if (isFootwear) {
         resolvedSizes = ['40', '41', '42', '43', '44'];
       }
 
@@ -328,8 +332,8 @@ export async function GET(request: Request) {
         ? { 'One Size': dynamicSizeStock['One Size'] || { enabled: true, quantity: 20 }, variants: variantStockMap }
         : Object.keys(dynamicSizeStock).length > 0
         ? dynamicSizeStock
-        : (p.category === 'footwear'
-          ? { '40': { enabled: true, quantity: 10 }, '41': { enabled: true, quantity: 10 }, '42': { enabled: true, quantity: 10 } }
+        : (isFootwear
+          ? { '40': { enabled: true, quantity: 10 }, '41': { enabled: true, quantity: 10 }, '42': { enabled: true, quantity: 10 }, '43': { enabled: true, quantity: 10 }, '44': { enabled: true, quantity: 10 } }
           : { S: { enabled: true, quantity: 10 }, M: { enabled: true, quantity: 20 }, L: { enabled: true, quantity: 20 } });
 
       const rawTags: string[] = Array.isArray(p.tags) ? p.tags : [];

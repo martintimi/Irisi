@@ -268,16 +268,32 @@ export async function detectGarmentColor(
         const imgData = ctx.getImageData(0, 0, size, size).data;
 
         const clusters = new Map<string, ColorCluster>();
-        const perimeterMargin = Math.round(size * 0.08); // Outer 8% border
+        const perimeterMargin = Math.round(size * 0.16); // Outer 16% border for background isolation
 
-        // Center points for saliency (Main center + 4 quadrant centers for multi-angle collages)
+        // Center points for saliency (Main center + focal zones)
         const focalCenters = [
-          { x: size * 0.5, y: size * 0.5, weight: 3.0 }, // Main Center
-          { x: size * 0.28, y: size * 0.28, weight: 2.0 }, // Top-Left Quadrant
-          { x: size * 0.72, y: size * 0.28, weight: 2.0 }, // Top-Right Quadrant
-          { x: size * 0.28, y: size * 0.72, weight: 2.0 }, // Bottom-Left Quadrant
-          { x: size * 0.72, y: size * 0.72, weight: 2.0 }, // Bottom-Right Quadrant
+          { x: size * 0.5, y: size * 0.5, weight: 4.5 }, // Strong Main Center
+          { x: size * 0.5, y: size * 0.42, weight: 3.5 }, // Upper Center (Chest/Upper)
+          { x: size * 0.5, y: size * 0.58, weight: 3.5 }, // Lower Center (Lower/Sole)
+          { x: size * 0.32, y: size * 0.32, weight: 2.0 }, // Top-Left Quadrant
+          { x: size * 0.68, y: size * 0.32, weight: 2.0 }, // Top-Right Quadrant
+          { x: size * 0.32, y: size * 0.68, weight: 2.0 }, // Bottom-Left Quadrant
+          { x: size * 0.68, y: size * 0.68, weight: 2.0 }, // Bottom-Right Quadrant
         ];
+
+        // 1. First Pass: Sample perimeter pixels to identify dominant background color (walls, floor, grey studio)
+        const bgColors: { r: number; g: number; b: number }[] = [];
+        for (let y = 0; y < size; y += 4) {
+          for (let x = 0; x < size; x += 4) {
+            const isBorder = x < perimeterMargin || x >= size - perimeterMargin || y < perimeterMargin || y >= size - perimeterMargin;
+            if (isBorder) {
+              const idx = (y * size + x) * 4;
+              if (imgData[idx + 3] >= 128) {
+                bgColors.push({ r: imgData[idx], g: imgData[idx + 1], b: imgData[idx + 2] });
+              }
+            }
+          }
+        }
 
         for (let y = 0; y < size; y += 2) {
           for (let x = 0; x < size; x += 2) {
@@ -370,17 +386,28 @@ export async function detectGarmentColor(
 
           const perimeterRatio = cluster.perimeterWeight / cluster.pixelCount;
 
-          // Background Penalty: If more than 55% of this cluster is on the outer border with neutral tone
-          const isNeutralBackground = perimeterRatio > 0.55 && (s < 14 || (l > 88 && s < 25));
-          if (isNeutralBackground) {
-            continue; // Exclude background wall or floor
+          // Check if cluster is close to background perimeter sample
+          let isSimilarToBg = false;
+          if (bgColors.length > 0 && perimeterRatio > 0.25) {
+            let closeBgCount = 0;
+            for (let i = 0; i < Math.min(30, bgColors.length); i++) {
+              const bg = bgColors[i];
+              const diff = Math.hypot(avgR - bg.r, avgG - bg.g, avgB - bg.b);
+              if (diff < 35) closeBgCount++;
+            }
+            if (closeBgCount > 10) isSimilarToBg = true;
           }
 
-          // Saturation boost: Garments with rich hues (Navy, Red, Green, Gold) should beat dull concrete floor
-          const chromaticBoost = (1 + Math.min(2.0, (s / 30))) * (maxDiff > 16 ? 1.4 : 1.0);
+          // Background Penalty: If more than 35% is on border, or matches border background sample
+          if (isSimilarToBg || (perimeterRatio > 0.40 && (s < 18 || l > 85))) {
+            continue; // Exclude background wall, grey floor, or studio backdrop
+          }
+
+          // Saturation & Contrast boost: Real product colors (Navy, Red, Green, Gold, Tan, Brown) heavily outscore grey studio backdrops
+          const chromaticBoost = (1 + Math.min(3.0, (s / 20))) * (maxDiff > 14 ? 1.6 : 1.0);
           
-          // Interior density score
-          const score = cluster.interiorWeight * chromaticBoost * (1 - perimeterRatio * 0.5);
+          // Interior density score heavily weighted by center saliency
+          const score = cluster.interiorWeight * chromaticBoost * Math.max(0.05, 1 - perimeterRatio * 1.5);
 
           if (score > highestScore) {
             highestScore = score;
