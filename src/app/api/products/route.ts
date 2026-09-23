@@ -36,7 +36,10 @@ export async function GET(request: Request) {
     const category = searchParams.get('category');
     const gender = searchParams.get('gender');
     const origin = searchParams.get('origin');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const requestedLimit = parseInt(searchParams.get('limit') || '1000', 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 1), 1000)
+      : 1000;
 
     const cacheKey = `${vendorId || ''}_${category || ''}_${gender || ''}_${origin || ''}_${limit}`;
     const cached = apiProductsCache.get(cacheKey);
