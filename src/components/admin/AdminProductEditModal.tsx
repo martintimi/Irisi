@@ -3,12 +3,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Save, ExternalLink, Star, Check, AlertCircle, Layers, CheckCircle2, Camera, Trash2, Plus, Loader2, Palette, Sparkles, RefreshCw } from 'lucide-react';
+import { X, Save, ExternalLink, Star, Check, AlertCircle, Layers, CheckCircle2, Camera, Trash2, Plus, Loader2, Palette, Sparkles, RefreshCw, Minus } from 'lucide-react';
 import { INITIAL_CATEGORIES } from '@/lib/data/categories';
 import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
 
 const ADMIN_COLOR_PALETTE = STANDARD_FASHION_COLORS;
+
+export interface VariantStockItem {
+  id?: string;
+  size: string;
+  color?: string;
+  stock_quantity: number;
+}
 
 export interface EditProductImageItem {
   id: string;
@@ -85,68 +92,6 @@ const GENDER_OPTIONS = [
   { value: 'unisex', label: 'Unisex' },
 ];
 
-const DEFAULT_CATEGORIES_BY_GENDER = {
-  male: [
-    { id: 'senator_kaftan', label: 'Senator Sets & Kaftans (Native)' },
-    { id: 'agbada_robes', label: 'Grand Agbada 3-Piece (Native)' },
-    { id: 'jalabiya_tunics', label: 'Jalabiya & Tunics (Native)' },
-    { id: 'men_caps_fila', label: 'Aso-Oke Fila & Caps (Native)' },
-    { id: 'streetwear_hoodie', label: 'Hoodies & Sweatshirts' },
-    { id: 'suits_blazers', label: 'Suits, Tuxedos & Blazers' },
-    { id: 'tshirts_tees', label: 'T-Shirts & Graphic Tees' },
-    { id: 'shirts_polos', label: 'Luxury Shirts & Polos' },
-    { id: 'jackets_coats', label: 'Jackets & Windbreakers' },
-    { id: 'jeans_trousers', label: 'Baggy Jeans & Cargo Pants' },
-    { id: 'joggers_sweats', label: 'Joggers & Sweatpants' },
-    { id: 'shorts_sets', label: 'Shorts & Casual Sets' },
-    { id: 'men_underwears', label: 'Underwear & Loungewear' },
-    { id: 'men_slides_palms', label: 'Slides, Palms & Slippers' },
-    { id: 'men_shoes_sneakers', label: 'Sneakers & Street Trainers' },
-    { id: 'men_shoes_loafers', label: 'Loafers, Shoes & Mules' },
-    { id: 'men_shoes_clogs', label: 'Crocs & Foam Clogs (Footwear)' },
-    { id: 'men_bags_backpacks', label: 'Backpacks & Travel Bags' },
-    { id: 'men_bags_crossbody', label: 'Crossbody & Chest Rigs' },
-    { id: 'men_jewelry_chains', label: 'Chains, Rings & Jewelry' },
-    { id: 'men_watches', label: 'Luxury Wristwatches' },
-    { id: 'men_eyewear', label: 'Sunglasses & Glasses' },
-  ],
-  female: [
-    { id: 'dresses_gowns', label: 'Dresses, Gowns & Maxis (Apparel)' },
-    { id: 'boubou_kaftans', label: 'Silk Boubou, Kaftans & Abayas (Native)' },
-    { id: 'lace_ankara', label: 'Lace & Ankara Tailored Sets (Native)' },
-    { id: 'two_piece_sets', label: 'Two-Piece Co-ord Sets' },
-    { id: 'corsets_tops', label: 'Tops, Corsets & Blouses' },
-    { id: 'female_streetwear', label: 'Hoodies & Sweatshirts' },
-    { id: 'women_jeans_trousers', label: 'Jeans, Cargo & Pants' },
-    { id: 'skirts_minis', label: 'Skirts & Mini Skirts' },
-    { id: 'women_shorts', label: 'Shorts & Biker Sets' },
-    { id: 'women_underwears', label: 'Underwear, Shapewear & Loungewear' },
-    { id: 'women_heels_mules', label: 'Heels, Pumps & Mules' },
-    { id: 'women_slides_palms', label: 'Slides, Palms & Flats' },
-    { id: 'women_sneakers', label: 'Designer Sneakers' },
-    { id: 'women_shoes_clogs', label: 'Crocs & Foam Clogs (Footwear)' },
-    { id: 'women_bags_handbags', label: 'Handbags & Totes' },
-    { id: 'women_bags_clutches', label: 'Clutches & Crossbody Minis' },
-    { id: 'women_jewelry', label: 'Jewelry, Necklaces & Bangles' },
-    { id: 'women_watches', label: 'Women’s Luxury Watches' },
-    { id: 'women_sunglasses', label: 'Sunglasses & Shades' },
-    { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps' },
-  ],
-  unisex: [
-    { id: 'unisex_hoodie', label: 'Hoodies & Sweatshirts' },
-    { id: 'unisex_tees', label: 'Graphic Tees & Oversized Shirts' },
-    { id: 'unisex_denim', label: 'Denim Jeans & Cargo Pants' },
-    { id: 'unisex_slides_palms', label: 'Slides, Palms & Flats' },
-    { id: 'unisex_shoes_clogs', label: 'Crocs & Foam Clogs (Footwear)' },
-    { id: 'unisex_sneakers', label: 'Sneakers & Casual Shoes' },
-    { id: 'unisex_jewelry', label: 'Chains, Rings & Jewelry' },
-    { id: 'unisex_watches', label: 'Wristwatches & Timepieces' },
-    { id: 'unisex_sunglasses', label: 'Sunglasses & Eyewear' },
-    { id: 'unisex_caps_hats', label: 'Caps, Beanies & Hats' },
-    { id: 'unisex_bags', label: 'Crossbody Bags & Backpacks' },
-  ]
-};
-
 interface Props {
   product: any;
   onClose: () => void;
@@ -159,7 +104,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   const [editGender, setEditGender] = useState<'male' | 'female' | 'unisex'>(
     (product.genderTarget || product.gender_target || 'unisex').toLowerCase() as any
   );
-  const [editCategory, setEditCategory] = useState(product.category || product.subCategory || 'tops');
+  const [editCategory, setEditCategory] = useState(product.category || product.subCategory || 'clothing');
   const [editDescription, setEditDescription] = useState(product.description || '');
   const [editInStock, setEditInStock] = useState(product.is_published !== false && product.in_stock !== false);
   const [editFeatured, setEditFeatured] = useState(
@@ -185,41 +130,52 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
       .catch(() => {});
   }, []);
 
-  // Compute available category options based on active gender target
+  // Compute available category options based on active gender target — Single source of truth, NO duplicates
   const categoryOptions = useMemo(() => {
     const list: { id: string; label: string }[] = [];
     const seen = new Set<string>();
+    const targetGenderKey = editGender === 'male' ? 'men' : editGender === 'female' ? 'women' : 'unisex';
 
-    // 1. Add predefined publish categories for the active gender
-    const preset = DEFAULT_CATEGORIES_BY_GENDER[editGender] || DEFAULT_CATEGORIES_BY_GENDER.unisex;
-    preset.forEach(c => {
-      seen.add(c.id.toLowerCase());
-      list.push(c);
+    // 1. Add canonical INITIAL_CATEGORIES (strictly gender filtered)
+    INITIAL_CATEGORIES.forEach(c => {
+      if (editGender !== 'unisex' && c.gender && c.gender !== 'unisex' && c.gender !== targetGenderKey) {
+        return;
+      }
+      const id = c.slug || c.id;
+      const key = id.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        const deptTag = c.department ? ` (${c.department})` : '';
+        const cleanName = c.name.replace(/\s*\([^)]*\)$/, '');
+        list.push({ id, label: `${cleanName}${deptTag}` });
+      }
     });
 
     // 2. Add dynamic categories fetched from /api/admin/categories
     apiCategories.forEach(c => {
+      if (editGender !== 'unisex' && c.gender && c.gender !== 'unisex' && c.gender !== targetGenderKey) {
+        return;
+      }
       const id = c.slug || c.id;
       const key = id.toLowerCase();
       if (!seen.has(key)) {
         seen.add(key);
-        list.push({ id, label: `${c.name} (${c.department || 'general'})` });
+        const deptTag = c.department ? ` (${c.department})` : '';
+        const cleanName = c.name.replace(/\s*\([^)]*\)$/, '');
+        list.push({ id, label: `${cleanName}${deptTag}` });
       }
     });
 
-    // 3. Fallback INITIAL_CATEGORIES
-    INITIAL_CATEGORIES.forEach(c => {
-      const id = c.slug || c.id;
-      const key = id.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        list.push({ id, label: `${c.name} (${c.department})` });
-      }
-    });
-
-    // 4. If product currently has a category not in the list, keep it as an option
+    // 3. If product currently has a category not in the list, keep it as an option
     if (editCategory && !seen.has(editCategory.toLowerCase())) {
-      list.unshift({ id: editCategory, label: `${editCategory.toUpperCase()} (Current)` });
+      const match = INITIAL_CATEGORIES.find(
+        c => c.id.toLowerCase() === editCategory.toLowerCase() || c.slug.toLowerCase() === editCategory.toLowerCase()
+      );
+      if (match) {
+        list.unshift({ id: editCategory, label: `${match.name} (${match.department})` });
+      } else {
+        list.unshift({ id: editCategory, label: `${editCategory.toUpperCase()} (Current)` });
+      }
     }
 
     return list;
@@ -233,6 +189,126 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   const [showCustomColor, setShowCustomColor] = useState(false);
   const [customColorName, setCustomColorName] = useState('');
   const [customColorHex, setCustomColorHex] = useState('#2563eb');
+
+  // Variant Sizing & Stock Inventory State
+  const [variants, setVariants] = useState<VariantStockItem[]>(() => {
+    if (Array.isArray(product.variants) && product.variants.length > 0) {
+      return product.variants.map((v: any) => ({
+        id: v.id,
+        size: v.size || 'Standard',
+        color: v.color || 'Standard',
+        stock_quantity: Number(v.stock_quantity) || 0,
+      }));
+    } else if (product.sizeStock && typeof product.sizeStock === 'object') {
+      const varMap = product.sizeStock.variants || {};
+      const vList: VariantStockItem[] = [];
+
+      if (Object.keys(varMap).length > 0) {
+        Object.entries(varMap).forEach(([key, qty]: [string, any]) => {
+          const parts = key.split('_');
+          const col = parts.length > 1 ? parts[0] : 'Standard';
+          const sz = parts.length > 1 ? parts.slice(1).join('_') : parts[0];
+          vList.push({
+            size: sz,
+            color: col,
+            stock_quantity: Number(qty) || 0,
+          });
+        });
+      } else {
+        Object.entries(product.sizeStock).forEach(([sz, val]: [string, any]) => {
+          if (sz === 'variants') return;
+          const q = typeof val === 'object' ? Number(val?.quantity) : Number(val);
+          vList.push({
+            size: sz,
+            color: 'Standard',
+            stock_quantity: isNaN(q) ? 0 : q,
+          });
+        });
+      }
+
+      if (vList.length > 0) return vList;
+    }
+    
+    // Default size set if no variants exist
+    return [
+      { size: 'S', color: 'Standard', stock_quantity: 10 },
+      { size: 'M', color: 'Standard', stock_quantity: 10 },
+      { size: 'L', color: 'Standard', stock_quantity: 10 },
+      { size: 'XL', color: 'Standard', stock_quantity: 10 },
+    ];
+  });
+  const [singleStock, setSingleStock] = useState<number>(Number(product.stockQuantity ?? product.stock_quantity) || 10);
+  const [showAddCustomSize, setShowAddCustomSize] = useState(false);
+  const [newSizeInput, setNewSizeInput] = useState('');
+  const [newSizeStock, setNewSizeStock] = useState('10');
+
+  // Calculate total inventory live
+  const computedTotalStock = variants.length > 0
+    ? variants.reduce((acc, v) => acc + (Number(v.stock_quantity) || 0), 0)
+    : Number(singleStock) || 0;
+
+  const handleVariantStockChange = (index: number, newQty: number) => {
+    const updated = [...variants];
+    updated[index].stock_quantity = Math.max(0, newQty);
+    setVariants(updated);
+  };
+
+  const handleQuickAdd = (index: number, delta: number) => {
+    const updated = [...variants];
+    const cur = Number(updated[index].stock_quantity) || 0;
+    updated[index].stock_quantity = Math.max(0, cur + delta);
+    setVariants(updated);
+  };
+
+  const handleSetSoldOut = (index: number) => {
+    const updated = [...variants];
+    updated[index].stock_quantity = 0;
+    setVariants(updated);
+  };
+
+  const handleVariantSizeNameChange = (index: number, newSize: string) => {
+    const updated = [...variants];
+    updated[index].size = newSize;
+    setVariants(updated);
+  };
+
+  const handleAddCustomVariant = () => {
+    const trimmed = newSizeInput.trim();
+    if (!trimmed) return;
+    const qty = Math.max(0, parseInt(newSizeStock, 10) || 0);
+
+    setVariants([
+      ...variants,
+      {
+        size: trimmed,
+        color: variants[0]?.color || 'Standard',
+        stock_quantity: qty,
+      }
+    ]);
+    setNewSizeInput('');
+    setNewSizeStock('10');
+    setShowAddCustomSize(false);
+  };
+
+  const handleRemoveVariant = (indexToRemove: number) => {
+    setVariants(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleAddNewSizeVariant = () => {
+    const isShoes = editCategory.toLowerCase().includes('shoes') || editCategory.toLowerCase().includes('footwear') || editCategory.toLowerCase().includes('sneakers') || editCategory.toLowerCase().includes('slides') || editCategory.toLowerCase().includes('heels');
+    const defaultSizes = isShoes ? ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'] : ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    const existingSizes = new Set(variants.map(v => v.size.toUpperCase()));
+    const nextAvailable = defaultSizes.find(s => !existingSizes.has(s.toUpperCase())) || `Size-${variants.length + 1}`;
+    
+    setVariants([
+      ...variants,
+      {
+        size: nextAvailable,
+        color: variants[0]?.color || 'Standard',
+        stock_quantity: 10,
+      }
+    ]);
+  };
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -454,6 +530,12 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           isFeatured: editFeatured,
           colors: colorsPayload,
           images: cleanImgPayload,
+          variants: variants.map(v => ({
+            id: v.id,
+            size: v.size.trim(),
+            color: v.color || 'Standard',
+            stock_quantity: Math.max(0, Number(v.stock_quantity) || 0),
+          })),
         }),
       });
 
@@ -482,6 +564,14 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           colors: parseAndNormalizeColors(selectedColors),
           images: cleanImgPayload.map(i => i.url),
           imageUrl: cleanImgPayload[0]?.url || product.imageUrl,
+          variants: variants.map(v => ({
+            id: v.id,
+            size: v.size.trim(),
+            color: v.color || 'Standard',
+            stock_quantity: Math.max(0, Number(v.stock_quantity) || 0),
+          })),
+          stockQuantity: computedTotalStock,
+          stock_quantity: computedTotalStock,
         });
       }, 700);
     } catch (err: any) {
@@ -860,9 +950,10 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
                     type="button"
                     onClick={() => {
                       setEditGender(opt.value as any);
-                      const nextPresets = DEFAULT_CATEGORIES_BY_GENDER[opt.value as 'male' | 'female' | 'unisex'];
-                      if (nextPresets && nextPresets.length > 0) {
-                        setEditCategory(nextPresets[0].id);
+                      const targetKey = opt.value === 'male' ? 'men' : opt.value === 'female' ? 'women' : 'unisex';
+                      const nextPresets = INITIAL_CATEGORIES.filter(c => c.gender === targetKey || c.gender === 'unisex');
+                      if (nextPresets.length > 0) {
+                        setEditCategory(nextPresets[0].slug || nextPresets[0].id);
                       }
                     }}
                     className={`py-2.5 rounded-xl text-xs font-mono-luxury font-black uppercase tracking-wider transition-all cursor-pointer border ${
@@ -1009,6 +1100,216 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
                 );
               })}
             </div>
+          </div>
+
+          {/* SIZING & LIVE STOCK INVENTORY SECTION */}
+          <div className="space-y-3.5 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <label className="text-[11px] font-mono-luxury uppercase text-amber-700 dark:text-amber-400 font-bold tracking-wider flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5" />
+                  <span>Live Stock & Sizing Inventory</span>
+                </label>
+                <p className="text-[9px] text-neutral-500 dark:text-neutral-400 mt-0.5 font-mono-luxury">
+                  Quantities update live and deduct automatically when orders are placed.
+                </p>
+              </div>
+
+              {/* Real-time Inventory Counter Badge */}
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono-luxury font-bold uppercase border ${
+                  computedTotalStock === 0
+                    ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                    : computedTotalStock <= 3
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                }`}>
+                  {computedTotalStock === 0 ? '🔴 Sold Out' : computedTotalStock <= 3 ? `⚠️ Low: ${computedTotalStock} Units` : `🟢 ${computedTotalStock} Units in Stock`}
+                </span>
+              </div>
+            </div>
+
+            {variants.length > 0 ? (
+              <div className="space-y-2">
+                {variants.map((v, idx) => (
+                  <div
+                    key={v.id || idx}
+                    className="p-2.5 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={v.size}
+                        onChange={(e) => handleVariantSizeNameChange(idx, e.target.value)}
+                        title="Edit size label"
+                        className="h-7 w-14 px-1.5 text-center rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 font-bold text-xs text-amber-600 dark:text-amber-400 focus:outline-none focus:border-amber-500"
+                      />
+                      <div>
+                        <span className="font-bold text-neutral-900 dark:text-white block text-xs">
+                          {v.color && v.color !== 'Standard' ? `${v.color} · Size ${v.size}` : `Size ${v.size}`}
+                        </span>
+                        <span className="text-[9px] text-neutral-500 dark:text-neutral-400 font-mono-luxury">
+                          {v.stock_quantity === 0 ? 'Out of stock' : `${v.stock_quantity} available`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Increment / Decrement / Quick Chips / Delete */}
+                    <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(idx, -1)}
+                        disabled={v.stock_quantity <= 0}
+                        className="h-7 w-7 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 hover:border-amber-500 disabled:opacity-40 flex items-center justify-center text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
+                        title="Decrease by 1"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.stock_quantity}
+                        onChange={(e) => handleVariantStockChange(idx, Number(e.target.value) || 0)}
+                        className="h-7 w-14 text-center rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white font-bold text-xs focus:outline-none focus:border-amber-500"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(idx, 1)}
+                        className="h-7 w-7 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 hover:border-amber-500 flex items-center justify-center text-neutral-700 dark:text-neutral-300 transition-colors cursor-pointer"
+                        title="Increase by 1"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAdd(idx, 10)}
+                        className="h-7 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-mono-luxury font-bold uppercase cursor-pointer"
+                        title="Restock +10 units"
+                      >
+                        +10
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSetSoldOut(idx)}
+                        className="h-7 px-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[9px] font-mono-luxury font-bold uppercase cursor-pointer"
+                        title="Set to 0 (Sold out)"
+                      >
+                        Sold Out
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveVariant(idx)}
+                        className="h-7 w-7 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 hover:border-rose-500 text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
+                        title="Delete this size variant"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Custom Size Adder Form */}
+                {showAddCustomSize && (
+                  <div className="p-3 rounded-xl bg-white dark:bg-neutral-800 border border-amber-500/50 flex flex-col sm:flex-row items-center gap-2 animate-fadeIn shadow-xs">
+                    <div className="flex-1 w-full">
+                      <label className="text-[9px] text-neutral-500 dark:text-neutral-400 uppercase block mb-0.5 font-bold font-mono-luxury">
+                        Custom Size Name
+                      </label>
+                      <input
+                        type="text"
+                        value={newSizeInput}
+                        onChange={(e) => setNewSizeInput(e.target.value)}
+                        placeholder="e.g. 41.5, 3XL, Petite, Custom"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white font-bold focus:border-amber-500 focus:outline-none"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="w-full sm:w-24">
+                      <label className="text-[9px] text-neutral-500 dark:text-neutral-400 uppercase block mb-0.5 font-bold font-mono-luxury">
+                        Initial Stock
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newSizeStock}
+                        onChange={(e) => setNewSizeStock(e.target.value)}
+                        placeholder="10"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white font-bold focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 w-full sm:w-auto self-end mt-1 sm:mt-0">
+                      <button
+                        type="button"
+                        onClick={handleAddCustomVariant}
+                        disabled={!newSizeInput.trim()}
+                        className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase cursor-pointer disabled:opacity-40 transition-colors"
+                      >
+                        Add Size
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddCustomSize(false);
+                          setNewSizeInput('');
+                        }}
+                        className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:text-neutral-900 dark:hover:text-white cursor-pointer"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sizing Action Buttons */}
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleAddNewSizeVariant}
+                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 hover:border-amber-500 text-neutral-800 dark:text-neutral-200 text-xs font-mono-luxury font-bold uppercase transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5 text-amber-500" />
+                    <span>Add Standard Size</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomSize(!showAddCustomSize)}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-mono-luxury font-bold uppercase transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>{showAddCustomSize ? 'Cancel Custom' : 'Add Custom Size'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-neutral-900 dark:text-white block">One Size / Standard Stock</span>
+                  <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-mono-luxury">No size variations for this piece</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={singleStock}
+                    onChange={(e) => setSingleStock(Math.max(0, Number(e.target.value) || 0))}
+                    className="h-8 w-20 text-center rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white font-bold text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddNewSizeVariant()}
+                    className="px-3 py-1.5 rounded-lg bg-amber-400 text-black text-xs font-mono-luxury font-bold uppercase cursor-pointer"
+                  >
+                    + Split into Sizes
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description */}

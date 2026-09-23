@@ -444,35 +444,62 @@ export async function PATCH(
 
     // 2. Update stock quantities in product_variants
     if (Array.isArray(body.variants)) {
+      const { data: existingAll } = await supabase
+        .from('product_variants')
+        .select('id, size')
+        .eq('product_id', id);
+
+      const keptIds = new Set<string>();
+
       for (const v of body.variants) {
+        const sizeName = String(v.size || 'Standard').trim();
+        const stockQty = Math.max(0, Number(v.stock_quantity) || 0);
+
         if (v.id) {
+          keptIds.add(v.id);
           await supabase
             .from('product_variants')
-            .update({ stock_quantity: Math.max(0, Number(v.stock_quantity) || 0) })
+            .update({
+              size: sizeName,
+              stock_quantity: stockQty,
+            })
             .eq('id', v.id);
-        } else if (v.size) {
-          const { data: existing } = await supabase
-            .from('product_variants')
-            .select('id')
-            .eq('product_id', id)
-            .eq('size', v.size)
-            .maybeSingle();
-
-          if (existing) {
+        } else if (sizeName) {
+          const match = existingAll?.find(e => e.size.toLowerCase() === sizeName.toLowerCase() && !keptIds.has(e.id));
+          if (match) {
+            keptIds.add(match.id);
             await supabase
               .from('product_variants')
-              .update({ stock_quantity: Math.max(0, Number(v.stock_quantity) || 0) })
-              .eq('id', existing.id);
+              .update({
+                size: sizeName,
+                stock_quantity: stockQty,
+              })
+              .eq('id', match.id);
           } else {
-            await supabase
+            const { data: inserted } = await supabase
               .from('product_variants')
               .insert({
                 product_id: id,
-                size: v.size,
+                size: sizeName,
                 color: v.color || 'Standard',
-                stock_quantity: Math.max(0, Number(v.stock_quantity) || 0),
-              });
+                stock_quantity: stockQty,
+              })
+              .select('id')
+              .single();
+
+            if (inserted?.id) keptIds.add(inserted.id);
           }
+        }
+      }
+
+      // Delete removed variants
+      if (existingAll && existingAll.length > 0) {
+        const toDelete = existingAll.filter(e => !keptIds.has(e.id)).map(e => e.id);
+        if (toDelete.length > 0) {
+          await supabase
+            .from('product_variants')
+            .delete()
+            .in('id', toDelete);
         }
       }
     } else if (body.sizeStock && typeof body.sizeStock === 'object') {

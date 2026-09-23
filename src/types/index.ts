@@ -46,8 +46,9 @@ export interface BodyProfile {
   preferredFit?: 'slim' | 'regular' | 'oversized';
 }
 
-export type GarmentCategory = 'tops' | 'bottoms' | 'outerwear' | 'footwear' | 'accessories';
-export type ShopCategory = GarmentCategory | 'native' | 'all';
+export type DepartmentCategory = 'clothing' | 'native' | 'footwear' | 'bags' | 'accessories';
+export type GarmentCategory = DepartmentCategory | 'tops' | 'bottoms' | 'outerwear';
+export type ShopCategory = GarmentCategory | 'all';
 export type GarmentOriginType = 'handmade_designer' | 'ready_made_boutique';
 export type GenderTarget = 'male' | 'female' | 'unisex';
 
@@ -278,11 +279,15 @@ export function getVendorSpecialtyInfo(specialty: VendorSpecialty, isBoutique: b
 }
 
 export interface ActiveOutfit {
+  clothing?: Product;
+  native?: Product;
+  footwear?: Product;
+  bags?: Product;
+  accessories?: Product;
   tops?: Product;
   bottoms?: Product;
   outerwear?: Product;
-  footwear?: Product;
-  accessories?: Product;
+  [key: string]: Product | undefined;
 }
 
 export interface FitMatchResult {

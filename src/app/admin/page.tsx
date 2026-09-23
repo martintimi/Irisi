@@ -21,6 +21,8 @@ import LuxuryLoader from '@/components/common/LuxuryLoader';
 import { getConciergeConfig, saveConciergeConfig, generateWhatsAppUrl, ConciergeConfig } from '@/lib/config/concierge';
 import AdminCategoriesManager from '@/components/admin/AdminCategoriesManager';
 import AdminProductEditModal from '@/components/admin/AdminProductEditModal';
+import { getCategoryBySlug } from '@/lib/data/categories';
+import { matchesDepartment } from '@/lib/utils/categoryMatcher';
 import { supabase } from '@/lib/supabase/client';
 
 const adminEditorialSlides = [
@@ -239,7 +241,7 @@ export default function SuperAdminPage() {
   const fetchProductsList = useCallback(async () => {
     try {
       setIsLoadingProducts(true);
-      const res = await fetch('/api/products?limit=100');
+      const res = await fetch('/api/admin/products');
       const data = await res.json();
       if (res.ok && data.success) {
         setProducts(data.products || []);
@@ -685,18 +687,48 @@ export default function SuperAdminPage() {
     });
   }, [orders, orderSearch, orderStageFilter]);
 
-  // Filtered Products
+  // Category Counts per Department for Admin Tabs
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: products.length,
+      clothing: 0,
+      native: 0,
+      footwear: 0,
+      bags: 0,
+      accessories: 0,
+    };
+
+    products.forEach((p) => {
+      (['clothing', 'native', 'footwear', 'bags', 'accessories'] as const).forEach((dept) => {
+        if (matchesDepartment(p, dept)) {
+          counts[dept] = (counts[dept] || 0) + 1;
+        }
+      });
+    });
+
+    return counts;
+  }, [products]);
+
+  // Filtered Products with robust search and department matching
   const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const q = productSearch.toLowerCase().trim();
+    return products.filter((p) => {
+      const q = productSearch.toLowerCase().trim().replace(/[’']/g, '');
+      const pName = (p.name || '').toLowerCase().replace(/[’']/g, '');
+      const vName = (p.vendorName || p.vendor_name || p.vendorId || p.vendor_id || '').toLowerCase().replace(/[’']/g, '');
+      const pCat = (p.category || '').toLowerCase();
+      const pSub = (p.subCategory || p.subcategory || '').toLowerCase();
+      const pTags = Array.isArray(p.tags) ? p.tags.join(' ').toLowerCase() : '';
+
       const matchesSearch = !q ||
-        (p.name || '').toLowerCase().includes(q) ||
-        (p.vendorName || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q);
+        pName.includes(q) ||
+        vName.includes(q) ||
+        pCat.includes(q) ||
+        pSub.includes(q) ||
+        pTags.includes(q);
 
       let matchesCat = true;
       if (productCategoryFilter !== 'all') {
-        matchesCat = (p.category || '').toLowerCase() === productCategoryFilter.toLowerCase();
+        matchesCat = matchesDepartment(p, productCategoryFilter as any);
       }
 
       return matchesSearch && matchesCat;
@@ -737,16 +769,6 @@ export default function SuperAdminPage() {
       return matchesSearch && matchesFilter;
     });
   }, [orders, financeSearch, financeFilter]);
-
-  // Category product counters
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    products.forEach((p) => {
-      const cat = (p.category || 'other').toLowerCase();
-      counts[cat] = (counts[cat] || 0) + 1;
-    });
-    return counts;
-  }, [products]);
 
   const pendingCount = vendors.filter(v => v.approvalStatus === 'pending' || !v.isVerified).length;
   const approvedCount = vendors.filter(v => v.approvalStatus === 'approved' || v.isVerified).length;
@@ -2375,7 +2397,7 @@ export default function SuperAdminPage() {
               {/* Filters & Search */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl surface-card border border-[var(--border-subtle)]">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {(['all', 'native', 'streetwear', 'footwear', 'jewelry', 'outerwear', 'accessories'] as const).map((cat) => (
+                  {(['all', 'clothing', 'native', 'footwear', 'bags', 'accessories'] as const).map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setProductCategoryFilter(cat)}
@@ -2385,7 +2407,7 @@ export default function SuperAdminPage() {
                           : 'surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                       }`}
                     >
-                      {cat} {cat !== 'all' && categoryCounts[cat] ? `(${categoryCounts[cat]})` : ''}
+                      {cat} {cat !== 'all' && categoryCounts[cat] !== undefined ? `(${categoryCounts[cat]})` : ''}
                     </button>
                   ))}
                 </div>
@@ -2450,7 +2472,9 @@ export default function SuperAdminPage() {
 
                           <div>
                             <div className="flex items-center justify-between text-xs font-mono-luxury">
-                              <span className="text-[var(--gold-accent)] uppercase font-bold text-[10px]">{p.category || 'Fashion'}</span>
+                              <span className="text-[var(--gold-accent)] uppercase font-bold text-[10px]">
+                                {getCategoryBySlug(p.category || '')?.name || (p.category ? p.category.replace(/[-_]/g, ' ') : 'Fashion')}
+                              </span>
                               <strong className="text-[var(--text-primary)]">₦{Number(p.price || 0).toLocaleString()}</strong>
                             </div>
                             <h4

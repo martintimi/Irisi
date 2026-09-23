@@ -943,15 +943,15 @@ export default function EditProductModal({
                   <div className="space-y-1">
                     <label className="text-[10px] uppercase text-[var(--text-secondary)]">Department Category</label>
                     <select
-                      value={category}
+                      value={category === 'tops' || category === 'bottoms' || category === 'outerwear' ? 'clothing' : category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors text-xs font-sans"
                     >
-                      <option value="tops">Tops & Shirts</option>
-                      <option value="outerwear">Outerwear & Hoodies</option>
-                      <option value="bottoms">Bottoms & Trousers</option>
-                      <option value="footwear">Footwear & Boots</option>
-                      <option value="accessories">Jewelry & Accessories</option>
+                      <option value="clothing">Clothing (Apparel, Hoodies, Shirts, Pants)</option>
+                      <option value="native">Native & Cultural (Senators, Agbada, Kaftans)</option>
+                      <option value="footwear">Shoes & Footwear (Slides, Sneakers, Clogs)</option>
+                      <option value="bags">Bags & Luggage (Backpacks, Handbags, Crossbody)</option>
+                      <option value="accessories">Accessories & Jewelry (Watches, Glasses, Caps)</option>
                     </select>
                   </div>
 
@@ -969,7 +969,7 @@ export default function EditProductModal({
               </div>
 
               {/* 2. Colorways & Finishes */}
-              {category !== 'accessories' && (
+              {category !== 'accessories' && category !== 'bags' && (
                 <div className="space-y-3 pt-2 border-t border-[var(--border-subtle)]">
                   <div className="flex items-center justify-between">
                     <span className="text-xs uppercase font-bold text-[var(--text-primary)] flex items-center gap-1.5">

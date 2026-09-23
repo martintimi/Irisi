@@ -30,6 +30,16 @@ interface CategoryConfig {
 }
 
 const CATEGORY_MAP: Record<string, CategoryConfig> = {
+  clothing: {
+    title: 'CLOTHING & APPAREL',
+    subtitle: 'Hoodies, t-shirts, jeans, trousers, skirts, dresses & jackets',
+    filterFn: (p: any) => matchesCategoryFilter(p, 'clothing')
+  },
+  bags: {
+    title: 'BAGS & LUGGAGE',
+    subtitle: 'Backpacks, crossbody bags, handbags, totes & clutches',
+    filterFn: (p: any) => matchesCategoryFilter(p, 'bags')
+  },
   shirts: {
     title: 'SHIRTS & TOPS',
     subtitle: 'Button-downs, polo shirts & casual tops',
