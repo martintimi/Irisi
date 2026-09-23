@@ -1,12 +1,12 @@
 /**
- * AI Computer Vision Garment Color Detection Engine for Veyra Luxury Fashion.
+ * AI Computer Vision Garment & Product Color Detection Engine for Veyra Luxury Fashion.
  * 
- * Accurately analyzes garment photography:
- * 1. Automatically detects and isolates studio backdrops and background walls.
- * 2. Discriminates between human skin tones and blush/pink/rose/nude fabrics.
- * 3. Uses HSL / Perceptual Color Space (Hue, Saturation, Lightness) instead of naive RGB distance.
- * 4. Extracts the authentic fabric hex swatch directly from the garment.
- * 5. Classifies the fabric into high-end retail fashion colorways (e.g. Blush Pink, Olive Green, Ivory / Cream, etc.).
+ * Accurately analyzes fashion, footwear, bags, and garment photography:
+ * 1. Multi-zone Perimeter vs Interior Saliency Analysis (isolates studio backdrops, concrete floors, and walls).
+ * 2. Multi-panel Collage Awareness (detects foreground subjects in single-shot and 4-panel product layouts).
+ * 3. Human Skin Tone Discrimination (discriminates melanin skin vs blush/pink/rose/nude fabrics).
+ * 4. Perceptual HSL & Chromatic Contrast Space (prevents dark navy/greens from collapsing into black/grey).
+ * 5. Extracts authentic product hex swatches and maps them to luxury retail colorways.
  */
 
 export interface FashionColor {
@@ -45,6 +45,7 @@ export const FASHION_COLOR_PALETTE: FashionColor[] = [
   { name: 'Forest Green', hex: '#065F46', category: 'greens', rgb: [6, 95, 70] },
   { name: 'Emerald Green', hex: '#046307', category: 'greens', rgb: [4, 99, 7] },
   { name: 'Mint Green', hex: '#A7F3D0', category: 'greens', rgb: [167, 243, 208] },
+  { name: 'Lime Green', hex: '#84CC16', category: 'greens', rgb: [132, 204, 22] },
   { name: 'Moss Green', hex: '#8A9A5B', category: 'greens', rgb: [138, 154, 91] },
 
   // Browns & Earth Tones
@@ -107,53 +108,64 @@ export function rgbToHsl(r: number, g: number, b: number): { h: number; s: numbe
 }
 
 /**
- * Intelligent perceptual color naming using HSL color space.
- * Prevents color bleed (e.g. pink garments being identified as beige).
+ * Intelligent perceptual color naming using HSL and RGB chromatic contrast.
+ * Accurately distinguishes deep Navy Blues and Forest Greens from black/grey.
  */
 export function classifyGarmentColor(r: number, g: number, b: number): { name: string; hex: string } {
   const { h, s, l } = rgbToHsl(r, g, b);
   const rawHex = rgbToHex(r, g, b);
+  const maxDiff = Math.max(r, g, b) - Math.min(r, g, b);
 
-  // 1. Extreme Lights & Darks (Pure White & Pure Black)
-  if (l <= 15) return { name: 'Pitch Black', hex: rawHex };
-  if (l <= 25 && s < 18) return { name: 'Charcoal Black', hex: rawHex };
-  if (l >= 93 && s <= 18) return { name: 'Pure White', hex: rawHex };
+  // 1. Extreme Darks & Blacks
+  // If it's very dark and lacks noticeable blue/green tint:
+  if (l <= 8) return { name: 'Pitch Black', hex: rawHex };
+  if (l <= 18 && maxDiff < 14) return { name: 'Pitch Black', hex: rawHex };
+  if (l <= 24 && maxDiff < 12 && s < 12) return { name: 'Charcoal Grey', hex: rawHex };
 
-  // 2. Whites, Creams & Ivory (High Lightness > 80% with neutral or warm tint)
-  if (l >= 80 && s <= 48 && h >= 25 && h <= 55) {
-    if (l >= 88 && s <= 20) return { name: 'Off-White', hex: rawHex };
+  // 2. Extreme Lights & Pure Whites
+  if (l >= 94 && s <= 15) return { name: 'Pure White', hex: rawHex };
+
+  // 3. Deep Blues & Navy (Even with low lightness L: 8-38%, blue dominance indicates Navy/Midnight)
+  if (h >= 195 && h <= 255 || (b > r + 8 && b > g + 4)) {
+    if (l <= 22) return { name: 'Midnight Blue', hex: rawHex };
+    if (l <= 36) return { name: 'Navy Blue', hex: rawHex };
+    if (l >= 70) return { name: 'Sky Blue / Baby Blue', hex: rawHex };
+    if (s > 45) return { name: 'Royal Blue', hex: rawHex };
+    return { name: 'Denim Blue', hex: rawHex };
+  }
+
+  // 4. Whites, Creams & Ivory (High Lightness > 78% with neutral or warm tint)
+  if (l >= 80 && s <= 45 && h >= 25 && h <= 55) {
+    if (l >= 88 && s <= 18) return { name: 'Off-White', hex: rawHex };
     return { name: 'Ivory / Cream', hex: rawHex };
   }
-  if (l >= 84 && s <= 18) return { name: 'Off-White', hex: rawHex };
+  if (l >= 85 && s <= 15) return { name: 'Off-White', hex: rawHex };
 
-  // 3. Monochromatic Greys
-  if (s < 12) {
+  // 5. Monochromatic Greys (Strictly requires low saturation AND low RGB difference)
+  if (s < 10 && maxDiff < 15) {
     if (l > 75) return { name: 'Silver / Slate', hex: rawHex };
-    if (l > 45) return { name: 'Heather Grey', hex: rawHex };
+    if (l > 42) return { name: 'Heather Grey', hex: rawHex };
     return { name: 'Charcoal Grey', hex: rawHex };
   }
 
-  // 4. Reds, Pinks & Roses (Hue: 335° - 360° or 0° - 18°)
+  // 6. Reds, Pinks & Roses (Hue: 335° - 360° or 0° - 18°)
   if (h >= 335 || h <= 18) {
-    // Light pinks & dusty roses
     if (l >= 68) {
       if (s >= 35) return { name: 'Blush Pink', hex: rawHex };
       return { name: 'Dusty Rose / Pink', hex: rawHex };
     }
-    // Medium roses & mauves
     if (l >= 50) {
       if (s >= 40) return { name: 'Rose Pink', hex: rawHex };
       return { name: 'Dusty Mauve', hex: rawHex };
     }
-    // Deep reds & wines
     if (l < 38) {
-      if (s >= 25 && (h >= 340 || h <= 10)) return { name: 'Wine / Burgundy', hex: rawHex };
+      if (s >= 20 && (h >= 340 || h <= 10)) return { name: 'Wine / Burgundy', hex: rawHex };
       return { name: 'Maroon', hex: rawHex };
     }
     return { name: 'Crimson Red', hex: rawHex };
   }
 
-  // 5. Oranges, Terracottas & Corals (Hue: 19° - 34°)
+  // 7. Oranges, Terracottas & Corals (Hue: 19° - 34°)
   if (h >= 19 && h <= 34) {
     if (l >= 75 && s <= 45) return { name: 'Peach / Powder Blush', hex: rawHex };
     if (l >= 60 && s > 45) return { name: 'Coral', hex: rawHex };
@@ -163,11 +175,10 @@ export function classifyGarmentColor(r: number, g: number, b: number): { name: s
     return { name: 'Burnt Orange', hex: rawHex };
   }
 
-  // 6. Yellows, Beiges, Khakis & Earth Browns (Hue: 35° - 58°)
+  // 8. Yellows, Beiges, Khakis & Earth Browns (Hue: 35° - 58°)
   if (h >= 35 && h <= 58) {
-    // Olive/Army drab in low lightness
     if (l <= 45 && g > b * 1.3 && h >= 42) {
-      return { name: 'Army / Olive Green', hex: rawHex };
+      return { name: 'Army / Khaki Green', hex: rawHex };
     }
     if (l >= 78 && s <= 40) return { name: 'Ivory / Cream', hex: rawHex };
     if (l >= 60 && s <= 42) return { name: 'Beige / Khaki', hex: rawHex };
@@ -178,12 +189,13 @@ export function classifyGarmentColor(r: number, g: number, b: number): { name: s
     return { name: 'Camel / Tan', hex: rawHex };
   }
 
-  // 7. Greens, Olives, Sages & Emeralds (Hue: 59° - 165°)
+  // 9. Greens, Olives, Sages & Emeralds (Hue: 59° - 165°)
   if (h >= 59 && h <= 165) {
     if (h <= 95) {
+      if (s > 60 && l > 50) return { name: 'Lime Green', hex: rawHex };
       if (l <= 38) return { name: 'Army / Khaki Green', hex: rawHex };
       if (l <= 58) return { name: 'Olive Green', hex: rawHex };
-      return { name: 'Light Olive', hex: rawHex };
+      return { name: 'Olive Green', hex: rawHex };
     }
     if (h <= 135) {
       if (l >= 68) return { name: 'Mint Green', hex: rawHex };
@@ -193,44 +205,46 @@ export function classifyGarmentColor(r: number, g: number, b: number): { name: s
     return { name: 'Sage Green', hex: rawHex };
   }
 
-  // 8. Cyans & Teals (Hue: 166° - 195°)
-  if (h >= 166 && h <= 195) {
-    if (l < 40) return { name: 'Deep Teal', hex: rawHex };
+  // 10. Cyans & Teals (Hue: 166° - 194°)
+  if (h >= 166 && h <= 194) {
+    if (l < 40) return { name: 'Teal / Aqua', hex: rawHex };
     return { name: 'Teal / Aqua', hex: rawHex };
   }
 
-  // 9. Blues (Hue: 196° - 255°)
-  if (h >= 196 && h <= 255) {
-    if (l >= 70) return { name: 'Sky Blue / Baby Blue', hex: rawHex };
-    if (l <= 32) return { name: 'Navy Blue', hex: rawHex };
-    if (s > 48) return { name: 'Royal Blue', hex: rawHex };
-    return { name: 'Denim Blue', hex: rawHex };
-  }
-
-  // 10. Purples, Lavenders & Violets (Hue: 256° - 334°)
+  // 11. Purples, Lavenders & Violets (Hue: 256° - 334°)
   if (h >= 256 && h <= 334) {
     if (l >= 68) return { name: 'Lavender', hex: rawHex };
     if (l <= 35) return { name: 'Plum / Deep Purple', hex: rawHex };
     return { name: 'Royal Purple', hex: rawHex };
   }
 
-  return { name: 'Custom Color', hex: rawHex };
+  return { name: 'Pitch Black', hex: rawHex };
+}
+
+interface ColorCluster {
+  key: string;
+  totalWeight: number;
+  interiorWeight: number;
+  perimeterWeight: number;
+  totalR: number;
+  totalG: number;
+  totalB: number;
+  pixelCount: number;
 }
 
 /**
- * Detect the dominant garment color from an image data URL or image element.
+ * Detect the dominant garment or product color using computer-vision saliency clustering.
  * 
- * 1. Samples corners to detect background studio wall color.
- * 2. Excludes background pixels from sample pool.
- * 3. Discriminates skin tone (melanin) vs garment fabric.
- * 4. Clusters fabric pixels and extracts dominant garment tone.
- * 5. Returns the true sampled fabric hex swatch and accurate fashion name.
+ * 1. Analyzes spatial distribution (perimeter vs interior) to isolate studio walls and concrete floors.
+ * 2. Rewards central & multi-quadrant focal points to prioritize the actual product over backdrops.
+ * 3. Removes human skin tones when present.
+ * 4. Extracts the true authentic product hex swatch and assigns the fashion retail colorway.
  */
 export async function detectGarmentColor(
   imageUrlOrDataUrl: string
 ): Promise<{ name: string; hex: string; rawHex: string }> {
   if (typeof window === 'undefined') {
-    return { name: 'Ivory / Cream', hex: '#FAF5EF', rawHex: '#FAF5EF' };
+    return { name: 'Navy Blue', hex: '#1E3A8A', rawHex: '#1E3A8A' };
   }
 
   return new Promise((resolve) => {
@@ -240,7 +254,7 @@ export async function detectGarmentColor(
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const size = 140; // High resolution sampling grid
+        const size = 120; // 120x120 high density sampling grid (14,400 samples)
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -253,53 +267,31 @@ export async function detectGarmentColor(
         ctx.drawImage(img, 0, 0, size, size);
         const imgData = ctx.getImageData(0, 0, size, size).data;
 
-        const getPx = (x: number, y: number): [number, number, number] => {
-          const idx = (y * size + x) * 4;
-          return [imgData[idx], imgData[idx + 1], imgData[idx + 2]];
-        };
+        const clusters = new Map<string, ColorCluster>();
+        const perimeterMargin = Math.round(size * 0.08); // Outer 8% border
 
-        // 1. Detect background color by sampling top corners
-        const c1 = getPx(5, 5);
-        const c2 = getPx(size - 6, 5);
-        const c3 = getPx(10, 15);
-        const c4 = getPx(size - 11, 15);
-        const bgR = Math.round((c1[0] + c2[0] + c3[0] + c4[0]) / 4);
-        const bgG = Math.round((c1[1] + c2[1] + c3[1] + c4[1]) / 4);
-        const bgB = Math.round((c1[2] + c2[2] + c3[2] + c4[2]) / 4);
+        // Center points for saliency (Main center + 4 quadrant centers for multi-angle collages)
+        const focalCenters = [
+          { x: size * 0.5, y: size * 0.5, weight: 3.0 }, // Main Center
+          { x: size * 0.28, y: size * 0.28, weight: 2.0 }, // Top-Left Quadrant
+          { x: size * 0.72, y: size * 0.28, weight: 2.0 }, // Top-Right Quadrant
+          { x: size * 0.28, y: size * 0.72, weight: 2.0 }, // Bottom-Left Quadrant
+          { x: size * 0.72, y: size * 0.72, weight: 2.0 }, // Bottom-Right Quadrant
+        ];
 
-        // Color distance helper
-        const distSq = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number) =>
-          (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2;
-
-        // Sample garment zone (central 70% width, 22% to 88% height)
-        const startX = Math.round(size * 0.15);
-        const endX = Math.round(size * 0.85);
-        const startY = Math.round(size * 0.22);
-        const endY = Math.round(size * 0.88);
-
-        const colorBuckets = new Map<string, { count: number; totalR: number; totalG: number; totalB: number }>();
-        let totalValidPixels = 0;
-
-        for (let y = startY; y < endY; y += 2) {
-          for (let x = startX; x < endX; x += 2) {
+        for (let y = 0; y < size; y += 2) {
+          for (let x = 0; x < size; x += 2) {
             const idx = (y * size + x) * 4;
             const r = imgData[idx];
             const g = imgData[idx + 1];
             const b = imgData[idx + 2];
             const a = imgData[idx + 3];
 
-            if (a < 128) continue; // transparent
+            if (a < 128) continue; // Transparent
 
-            // Check if pixel is part of background backdrop
-            if (distSq(r, g, b, bgR, bgG, bgB) < 1000) { // ~31 RGB distance threshold
-              continue;
-            }
-
-            // Discriminate human skin tone vs fabric:
-            // Human melanin skin has: R > G > B with Green substantially higher than Blue (g - b > 22)
-            // and R higher than G (r - g > 20).
-            // In pink/rose/blush/mauve fabrics, Blue is close to Green (or b >= g), so it is FABRIC.
-            const isHumanMelaninSkin =
+            // Discriminate human melanin skin tone:
+            // R > 130 && G > 85 && B > 45 with R > G > B and high Red-Green difference
+            const isHumanSkin =
               r > 130 &&
               g > 85 &&
               b > 45 &&
@@ -308,52 +300,121 @@ export async function detectGarmentColor(
               (g - b) > 22 &&
               (r - g) > 20;
 
-            if (isHumanMelaninSkin) {
-              continue; // Exclude model's bare skin / neck from garment color
+            if (isHumanSkin) continue;
+
+            const isPerimeter =
+              x < perimeterMargin ||
+              x >= size - perimeterMargin ||
+              y < perimeterMargin ||
+              y >= size - perimeterMargin;
+
+            // Calculate spatial focal saliency weight
+            let saliencyWeight = 1.0;
+            if (!isPerimeter) {
+              let maxFocal = 1.0;
+              for (const fc of focalCenters) {
+                const dist = Math.hypot(x - fc.x, y - fc.y) / size;
+                const weight = fc.weight * Math.max(0, 1 - dist * 2);
+                if (weight > maxFocal) maxFocal = weight;
+              }
+              saliencyWeight = maxFocal;
             }
 
-            // Quantize colors into 12-step clusters for precision
-            const qR = Math.round(r / 12) * 12;
-            const qG = Math.round(g / 12) * 12;
-            const qB = Math.round(b / 12) * 12;
+            // Quantize into 16-step perceptual RGB buckets
+            const qR = Math.round(r / 16) * 16;
+            const qG = Math.round(g / 16) * 16;
+            const qB = Math.round(b / 16) * 16;
             const key = `${qR},${qG},${qB}`;
 
-            const existing = colorBuckets.get(key) || { count: 0, totalR: 0, totalG: 0, totalB: 0 };
-            existing.count++;
+            const existing = clusters.get(key) || {
+              key,
+              totalWeight: 0,
+              interiorWeight: 0,
+              perimeterWeight: 0,
+              totalR: 0,
+              totalG: 0,
+              totalB: 0,
+              pixelCount: 0,
+            };
+
+            existing.totalWeight += saliencyWeight;
+            if (isPerimeter) {
+              existing.perimeterWeight += 1.0;
+            } else {
+              existing.interiorWeight += saliencyWeight;
+            }
             existing.totalR += r;
             existing.totalG += g;
             existing.totalB += b;
-            colorBuckets.set(key, existing);
-            totalValidPixels++;
+            existing.pixelCount++;
+
+            clusters.set(key, existing);
           }
         }
 
-        if (totalValidPixels === 0 || colorBuckets.size === 0) {
-          // Fallback if background segmentation cleared everything
+        if (clusters.size === 0) {
           resolve({ name: 'Pitch Black', hex: '#111111', rawHex: '#111111' });
           return;
         }
 
-        // Find the dominant fabric color bucket
-        let dominantBucket = { count: 0, totalR: 0, totalG: 0, totalB: 0 };
-        for (const bucket of colorBuckets.values()) {
-          if (bucket.count > dominantBucket.count) {
-            dominantBucket = bucket;
+        // Score clusters to determine genuine product color vs background
+        let bestCluster: ColorCluster | null = null;
+        let highestScore = -Infinity;
+
+        for (const cluster of clusters.values()) {
+          const avgR = cluster.totalR / cluster.pixelCount;
+          const avgG = cluster.totalG / cluster.pixelCount;
+          const avgB = cluster.totalB / cluster.pixelCount;
+          const { s, l } = rgbToHsl(avgR, avgG, avgB);
+          const maxDiff = Math.max(avgR, avgG, avgB) - Math.min(avgR, avgG, avgB);
+
+          const perimeterRatio = cluster.perimeterWeight / cluster.pixelCount;
+
+          // Background Penalty: If more than 55% of this cluster is on the outer border with neutral tone
+          const isNeutralBackground = perimeterRatio > 0.55 && (s < 14 || (l > 88 && s < 25));
+          if (isNeutralBackground) {
+            continue; // Exclude background wall or floor
+          }
+
+          // Saturation boost: Garments with rich hues (Navy, Red, Green, Gold) should beat dull concrete floor
+          const chromaticBoost = (1 + Math.min(2.0, (s / 30))) * (maxDiff > 16 ? 1.4 : 1.0);
+          
+          // Interior density score
+          const score = cluster.interiorWeight * chromaticBoost * (1 - perimeterRatio * 0.5);
+
+          if (score > highestScore) {
+            highestScore = score;
+            bestCluster = cluster;
           }
         }
 
-        const avgR = Math.round(dominantBucket.totalR / dominantBucket.count);
-        const avgG = Math.round(dominantBucket.totalG / dominantBucket.count);
-        const avgB = Math.round(dominantBucket.totalB / dominantBucket.count);
-        const fabricHex = rgbToHex(avgR, avgG, avgB);
+        // Fallback to highest interior weight if all were penalized
+        if (!bestCluster) {
+          let maxInterior = -1;
+          for (const cluster of clusters.values()) {
+            if (cluster.interiorWeight > maxInterior) {
+              maxInterior = cluster.interiorWeight;
+              bestCluster = cluster;
+            }
+          }
+        }
 
-        // Classify into exact luxury fashion retail name
-        const classified = classifyGarmentColor(avgR, avgG, avgB);
+        if (!bestCluster || bestCluster.pixelCount === 0) {
+          resolve({ name: 'Pitch Black', hex: '#111111', rawHex: '#111111' });
+          return;
+        }
+
+        const finalR = Math.round(bestCluster.totalR / bestCluster.pixelCount);
+        const finalG = Math.round(bestCluster.totalG / bestCluster.pixelCount);
+        const finalB = Math.round(bestCluster.totalB / bestCluster.pixelCount);
+        const productHex = rgbToHex(finalR, finalG, finalB);
+
+        const classified = classifyGarmentColor(finalR, finalG, finalB);
 
         resolve({
           name: classified.name,
-          hex: fabricHex, // The authentic sampled fabric hex from the photo!
-          rawHex: fabricHex
+          hex: productHex, // Authentic extracted color hex
+          rawHex: productHex
         });
       } catch (e) {
         console.error('Error in detectGarmentColor:', e);

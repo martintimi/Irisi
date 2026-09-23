@@ -388,12 +388,21 @@ export async function PATCH(
       updateData.colors = norm.map((c) => c.name);
     }
 
-    // Handle multiple gallery images
+    // Handle multiple gallery images & color-tagged images
     if (Array.isArray(body.images)) {
-      const cleanImages = body.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0);
-      updateData.image_url = cleanImages[0] || '';
+      const cleanImgItems = body.images.map((img: any) => {
+        if (typeof img === 'string') return { url: img.trim(), colorName: undefined, label: undefined };
+        return {
+          url: (img?.url || '').trim(),
+          colorName: (img?.colorName || '').trim() || undefined,
+          label: (img?.label || '').trim() || undefined,
+        };
+      }).filter((img: any) => img.url.length > 0);
 
-      // Get current tags to preserve video:, ships_from:, etc.
+      const cleanUrls = cleanImgItems.map((i: any) => i.url);
+      updateData.image_url = cleanUrls[0] || '';
+
+      // Get current tags to preserve video:, ships_from:, subcat:, etc.
       const { data: currentProduct } = await supabase
         .from('products')
         .select('tags')
@@ -402,12 +411,16 @@ export async function PATCH(
 
       const existingTags: string[] = Array.isArray(currentProduct?.tags) ? currentProduct.tags : [];
       const preservedTags = existingTags.filter(
-        (t: string) => typeof t === 'string' && !t.startsWith('img:')
+        (t: string) => typeof t === 'string' && !t.startsWith('img:') && !t.startsWith('color_img:')
       );
 
       // Add gallery images as 'img:<url>' tags for index > 0
-      const newImgTags = cleanImages.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
-      updateData.tags = [...preservedTags, ...newImgTags];
+      const newImgTags = cleanUrls.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
+      const newColorImgTags = cleanImgItems
+        .filter((item: any) => item.colorName && item.colorName !== 'none' && item.colorName !== 'General / All Colors')
+        .map((item: any) => `color_img:${item.colorName}:${item.url}`);
+
+      updateData.tags = [...preservedTags, ...newImgTags, ...newColorImgTags];
     } else if (body.tags !== undefined && Array.isArray(body.tags)) {
       updateData.tags = body.tags;
     }

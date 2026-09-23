@@ -56,8 +56,17 @@ export async function PATCH(request: Request) {
     }
 
     if (Array.isArray(images)) {
-      const cleanImages = images.filter((img: any) => typeof img === 'string' && img.trim().length > 0);
-      updates.image_url = cleanImages[0] || '';
+      const cleanImgItems = images.map((img: any) => {
+        if (typeof img === 'string') return { url: img.trim(), colorName: undefined, label: undefined };
+        return {
+          url: (img?.url || '').trim(),
+          colorName: (img?.colorName || '').trim() || undefined,
+          label: (img?.label || '').trim() || undefined,
+        };
+      }).filter((img: any) => img.url.length > 0);
+
+      const cleanUrls = cleanImgItems.map((i: any) => i.url);
+      updates.image_url = cleanUrls[0] || '';
 
       const { data: existing } = await supabase
         .from('products')
@@ -67,11 +76,15 @@ export async function PATCH(request: Request) {
 
       const existingTags: string[] = Array.isArray(existing?.tags) ? existing.tags : [];
       const preservedTags = existingTags.filter(
-        (t: string) => typeof t === 'string' && !t.startsWith('img:')
+        (t: string) => typeof t === 'string' && !t.startsWith('img:') && !t.startsWith('color_img:')
       );
 
-      const newImgTags = cleanImages.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
-      targetTags = [...preservedTags, ...newImgTags];
+      const newImgTags = cleanUrls.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
+      const newColorImgTags = cleanImgItems
+        .filter((item: any) => item.colorName && item.colorName !== 'none' && item.colorName !== 'General / All Colors')
+        .map((item: any) => `color_img:${item.colorName}:${item.url}`);
+
+      targetTags = [...preservedTags, ...newImgTags, ...newColorImgTags];
     } else if (imageUrl !== undefined || image_url !== undefined) {
       updates.image_url = imageUrl || image_url;
     }

@@ -3,11 +3,81 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Save, ExternalLink, Star, Check, AlertCircle, Layers, CheckCircle2, Camera, Trash2, Plus, Loader2, Palette } from 'lucide-react';
+import { X, Save, ExternalLink, Star, Check, AlertCircle, Layers, CheckCircle2, Camera, Trash2, Plus, Loader2, Palette, Sparkles, RefreshCw } from 'lucide-react';
 import { INITIAL_CATEGORIES } from '@/lib/data/categories';
 import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
+import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
 
 const ADMIN_COLOR_PALETTE = STANDARD_FASHION_COLORS;
+
+export interface EditProductImageItem {
+  id: string;
+  url: string;
+  label?: string; // 'Front' | 'Back' | 'Side' | 'Detail' | 'Model'
+  colorName?: string;
+  colorHex?: string;
+  isCover?: boolean;
+  showColorTag?: boolean;
+  isDetectingColor?: boolean;
+  isAiDetected?: boolean;
+  isUploading?: boolean;
+}
+
+function initializeImageItems(p: any): EditProductImageItem[] {
+  if (!p) return [];
+  const rawList: Array<string | any> = Array.isArray(p.images) && p.images.length > 0
+    ? p.images
+    : Array.isArray(p.gallery) && p.gallery.length > 0
+    ? p.gallery
+    : [p.imageUrl || p.image_url].filter(Boolean);
+
+  const colorMap = new Map<string, { colorName: string; colorHex: string }>();
+
+  // Extract from tags
+  const rawTags: string[] = Array.isArray(p.tags) ? p.tags : [];
+  rawTags.forEach(t => {
+    if (typeof t === 'string' && t.startsWith('color_img:')) {
+      const parts = t.slice('color_img:'.length).split(':');
+      if (parts.length >= 2) {
+        const cName = parts[0].trim();
+        const url = parts.slice(1).join(':').trim();
+        if (url && cName) {
+          const hex = resolveColorNameToHex(cName) || '#111111';
+          colorMap.set(url.toLowerCase(), { colorName: cName, colorHex: hex });
+        }
+      }
+    }
+  });
+
+  // Extract from colors array
+  const normColors = parseAndNormalizeColors(p.colors);
+  normColors.forEach(c => {
+    if (c.imageUrl && typeof c.imageUrl === 'string') {
+      colorMap.set(c.imageUrl.toLowerCase(), { colorName: c.name, colorHex: c.hex || resolveColorNameToHex(c.name) });
+    }
+  });
+
+  return rawList.map((item, idx) => {
+    const url = typeof item === 'string' ? item : item?.url || '';
+    const assigned = colorMap.get(url.toLowerCase());
+    const itemColorName = (typeof item === 'object' && item?.colorName) ? item.colorName : assigned?.colorName;
+    const itemColorHex = (typeof item === 'object' && item?.colorHex) ? item.colorHex : (assigned?.colorHex || (itemColorName ? resolveColorNameToHex(itemColorName) : '#111111'));
+    const itemLabel = (typeof item === 'object' && item?.label) ? item.label : (idx === 0 ? 'Front' : (idx === 1 ? 'Back' : undefined));
+
+    return {
+      id: (typeof item === 'object' && item?.id) ? item.id : `img-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+      url,
+      label: itemLabel,
+      colorName: itemColorName,
+      colorHex: itemColorHex,
+      isCover: idx === 0,
+      showColorTag: !!itemColorName,
+      isDetectingColor: false,
+      isAiDetected: false,
+      isUploading: false,
+    };
+  }).filter(img => Boolean(img.url));
+}
 
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
@@ -97,12 +167,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
   );
 
   // Gallery Images State
-  const rawImages: string[] = Array.isArray(product.images) && product.images.length > 0
-    ? product.images
-    : Array.isArray(product.gallery) && product.gallery.length > 0
-    ? product.gallery
-    : [product.imageUrl || product.image_url].filter(Boolean);
-  const [editImages, setEditImages] = useState<string[]>(rawImages);
+  const [uploadedImages, setUploadedImages] = useState<EditProductImageItem[]>(() => initializeImageItems(product));
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Live Categories state
@@ -224,7 +289,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     setUploadingImage(true);
     setSaveError('');
     try {
-      const uploadedUrls: string[] = [];
+      const newItems: EditProductImageItem[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const formData = new FormData();
@@ -235,12 +300,22 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
         });
         const data = await res.json();
         if (res.ok && data.url) {
-          uploadedUrls.push(data.url);
+          const isFirst = uploadedImages.length === 0 && newItems.length === 0;
+          newItems.push({
+            id: `img-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+            url: data.url,
+            label: isFirst ? 'Front' : undefined,
+            isCover: isFirst,
+            colorHex: '#111111',
+            showColorTag: false,
+            isDetectingColor: false,
+            isAiDetected: false,
+          });
         } else {
           throw new Error(data.error || 'Failed to upload photo');
         }
       }
-      setEditImages(prev => [...prev, ...uploadedUrls]);
+      setUploadedImages(prev => [...prev, ...newItems]);
     } catch (err: any) {
       setSaveError('Upload error: ' + err.message);
     } finally {
@@ -249,17 +324,101 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     }
   };
 
-  const handleRemoveImage = (indexToRemove: number) => {
-    setEditImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  const handleRemoveImage = (id: string) => {
+    setUploadedImages((prev) => {
+      const filtered = prev.filter((img) => img.id !== id);
+      if (filtered.length > 0 && !filtered.some((img) => img.isCover)) {
+        filtered[0].isCover = true;
+      }
+      return filtered;
+    });
   };
 
-  const handleSetCover = (indexToCover: number) => {
-    setEditImages(prev => {
-      if (indexToCover === 0) return prev;
-      const target = prev[indexToCover];
-      const rest = prev.filter((_, idx) => idx !== indexToCover);
-      return [target, ...rest];
+  const handleSetCover = (id: string) => {
+    setUploadedImages((prev) => {
+      const target = prev.find((img) => img.id === id);
+      if (!target) return prev;
+      const rest = prev.filter((img) => img.id !== id);
+      return [{ ...target, isCover: true }, ...rest.map((img) => ({ ...img, isCover: false }))];
     });
+  };
+
+  const handleUpdateImageLabel = (id: string, preset: string) => {
+    setUploadedImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, label: img.label === preset ? undefined : preset } : img))
+    );
+  };
+
+  const handleToggleColorTag = (id: string) => {
+    setUploadedImages((prev) =>
+      prev.map((img) =>
+        img.id === id
+          ? {
+              ...img,
+              showColorTag: !img.showColorTag,
+              colorName: img.showColorTag ? undefined : (img.colorName || ''),
+            }
+          : img
+      )
+    );
+  };
+
+  const handleAssignColor = (id: string, colorName: string, customHex?: string) => {
+    const matched = FASHION_COLOR_PALETTE.find(
+      (c) => c.name.toLowerCase() === colorName.toLowerCase()
+    );
+    const existingImg = uploadedImages.find((i) => i.id === id);
+    const resolvedHex = customHex || (matched ? matched.hex : (resolveColorNameToHex(colorName) || existingImg?.colorHex || '#111111'));
+
+    setUploadedImages((prev) =>
+      prev.map((img) =>
+        img.id === id ? { ...img, colorName, colorHex: resolvedHex } : img
+      )
+    );
+
+    if (colorName && colorName.trim() && colorName !== 'none' && colorName !== 'General / All Colors') {
+      setSelectedColors((prev) => {
+        if (!prev.some((c) => c.toLowerCase() === colorName.trim().toLowerCase())) {
+          return [...prev, colorName.trim()];
+        }
+        return prev;
+      });
+    }
+  };
+
+  const handleUpdateColorHex = (id: string, hex: string) => {
+    setUploadedImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, colorHex: hex } : img))
+    );
+    const img = uploadedImages.find((i) => i.id === id);
+    if (img && img.colorName) {
+      setSelectedColors((prev) =>
+        prev.map((c) => (c.toLowerCase() === img.colorName?.toLowerCase() ? c : c))
+      );
+    }
+  };
+
+  const handleAiDetectForImage = async (id: string) => {
+    const img = uploadedImages.find((i) => i.id === id);
+    if (!img) return;
+
+    setUploadedImages((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, isDetectingColor: true, isAiDetected: false } : item))
+    );
+
+    try {
+      const detected = await detectGarmentColor(img.url);
+      handleAssignColor(id, detected.name, detected.hex);
+      setUploadedImages((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isAiDetected: true } : item))
+      );
+    } catch (e) {
+      console.error('AI color detection error:', e);
+    } finally {
+      setUploadedImages((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, isDetectingColor: false } : item))
+      );
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -271,6 +430,14 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     setSaveSuccess(false);
 
     try {
+      const cleanImgPayload = uploadedImages.map(img => ({
+        url: img.url,
+        colorName: (img.colorName && img.colorName.trim() && img.colorName !== 'none' && img.colorName !== 'General / All Colors') ? img.colorName.trim() : undefined,
+        colorHex: img.colorHex,
+        label: img.label,
+        isCover: img.isCover,
+      }));
+
       const colorsPayload = selectedColors;
 
       const res = await fetch('/api/admin/products', {
@@ -286,7 +453,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           isPublished: editInStock,
           isFeatured: editFeatured,
           colors: colorsPayload,
-          images: editImages,
+          images: cleanImgPayload,
         }),
       });
 
@@ -313,8 +480,8 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           in_stock: editInStock,
           is_featured: editFeatured,
           colors: parseAndNormalizeColors(selectedColors),
-          images: editImages,
-          imageUrl: editImages[0] || product.imageUrl,
+          images: cleanImgPayload.map(i => i.url),
+          imageUrl: cleanImgPayload[0]?.url || product.imageUrl,
         });
       }, 700);
     } catch (err: any) {
@@ -384,87 +551,186 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           )}
 
           {/* Multi-Photo Gallery Manager */}
-          <div className="space-y-2.5 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className="space-y-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-mono-luxury uppercase text-amber-700 dark:text-amber-400 font-bold tracking-wider flex items-center gap-1.5">
                 <Camera className="h-3.5 w-3.5" />
-                <span>Product Photos & Gallery ({editImages.length})</span>
+                <span>Product Photos & Gallery ({uploadedImages.length})</span>
               </label>
               <span className="text-[10px] font-mono-luxury text-neutral-500 dark:text-neutral-400">
-                {editImages.length === 0 ? 'No photos' : `${editImages.length} photo${editImages.length > 1 ? 's' : ''} (First is Cover)`}
+                {uploadedImages.length === 0 ? 'No photos' : `${uploadedImages.length} photo${uploadedImages.length > 1 ? 's' : ''} (First is Cover)`}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {editImages.map((imgUrl, idx) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {uploadedImages.map((img, idx) => (
                 <div
-                  key={`${imgUrl}-${idx}`}
-                  className={`group relative aspect-square rounded-2xl overflow-hidden border transition-all ${
-                    idx === 0
-                      ? 'border-amber-500 ring-2 ring-amber-400/40 shadow-md'
-                      : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:border-neutral-400'
-                  }`}
+                  key={img.id}
+                  className="relative rounded-2xl overflow-hidden bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 flex flex-col group/card shadow-sm"
                 >
-                  <Image
-                    src={imgUrl}
-                    alt={`Product photo ${idx + 1}`}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
+                  <div className="relative h-36 w-full bg-black/40 overflow-hidden">
+                    <Image
+                      src={img.url}
+                      alt={`Product view ${idx + 1}`}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
 
-                  {/* Index / Cover badge */}
-                  <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1">
-                    {idx === 0 ? (
-                      <span className="px-2 py-0.5 rounded-md bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider shadow-sm flex items-center gap-0.5">
-                        <Star className="h-2.5 w-2.5 fill-black" />
-                        <span>Cover</span>
-                      </span>
-                    ) : (
-                      <span className="px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-white text-[9px] font-bold">
-                        #{idx + 1}
-                      </span>
+                    {/* Syncing to CDN Overlay */}
+                    {img.isUploading && (
+                      <div className="absolute inset-0 z-20 bg-black/75 flex flex-col items-center justify-center gap-1 backdrop-blur-[2px]">
+                        <RefreshCw className="h-4 w-4 text-amber-400 animate-spin" />
+                        <span className="text-[8px] font-mono-luxury font-bold text-white uppercase tracking-wider">
+                          Syncing...
+                        </span>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Action buttons (Delete & Make Cover) */}
-                  <div className="absolute top-1.5 right-1.5 z-10 flex items-center gap-1">
-                    {idx > 0 && (
+                    {/* Cover Photo Badge / Set Cover Button */}
+                    {idx === 0 ? (
+                      <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-amber-400 text-black text-[9px] font-mono-luxury font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-md">
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        <span>Main Cover</span>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => handleSetCover(idx)}
-                        className="p-1.5 rounded-lg bg-black/75 hover:bg-amber-400 text-white hover:text-black transition-colors shadow-sm cursor-pointer"
-                        title="Make this photo the primary cover"
+                        onClick={() => handleSetCover(img.id)}
+                        className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-full bg-black/80 hover:bg-black text-white text-[9px] font-mono-luxury font-bold uppercase tracking-wider border border-white/20 transition-all cursor-pointer shadow-md"
                       >
-                        <Star className="h-3 w-3" />
+                        Set Cover
                       </button>
                     )}
+
+                    {/* Delete Photo Button */}
                     <button
                       type="button"
-                      onClick={() => handleRemoveImage(idx)}
-                      className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-colors shadow-sm cursor-pointer"
-                      title="Delete this photo"
+                      onClick={() => handleRemoveImage(img.id)}
+                      className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/80 text-rose-400 hover:text-rose-300 border border-rose-500/30 cursor-pointer shadow-lg active:scale-90 transition-transform"
+                      title="Remove photo"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
 
-                  {/* Bottom hover bar to set cover */}
-                  {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleSetCover(idx)}
-                      className="absolute inset-x-0 bottom-0 py-1 bg-black/80 text-[9px] text-amber-200 text-center font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      Set as Cover
-                    </button>
-                  )}
+                  {/* Photo View Label & Optional Color Tag */}
+                  <div className="p-2.5 bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-mono-luxury uppercase text-neutral-500 dark:text-neutral-400 font-bold">
+                        View {idx + 1} {idx === 0 ? '(Cover)' : ''}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleColorTag(img.id)}
+                        className="text-[9px] font-mono-luxury font-bold text-neutral-600 dark:text-neutral-300 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Palette className="h-2.5 w-2.5" />
+                        <span>{img.showColorTag || img.colorName ? 'Color Tagged' : '+ Color Tag'}</span>
+                      </button>
+                    </div>
+
+                    {/* Quick View Presets (Front, Back, Side, Detail, Model) */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {['Front', 'Back', 'Side', 'Detail', 'Model'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => handleUpdateImageLabel(img.id, preset)}
+                          className={`px-2 py-0.5 rounded text-[9px] font-mono-luxury font-bold transition-all cursor-pointer ${
+                            img.label === preset
+                              ? 'bg-amber-400 text-black shadow-sm'
+                              : 'bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white'
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Optional Color Tagging */}
+                    {(img.showColorTag || img.colorName) && (
+                      <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 space-y-2 animate-fadeIn">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-mono-luxury uppercase text-amber-600 dark:text-amber-400 font-bold">
+                            Colorway
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleAiDetectForImage(img.id)}
+                            disabled={img.isDetectingColor}
+                            className="text-[9px] font-mono-luxury font-bold text-amber-600 dark:text-amber-400 hover:text-amber-500 flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20"
+                          >
+                            {img.isDetectingColor ? (
+                              <>
+                                <Sparkles className="h-2.5 w-2.5 animate-spin" />
+                                <span>Detecting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-2.5 w-2.5" />
+                                <span>AI Detect</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* AI Detection Success Feedback Badge */}
+                        {img.isAiDetected && img.colorName && (
+                          <div className="flex items-center gap-1 text-[8px] font-mono-luxury font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded animate-fadeIn">
+                            <Sparkles className="h-2.5 w-2.5 text-emerald-500 shrink-0" />
+                            <span>AI Detected: {img.colorName}</span>
+                          </div>
+                        )}
+
+                        {/* Clean Color Picker & Name Row */}
+                        <div className="flex items-center gap-1.5">
+                          <label
+                            className="relative flex-shrink-0 h-6 w-6 rounded-md border border-neutral-300 dark:border-neutral-600 shadow-inner cursor-pointer overflow-hidden transition-transform active:scale-90"
+                            style={{ backgroundColor: img.colorHex || '#111111' }}
+                            title="Tap to adjust color shade"
+                          >
+                            <input
+                              type="color"
+                              value={img.colorHex || '#111111'}
+                              onChange={(e) => handleUpdateColorHex(img.id, e.target.value)}
+                              className="opacity-0 absolute inset-0 cursor-pointer w-full h-full"
+                            />
+                          </label>
+
+                          <input
+                            type="text"
+                            list="fashion-colors-list-edit-admin"
+                            placeholder="e.g. Black, Navy Blue, Wine"
+                            value={img.colorName || ''}
+                            onChange={(e) => handleAssignColor(img.id, e.target.value)}
+                            className="flex-1 min-w-0 px-2 py-1 rounded bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-[10px] font-mono-luxury font-bold text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500"
+                          />
+
+                          {img.colorName && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleAssignColor(img.id, '');
+                                handleToggleColorTag(img.id);
+                              }}
+                              className="p-1 rounded text-neutral-400 hover:text-rose-400 text-xs cursor-pointer"
+                              title="Remove color tag"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
 
               {/* Upload New Photo(s) Box */}
               <label
-                className={`aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-3 text-center transition-all cursor-pointer ${
+                className={`h-36 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-3 text-center transition-all cursor-pointer ${
                   uploadingImage
                     ? 'border-amber-500 bg-amber-500/5 cursor-wait'
                     : 'border-neutral-300 dark:border-neutral-700 hover:border-amber-500 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-750'
@@ -498,8 +764,15 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
                 )}
               </label>
             </div>
+
+            <datalist id="fashion-colors-list-edit-admin">
+              {FASHION_COLOR_PALETTE.map((c) => (
+                <option key={c.name} value={c.name} />
+              ))}
+            </datalist>
+
             <p className="text-[9px] text-neutral-500 dark:text-neutral-400 italic">
-              Click the red trash icon on any unwanted photo to remove it. Click the star icon to set as primary storefront cover.
+              Click the red trash icon on any unwanted photo to remove it. Select angle presets (Front, Back, Side), set cover, or tag colors with AI Detect.
             </p>
           </div>
 
@@ -507,7 +780,7 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
           <div className="flex items-center gap-4 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800">
             <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-neutral-200 dark:bg-black shrink-0 border border-neutral-300 dark:border-neutral-700">
               <Image
-                src={editImages[0] || product.imageUrl || product.image_url || '/images/no-product.svg'}
+                src={uploadedImages[0]?.url || product.imageUrl || product.image_url || '/images/no-product.svg'}
                 alt={product.name}
                 fill
                 unoptimized
