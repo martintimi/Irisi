@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GarmentCategory, GenderTarget, getVendorSpecialty, VendorSpecialty } from '@/types';
+import { GarmentCategory, GenderTarget, getVendorSpecialty, VendorSpecialty, isBoutiqueVendor } from '@/types';
 import {
   UploadCloud, Sparkles, Plus, Trash2, Check,
   Layers, ChevronDown, CheckCircle2, ArrowRight,
@@ -145,11 +145,14 @@ export default function BatchProductUploadView({
     }
   }, [errorMessage]);
 
+  const isBoutique = isBoutiqueVendor(vendorProfile);
+
   // Filter Categories by Active Drop Mode
   const availableCategories = ALL_CATEGORY_OPTIONS.filter(c => {
-    if (dropMode === 'jewelry') return c.group === 'jewelry';
+    if (isBoutique && (c.group === 'native' || c.generalCat === 'native')) return false;
+    if (dropMode === 'jewelry') return c.group === 'jewelry' || c.group === 'accessories' || c.group === 'bags';
     if (dropMode === 'footwear') return c.group === 'footwear';
-    if (dropMode === 'apparel') return c.group === 'apparel';
+    if (dropMode === 'apparel') return c.group === 'apparel' || (!isBoutique && c.group === 'native');
     return true;
   });
 

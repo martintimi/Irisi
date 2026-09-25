@@ -113,6 +113,12 @@ export default function PublishGarmentPage() {
 
   const vendorSpecialty: VendorSpecialty = getVendorSpecialty(vendorProfile);
 
+  const isBoutique = isBoutiqueVendor(vendorProfile);
+
+  const initialMaleList = useMemo(() => {
+    return isBoutique ? MALE_CATEGORIES.filter(c => c.group !== 'native' && c.generalCat !== 'native') : MALE_CATEGORIES;
+  }, [isBoutique]);
+
   // Verification & Profile Status State
   const [profileStatus, setProfileStatus] = useState<{
     isProfileSaved: boolean;
@@ -144,17 +150,17 @@ export default function PublishGarmentPage() {
   // Core Form State
   const [name, setName] = useState('');
   const [subCategory, setSubCategory] = useState(
-    vendorSpecialty === 'caps' ? 'men_caps_fila' :
+    vendorSpecialty === 'caps' ? 'men_caps_hats' :
     vendorSpecialty === 'jewelry' ? 'men_jewelry_chains' :
-    vendorSpecialty === 'accessories' ? 'men_bags_wallets' :
+    vendorSpecialty === 'accessories' ? 'men_bags_backpacks' :
     vendorSpecialty === 'footwear' ? 'men_slides_palms' :
-    vendorSpecialty === 'native_tailoring' ? 'senator_kaftan' :
-    MALE_CATEGORIES[0].id
+    (vendorSpecialty === 'native_tailoring' && !isBoutique) ? 'senator_kaftan' :
+    (initialMaleList[0]?.id || 'streetwear_hoodie')
   );
   const [category, setCategory] = useState<GarmentCategory>(
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' ? 'accessories' :
     vendorSpecialty === 'footwear' ? 'footwear' :
-    MALE_CATEGORIES[0].generalCat
+    (initialMaleList[0]?.generalCat || 'clothing')
   );
   const [rawPrice, setRawPrice] = useState<string>('');
   const [weightKg, setWeightKg] = useState<string>('');
@@ -324,10 +330,11 @@ export default function PublishGarmentPage() {
 
   // Update categories when genderTarget or catFilterTab changes
   useEffect(() => {
-    const list = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
+    const rawList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
+    const list = isBoutique ? rawList.filter(c => c.group !== 'native' && c.generalCat !== 'native') : rawList;
     const allowed = list.filter(c => {
       if (catFilterTab === 'all') return true;
-      if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'native';
+      if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'clothing' || (!isBoutique && c.group === 'native');
       if (catFilterTab === 'footwear') return c.group === 'footwear';
       if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
       return c.group === catFilterTab;
@@ -336,7 +343,7 @@ export default function PublishGarmentPage() {
     if (allowed.length > 0 && !allowed.some(c => c.id === subCategory)) {
       handleCategorySelect(allowed[0].id, allowed[0].generalCat);
     }
-  }, [genderTarget, catFilterTab]);
+  }, [genderTarget, catFilterTab, isBoutique]);
 
   const currentSizeList = useMemo(() => {
     const base = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
@@ -995,14 +1002,23 @@ export default function PublishGarmentPage() {
     setErrorMessage('');
   };
 
-  const currentCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
-  const filteredCategoryList = currentCategoryList.filter(c => {
-    if (catFilterTab === 'all') return true;
-    if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'native';
-    if (catFilterTab === 'footwear') return c.group === 'footwear';
-    if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
-    return c.group === catFilterTab;
-  });
+  const rawCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
+  const currentCategoryList = useMemo(() => {
+    if (isBoutique) {
+      return rawCategoryList.filter(c => c.group !== 'native' && c.generalCat !== 'native');
+    }
+    return rawCategoryList;
+  }, [rawCategoryList, isBoutique]);
+
+  const filteredCategoryList = useMemo(() => {
+    return currentCategoryList.filter(c => {
+      if (catFilterTab === 'all') return true;
+      if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'clothing' || (!isBoutique && c.group === 'native');
+      if (catFilterTab === 'footwear') return c.group === 'footwear';
+      if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
+      return c.group === catFilterTab;
+    });
+  }, [currentCategoryList, catFilterTab, isBoutique]);
   const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled);
 
   const totalStockCount = Object.values(sizeStock)
@@ -1791,7 +1807,7 @@ export default function PublishGarmentPage() {
               <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
                 {[
                   { id: 'all', label: 'All Categories', icon: Layers, allowed: true },
-                  { id: 'apparel', label: 'Apparel & Sets', icon: Shirt, allowed: true },
+                  { id: 'apparel', label: isBoutique ? 'Apparel & Streetwear' : 'Apparel & Native Sets', icon: Shirt, allowed: true },
                   { id: 'footwear', label: 'Footwear & Slides', icon: Footprints, allowed: true },
                   { id: 'accessories', label: 'Caps, Bags & Jewelry', icon: Sparkles, allowed: true },
                 ].filter(t => t.allowed).map((tab) => {

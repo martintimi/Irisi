@@ -410,9 +410,15 @@ export async function PATCH(
         .maybeSingle();
 
       const existingTags: string[] = Array.isArray(currentProduct?.tags) ? currentProduct.tags : [];
-      const preservedTags = existingTags.filter(
+      let preservedTags = existingTags.filter(
         (t: string) => typeof t === 'string' && !t.startsWith('img:') && !t.startsWith('color_img:')
       );
+
+      const subcatToSave = body.subcategory || body.subCategory;
+      if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
+        preservedTags = preservedTags.filter((t: string) => typeof t === 'string' && !t.startsWith('subcat:'));
+        preservedTags.push(`subcat:${subcatToSave.trim()}`);
+      }
 
       // Add gallery images as 'img:<url>' tags for index > 0
       const newImgTags = cleanUrls.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
@@ -423,6 +429,20 @@ export async function PATCH(
       updateData.tags = [...preservedTags, ...newImgTags, ...newColorImgTags];
     } else if (body.tags !== undefined && Array.isArray(body.tags)) {
       updateData.tags = body.tags;
+    } else if (body.subcategory !== undefined || body.subCategory !== undefined) {
+      const subcatToSave = body.subcategory || body.subCategory;
+      if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
+        const { data: currentProduct } = await supabase
+          .from('products')
+          .select('tags')
+          .eq('id', id)
+          .maybeSingle();
+
+        const existingTags: string[] = Array.isArray(currentProduct?.tags) ? currentProduct.tags : [];
+        const updatedTags = existingTags.filter((t: string) => typeof t === 'string' && !t.startsWith('subcat:'));
+        updatedTags.push(`subcat:${subcatToSave.trim()}`);
+        updateData.tags = updatedTags;
+      }
     }
 
     if (body.imageUrl !== undefined || body.image_url !== undefined) {

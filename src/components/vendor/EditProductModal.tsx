@@ -8,8 +8,116 @@ import {
   UploadCloud, Camera, Star, Check, Palette
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useStore } from '@/lib/store/useStore';
+import { isBoutiqueVendor } from '@/types';
 import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
+
+export const APPAREL_CATEGORIES = [
+  { id: 'hoodies', label: 'Hoodies & Sweatshirts' },
+  { id: 'tshirts', label: 'T-Shirts & Graphic Tees' },
+  { id: 'polos', label: 'Luxury Polos & Casual Shirts' },
+  { id: 'jackets', label: 'Jackets & Outerwear' },
+  { id: 'jeans', label: 'Jeans & Denim' },
+  { id: 'cargo', label: 'Cargo Pants & Trousers' },
+  { id: 'joggers', label: 'Joggers & Sweatpants' },
+  { id: 'shorts', label: 'Shorts & Casual Sets' },
+  { id: 'dresses', label: 'Dresses & Evening Gowns' },
+  { id: 'tops', label: 'Tops, Corsets & Blouses' },
+  { id: 'skirts', label: 'Skirts & Mini Skirts' },
+  { id: 'two-piece', label: 'Two-Piece Co-ord Sets' },
+  { id: 'underwears', label: 'Underwear & Loungewear' },
+];
+
+export const FOOTWEAR_CATEGORIES = [
+  { id: 'slides', label: 'Slides, Palms & Slippers' },
+  { id: 'sneakers', label: 'Sneakers & Casual Shoes' },
+  { id: 'clogs', label: 'Crocs & Foam Clogs' },
+  { id: 'heels', label: 'Heels, Pumps & Mules' },
+];
+
+export const BAGS_CATEGORIES = [
+  { id: 'backpacks', label: 'Backpacks & Travel Bags' },
+  { id: 'crossbody', label: 'Crossbody & Chest Bags' },
+  { id: 'handbags', label: 'Handbags & Totes' },
+  { id: 'clutches', label: 'Clutches & Evening Bags' },
+];
+
+export const ACCESSORY_CATEGORIES = [
+  { id: 'chains', label: 'Cuban Chains, Rings & Jewelry' },
+  { id: 'watches', label: 'Luxury Wristwatches' },
+  { id: 'sunglasses', label: 'Sunglasses & Eyewear' },
+  { id: 'caps', label: 'Caps, Hats & Beanies' },
+];
+
+export const NATIVE_CATEGORIES = [
+  { id: 'senator', label: 'Senator & Kaftan Sets' },
+  { id: 'agbada', label: 'Grand Agbada 3-Piece' },
+  { id: 'jalabiya', label: 'Jalabiya & Tunics' },
+  { id: 'boubou', label: 'Silk Boubou & Kaftans' },
+  { id: 'ankara', label: 'Lace & Ankara Tailored Sets' },
+  { id: 'fila', label: 'Aso-Oke Fila & Traditional Caps' },
+];
+
+export function normalizeCategorySlug(rawCat?: string, rawSubcat?: string): string {
+  const c = String(rawSubcat || rawCat || '').toLowerCase().trim();
+  if (!c) return 'hoodies';
+
+  // Footwear
+  if (c.includes('slide') || c.includes('palm') || c.includes('slipper')) return 'slides';
+  if (c.includes('clog') || c.includes('croc')) return 'clogs';
+  if (c.includes('heel') || c.includes('pump') || c.includes('mule')) return 'heels';
+  if (c.includes('sneaker') || c.includes('shoe') || c.includes('loafer') || c.includes('trainer')) return 'sneakers';
+  if (c === 'footwear') return 'sneakers';
+
+  // Bags
+  if (c.includes('backpack') || c.includes('travel')) return 'backpacks';
+  if (c.includes('crossbody') || c.includes('chest')) return 'crossbody';
+  if (c.includes('handbag') || c.includes('tote')) return 'handbags';
+  if (c.includes('clutch')) return 'clutches';
+  if (c === 'bags') return 'backpacks';
+
+  // Accessories
+  if (c.includes('chain') || c.includes('ring') || c.includes('jewelry') || c.includes('jewellery') || c.includes('pendant')) return 'chains';
+  if (c.includes('watch') || c.includes('timepiece')) return 'watches';
+  if (c.includes('glass') || c.includes('sunglass') || c.includes('eyewear') || c.includes('shade')) return 'sunglasses';
+  if (c.includes('cap') || c.includes('hat') || c.includes('beanie')) return 'caps';
+  if (c === 'accessories') return 'chains';
+
+  // Native
+  if (c.includes('senator') || c.includes('kaftan')) return 'senator';
+  if (c.includes('agbada')) return 'agbada';
+  if (c.includes('jalabiya') || c.includes('tunic')) return 'jalabiya';
+  if (c.includes('boubou') || c.includes('bubu') || c.includes('abaya')) return 'boubou';
+  if (c.includes('ankara') || c.includes('lace')) return 'ankara';
+  if (c.includes('fila')) return 'fila';
+  if (c === 'native') return 'senator';
+
+  // Apparel
+  if (c.includes('hoodie') || c.includes('sweatshirt')) return 'hoodies';
+  if (c.includes('tshirt') || c.includes('tee')) return 'tshirts';
+  if (c.includes('polo') || c.includes('shirt')) return 'polos';
+  if (c.includes('jacket') || c.includes('coat') || c.includes('windbreaker') || c.includes('blazer') || c.includes('suit')) return 'jackets';
+  if (c.includes('cargo')) return 'cargo';
+  if (c.includes('jogger') || c.includes('sweatpant')) return 'joggers';
+  if (c.includes('jean') || c.includes('denim')) return 'jeans';
+  if (c.includes('short')) return 'shorts';
+  if (c.includes('dress') || c.includes('gown')) return 'dresses';
+  if (c.includes('corset') || c.includes('top') || c.includes('blouse')) return 'tops';
+  if (c.includes('skirt')) return 'skirts';
+  if (c.includes('two_piece') || c.includes('two-piece') || c.includes('coord') || c.includes('co-ord')) return 'two-piece';
+  if (c.includes('underw') || c.includes('loungew')) return 'underwears';
+
+  return c || 'hoodies';
+}
+
+export function getDepartmentForSlug(slug: string): string {
+  if (['slides', 'sneakers', 'clogs', 'heels'].includes(slug)) return 'footwear';
+  if (['backpacks', 'crossbody', 'handbags', 'clutches'].includes(slug)) return 'bags';
+  if (['chains', 'watches', 'sunglasses', 'caps'].includes(slug)) return 'accessories';
+  if (['senator', 'agbada', 'jalabiya', 'boubou', 'ankara', 'fila'].includes(slug)) return 'native';
+  return 'clothing';
+}
 
 export interface EditProductImageItem {
   id: string;
@@ -102,6 +210,9 @@ export default function EditProductModal({
   onProductUpdated,
   onProductDeleted,
 }: EditProductModalProps) {
+  const { vendorProfile } = useStore();
+  const isBoutique = isBoutiqueVendor(vendorProfile) || isBoutiqueVendor(product?.vendor_type || product?.vendorType);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -112,7 +223,7 @@ export default function EditProductModal({
   // Editable fields
   const [name, setName] = useState('');
   const [price, setPrice] = useState<number | string>('');
-  const [category, setCategory] = useState('tops');
+  const [category, setCategory] = useState('hoodies');
   const [genderTarget, setGenderTarget] = useState('unisex');
   const [description, setDescription] = useState('');
   const [uploadedImages, setUploadedImages] = useState<EditProductImageItem[]>([]);
@@ -166,7 +277,7 @@ export default function EditProductModal({
 
     setName(product.name || '');
     setPrice(product.price || '');
-    setCategory(product.category || 'tops');
+    setCategory(normalizeCategorySlug(product.category, product.subcategory || product.subCategory));
     setGenderTarget(product.genderTarget || product.gender_target || 'unisex');
     setDescription(product.description || '');
 
@@ -191,7 +302,7 @@ export default function EditProductModal({
 
         setName(p.name || '');
         setPrice(p.price || '');
-        setCategory(p.category || 'tops');
+        setCategory(normalizeCategorySlug(p.category, p.subcategory || p.subCategory));
         setGenderTarget(p.genderTarget || p.gender_target || 'unisex');
         setDescription(p.description || '');
 
@@ -585,10 +696,14 @@ try {
         isCover: img.isCover,
       }));
 
+      const generalDept = getDepartmentForSlug(category);
       const payload: any = {
         name: name.trim(),
         price: Number(price) || 0,
-        category,
+        category: generalDept,
+        subcategory: category,
+        genderTarget,
+        gender_target: genderTarget,
         description: description.trim(),
         images: cleanImgPayload,
         imageUrl: cleanImgPayload[0]?.url || undefined,
@@ -632,6 +747,9 @@ try {
           name: payload.name,
           price: payload.price,
           category: payload.category,
+          subcategory: payload.subcategory,
+          genderTarget: payload.genderTarget,
+          gender_target: payload.gender_target,
           description: payload.description,
           images: cleanImgPayload.map(i => i.url),
           imageUrl: cleanImgPayload[0]?.url || product.imageUrl,
@@ -1027,17 +1145,62 @@ try {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase text-[var(--text-secondary)]">Department Category</label>
+                    <label className="text-[10px] uppercase text-[var(--text-secondary)] font-bold">Category & Subcategory</label>
                     <select
-                      value={category === 'tops' || category === 'bottoms' || category === 'outerwear' ? 'clothing' : category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors text-xs font-sans"
+                      value={category}
+                      onChange={(e) => {
+                        const newCat = e.target.value;
+                        setCategory(newCat);
+                        const newDept = getDepartmentForSlug(newCat);
+                        if (newDept === 'footwear' && !variants.some(v => ['38','39','40','41','42','43','44','45','46','47','48'].includes(v.size))) {
+                          setVariants([
+                            { size: '39', color: 'Standard', stock_quantity: 5 },
+                            { size: '40', color: 'Standard', stock_quantity: 10 },
+                            { size: '41', color: 'Standard', stock_quantity: 10 },
+                            { size: '42', color: 'Standard', stock_quantity: 10 },
+                            { size: '43', color: 'Standard', stock_quantity: 10 },
+                            { size: '44', color: 'Standard', stock_quantity: 5 },
+                          ]);
+                        } else if ((newDept === 'accessories' || newDept === 'bags') && !variants.some(v => v.size === 'One Size')) {
+                          setVariants([{ size: 'One Size', color: 'Standard', stock_quantity: 20 }]);
+                        } else if (newDept === 'clothing' && !variants.some(v => ['S', 'M', 'L', 'XL', 'XXL'].includes(v.size))) {
+                          setVariants([
+                            { size: 'S', color: 'Standard', stock_quantity: 10 },
+                            { size: 'M', color: 'Standard', stock_quantity: 20 },
+                            { size: 'L', color: 'Standard', stock_quantity: 20 },
+                            { size: 'XL', color: 'Standard', stock_quantity: 10 },
+                          ]);
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors text-xs font-sans font-bold cursor-pointer"
                     >
-                      <option value="clothing">Clothing (Apparel, Hoodies, Shirts, Pants)</option>
-                      <option value="native">Native & Cultural (Senators, Agbada, Kaftans)</option>
-                      <option value="footwear">Shoes & Footwear (Slides, Sneakers, Clogs)</option>
-                      <option value="bags">Bags & Luggage (Backpacks, Handbags, Crossbody)</option>
-                      <option value="accessories">Accessories & Jewelry (Watches, Glasses, Caps)</option>
+                      <optgroup label="Apparel & Streetwear">
+                        {APPAREL_CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Shoes & Footwear">
+                        {FOOTWEAR_CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Bags & Luggage">
+                        {BAGS_CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Accessories & Jewelry">
+                        {ACCESSORY_CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      {!isBoutique && (
+                        <optgroup label="Native & Cultural Tailoring">
+                          {NATIVE_CATEGORIES.map((c) => (
+                            <option key={c.id} value={c.id}>{c.label}</option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
 

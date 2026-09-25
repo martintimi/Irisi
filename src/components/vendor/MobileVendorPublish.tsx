@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { GarmentCategory, GenderTarget, VendorSpecialty, getVendorSpecialty } from '@/types';
+import { GarmentCategory, GenderTarget, VendorSpecialty, getVendorSpecialty, isBoutiqueVendor } from '@/types';
 import {
   UploadCloud, Sparkles, Plus, Trash2,
   Tag, ArrowRight, X, Palette,
@@ -116,6 +116,11 @@ export default function MobileVendorPublish({
   onSwitchToBatch
 }: MobileVendorPublishProps) {
   const vendorSpecialty: VendorSpecialty = getVendorSpecialty(vendorProfile);
+  const isBoutique = isBoutiqueVendor(vendorProfile);
+
+  const initialMaleList = useMemo(() => {
+    return isBoutique ? MALE_CATEGORIES.filter(c => c.group !== 'native' && c.generalCat !== 'native') : MALE_CATEGORIES;
+  }, [isBoutique]);
 
   const [genderTarget, setGenderTarget] = useState<GenderTarget>('male');
   const [catFilterTab, setCatFilterTab] = useState<'all' | 'apparel' | 'footwear' | 'accessories'>(
@@ -125,17 +130,17 @@ export default function MobileVendorPublish({
   );
   const [name, setName] = useState('');
   const [subCategory, setSubCategory] = useState(
-    vendorSpecialty === 'caps' ? 'men_caps_fila' :
+    vendorSpecialty === 'caps' ? 'men_caps_hats' :
     vendorSpecialty === 'jewelry' ? 'men_jewelry_chains' :
-    vendorSpecialty === 'accessories' ? 'men_bags_wallets' :
+    vendorSpecialty === 'accessories' ? 'men_bags_backpacks' :
     vendorSpecialty === 'footwear' ? 'men_slides_palms' :
-    vendorSpecialty === 'native_tailoring' ? 'senator_kaftan' :
-    MALE_CATEGORIES[0].id
+    (vendorSpecialty === 'native_tailoring' && !isBoutique) ? 'senator_kaftan' :
+    (initialMaleList[0]?.id || 'streetwear_hoodie')
   );
   const [category, setCategory] = useState<GarmentCategory>(
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' ? 'accessories' :
     vendorSpecialty === 'footwear' ? 'footwear' :
-    MALE_CATEGORIES[0].generalCat
+    (initialMaleList[0]?.generalCat || 'clothing')
   );
   const [rawPrice, setRawPrice] = useState<string>('');
   
@@ -252,11 +257,16 @@ export default function MobileVendorPublish({
     }
   }, [errorMessage]);
 
-  const currentCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
+  const rawCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
 
-  const filteredCategoryList = useMemo(() => {
-    return currentCategoryList;
-  }, [currentCategoryList]);
+  const currentCategoryList = useMemo(() => {
+    if (isBoutique) {
+      return rawCategoryList.filter(c => c.group !== 'native' && c.generalCat !== 'native');
+    }
+    return rawCategoryList;
+  }, [rawCategoryList, isBoutique]);
+
+  const filteredCategoryList = currentCategoryList;
 
   const [smartDetectedCat, setSmartDetectedCat] = useState<string | null>(null);
 
@@ -1129,7 +1139,10 @@ export default function MobileVendorPublish({
               onClick={() => {
                 setGenderTarget(gt);
                 const list = gt === 'male' ? MALE_CATEGORIES : gt === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
-                handleCategorySelect(list[0].id, list[0].generalCat);
+                const filtered = isBoutique ? list.filter(c => c.group !== 'native' && c.generalCat !== 'native') : list;
+                if (filtered.length > 0) {
+                  handleCategorySelect(filtered[0].id, filtered[0].generalCat);
+                }
               }}
               className={`pb-2.5 px-4 text-xs font-mono-luxury uppercase font-bold tracking-wider transition-all cursor-pointer ${
                 genderTarget === gt
@@ -1649,9 +1662,9 @@ export default function MobileVendorPublish({
             )}
 
             {/* Apparel & Streetwear */}
-            {filteredCategoryList.some(c => c.group === 'apparel') && (
+            {filteredCategoryList.some(c => c.group === 'clothing' || c.group === 'apparel') && (
               <optgroup label="Apparel & Streetwear">
-                {filteredCategoryList.filter(c => c.group === 'apparel').map((cat) => (
+                {filteredCategoryList.filter(c => c.group === 'clothing' || c.group === 'apparel').map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.label}
                   </option>
