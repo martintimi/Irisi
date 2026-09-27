@@ -12,7 +12,6 @@ import Link from 'next/link';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import MobileProductSlider from '@/components/shop/MobileProductSlider';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
-import { products as fallbackProducts } from '@/lib/data/products';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
 
 import {
@@ -336,10 +335,7 @@ export default function DedicatedCategoryPage() {
 
   // Filter products strictly for this category
   const categoryProducts = useMemo(() => {
-    let list = Array.isArray(allProducts) && allProducts.length > 0 ? allProducts : [];
-    if (list.length === 0 && Array.isArray(fallbackProducts)) {
-      list = fallbackProducts;
-    }
+    const list = Array.isArray(allProducts) ? allProducts : [];
     return list.filter(config.filterFn);
   }, [allProducts, config]);
 

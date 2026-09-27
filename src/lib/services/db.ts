@@ -1,7 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
 import { Product, VendorProfile, Order, NotificationItem } from '@/types';
-import { products as fallbackProducts } from '@/lib/data/products';
-import { vendors as fallbackVendors } from '@/lib/data/vendors';
 
 // 1. Fetch Products
 export async function getProducts(): Promise<Product[]> {
@@ -12,7 +10,7 @@ export async function getProducts(): Promise<Product[]> {
       .eq('is_published', true);
 
     if (error || !data || data.length === 0) {
-      return fallbackProducts;
+      return [];
     }
 
     return data.map((item: any) => ({
@@ -37,8 +35,8 @@ export async function getProducts(): Promise<Product[]> {
       layerZIndex: 1,
     }));
   } catch (err) {
-    console.error('Supabase fetch error, using fallback:', err);
-    return fallbackProducts;
+    console.error('Supabase fetch error:', err);
+    return [];
   }
 }
 
@@ -47,7 +45,7 @@ export async function getVendors(): Promise<any[]> {
   try {
     const { data, error } = await supabase.from('vendors').select('*');
     if (error || !data || data.length === 0) {
-      return fallbackVendors;
+      return [];
     }
     return data.map((v: any) => ({
       id: v.id,
@@ -67,7 +65,7 @@ export async function getVendors(): Promise<any[]> {
       featuredProducts: [],
     }));
   } catch {
-    return fallbackVendors;
+    return [];
   }
 }
 

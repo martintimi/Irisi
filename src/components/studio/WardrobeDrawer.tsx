@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import { GarmentCategory, GarmentOriginType } from '@/types';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
-import { products as initialProducts } from '@/lib/data/products';
 import { Sparkles, Check, Plus, Scissors, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 
@@ -30,7 +29,7 @@ export default function WardrobeDrawer() {
     fetchProductsFromDb();
   }, [fetchProductsFromDb]);
 
-  const catalog = (allProducts && allProducts.length > 0) ? allProducts : initialProducts;
+  const catalog = allProducts || [];
 
   const categories: { id: GarmentCategory | 'all'; stepNum: string; label: string }[] = [
     { id: 'tops', stepNum: 'Step 1', label: selectedGender === 'female' ? 'Ankara / Tops' : 'Senators / Tops' },

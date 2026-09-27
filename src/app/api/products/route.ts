@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
-import { products as fallbackCatalog } from '@/lib/data/products';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 const NIGERIAN_STATES = [
@@ -94,23 +93,11 @@ export async function GET(request: Request) {
     const { data: vendorsList } = vendorsResult;
 
     if (error || !products) {
-      console.warn('Supabase query restricted or failed (e.g. egress quota):', error?.message);
-      let list = [...fallbackCatalog];
-      if (gender && gender !== 'all') {
-        list = list.filter(p => p.genderTarget === gender || p.genderTarget === 'unisex');
-      }
-      if (category && category !== 'all') {
-        list = list.filter(p => p.category === category || (p as any).subCategory === category);
-      }
-      if (origin && origin !== 'all') {
-        list = list.filter(p => p.garmentOriginType === origin);
-      }
+      console.warn('Supabase products query failed:', error?.message);
       return NextResponse.json({
         success: true,
-        products: list.slice(0, limit),
-        count: list.length,
-        fromFallback: true,
-        notice: 'Serving verified cache while database quota refills'
+        products: [],
+        count: 0,
       }, {
         headers: {
           'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=30',

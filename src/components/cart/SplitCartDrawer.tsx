@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store/useStore';
-import { vendors } from '@/lib/data/vendors';
 import { X, Trash2, Plus, Minus, Check, Sparkles, Truck, ArrowRight, Store, Lock } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -22,14 +21,14 @@ export default function SplitCartDrawer() {
   } = useStore();
 
   const groupedItems = cart.reduce((acc, item) => {
-    const vendorId = item.product.vendorId;
+    const vendorId = item.product.vendorId || 'store-merchant';
     if (!acc[vendorId]) {
       acc[vendorId] = {
-        vendor: vendors.find(v => v.id === vendorId) || {
+        vendor: {
           id: vendorId,
-          name: item.product.vendorName,
-          code: 'VY',
-          deliveryDays: '1 - 2 business days (Lagos)',
+          name: item.product.vendorName || 'Verified Merchant',
+          code: vendorId.slice(0, 3).toUpperCase(),
+          deliveryDays: item.product.dispatchDays || '1 - 2 business days (Lagos)',
           shippingFee: 2000,
         },
         items: [],
