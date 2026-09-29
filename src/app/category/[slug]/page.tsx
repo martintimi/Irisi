@@ -640,28 +640,22 @@ export default function DedicatedCategoryPage() {
                       className="object-cover transition-all duration-700 brightness-95 group-hover:brightness-100 group-hover:scale-105"
                     />
 
-                    {/* Top Left: Atelier Attribution */}
-                    <div className="absolute top-4 left-4 z-10">
-                      <span className="px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-[10px] font-mono-luxury uppercase tracking-wider text-white border border-white/10 font-bold shadow-md">
-                        {product.vendorName}
-                      </span>
-                    </div>
-
-                    {/* Top Right: Wishlist Bookmark */}
+                    {/* Top Right: Wishlist Heart */}
                     <div className="absolute top-4 right-4 z-20">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleVaultItem(product);
                         }}
-                        className={`p-2.5 rounded-full backdrop-blur-md border transition-all ${
+                        className={`p-2.5 rounded-full backdrop-blur-md border transition-all cursor-pointer ${
                           isSaved
-                            ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md scale-105'
+                            ? 'bg-red-500/20 text-red-500 border-red-500/40 shadow-md scale-105'
                             : 'bg-black/60 text-white/80 border-white/10 hover:text-white hover:bg-black/85'
                         }`}
-                        title={isSaved ? 'In Curated Vault' : 'Curate to Wardrobe Vault'}
+                        title={isSaved ? 'In Wishlist' : 'Add to Wishlist'}
+                        aria-label="Wishlist"
                       >
-                        <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-current' : ''}`} />
+                        <Heart className={`h-3.5 w-3.5 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-white stroke-[2]'}`} />
                       </button>
                     </div>
 

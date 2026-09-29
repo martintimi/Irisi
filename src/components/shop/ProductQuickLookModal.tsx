@@ -6,7 +6,7 @@ import { Product } from '@/types';
 import { useStore } from '@/lib/store/useStore';
 import { calculateFitMatch } from '@/lib/utils/sizingEngine';
 import {
-  X, Sparkles, ShoppingBag, Bookmark, ArrowRight, Check,
+  X, Sparkles, ShoppingBag, Heart, ArrowRight, Check,
   Ruler, Store
 } from 'lucide-react';
 import Image from 'next/image';
@@ -355,69 +355,37 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
 
             {/* Action Buttons */}
             <div className="space-y-3 pt-4 border-t border-[var(--border-subtle)]">
-              {/* Desktop: 2-column grid with Style Look and Add to Bag */}
-              <div className="hidden md:grid md:grid-cols-2 gap-2">
-                {/* Style Look */}
-                <button
-                  onClick={handleTryOn}
-                  className={`flex items-center justify-center gap-2 py-3 px-3 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold transition-all shadow-sm ${
-                    isWorn
-                      ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
-                      : 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)]'
-                  }`}
-                >
-                  {isWorn ? (
-                    <>
-                      <Check className="h-4 w-4 stroke-[3]" />
-                      <span>On Model</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 text-[var(--gold-accent)]" />
-                      <span>Style Look</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Add to Bag */}
-                <button
-                  onClick={handleAddToCart}
-                  disabled={currentStock === 0}
-                  className="flex items-center justify-center gap-2 py-3 px-3 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  <span>{currentStock === 0 ? 'Out of Stock' : 'Add to Bag'}</span>
-                </button>
-              </div>
-
-              {/* Mobile: Clean single Add to Bag button (Zero Style Look on mobile) */}
+              {/* Primary Add to Bag Button */}
               <button
+                type="button"
                 onClick={handleAddToCart}
                 disabled={currentStock === 0}
-                className="md:hidden w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 active:scale-[0.98] transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <ShoppingBag className="h-4 w-4" />
                 <span>{currentStock === 0 ? 'Out of Stock' : 'Add to Bag'}</span>
               </button>
 
               <div className="flex items-center gap-2">
-                {/* Curate / Save to Vault */}
+                {/* Wishlist */}
                 <button
+                  type="button"
                   onClick={handleToggleVault}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full text-xs font-mono-luxury uppercase font-bold border transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full text-xs font-mono-luxury uppercase font-bold border transition-all cursor-pointer ${
                     isSaved
-                      ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border-[var(--gold-accent)]/50'
+                      ? 'bg-red-500/10 text-red-500 border-red-500/30'
                       : 'surface-card border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
                   }`}
                 >
-                  <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-current' : ''}`} />
-                  <span>{isSaved ? 'In Curated Vault' : 'Save to Vault'}</span>
+                  <Heart className={`h-3.5 w-3.5 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-current stroke-[2]'}`} />
+                  <span>{isSaved ? 'In Wishlist' : 'Add to Wishlist'}</span>
                 </button>
 
                 {/* View Full Page */}
                 <button
+                  type="button"
                   onClick={handleViewFullDetails}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full text-xs font-mono-luxury uppercase font-bold surface-card border border-[var(--border-subtle)] text-[var(--gold-accent)] hover:border-[var(--gold-accent)] transition-all"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-full text-xs font-mono-luxury uppercase font-bold surface-card border border-[var(--border-subtle)] text-[var(--gold-accent)] hover:border-[var(--gold-accent)] transition-all cursor-pointer"
                 >
                   <span>View Details</span>
                   <ArrowRight className="h-3.5 w-3.5" />

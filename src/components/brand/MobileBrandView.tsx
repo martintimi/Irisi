@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
   Store, ShieldCheck, MapPin, Clock, Plus, Check,
-  Zap, Sparkles, Bookmark, ArrowLeft, Star, ShoppingBag
+  Zap, Sparkles, Heart, ArrowLeft, Star, ShoppingBag
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -262,8 +262,10 @@ export default function MobileBrandView({
                         toggleVaultItem(product);
                       }}
                       className="absolute top-2.5 right-2.5 h-8 w-8 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center cursor-pointer border border-white/10 z-10 transition-transform active:scale-90"
+                      title={inVault ? 'In Wishlist' : 'Add to Wishlist'}
+                      aria-label="Wishlist"
                     >
-                      <Bookmark className={`h-4 w-4 ${inVault ? 'fill-[var(--gold-accent)] text-[var(--gold-accent)]' : 'text-white'}`} />
+                      <Heart className={`h-4 w-4 transition-colors ${inVault ? 'fill-red-500 text-red-500' : 'text-white stroke-[2]'}`} />
                     </button>
 
                     <div className="absolute bottom-2.5 left-2.5 right-2.5 z-10">

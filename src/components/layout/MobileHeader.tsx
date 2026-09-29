@@ -36,7 +36,7 @@ export default function MobileHeader() {
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <header className="sticky top-0 z-40 w-full md:hidden bg-[var(--bg-primary)]/95 backdrop-blur-xl border-b border-[var(--border-subtle)] transition-all">
+    <header className="w-full bg-[var(--bg-primary)]/95 backdrop-blur-xl border-b border-[var(--border-subtle)] transition-all shadow-xs">
       <div className="h-14 flex items-center justify-between px-4">
         
         {/* Left: Official Brand Wordmark */}

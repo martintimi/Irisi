@@ -1,142 +1,204 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import OutfitCanvas from '@/components/studio/OutfitCanvas';
-import WardrobeDrawer from '@/components/studio/WardrobeDrawer';
-import LookBreakdown from '@/components/studio/LookBreakdown';
-import StudioDressingStage from '@/components/3d/StudioDressingStage';
-import { Sparkles, ShieldCheck, Store, Truck, Layers, RotateCw, SlidersHorizontal } from 'lucide-react';
+import {
+  Sparkles, ArrowRight, Layers, ShieldCheck,
+  Check, Bell, Wand2, Scissors, Crown, Compass, SlidersHorizontal
+} from 'lucide-react';
 import { useStore } from '@/lib/store/useStore';
 
 export default function StudioPage() {
-  const { userAuth, bodyProfile, setIsProfileWizardOpen, fetchProductsFromDb } = useStore();
-  const [studioMode, setStudioMode] = useState<'look_builder' | 'webgl_3d'>('look_builder');
+  const { userAuth, bodyProfile } = useStore();
+  const [email, setEmail] = useState(userAuth?.email || '');
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchProductsFromDb();
-  }, [fetchProductsFromDb]);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !email.includes('@')) return;
+
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+    }, 700);
+  };
 
   return (
-    <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 animate-fadeIn">
+    <div className="relative min-h-[85vh] flex flex-col justify-center items-center overflow-hidden bg-[var(--bg-primary)] px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
       
-      {/* Studio Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-[var(--border-subtle)]">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 text-[10px] font-mono-luxury font-bold uppercase tracking-widest flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3" />
-              <span>Editorial Styling Studio</span>
+      {/* ─── Ambient Luxury Background Aura ────────────────────────────── */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] sm:w-[750px] h-[450px] sm:h-[550px] bg-gradient-to-b from-[var(--gold-accent)]/15 via-[var(--gold-accent)]/5 to-transparent rounded-full blur-3xl pointer-events-none -z-10 opacity-70 animate-pulse" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--bg-primary)_85%)] pointer-events-none -z-10" />
+
+      {/* ─── Center Hero Content ───────────────────────────────────────── */}
+      <div className="w-full max-w-4xl mx-auto text-center space-y-8 animate-fadeIn">
+        
+        {/* Editorial Pill Badge */}
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[var(--badge-bg)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] text-xs font-mono-luxury uppercase tracking-widest shadow-lg backdrop-blur-md">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--gold-accent)] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--gold-accent)]" />
+          </span>
+          <span className="font-bold">Ìrísí Digital Atelier · Private Beta</span>
+        </div>
+
+        {/* Grand Headline */}
+        <div className="space-y-4">
+          <h1 className="font-editorial text-4xl sm:text-6xl lg:text-7xl font-medium tracking-tight text-[var(--text-primary)] leading-[1.08]">
+            The Outfit Studio.<br />
+            <span className="italic font-normal shimmer-gold">
+              Virtual Runway in Progress.
             </span>
-          </div>
-          <h1 className="font-editorial text-3xl sm:text-4xl lg:text-5xl text-[var(--text-primary)] mt-2">
-            Outfit Look Builder
           </h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1 font-light max-w-2xl leading-relaxed">
-            Style complete Nigerian luxury looks with real garments from verified ateliers. Mix Senator tops, hoodies, baggy denim, and handcrafted slides into a complete outfit.
+
+          <p className="text-sm sm:text-base lg:text-lg text-[var(--text-secondary)] font-light max-w-2xl mx-auto leading-relaxed">
+            We are engineering a proprietary 3D styling and outfit composition engine. Calibrate your exact measurements, curate complete looks from verified Nigerian fashion houses, and test garment drapes before placing a single order.
           </p>
         </div>
 
-        {/* Studio Mode Switcher: Editorial Look Builder vs 3D 360° Dais */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center gap-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setStudioMode('look_builder')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono-luxury uppercase font-bold transition-all cursor-pointer ${
-                studioMode === 'look_builder'
-                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              <span>Complete Look Studio</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStudioMode('webgl_3d')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono-luxury uppercase font-bold transition-all cursor-pointer ${
-                studioMode === 'webgl_3d'
-                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-              <span>3D 360° Dais</span>
-            </button>
-          </div>
-
-          {/* Sizing Calibration Indicator */}
-          <button
-            type="button"
-            onClick={() => setIsProfileWizardOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-[var(--bg-secondary)] hover:border-[var(--gold-accent)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] transition-all cursor-pointer shadow-sm"
-          >
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-mono-luxury text-xs font-bold">
-              {bodyProfile.heightCm}cm · {bodyProfile.gender}
+        {/* VIP Early Access Card */}
+        <div className="max-w-md mx-auto p-6 sm:p-7 rounded-3xl surface-card border border-[var(--border-subtle)] bg-[var(--bg-surface)]/80 backdrop-blur-xl shadow-2xl space-y-4 text-left">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-mono-luxury font-bold uppercase text-[var(--gold-accent)]">
+              <Crown className="h-4 w-4" />
+              <span>VIP Atelier Access</span>
+            </div>
+            <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] tracking-wider">
+              Limited to 250 Testers
             </span>
-            <SlidersHorizontal className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-          </button>
-        </div>
-      </div>
-
-      {/* Main Studio Viewport */}
-      <div className="w-full">
-        {studioMode === 'look_builder' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-[640px]">
-            {/* Left: Step-by-Step Clothes Selector (4 cols) */}
-            <div className="lg:col-span-4 h-[620px] lg:h-[720px] flex flex-col min-h-0">
-              <WardrobeDrawer />
-            </div>
-
-            {/* Center: Live Look Canvas Preview (5 cols) */}
-            <div className="lg:col-span-5 h-[620px] lg:h-[720px] flex flex-col min-h-0">
-              <OutfitCanvas />
-            </div>
-
-            {/* Right: Outfit Summary & Checkout (3 cols) */}
-            <div className="lg:col-span-3 h-[620px] lg:h-[720px] flex flex-col min-h-0">
-              <LookBreakdown />
-            </div>
           </div>
-        ) : (
-          <StudioDressingStage />
-        )}
-      </div>
 
-      {/* Trust & Craftsmanship Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        <div className="p-4 sm:p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1.5 shadow-sm">
-          <div className="flex items-center gap-2 text-[var(--gold-accent)] font-bold text-xs font-mono-luxury">
-            <Store className="h-4 w-4" />
-            <span className="uppercase">100% Platform Inventory</span>
-          </div>
-          <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
-            Every piece on this styling canvas is sourced directly from independent Nigerian fashion houses and ready for instant dispatch.
+          <p className="text-xs text-[var(--text-secondary)] font-light leading-normal">
+            Be the first to dress your digital body twin with authentic native wear, streetwear drops, and bespoke couture.
           </p>
+
+          {isSubmitted ? (
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                <Check className="h-4 w-4" />
+              </div>
+              <div className="text-xs font-mono-luxury">
+                <p className="font-bold uppercase tracking-wider text-emerald-300">You are on the Atelier Guestlist</p>
+                <p className="text-[11px] text-emerald-400/80 mt-0.5">We will notify {email} the moment the fitting room unlocks.</p>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2.5">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email for private invite..."
+                className="flex-1 px-4 py-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--gold-accent)] transition-all font-mono-luxury"
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-3 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 font-mono-luxury text-xs font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <span>Reserving...</span>
+                ) : (
+                  <>
+                    <Bell className="h-3.5 w-3.5" />
+                    <span>Join Waitlist</span>
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {bodyProfile?.heightCm && (
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-[11px] font-mono-luxury text-[var(--text-muted)]">
+              <span>Your Twin Profile:</span>
+              <span className="text-[var(--text-primary)] font-bold">
+                {bodyProfile.heightCm}cm · {bodyProfile.gender}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1.5 shadow-sm">
-          <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs font-mono-luxury">
-            <ShieldCheck className="h-4 w-4" />
-            <span className="uppercase">Zero Pull Escrow</span>
+        {/* ─── 3 Visual Architecture Pillars ────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 text-left max-w-4xl mx-auto">
+          
+          {/* Pillar 1 */}
+          <div className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]/60 backdrop-blur-sm space-y-2 hover:border-[var(--gold-accent)]/40 transition-all group">
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gold-accent)]/10 text-[var(--gold-accent)] border border-[var(--gold-accent)]/20">
+                <SlidersHorizontal className="h-4 w-4" />
+              </div>
+              <span className="text-[9px] font-mono-luxury uppercase text-[var(--gold-accent)] tracking-widest font-bold">
+                01 / ARCHITECTURE
+              </span>
+            </div>
+            <h4 className="font-editorial text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
+              3D Body Twin Calibration
+            </h4>
+            <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
+              Photorealistic body twin mapped to bespoke Nigerian tailoring dimensions, arm length, chest drape, and torso drop.
+            </p>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
-            Your payment is held safely in Ìrísí Escrow until delivery is confirmed and the cut matches your exact satisfaction.
-          </p>
+
+          {/* Pillar 2 */}
+          <div className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]/60 backdrop-blur-sm space-y-2 hover:border-[var(--gold-accent)]/40 transition-all group">
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gold-accent)]/10 text-[var(--gold-accent)] border border-[var(--gold-accent)]/20">
+                <Layers className="h-4 w-4" />
+              </div>
+              <span className="text-[9px] font-mono-luxury uppercase text-[var(--gold-accent)] tracking-widest font-bold">
+                02 / ARCHITECTURE
+              </span>
+            </div>
+            <h4 className="font-editorial text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
+              Multi-Brand Look Builder
+            </h4>
+            <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
+              Mix a Sartorial Lagos Senator top with Moji Wears raw denim and Kano cowhide slides on a single unified canvas.
+            </p>
+          </div>
+
+          {/* Pillar 3 */}
+          <div className="p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]/60 backdrop-blur-sm space-y-2 hover:border-[var(--gold-accent)]/40 transition-all group">
+            <div className="flex items-center justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gold-accent)]/10 text-[var(--gold-accent)] border border-[var(--gold-accent)]/20">
+                <Wand2 className="h-4 w-4" />
+              </div>
+              <span className="text-[9px] font-mono-luxury uppercase text-[var(--gold-accent)] tracking-widest font-bold">
+                03 / ARCHITECTURE
+              </span>
+            </div>
+            <h4 className="font-editorial text-base font-bold text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
+              Physics Drape Simulation
+            </h4>
+            <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
+              Accurate textile simulation for 450gsm heavyweight cotton, flowing silk boubous, and structured cashmere wools.
+            </p>
+          </div>
+
         </div>
 
-        <div className="p-4 sm:p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1.5 shadow-sm">
-          <div className="flex items-center gap-2 text-sky-400 font-bold text-xs font-mono-luxury">
-            <Truck className="h-4 w-4" />
-            <span className="uppercase">Nationwide Express Delivery</span>
-          </div>
-          <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
-            Your entire styled look is packaged together and delivered in 1 consolidated box across all 36 Nigerian states.
-          </p>
+        {/* ─── Back to Shopping Action Buttons ───────────────────────────── */}
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            href="/shop"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all shadow-lg group"
+          >
+            <span>Explore Live Marketplace</span>
+            <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          <Link
+            href="/category"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury text-xs font-bold uppercase tracking-wider hover:border-[var(--gold-accent)] transition-all"
+          >
+            <Compass className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+            <span>Browse All Categories</span>
+          </Link>
         </div>
+
       </div>
 
     </div>

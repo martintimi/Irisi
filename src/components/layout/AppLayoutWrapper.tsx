@@ -81,10 +81,22 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
       <LuxuryLoader />
       {!isStandalonePage && (
         <>
-          {/* Desktop Top Navbar (Strictly Hidden on Mobile for pure native app feel) */}
-          <div className="hidden md:block">
+          {/* Desktop Top Navbar (Fixed at the very top of the page - never scrolls away) */}
+          <div className="hidden md:block fixed top-0 left-0 right-0 z-50">
             <Navbar />
           </div>
+          {/* Topnav height spacer so content starts cleanly below the fixed header */}
+          <div className="hidden md:block h-20" aria-hidden="true" />
+
+          {/* Mobile Top Header (Fixed at the very top of mobile pages - never scrolls away) */}
+          {pathname !== '/' && (
+            <>
+              <div className="block md:hidden fixed top-0 left-0 right-0 z-50">
+                <MobileHeader />
+              </div>
+              <div className="block md:hidden h-14" aria-hidden="true" />
+            </>
+          )}
         </>
       )}
       <main className={!isStandalonePage ? "min-h-screen pb-24 md:pb-0" : "min-h-screen"}>

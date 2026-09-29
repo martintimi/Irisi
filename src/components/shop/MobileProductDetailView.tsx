@@ -430,6 +430,28 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     }
   };
 
+  // Auto-advance mobile carousel when user is idle (Nike/Adidas/Jordan style)
+  useEffect(() => {
+    if (mediaItems.length <= 1) return;
+    const currentItem = mediaItems[activeMediaIndex];
+    const duration = currentItem?.type === 'video' ? 6500 : 4000;
+
+    const timer = setTimeout(() => {
+      if (carouselRef.current && !isDraggingCarousel.current) {
+        const nextIndex = (activeMediaIndex + 1) % mediaItems.length;
+        setActiveMediaIndex(nextIndex);
+        if (carouselRef.current.clientWidth > 0) {
+          carouselRef.current.scrollTo({
+            left: nextIndex * carouselRef.current.clientWidth,
+            behavior: 'smooth',
+          });
+        }
+      }
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [activeMediaIndex, mediaItems]);
+
   // Stock for chosen color and size
   const currentVariantStock = (() => {
     if (product.sizeStock && typeof product.sizeStock === 'object') {
@@ -549,9 +571,10 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
             type="button"
             onClick={() => toggleVaultItem(product)}
             className="p-2.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/15 text-white shadow-xl active:scale-90 transition-transform cursor-pointer"
-            aria-label={isSaved ? 'In Vault' : 'Save to Vault'}
+            aria-label={isSaved ? 'In Wishlist' : 'Add to Wishlist'}
+            title={isSaved ? 'In Wishlist' : 'Add to Wishlist'}
           >
-            <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-[var(--gold-accent)] text-[var(--gold-accent)]' : 'text-white'}`} />
+            <Heart className={`h-4 w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : 'text-white stroke-[2]'}`} />
           </button>
         </div>
       </div>

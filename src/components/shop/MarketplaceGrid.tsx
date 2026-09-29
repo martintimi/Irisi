@@ -8,10 +8,12 @@ import { calculateFitMatch } from '@/lib/utils/sizingEngine';
 import {
   Sparkles, Check, ShoppingBag, Search, Scissors, ArrowRight,
   ChevronLeft, ChevronRight, RotateCcw, PackageSearch, Layers,
-  Bookmark, Eye, Plus, MapPin
+  Bookmark, Eye, Plus, MapPin, SlidersHorizontal, X, Heart,
+  Grid3X3, LayoutGrid, CheckCircle2, ChevronDown
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
 import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
 
@@ -23,6 +25,15 @@ import {
 } from '@/lib/utils/categoryMatcher';
 
 const ITEMS_PER_PAGE = 24;
+
+const categoryMeta: Record<string, { label: string; desc: string }> = {
+  native: { label: 'Native & Cultural', desc: 'Bespoke Senator sets, Grand Agbada, Boubou, Kaftans, and tailored native wear' },
+  tops: { label: 'Shirts & Tops', desc: 'Boutique shirts, graphic tees, polos, and blouses' },
+  outerwear: { label: 'Streetwear & Hoodies', desc: 'Heavyweight hoodies, jackets, and urban drops' },
+  footwear: { label: 'Footwear & Shoes', desc: 'Handcrafted leather shoes, slides, mules, and sneakers' },
+  bottoms: { label: 'Trousers & Denim', desc: 'Baggy denim, cargo pants, and boutique trousers' },
+  accessories: { label: 'Bags & Jewelry', desc: 'Luxury totes, Cuban links, rings, and leather bags' },
+};
 
 const MEN_DESKTOP_CATEGORIES: { id: string; label: string; type: 'cat' | 'sub' }[] = [
   { id: 'all', label: 'All Items & Drops', type: 'cat' },
@@ -90,12 +101,31 @@ export default function MarketplaceGrid() {
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<GarmentCategory | 'native' | 'all'>('all');
   const [specificCategory, setSpecificCategory] = useState<string | null>(null);
+  const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [priceRange, setPriceRange] = useState<'all' | 'under25k' | '25k-50k' | '50k-100k' | 'over100k'>('all');
+  const [sortBy, setSortBy] = useState<'featured' | 'newest' | 'price-asc' | 'price-desc'>('featured');
+  const [isRefineOpen, setIsRefineOpen] = useState(false);
+  const [gridCols, setGridCols] = useState<3 | 4>(4);
+  const [burstingHearts, setBurstingHearts] = useState<Set<string>>(new Set());
+
   const [currentPage, setCurrentPage] = useState<number>(() => {
     const p = parseInt(searchParams?.get('page') || '1', 10);
     return isNaN(p) || p < 1 ? 1 : p;
   });
   const [quickLookProduct, setQuickLookProduct] = useState<any>(null);
+
+  const handleHeartClick = (product: any) => {
+    toggleVaultItem(product);
+    setBurstingHearts((prev) => new Set(prev).add(product.id));
+    setTimeout(() => {
+      setBurstingHearts((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    }, 700);
+  };
 
   useEffect(() => {
     const gen = searchParams.get('gender')?.toLowerCase();
@@ -115,6 +145,18 @@ export default function MarketplaceGrid() {
     const pageParam = parseInt(searchParams.get('page') || '', 10);
     if (!isNaN(pageParam) && pageParam >= 1) {
       setCurrentPage(pageParam);
+    }
+
+    const dept = searchParams.get('department') || searchParams.get('dept');
+    if (dept) {
+      setDepartmentFilter(dept.toLowerCase());
+    } else {
+      setDepartmentFilter(null);
+    }
+
+    const occ = searchParams.get('occasion');
+    if (occ) {
+      setSearchQuery(occ);
     }
 
     const cat = searchParams.get('category')?.toLowerCase();
@@ -168,6 +210,19 @@ export default function MarketplaceGrid() {
     return Array.from(brandsMap.values());
   }, [allProducts]);
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== 'all') count++;
+    if (specificCategory !== null) count++;
+    if (departmentFilter !== null) count++;
+    if (priceRange !== 'all') count++;
+    if (selectedBrand !== 'all') count++;
+    if (selectedOriginType !== 'all') count++;
+    if (searchQuery.trim().length > 0) count++;
+    if (sortBy !== 'featured') count++;
+    return count;
+  }, [selectedCategory, specificCategory, departmentFilter, priceRange, selectedBrand, selectedOriginType, searchQuery, sortBy]);
+
   const filteredProducts = useMemo(() => {
     let list = allProducts.filter((p) => {
       const pGender = String(p.genderTarget || '').toLowerCase();
@@ -191,6 +246,9 @@ export default function MarketplaceGrid() {
       // Specific subcategory filter
       const matchesSpecific = specificCategory ? matchesSpecificCategory(p, specificCategory) : true;
 
+      // Department filter
+      const matchesDept = departmentFilter ? matchesDepartment(p, departmentFilter) : true;
+
       const pVendorName = String(p.vendorName || '').toLowerCase();
       const pVendorId = String(p.vendorId || '').toLowerCase();
       const sBrand = String(selectedBrand || '').toLowerCase();
@@ -202,16 +260,34 @@ export default function MarketplaceGrid() {
                            String(p.description || '').toLowerCase().includes(q) ||
                            (Array.isArray(p.tags) && p.tags.some(t => String(t).toLowerCase().includes(q)));
 
-      return matchesGender && matchesOrigin && matchesCat && matchesSpecific && matchesBrand && matchesQuery;
+      // Price Range Filter
+      let matchesPrice = true;
+      const price = Number(p.price || 0);
+      if (priceRange === 'under25k') matchesPrice = price < 25000;
+      else if (priceRange === '25k-50k') matchesPrice = price >= 25000 && price <= 50000;
+      else if (priceRange === '50k-100k') matchesPrice = price > 50000 && price <= 100000;
+      else if (priceRange === 'over100k') matchesPrice = price > 100000;
+
+      return matchesGender && matchesOrigin && matchesCat && matchesSpecific && matchesDept && matchesBrand && matchesQuery && matchesPrice;
     });
 
-    // Shuffle & Diversify catalog display across categories & vendors
-    if (!searchQuery && selectedCategory === 'all' && !specificCategory) {
+    // Sorting
+    if (sortBy === 'price-asc') {
+      list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    } else if (sortBy === 'price-desc') {
+      list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    } else if (sortBy === 'newest') {
+      list.sort((a, b) => {
+        const tA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+        const tB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+        return tB - tA;
+      });
+    } else if (sortBy === 'featured') {
       list = diversifyCatalog(list);
     }
 
     return list;
-  }, [allProducts, selectedGender, selectedOriginType, selectedCategory, specificCategory, selectedBrand, searchQuery]);
+  }, [allProducts, selectedGender, selectedOriginType, selectedCategory, specificCategory, departmentFilter, selectedBrand, searchQuery, priceRange, sortBy]);
 
   // Reset page when filters change
   const handleBrandChange = (brandId: string) => {
@@ -224,14 +300,17 @@ export default function MarketplaceGrid() {
     if (cat.id === 'all') {
       setSelectedCategory('all');
       setSpecificCategory(null);
+      setDepartmentFilter(null);
       router.replace(`/shop?gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
     } else if (cat.type === 'cat') {
       setSelectedCategory(cat.id as any);
       setSpecificCategory(null);
+      setDepartmentFilter(null);
       router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
     } else {
       setSelectedCategory('all');
       setSpecificCategory(cat.id);
+      setDepartmentFilter(null);
       router.replace(`/shop?category=${cat.id}&gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
     }
   };
@@ -241,6 +320,7 @@ export default function MarketplaceGrid() {
     try { localStorage.setItem('irisi_selected_gender', g); } catch (e) {}
     setSelectedCategory('all');
     setSpecificCategory(null);
+    setDepartmentFilter(null);
     setCurrentPage(1);
     router.replace(`/shop?gender=${g === 'male' ? 'men' : 'women'}&page=1`);
   };
@@ -249,9 +329,13 @@ export default function MarketplaceGrid() {
     setSelectedBrand('all');
     setSelectedCategory('all');
     setSpecificCategory(null);
+    setDepartmentFilter(null);
     setSelectedOriginType('all');
+    setPriceRange('all');
+    setSortBy('featured');
     setSearchQuery('');
     setCurrentPage(1);
+    router.replace(`/shop?gender=${selectedGender === 'male' ? 'men' : 'women'}&page=1`);
   };
 
   // Pagination math
@@ -292,30 +376,25 @@ export default function MarketplaceGrid() {
           {/* Action Row: Virtual Dressing Room + Integrated Brand Filter Pills */}
           <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             
-            {/* Left Button */}
+            {/* Left Button: Explore Categories Directory */}
             <Link
-              href="/studio"
+              href="/categories"
               className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase tracking-widest text-xs font-bold hover:opacity-90 transition-all shadow-md shrink-0"
             >
-              <Layers className="h-4 w-4" />
-              <span>Open Virtual Dressing Room</span>
+              <Sparkles className="h-4 w-4 text-[var(--gold-accent)]" />
+              <span>Explore All Categories</span>
             </Link>
-
-        
-
           </div>
 
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 2. SEARCH & GLOBAL FILTERS BAR */}
+      {/* 2. DEDICATED LUXURY SEARCH BAR */}
       {/* ======================================================== */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl surface-card border border-[var(--border-subtle)]">
-        
-        {/* Search Input */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+      <div className="w-full max-w-2xl mx-auto">
+        <div className="relative flex items-center">
+          <Search className="absolute left-[22px] top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -323,19 +402,38 @@ export default function MarketplaceGrid() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search Senator, Ankara, Hoodies, Denim..."
-            className="w-full pl-11 pr-4 py-2.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs sm:text-sm text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+            placeholder="Search products, brands, luxury drops..."
+            className="w-full pl-[50px] pr-12 py-3.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 focus:border-[var(--gold-accent)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-xs focus:outline-none transition-all"
           />
-        </div>
-
-        {/* Gender Switcher & Handmade vs ReadyMade Filter */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          
-          {/* Gender Switcher */}
-          <div className="flex items-center p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
+          {searchQuery && (
             <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
+              className="absolute right-4.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--badge-bg)] transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 3. REFINED CONTROLS & FILTER TOOLBAR */}
+      {/* ======================================================== */}
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl surface-card border border-[var(--border-subtle)] shadow-xs">
+        
+        {/* Left Side: Gender + Origin Switchers */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Gender Switcher */}
+          <div className="flex items-center p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-xs">
+            <button
+              type="button"
               onClick={() => handleGenderChange('male')}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all cursor-pointer ${
                 selectedGender === 'male'
                   ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -344,8 +442,9 @@ export default function MarketplaceGrid() {
               Men&apos;s
             </button>
             <button
+              type="button"
               onClick={() => handleGenderChange('female')}
-              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-mono-luxury uppercase transition-all cursor-pointer ${
                 selectedGender === 'female'
                   ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -356,13 +455,14 @@ export default function MarketplaceGrid() {
           </div>
 
           {/* Origin Switcher */}
-          <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury uppercase">
+          <div className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury uppercase shadow-xs">
             <button
+              type="button"
               onClick={() => {
                 setSelectedOriginType('all');
                 setCurrentPage(1);
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-full transition-all ${
+              className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
                 selectedOriginType === 'all'
                   ? 'bg-[var(--badge-bg)] text-[var(--text-primary)] font-bold'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
@@ -371,11 +471,12 @@ export default function MarketplaceGrid() {
               All Types
             </button>
             <button
+              type="button"
               onClick={() => {
                 setSelectedOriginType('handmade_designer');
                 setCurrentPage(1);
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-full transition-all flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
                 selectedOriginType === 'handmade_designer'
                   ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] font-bold border border-[var(--gold-accent)]/20'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
@@ -385,11 +486,12 @@ export default function MarketplaceGrid() {
               <span>Handmade</span>
             </button>
             <button
+              type="button"
               onClick={() => {
                 setSelectedOriginType('ready_made_boutique');
                 setCurrentPage(1);
               }}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-full transition-all ${
+              className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
                 selectedOriginType === 'ready_made_boutique'
                   ? 'bg-[var(--badge-bg)] text-[var(--text-primary)] font-bold'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
@@ -398,35 +500,194 @@ export default function MarketplaceGrid() {
               Ready-Made
             </button>
           </div>
-
         </div>
 
+        {/* Right Side: Quick Sort, Quick Price, Refine Modal Trigger, and Grid Density */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Quick Sort Select */}
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as any);
+                setCurrentPage(1);
+              }}
+              className="appearance-none pl-3.5 pr-8 py-2 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury font-bold text-[var(--text-primary)] cursor-pointer focus:outline-none transition-all shadow-xs"
+            >
+              <option value="featured">Sort: Featured Drops</option>
+              <option value="newest">Sort: Newest Arrivals</option>
+              <option value="price-asc">Sort: Price Low to High</option>
+              <option value="price-desc">Sort: Price High to Low</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)] pointer-events-none" />
+          </div>
+
+          {/* Quick Price Select */}
+          <div className="relative">
+            <select
+              value={priceRange}
+              onChange={(e) => {
+                setPriceRange(e.target.value as any);
+                setCurrentPage(1);
+              }}
+              className="appearance-none pl-3.5 pr-8 py-2 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury font-bold text-[var(--text-primary)] cursor-pointer focus:outline-none transition-all shadow-xs"
+            >
+              <option value="all">Price: All</option>
+              <option value="under25k">Under ₦25k</option>
+              <option value="25k-50k">₦25k - ₦50k</option>
+              <option value="50k-100k">₦50k - ₦100k</option>
+              <option value="over100k">Over ₦100k</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)] pointer-events-none" />
+          </div>
+
+          {/* Refine / All Filters Button */}
+          <button
+            type="button"
+            onClick={() => setIsRefineOpen(true)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-mono-luxury font-bold cursor-pointer transition-all shadow-xs border ${
+              activeFiltersCount > 0
+                ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md hover:brightness-105'
+                : 'bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)]'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Refine</span>
+            {activeFiltersCount > 0 && (
+              <span className="h-4.5 w-4.5 px-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center text-[10px] font-extrabold">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+
+          {/* Grid Layout Density Switcher (3-Col vs 4-Col) */}
+          <button
+            type="button"
+            onClick={() => setGridCols((prev) => (prev === 4 ? 3 : 4))}
+            className="flex items-center gap-1.5 px-3 py-2 border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury font-bold rounded-full cursor-pointer hover:border-[var(--gold-accent)] transition-all bg-[var(--bg-primary)] active:scale-95"
+            title={gridCols === 4 ? 'Switch to 3-column view' : 'Switch to 4-column view'}
+          >
+            {gridCols === 4 ? (
+              <>
+                <Grid3X3 className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                <span className="text-[10px] uppercase font-bold">3-Col</span>
+              </>
+            ) : (
+              <>
+                <LayoutGrid className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                <span className="text-[10px] uppercase font-bold">4-Col</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 3. CATEGORY PILL SELECTOR */}
+      {/* 2.5 ACTIVE FILTER PILLS (Matching Mobile) */}
       {/* ======================================================== */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {categories.map((cat) => {
-          const isSelected =
-            (cat.id === 'all' && selectedCategory === 'all' && !specificCategory) ||
-            (cat.type === 'cat' && selectedCategory === cat.id && !specificCategory) ||
-            (cat.type === 'sub' && specificCategory === cat.id);
+      {activeFiltersCount > 0 && (
+        <div className="flex items-center gap-2 flex-wrap p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury">
+          <span className="text-[10px] uppercase text-[var(--gold-accent)] font-bold shrink-0">Active Filters:</span>
+          
+          {selectedCategory !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span>{categoryMeta[selectedCategory]?.label || selectedCategory}</span>
+              <button onClick={() => setSelectedCategory('all')} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {specificCategory && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span className="capitalize">{specificCategory.replace(/-/g, ' ')}</span>
+              <button onClick={() => setSpecificCategory(null)} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {departmentFilter && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span className="uppercase">{departmentFilter}</span>
+              <button onClick={() => setDepartmentFilter(null)} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {priceRange !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span>
+                {priceRange === 'under25k' && 'Under ₦25k'}
+                {priceRange === '25k-50k' && '₦25k - ₦50k'}
+                {priceRange === '50k-100k' && '₦50k - ₦100k'}
+                {priceRange === 'over100k' && 'Over ₦100k'}
+              </span>
+              <button onClick={() => setPriceRange('all')} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {selectedBrand !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span>Brand: {brandOptions.find(b => b.id === selectedBrand)?.name || selectedBrand}</span>
+              <button onClick={() => setSelectedBrand('all')} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {selectedOriginType !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span>{selectedOriginType === 'handmade_designer' ? 'Handmade' : 'Ready-Made'}</span>
+              <button onClick={() => setSelectedOriginType('all')} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {sortBy !== 'featured' && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span>
+                {sortBy === 'newest' && 'Newest'}
+                {sortBy === 'price-asc' && 'Price: Low-High'}
+                {sortBy === 'price-desc' && 'Price: High-Low'}
+              </span>
+              <button onClick={() => setSortBy('featured')} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
+          {searchQuery && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium">
+              <span>&quot;{searchQuery}&quot;</span>
+              <button onClick={() => setSearchQuery('')} className="hover:text-red-500 cursor-pointer ml-0.5"><X className="h-3 w-3" /></button>
+            </span>
+          )}
 
-          return (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryItemClick(cat)}
-              className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                isSelected
-                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
-                  : 'surface-card text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
-              }`}
-            >
-              {cat.label}
-            </button>
-          );
-        })}
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="ml-auto text-[11px] text-rose-500 hover:underline font-bold uppercase cursor-pointer"
+          >
+            Clear All
+          </button>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 3. CATEGORY PILL SELECTOR & PIECES SUMMARY */}
+      {/* ======================================================== */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {categories.map((cat) => {
+            const isSelected =
+              (cat.id === 'all' && selectedCategory === 'all' && !specificCategory && !departmentFilter) ||
+              (cat.type === 'cat' && selectedCategory === cat.id && !specificCategory) ||
+              (cat.type === 'sub' && specificCategory === cat.id);
+
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryItemClick(cat)}
+                className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
+                    : 'surface-card text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono-luxury px-1">
+          <span>{filteredProducts.length} {filteredProducts.length === 1 ? 'curated piece' : 'curated pieces'} found</span>
+          {totalPages > 1 && <span>Page {currentPage} of {totalPages}</span>}
+        </div>
       </div>
 
       {/* ======================================================== */}
@@ -478,8 +739,8 @@ export default function MarketplaceGrid() {
 
       ) : (
 
-        /* PRODUCT GRID (2-COLUMNS ON MOBILE, 4-COLUMNS ON DESKTOP) */
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+        /* PRODUCT GRID (Dynamic 3-Col vs 4-Col on Desktop) */
+        <div className={gridCols === 3 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6"}>
           {paginatedProducts.map((product) => {
             const isWorn = Boolean(product.category && (activeOutfit as any)[product.category]?.id === product.id);
             const fitResult = calculateFitMatch(bodyProfile, product);
@@ -506,7 +767,7 @@ export default function MarketplaceGrid() {
                       video.play().catch(() => {});
                     }
                   }}
-                  className="relative h-48 sm:h-80 w-full bg-[var(--bg-secondary)] overflow-hidden block cursor-pointer"
+                  className={`relative ${gridCols === 3 ? 'h-64 sm:h-96' : 'h-48 sm:h-80'} w-full bg-[var(--bg-secondary)] overflow-hidden block cursor-pointer`}
                 >
                   <Image
                     src={product.imageUrl}
@@ -550,29 +811,28 @@ export default function MarketplaceGrid() {
                       className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     />
                   )}
-                  
-                  {/* Top Left: Atelier Attribution */}
-                  <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10">
-                    <span className="px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md text-[9px] sm:text-[10px] font-mono-luxury uppercase tracking-wider text-white border border-white/10 font-bold shadow-md">
-                      {product.vendorName}
-                    </span>
-                  </div>
 
-                  {/* Top Right: Curated Vault Bookmark Button */}
+                  {/* Top Right: Wishlist Heart Button (Matching Mobile Feature) */}
                   <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20">
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleVaultItem(product);
+                        handleHeartClick(product);
                       }}
-                      className={`p-2 sm:p-2.5 rounded-full backdrop-blur-md border transition-all ${
+                      className={`p-2 sm:p-2.5 rounded-full backdrop-blur-md border transition-all cursor-pointer ${
                         isInVault(product.id)
-                          ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)] shadow-md scale-105'
+                          ? 'bg-red-500/20 text-red-500 border-red-500/40 shadow-md scale-105'
                           : 'bg-black/60 text-white/80 border-white/10 hover:text-white hover:bg-black/85'
                       }`}
-                      title={isInVault(product.id) ? 'In Curated Vault' : 'Curate to Wardrobe Vault'}
+                      title={isInVault(product.id) ? 'In Wishlist' : 'Add to Wishlist'}
+                      aria-label="Wishlist"
                     >
-                      <Bookmark className={`h-3.5 w-3.5 ${isInVault(product.id) ? 'fill-current' : ''}`} />
+                      <Heart
+                        className={`h-4 w-4 transition-all duration-200 ${
+                          isInVault(product.id) ? 'fill-red-500 text-red-500' : 'text-white stroke-[2]'
+                        } ${burstingHearts.has(product.id) ? 'scale-125' : 'scale-100'}`}
+                      />
                     </button>
                   </div>
 
@@ -660,30 +920,13 @@ export default function MarketplaceGrid() {
                     {/* Desktop: 2-column grid with Style Look and Add to Bag */}
                     <div className="hidden md:grid md:grid-cols-2 gap-2">
                       <button
-                        onClick={() => {
-                          if (isWorn) {
-                            removeOutfitItem(product.category);
-                          } else {
-                            setOutfitItem(product);
-                          }
-                        }}
-                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all ${
-                          isWorn
-                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                            : 'bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)]'
-                        }`}
+                        type="button"
+                        onClick={() => setQuickLookProduct(product)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] cursor-pointer"
+                        title="Quick View"
                       >
-                        {isWorn ? (
-                          <>
-                            <Check className="h-3 w-3 stroke-[3] shrink-0" />
-                            <span className="truncate">On Model</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
-                            <span className="truncate">Style Look</span>
-                          </>
-                        )}
+                        <Eye className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
+                        <span className="truncate">Quick View</span>
                       </button>
 
                       <button
@@ -769,6 +1012,253 @@ export default function MarketplaceGrid() {
         onClose={() => setQuickLookProduct(null)}
       />
 
+      {/* ======================================================== */}
+      {/* 6. REFINE SLIDE-OVER DRAWER (Desktop) */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {isRefineOpen && (
+          <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsRefineOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity cursor-pointer"
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="relative w-full max-w-lg bg-[var(--bg-primary)] border-l border-[var(--border-subtle)] shadow-2xl flex flex-col justify-between h-full z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between">
+                <div>
+                  <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">Refine &amp; Sort</h3>
+                  <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-0.5">
+                    Showing {filteredProducts.length} curated {filteredProducts.length === 1 ? 'piece' : 'pieces'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRefineOpen(false)}
+                  className="p-2 rounded-full bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Filters Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Search */}
+                <div className="space-y-2">
+                  <label className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    Search Catalog
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-secondary)]" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      placeholder="Search by designer, style, or tag..."
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] bg-[var(--bg-secondary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors placeholder:text-[var(--text-secondary)] font-mono-luxury"
+                    />
+                  </div>
+                </div>
+
+                {/* Sort By */}
+                <div className="space-y-2.5">
+                  <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    Sort By
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'featured', label: 'Featured Drops' },
+                      { id: 'newest', label: 'Newest Arrivals' },
+                      { id: 'price-asc', label: 'Price: Low to High' },
+                      { id: 'price-desc', label: 'Price: High to Low' },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setSortBy(s.id as any);
+                          setCurrentPage(1);
+                        }}
+                        className={`px-3 py-2.5 rounded-xl text-left text-xs font-mono-luxury transition-all cursor-pointer border ${
+                          sortBy === s.id
+                            ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--gold-accent)] font-bold shadow-xs'
+                            : 'border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/40'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Price Range */}
+                <div className="space-y-2.5">
+                  <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    Price Range
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'all', label: 'All Prices' },
+                      { id: 'under25k', label: 'Under ₦25k' },
+                      { id: '25k-50k', label: '₦25k - ₦50k' },
+                      { id: '50k-100k', label: '₦50k - ₦100k' },
+                      { id: 'over100k', label: 'Over ₦100k' },
+                    ].map((tier) => (
+                      <button
+                        key={tier.id}
+                        type="button"
+                        onClick={() => {
+                          setPriceRange(tier.id as any);
+                          setCurrentPage(1);
+                        }}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-mono-luxury transition-all cursor-pointer border ${
+                          priceRange === tier.id
+                            ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--gold-accent)] font-bold shadow-xs'
+                            : 'border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-secondary)] hover:border-[var(--text-primary)]/40'
+                        }`}
+                      >
+                        {tier.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Department */}
+                <div className="space-y-2">
+                  <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">Department</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{ id: 'male', label: "Men's Collection" }, { id: 'female', label: "Women's Collection" }].map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => {
+                          handleGenderChange(g.id as 'male' | 'female');
+                        }}
+                        className={`py-2.5 rounded-xl text-center text-xs font-mono-luxury transition-all cursor-pointer border ${
+                          selectedGender === g.id
+                            ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold shadow-xs'
+                            : 'border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-secondary)]'
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Garment Origin Type */}
+                <div className="space-y-2">
+                  <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">Garment Origin</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'all', label: 'All Types' },
+                      { id: 'handmade_designer', label: 'Handmade' },
+                      { id: 'ready_made_boutique', label: 'Ready-Made' },
+                    ].map((orig) => (
+                      <button
+                        key={orig.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedOriginType(orig.id as any);
+                          setCurrentPage(1);
+                        }}
+                        className={`py-2 px-1 text-center text-xs font-mono-luxury transition-all cursor-pointer rounded-xl border ${
+                          selectedOriginType === orig.id
+                            ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--gold-accent)] font-bold'
+                            : 'border-[var(--border-subtle)] text-[var(--text-secondary)] bg-[var(--bg-secondary)]'
+                        }`}
+                      >
+                        {orig.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Verified Boutiques & Designers */}
+                <div className="space-y-2">
+                  <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">Boutique / Brand</p>
+                  <select
+                    value={selectedBrand}
+                    onChange={(e) => handleBrandChange(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xs font-mono-luxury text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] cursor-pointer"
+                  >
+                    {brandOptions.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Category List */}
+                <div className="space-y-2">
+                  <p className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">Categories</p>
+                  <div className="flex flex-col gap-1 max-h-52 overflow-y-auto pr-1">
+                    {categories.map((cat) => {
+                      const isSelected =
+                        (cat.id === 'all' && selectedCategory === 'all' && !specificCategory && !departmentFilter) ||
+                        (cat.type === 'cat' && selectedCategory === cat.id && !specificCategory) ||
+                        (cat.type === 'sub' && specificCategory === cat.id);
+
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            handleCategoryItemClick(cat);
+                            setIsRefineOpen(false);
+                          }}
+                          className={`text-left px-3 py-2 text-xs rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-[var(--gold-subtle)] font-bold text-[var(--gold-accent)]'
+                              : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+                          }`}
+                        >
+                          <span className="font-mono-luxury">{cat.label}</span>
+                          {isSelected && <span className="h-2 w-2 rounded-full bg-[var(--gold-accent)]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky Footer */}
+              <div className="p-6 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)] flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-5 py-3 rounded-full border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-mono-luxury font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Reset All</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRefineOpen(false)}
+                  className="flex-1 py-3 px-6 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury font-bold text-xs uppercase tracking-wider shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>View {filteredProducts.length} {filteredProducts.length === 1 ? 'Piece' : 'Pieces'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

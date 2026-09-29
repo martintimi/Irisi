@@ -6,10 +6,12 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Sparkles, Check, ShoppingBag, ShieldCheck, Truck, RotateCcw,
   Star, Heart, ArrowLeft, ArrowRight, Share2, Ruler,
-  Building, Phone, MapPin, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, Loader2, Store, Clock, Package, Play, User, Layers
+  Building, Phone, MapPin, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, Loader2, Store, Clock, Package, Play, User, Layers,
+  Pause, ChevronLeft, X, Maximize2
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import MobileProductDetailView from '@/components/shop/MobileProductDetailView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
@@ -89,21 +91,111 @@ export default function ProductDetailPage() {
     return cols[0] || { name: 'As Pictured', hex: '#111111' };
   });
   const [quantity, setQuantity] = useState(1);
-  const [activeImage, setActiveImage] = useState<string>(() => cachedProduct?.imageUrl || '');
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const hoverVideoRef = useRef<HTMLVideoElement>(null);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [isSlideshowPlaying, setIsSlideshowPlaying] = useState(true);
+  const [isGalleryHovered, setIsGalleryHovered] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const slideVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Determine next / alternate image for hover preview when no video
-  const nextImage = useMemo(() => {
-    if (!product) return null;
-    const allImages: string[] = [
-      product.imageUrl,
-      ...(Array.isArray(product.images) ? product.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean) : [])
-    ];
-    const unique = Array.from(new Set(allImages));
-    return unique.find(img => img !== (activeImage || product.imageUrl)) || null;
-  }, [product, activeImage]);
+interface MediaItem {
+  type: 'image' | 'video';
+  url: string;
+  colorName?: string;
+  colorHex?: string;
+}
+
+  // Multi-media gallery items (Photos + Catwalk/Runway Video)
+  const mediaList = useMemo<MediaItem[]>(() => {
+    if (!product) return [];
+    const list: MediaItem[] = [];
+
+    const findColor = (imgUrl: string) => {
+      return normalizedColors.find((c: any) => c.imageUrl === imgUrl);
+    };
+
+    // 1. Primary image
+    if (product.imageUrl) {
+      const matched = findColor(product.imageUrl);
+      list.push({
+        type: 'image',
+        url: product.imageUrl,
+        colorName: matched?.name,
+        colorHex: matched?.hex,
+      });
+    }
+
+    // 2. Extra gallery images
+    if (Array.isArray(product.images)) {
+      product.images.forEach((img: any) => {
+        const url = typeof img === 'string' ? img : img?.url;
+        const colorName = typeof img === 'object' ? img?.colorName : undefined;
+        if (url && url !== product.imageUrl && !list.some((item) => item.url === url)) {
+          const matched = findColor(url);
+          list.push({
+            type: 'image',
+            url,
+            colorName: colorName || matched?.name,
+            colorHex: matched?.hex,
+          });
+        }
+      });
+    }
+
+    // 3. Product video if available
+    if (product.videoUrl) {
+      list.push({
+        type: 'video',
+        url: product.videoUrl,
+      });
+    }
+
+    return list.length > 0 ? list : [{ type: 'image', url: '/images/no-product.svg' }];
+  }, [product, normalizedColors]);
+
+  const currentMedia = mediaList[activeMediaIndex] || mediaList[0];
+
+  // Auto-advancing slideshow with dynamic timing (Videos play longer, images stay for ~3.8s)
+  useEffect(() => {
+    if (mediaList.length <= 1) return;
+    if (!isSlideshowPlaying || isGalleryHovered) return;
+
+    // If current item is a video, give it ~6.5s to play; for images, 3.8s
+    const duration = currentMedia?.type === 'video' ? 6500 : 3800;
+
+    const timer = setTimeout(() => {
+      setActiveMediaIndex((prev) => (prev + 1) % mediaList.length);
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [activeMediaIndex, isSlideshowPlaying, isGalleryHovered, mediaList.length, currentMedia?.type]);
+
+  // Sync selected color if current slide has a color match
+  useEffect(() => {
+    if (currentMedia?.colorName && normalizedColors.length > 0) {
+      const matched = normalizedColors.find(
+        (c) => c.name.toLowerCase() === currentMedia.colorName?.toLowerCase()
+      );
+      if (matched && matched.name !== selectedColor?.name) {
+        setSelectedColor(matched);
+      }
+    }
+  }, [activeMediaIndex, currentMedia, normalizedColors, selectedColor?.name]);
+
+  // Lightbox keyboard navigation & escape to close
+  useEffect(() => {
+    if (!isImageModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsImageModalOpen(false);
+      if (e.key === 'ArrowRight' && mediaList.length > 1) {
+        setActiveMediaIndex((prev) => (prev + 1) % mediaList.length);
+      }
+      if (e.key === 'ArrowLeft' && mediaList.length > 1) {
+        setActiveMediaIndex((prev) => (prev === 0 ? mediaList.length - 1 : prev - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isImageModalOpen, mediaList.length]);
 
   const [is3DModalOpen, setIs3DModalOpen] = useState(false);
   const [isModelTryOnOpen, setIsModelTryOnOpen] = useState(false);
@@ -268,32 +360,29 @@ export default function ProductDetailPage() {
       const pref = bodyProfile?.preferredSize || 'M';
       setSelectedSize(cachedProduct.sizes?.includes(pref) ? pref : (cachedProduct.sizes?.[0] || 'M'));
       setSelectedColor(cachedProduct.colors?.[0] || { name: 'As Pictured', hex: '#111111' });
-      if (cachedProduct.imageUrl) setActiveImage(cachedProduct.imageUrl);
+      if (cachedProduct.imageUrl) setActiveMediaIndex(0);
     }
   }, [cachedProduct, product, bodyProfile]);
 
   const handleSelectColor = (c: any) => {
     const colorObj = typeof c === 'object' ? c : { name: c, hex: '#111111' };
     setSelectedColor(colorObj);
-    setIsVideoPlaying(false);
 
-    // 1. If color has direct imageUrl
+    // 1. If color has direct imageUrl, jump to matching slide
     if (colorObj.imageUrl) {
-      setActiveImage(colorObj.imageUrl);
-      return;
+      const idx = mediaList.findIndex((item) => item.url === colorObj.imageUrl);
+      if (idx !== -1) {
+        setActiveMediaIndex(idx);
+        return;
+      }
     }
 
-    // 2. Look for matching image in product.images
-    if (Array.isArray(product?.images)) {
-      const match = product.images.find((img: any) => {
-        if (typeof img === 'object' && img.colorName?.toLowerCase() === colorObj.name?.toLowerCase()) {
-          return true;
-        }
-        return false;
-      });
-      if (match) {
-        setActiveImage(typeof match === 'string' ? match : match.url);
-      }
+    // 2. Or match by colorName
+    const nameIdx = mediaList.findIndex(
+      (item) => item.colorName && item.colorName.toLowerCase() === colorObj.name?.toLowerCase()
+    );
+    if (nameIdx !== -1) {
+      setActiveMediaIndex(nameIdx);
     }
   };
 
@@ -318,7 +407,7 @@ export default function ProductDetailPage() {
           setSelectedSize((prev: string) => (p.sizes?.includes(prev) ? prev : defaultSz));
           const initialColor = p.colors?.[0] || { name: 'As Pictured', hex: '#111111' };
           setSelectedColor(initialColor);
-          setActiveImage(initialColor?.imageUrl || p.imageUrl || '');
+          setActiveMediaIndex(0);
 
           // Fetch reviews for this product
           try {
@@ -490,168 +579,153 @@ export default function ProductDetailPage() {
         {/* LEFT COLUMN: HD GALLERY + VENDOR DELIVERY RATES UNDER IMAGE (6 COLS) */}
         <div className="lg:col-span-6 space-y-5">
           
-          {/* Main Product Image Container with Hover to Play Video or Show Next Image */}
+          {/* Main Product Image Container with Auto-Advancing Luxury Slideshow (Nike/Adidas/Jordan style) */}
           <div
-            onMouseEnter={() => {
-              setIsHovered(true);
-              if (hoverVideoRef.current) {
-                hoverVideoRef.current.play().catch(() => {});
-              }
-            }}
-            onMouseLeave={() => {
-              setIsHovered(false);
-              if (hoverVideoRef.current) {
-                hoverVideoRef.current.pause();
-                hoverVideoRef.current.currentTime = 0;
-              }
-            }}
-            className="relative h-[480px] sm:h-[540px] w-full rounded-3xl overflow-hidden surface-card border border-[var(--border-subtle)] shadow-xl group"
+            onClick={() => setIsImageModalOpen(true)}
+            onMouseEnter={() => setIsGalleryHovered(true)}
+            onMouseLeave={() => setIsGalleryHovered(false)}
+            className="relative h-[480px] sm:h-[540px] w-full rounded-3xl overflow-hidden surface-card border border-[var(--border-subtle)] shadow-2xl group select-none bg-black cursor-zoom-in"
           >
-            {/* 1. Base Active Image */}
-            <Image
-              src={activeImage || product.imageUrl}
-              alt={product.name}
-              fill
-              unoptimized
-              priority
-              className={`object-cover object-center transition-all duration-700 ${
-                isHovered && (product.videoUrl || nextImage) ? 'opacity-0 scale-105' : 'opacity-100 scale-100 group-hover:scale-105'
-              }`}
-            />
-
-            {/* 2. Hover Next/Alternate Image (when no video) */}
-            {nextImage && !product.videoUrl && (
-              <Image
-                src={nextImage}
-                alt={`${product.name} alternate view`}
-                fill
-                unoptimized
-                className={`object-cover object-center transition-opacity duration-500 pointer-events-none ${
-                  isHovered ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            )}
-
-            {/* 3. Hover Video Playback (when video is available) */}
-            {product.videoUrl && (
-              <video
-                ref={(el) => {
-                  hoverVideoRef.current = el;
-                  if (el) {
-                    el.muted = true;
-                    el.defaultMuted = true;
-                    el.playsInline = true;
-                    el.setAttribute('muted', '');
-                    el.setAttribute('playsinline', '');
-                    el.setAttribute('webkit-playsinline', '');
-                  }
-                }}
-                src={product.videoUrl}
-                poster={activeImage || product.imageUrl}
-                loop
-                muted
-                playsInline
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 pointer-events-none ${
-                  isHovered || isVideoPlaying ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                }`}
-              />
-            )}
-
-            {/* Vendor Badge Overlay */}
-            <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-              <span className="px-3.5 py-1.5 rounded-full bg-black/80 backdrop-blur-md text-white text-[11px] font-mono-luxury uppercase font-bold border border-white/10 shadow-md">
-                {product.vendorName}
-              </span>
+            {/* Main Animated Media Display (Stacked Dissolve matching 'Complete Nigerian Drip' - No White Flash) */}
+            <div className="relative w-full h-full">
+              {mediaList.map((item, idx) => {
+                const isActive = idx === activeMediaIndex;
+                return (
+                  <motion.div
+                    key={`slide-${idx}-${item.url}`}
+                    initial={false}
+                    animate={{
+                      opacity: isActive ? 1 : 0,
+                      scale: isActive ? 1 : 1.02,
+                    }}
+                    transition={{ duration: 0.9, ease: [0.25, 1, 0.5, 1] }}
+                    className={`absolute inset-0 w-full h-full ${
+                      isActive ? 'pointer-events-auto z-10' : 'pointer-events-none z-0'
+                    }`}
+                  >
+                    {item.type === 'video' ? (
+                      <div className="relative w-full h-full bg-black flex items-center justify-center">
+                        {/* Fallback image poster behind video */}
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          unoptimized
+                          priority
+                          className="object-cover object-center pointer-events-none"
+                        />
+                        <video
+                          ref={isActive ? slideVideoRef : undefined}
+                          src={item.url}
+                          poster={product.imageUrl}
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <Image
+                        src={item.url}
+                        alt={`${product.name} view ${idx + 1}`}
+                        fill
+                        unoptimized
+                        priority={idx === 0}
+                        className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                      />
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
 
-            {/* Subtle video preview indicator when product has video */}
-            {product.videoUrl && (
-              <div className="absolute top-4 right-4 z-20">
-                <span className="px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-md text-white/90 text-[11px] font-mono-luxury font-bold border border-white/15 flex items-center gap-1.5 shadow-md">
-                  <Play className="h-3 w-3 text-[var(--gold-accent)] fill-current" />
-                  <span>{isHovered ? 'Playing Preview' : 'Hover to Play'}</span>
-                </span>
-              </div>
-            )}
+            {/* 3. Floating Previous / Next Arrow Chevrons on Hover */}
+            {mediaList.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMediaIndex((prev) => (prev === 0 ? mediaList.length - 1 : prev - 1));
+                  }}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-black/60 hover:bg-black/85 text-white/80 hover:text-white border border-white/15 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl cursor-pointer hover:scale-105"
+                  title="Previous image"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
 
-            {/* Store Origin Location Badge on Photo */}
-            <div className="absolute bottom-4 left-4 right-4 p-3 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between text-xs font-mono-luxury text-white z-20">
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
-                <span>{locationLabel}</span>
-              </div>
-              <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-bold">
-                <Clock className="h-3 w-3" />
-                <span>{product.dispatchDays || '1-2 business days'}</span>
-              </div>
-            </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMediaIndex((prev) => (prev + 1) % mediaList.length);
+                  }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-black/60 hover:bg-black/85 text-white/80 hover:text-white border border-white/15 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl cursor-pointer hover:scale-105"
+                  title="Next image"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Desktop Multi-Image & Video Thumbnail Strip */}
-          {((product.images && product.images.length > 1) || product.videoUrl) && (
+          {mediaList.length > 1 && (
             <div className="flex items-center gap-2.5 overflow-x-auto py-1 scrollbar-none">
-              {Array.from(new Set<string>([
-                product.imageUrl,
-                ...(Array.isArray(product.images) ? product.images.map((img: any) => typeof img === 'string' ? img : img?.url) : [])
-              ].filter(Boolean))).map((imgUrl: string, idx: number) => {
-                const isCurrent = (activeImage === imgUrl || (!activeImage && idx === 0)) && !isVideoPlaying;
-                const matchedColor = product.colors?.find((c: any) => c.imageUrl === imgUrl);
+              {mediaList.map((item, idx: number) => {
+                const isCurrent = activeMediaIndex === idx;
 
                 return (
                   <button
                     key={`thumb-${idx}`}
                     type="button"
                     onClick={() => {
-                      setActiveImage(imgUrl);
-                      setIsVideoPlaying(false);
-                      if (matchedColor) setSelectedColor(matchedColor);
+                      setActiveMediaIndex(idx);
+                      if (item.colorName) {
+                        const matched = normalizedColors.find(
+                          (c) => c.name.toLowerCase() === item.colorName?.toLowerCase()
+                        );
+                        if (matched) setSelectedColor(matched);
+                      }
                     }}
                     onMouseEnter={() => {
-                      setActiveImage(imgUrl);
-                      setIsVideoPlaying(false);
-                      if (matchedColor) setSelectedColor(matchedColor);
+                      setActiveMediaIndex(idx);
                     }}
                     className={`relative h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer group/thumb ${
                       isCurrent
-                        ? 'border-[var(--gold-accent)] ring-2 ring-[var(--gold-accent)]/40 scale-105 shadow-md'
+                        ? 'border-[var(--gold-accent)] ring-2 ring-[var(--gold-accent)]/40 scale-105 shadow-md z-10'
                         : 'border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/60 opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <Image
-                      src={imgUrl}
-                      alt={`${product.name} view ${idx + 1}`}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                    {matchedColor && (
-                      <span
-                        className="absolute bottom-1 right-1 h-3 w-3 rounded-full border border-white/40 shadow-sm"
-                        style={{ backgroundColor: matchedColor.hex }}
-                        title={matchedColor.name}
-                      />
+                    {item.type === 'video' ? (
+                      <div className="relative w-full h-full bg-black flex flex-col items-center justify-center">
+                        <Play className="h-5 w-5 text-[var(--gold-accent)] fill-current mb-0.5" />
+                        <span className="text-[8px] font-mono-luxury font-bold uppercase text-white tracking-wider">
+                          Video
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <Image
+                          src={item.url}
+                          alt={`${product.name} view ${idx + 1}`}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                        {item.colorHex && (
+                          <span
+                            className="absolute bottom-1 right-1 h-3 w-3 rounded-full border border-white/40 shadow-sm"
+                            style={{ backgroundColor: item.colorHex }}
+                            title={item.colorName}
+                          />
+                        )}
+                      </>
                     )}
                   </button>
                 );
               })}
-
-              {/* Video Thumbnail if available */}
-              {product.videoUrl && (
-                <button
-                  type="button"
-                  onClick={() => setIsVideoPlaying(true)}
-                  className={`relative h-20 w-20 flex-shrink-0 rounded-2xl overflow-hidden border-2 bg-black flex flex-col items-center justify-center transition-all cursor-pointer ${
-                    isVideoPlaying
-                      ? 'border-[var(--gold-accent)] ring-2 ring-[var(--gold-accent)]/40 scale-105 shadow-md'
-                      : 'border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/60 opacity-80 hover:opacity-100'
-                  }`}
-                >
-                  <Play className="h-6 w-6 text-[var(--gold-accent)] fill-current mb-0.5" />
-                  <span className="text-[9px] font-mono-luxury font-bold uppercase text-white tracking-wider">
-                    Video
-                  </span>
-                </button>
-              )}
             </div>
           )}
 
@@ -694,15 +768,17 @@ export default function ProductDetailPage() {
               </Link>
 
               <button
+                type="button"
                 onClick={() => toggleVaultItem(product)}
-                className={`p-2 rounded-full border transition-all cursor-pointer ${
+                className={`p-2.5 rounded-full border transition-all cursor-pointer ${
                   isSaved
-                    ? 'bg-[var(--gold-accent)] text-black border-[var(--gold-accent)]'
-                    : 'surface-card border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-rose-400'
+                    ? 'bg-red-500/10 text-red-500 border-red-500/40 shadow-sm'
+                    : 'surface-card border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-red-500 hover:border-red-500/30'
                 }`}
-                title={isSaved ? 'In Vault' : 'Save to Vault'}
+                title={isSaved ? 'In Wishlist' : 'Add to Wishlist'}
+                aria-label={isSaved ? 'In Wishlist' : 'Add to Wishlist'}
               >
-                <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                <Heart className={`h-4 w-4 transition-colors ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
               </button>
             </div>
 
@@ -956,14 +1032,6 @@ export default function ProductDetailPage() {
                 <span>Instant Checkout</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-            </div>
-          </div>
-
-          {/* Buyer Protection Guarantee */}
-          <div className="p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center gap-3 text-xs font-mono-luxury text-[var(--text-secondary)]">
-            <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
-            <div>
-              <span className="font-bold text-[var(--text-primary)]">Buyer Protection Guarantee:</span> Your payment is safely held until the item is delivered and confirmed.
             </div>
           </div>
 
@@ -1267,6 +1335,166 @@ export default function ProductDetailPage() {
           product={product}
         />
       )}
+
+      {/* Interactive Full-Screen Image & Video Lightbox Modal */}
+      <AnimatePresence>
+        {isImageModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-6 select-none"
+            onClick={() => setIsImageModalOpen(false)}
+          >
+            {/* Top Bar: Brand, Product Name, Counter, and Close */}
+            <div
+              className="flex items-center justify-between text-white z-20 max-w-7xl w-full mx-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
+                  {product.vendorName || 'Ìrísí'}
+                </span>
+                <h3 className="font-editorial text-lg sm:text-2xl font-bold text-white truncate max-w-sm sm:max-w-xl">
+                  {product.name}
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {mediaList.length > 1 && (
+                  <span className="text-xs font-mono-luxury text-zinc-300 bg-white/10 px-3.5 py-1 rounded-full border border-white/10 font-bold">
+                    {activeMediaIndex + 1} / {mediaList.length}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsImageModalOpen(false)}
+                  className="p-2.5 rounded-full bg-white/10 border border-white/20 text-white hover:bg-white/25 active:scale-90 transition-all cursor-pointer"
+                  aria-label="Close full view"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Centered Media with Full Screen Object Contain */}
+            <div
+              className="relative w-full max-w-6xl mx-auto h-[70vh] sm:h-[74vh] my-auto flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {currentMedia?.type === 'video' ? (
+                <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black flex items-center justify-center">
+                  <video
+                    src={currentMedia.url}
+                    poster={product.imageUrl}
+                    autoPlay
+                    loop
+                    controls
+                    playsInline
+                    className="relative w-full h-full max-h-[74vh] object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="relative w-full h-full">
+                  <Image
+                    src={currentMedia?.url || product.imageUrl || '/images/no-product.svg'}
+                    alt={product.name}
+                    fill
+                    unoptimized
+                    priority
+                    className="object-contain"
+                  />
+                </div>
+              )}
+
+              {/* Lightbox Prev / Next Arrows */}
+              {mediaList.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMediaIndex((prev) => (prev === 0 ? mediaList.length - 1 : prev - 1));
+                    }}
+                    className="absolute left-2 sm:-left-6 top-1/2 -translate-y-1/2 p-3 sm:p-3.5 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/20 backdrop-blur-md transition-all cursor-pointer hover:scale-105 shadow-2xl z-30"
+                    title="Previous"
+                  >
+                    <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMediaIndex((prev) => (prev + 1) % mediaList.length);
+                    }}
+                    className="absolute right-2 sm:-right-6 top-1/2 -translate-y-1/2 p-3 sm:p-3.5 rounded-full bg-black/75 hover:bg-black/95 text-white border border-white/20 backdrop-blur-md transition-all cursor-pointer hover:scale-105 shadow-2xl z-30"
+                    title="Next"
+                  >
+                    <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Bottom Bar: Price, Thumbnails, & Quick Add */}
+            <div
+              className="flex flex-col sm:flex-row items-center justify-between gap-4 z-20 max-w-7xl w-full mx-auto pt-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="font-editorial text-2xl font-bold text-[var(--gold-accent)]">
+                ₦{Number(product.price || 0).toLocaleString()}
+              </div>
+
+              {/* Lightbox Thumbnails Strip */}
+              {mediaList.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto max-w-md py-1 scrollbar-none">
+                  {mediaList.map((item, idx) => (
+                    <button
+                      key={`modal-thumb-${idx}`}
+                      type="button"
+                      onClick={() => setActiveMediaIndex(idx)}
+                      className={`relative h-12 w-12 rounded-xl overflow-hidden border-2 transition-all cursor-pointer shrink-0 ${
+                        activeMediaIndex === idx
+                          ? 'border-[var(--gold-accent)] ring-2 ring-[var(--gold-accent)]/50 scale-105'
+                          : 'border-white/20 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {item.type === 'video' ? (
+                        <div className="w-full h-full bg-black flex items-center justify-center text-[9px] font-mono-luxury text-white">
+                          <Play className="h-3 w-3 fill-current text-[var(--gold-accent)]" />
+                        </div>
+                      ) : (
+                        <Image
+                          src={item.url}
+                          alt="thumb"
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImageModalOpen(false);
+                  handleAddToCart();
+                }}
+                disabled={isOutOfStock}
+                className="py-3 px-6 rounded-full bg-white text-black font-mono-luxury uppercase text-xs font-bold hover:bg-zinc-200 active:scale-95 transition-all shadow-xl flex items-center gap-2 cursor-pointer disabled:opacity-40"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                <span>{isOutOfStock ? 'Out of Stock' : 'Add to Bag'}</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

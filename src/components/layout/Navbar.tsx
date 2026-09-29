@@ -62,12 +62,12 @@ export default function Navbar() {
   // Consumer shopper navigation links
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/studio', label: 'Outfit Studio', badge: 'Try On' },
+    { href: '/studio', label: 'Outfit Studio', badge: 'Coming Soon' },
     { href: '/shop', label: 'Shop Catalog' },
   ];
 
   return (
-    <header className="hidden md:block sticky top-0 z-40 w-full border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/90 backdrop-blur-xl transition-all">
+    <header className="w-full border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/98 backdrop-blur-2xl transition-all shadow-xs">
       {/* 100% Full-Width Edge-to-Edge Navigation Bar (Taller & Larger Typography) */}
       <div className="w-full flex h-20 items-center justify-between px-4 sm:px-8 lg:px-12">
         
