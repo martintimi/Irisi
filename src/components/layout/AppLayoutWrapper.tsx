@@ -10,7 +10,6 @@ import BodyTwinWizard from '@/components/profile/BodyTwinWizard';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import SmoothScrollProvider from '@/components/common/SmoothScrollProvider';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
-import MobileHeader from '@/components/layout/MobileHeader';
 import WardrobeVaultDrawer from '@/components/vault/WardrobeVaultDrawer';
 import AmbientScreenSaver from '@/components/common/AmbientScreenSaver';
 import WhatsAppConciergeWidget from '@/components/common/WhatsAppConciergeWidget';
@@ -87,16 +86,6 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
           </div>
           {/* Topnav height spacer so content starts cleanly below the fixed header */}
           <div className="hidden md:block h-20" aria-hidden="true" />
-
-          {/* Mobile Top Header (Fixed at the very top of mobile pages - never scrolls away) */}
-          {pathname !== '/' && (
-            <>
-              <div className="block md:hidden fixed top-0 left-0 right-0 z-50">
-                <MobileHeader />
-              </div>
-              <div className="block md:hidden h-14" aria-hidden="true" />
-            </>
-          )}
         </>
       )}
       <main className={!isStandalonePage ? "min-h-screen pb-24 md:pb-0" : "min-h-screen"}>
