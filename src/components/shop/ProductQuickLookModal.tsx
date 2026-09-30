@@ -75,6 +75,13 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
 
   const handleAddToCart = () => {
     addToCart(product, selectedSize, selectedColor, quantity);
+    confetti({
+      particleCount: 50,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#e6c367', '#f59e0b', '#ffffff']
+    });
+    onClose();
   };
 
   const handleToggleVault = () => {

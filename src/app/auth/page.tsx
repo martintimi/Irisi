@@ -238,6 +238,9 @@ function AuthPageContent() {
         const loggedInName = res.profile?.full_name || res.profile?.name || email.split('@')[0];
         const loggedInPhone = res.profile?.phone || '';
 
+        // Clear local orders so new authenticated session starts clean with their own DB orders
+        useStore.setState({ userOrders: [] });
+
         setUserAuth({
           isLoggedIn: true,
           name: loggedInName,
@@ -331,6 +334,9 @@ function AuthPageContent() {
 
       const activeName = res.profile?.name || pendingUserData?.name || name || activeEmail.split('@')[0];
       const activePhone = res.profile?.phone || pendingUserData?.phone || phone;
+
+      // Clear local orders so new registered account starts completely fresh with 0 orders
+      useStore.setState({ userOrders: [] });
 
       setUserAuth({
         isLoggedIn: true,

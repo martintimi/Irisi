@@ -388,8 +388,19 @@ export const useStore = create<IrisiState>()(
       setUserAuth: (authUpdate) => {
         set((state) => {
           const updatedAuth = { ...state.userAuth, ...authUpdate };
+          const newEmail = (updatedAuth.email || '').toLowerCase().trim();
+          const oldEmail = (state.userAuth.email || '').toLowerCase().trim();
+
+          let filteredOrders = state.userOrders;
+          if (newEmail && oldEmail && newEmail !== oldEmail) {
+            filteredOrders = state.userOrders.filter(
+              (o) => (o.customerEmail || '').toLowerCase().trim() === newEmail
+            );
+          }
+
           return {
             userAuth: updatedAuth,
+            userOrders: filteredOrders,
             bodyProfile: {
               ...state.bodyProfile,
               name: updatedAuth.name || state.bodyProfile.name,
@@ -413,6 +424,7 @@ export const useStore = create<IrisiState>()(
             userType: 'shopper',
           },
           bodyProfile: { ...defaultProfile, isLoggedIn: false },
+          userOrders: [],
         });
       },
 

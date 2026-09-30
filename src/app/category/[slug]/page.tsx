@@ -710,7 +710,7 @@ export default function DedicatedCategoryPage() {
                     <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => addToCart(product, product.sizes?.[0] || 'M')}
+                        onClick={() => setQuickLookProduct(product)}
                         className="flex-1 py-2.5 px-3 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase font-bold hover:opacity-90 transition-all flex items-center justify-center gap-1.5 shadow-sm"
                       >
                         <ShoppingBag className="h-3.5 w-3.5" />

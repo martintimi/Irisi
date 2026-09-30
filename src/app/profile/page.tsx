@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
   User, Phone, Mail, MapPin, Package, Bell, Star, ShieldCheck,
@@ -95,14 +95,16 @@ export default function ProfilePage() {
               email: p.email || '',
               phone: p.phone || '',
             });
-          }
-        }
 
-        const ordRes = await fetch('/api/orders');
-        if (ordRes.ok) {
-          const ordData = await ordRes.json();
-          if (ordData.orders) {
-            setLiveOrders(ordData.orders);
+            if (p.email) {
+              const ordRes = await fetch(`/api/orders?email=${encodeURIComponent(p.email)}`);
+              if (ordRes.ok) {
+                const ordData = await ordRes.json();
+                if (ordData.orders && Array.isArray(ordData.orders)) {
+                  setLiveOrders(ordData.orders);
+                }
+              }
+            }
           }
         }
       } catch (err) {
@@ -184,7 +186,44 @@ export default function ProfilePage() {
   const displayName = profileForm.name || userAuth.name || (userAuth.email ? userAuth.email.split('@')[0] : 'Ìrísí Patron');
   const displayPhone = profileForm.phone || userAuth.phone || 'No phone added (Tap Details to Add)';
   const displayLocation = (profileForm.deliveryAddress || profileForm.city) ? `${profileForm.city}, ${profileForm.state}` : 'Lagos, Nigeria';
-  const effectiveOrders = liveOrders.length > 0 ? liveOrders : userOrders;
+  const effectiveOrders = useMemo(() => {
+    const userEmail = (userAuth?.email || profileForm?.email || '').toLowerCase().trim();
+    const userPhone = (userAuth?.phone || profileForm?.phone || '').replace(/\D/g, '');
+
+    const combined: any[] = [];
+    const seen = new Set<string>();
+
+    const allCandidates = liveOrders.length > 0 ? liveOrders : userOrders;
+
+    allCandidates.forEach((ord: any) => {
+      const ordKey = ord.orderNumber || ord.id;
+      if (!ordKey || seen.has(ordKey)) return;
+
+      if (userEmail || userPhone) {
+        const oEmail = (ord.customerEmail || ord.customer_email || '').toLowerCase().trim();
+        const oPhone = (ord.customerPhone || ord.customer_phone || '').replace(/\D/g, '');
+        const emailMatches = Boolean(userEmail && oEmail && (oEmail === userEmail || oEmail.includes(userEmail)));
+        const phoneMatches = Boolean(userPhone && userPhone.length >= 7 && oPhone && oPhone.includes(userPhone));
+        if (!emailMatches && !phoneMatches) {
+          return;
+        }
+      } else {
+        return;
+      }
+
+      seen.add(ordKey);
+      combined.push(ord);
+    });
+
+    return combined.sort((a, b) => {
+      const stageB = Number(b.trackingStage ?? (b.status === 'delivered' ? 4 : b.status === 'dispatched' ? 3 : (b.status === 'packing' || b.status === 'ready') ? 2 : 1));
+      const stageA = Number(a.trackingStage ?? (a.status === 'delivered' ? 4 : a.status === 'dispatched' ? 3 : (a.status === 'packing' || a.status === 'ready') ? 2 : 1));
+      if (stageB !== stageA) return stageB - stageA;
+      const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime();
+      const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [liveOrders, userOrders, userAuth?.email, profileForm?.email, userAuth?.phone, profileForm?.phone]);
 
   return (
     <>

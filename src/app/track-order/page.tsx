@@ -19,7 +19,7 @@ export default function TrackOrderPage() {
   const router = useRouter();
   const initialOrderNo = searchParams.get('orderNumber') || '';
 
-  const { userOrders } = useStore();
+  const { userOrders, userAuth } = useStore();
 
   const [searchQuery, setSearchQuery] = useState(initialOrderNo);
   const [searchedOrder, setSearchedOrder] = useState<any | null>(null);
@@ -27,6 +27,27 @@ export default function TrackOrderPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [releasingPackageId, setReleasingPackageId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState('');
+
+  // User's orders sorted with latest status at the top
+  const userOrdersList = useMemo(() => {
+    const userEmail = (userAuth?.email || '').toLowerCase().trim();
+    const userPhone = (userAuth?.phone || '').replace(/\D/g, '');
+    const matched = userOrders.filter((ord: any) => {
+      if (!userEmail && !userPhone) return true;
+      const oEmail = (ord.customerEmail || ord.customer_email || '').toLowerCase().trim();
+      const oPhone = (ord.customerPhone || ord.customer_phone || '').replace(/\D/g, '');
+      return (userEmail && oEmail === userEmail) || (userPhone && userPhone.length >= 7 && oPhone.includes(userPhone));
+    });
+
+    return matched.sort((a: any, b: any) => {
+      const stageB = Number(b.trackingStage ?? (b.status === 'delivered' ? 4 : b.status === 'dispatched' ? 3 : (b.status === 'packing' || b.status === 'ready') ? 2 : 1));
+      const stageA = Number(a.trackingStage ?? (a.status === 'delivered' ? 4 : a.status === 'dispatched' ? 3 : (a.status === 'packing' || a.status === 'ready') ? 2 : 1));
+      if (stageB !== stageA) return stageB - stageA;
+      const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime();
+      const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [userOrders, userAuth?.email, userAuth?.phone]);
 
   // Rating & Review State
   const [activeReviewVendor, setActiveReviewVendor] = useState<{ vendorId: string; vendorName: string; productId: string; productName: string } | null>(null);
@@ -79,8 +100,16 @@ export default function TrackOrderPage() {
   useEffect(() => {
     if (initialOrderNo) {
       fetchOrderFromDb(initialOrderNo);
+    } else if (userOrdersList.length > 0 && !searchedOrder) {
+      // Auto-load the order with the latest status!
+      const topOrder = userOrdersList[0];
+      const ordCode = topOrder.orderNumber || topOrder.id;
+      if (ordCode) {
+        setSearchQuery(ordCode);
+        fetchOrderFromDb(ordCode);
+      }
     }
-  }, [initialOrderNo]);
+  }, [initialOrderNo, userOrdersList]);
 
   // Supabase Realtime: Updates package tracking live when vendor or courier marks dispatched or delivered
   useEffect(() => {
@@ -203,7 +232,15 @@ export default function TrackOrderPage() {
       entry.subtotal += itemPrice * itemQty;
     });
 
-    return Array.from(vMap.values());
+    // Sort vendor packages so the package with the latest status is at the top!
+    return Array.from(vMap.values()).sort((a, b) => {
+      if (b.packageStage !== a.packageStage) {
+        return b.packageStage - a.packageStage;
+      }
+      const bTime = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
+      const aTime = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
+      return bTime - aTime;
+    });
   }, [searchedOrder]);
 
   // Release Escrow for a specific vendor's package
@@ -384,6 +421,42 @@ export default function TrackOrderPage() {
             {isSearching ? <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" /> : <span>Track</span>}
           </button>
         </div>
+
+        {userOrdersList.length > 1 && (
+          <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center gap-2 overflow-x-auto pb-1">
+            <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] shrink-0 font-bold">Your Orders:</span>
+            {userOrdersList.map((ord: any) => {
+              const ordRef = ord.orderNumber || ord.id;
+              const isSelected = searchedOrder && (searchedOrder.orderNumber === ordRef || searchedOrder.id === ordRef);
+              const stage = Number(ord.trackingStage ?? (ord.status === 'delivered' ? 4 : ord.status === 'dispatched' ? 3 : (ord.status === 'packing' || ord.status === 'ready') ? 2 : 1));
+              const statusLabel = stage === 4 ? 'Delivered' : stage === 3 ? 'In Transit' : stage === 2 ? 'Packed' : 'Confirmed';
+              return (
+                <button
+                  key={ordRef}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(ordRef);
+                    fetchOrderFromDb(ordRef);
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-mono-luxury font-bold border transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)] text-[var(--gold-accent)]'
+                      : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  <span>{ordRef}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
+                    stage === 4 ? 'bg-emerald-500/20 text-emerald-400' :
+                    stage === 3 ? 'bg-amber-500/20 text-amber-400' :
+                    stage === 2 ? 'bg-blue-500/20 text-blue-400' : 'bg-zinc-500/20 text-zinc-400'
+                  }`}>
+                    {statusLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </form>
 
       {/* Toast Alert */}

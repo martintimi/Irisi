@@ -17,7 +17,7 @@ export default function MobileTrackOrderView() {
   const router = useRouter();
   const initialOrderNo = searchParams.get('orderNumber') || '';
 
-  const { userOrders } = useStore();
+  const { userOrders, userAuth } = useStore();
 
   const [searchQuery, setSearchQuery] = useState(initialOrderNo);
   const [searchedOrder, setSearchedOrder] = useState<any | null>(null);
@@ -76,8 +76,34 @@ export default function MobileTrackOrderView() {
   useEffect(() => {
     if (initialOrderNo) {
       fetchOrderFromDb(initialOrderNo);
+    } else {
+      const userEmail = (userAuth?.email || '').toLowerCase().trim();
+      const userPhone = (userAuth?.phone || '').replace(/\D/g, '');
+      const candidateOrders = userOrders.filter((ord: any) => {
+        if (!userEmail && !userPhone) return true;
+        const oEmail = (ord.customerEmail || ord.customer_email || '').toLowerCase().trim();
+        const oPhone = (ord.customerPhone || ord.customer_phone || '').replace(/\D/g, '');
+        return (userEmail && oEmail === userEmail) || (userPhone && userPhone.length >= 7 && oPhone.includes(userPhone));
+      });
+
+      if (candidateOrders.length > 0 && !searchedOrder) {
+        const sorted = [...candidateOrders].sort((a: any, b: any) => {
+          const stageB = Number(b.trackingStage ?? (b.status === 'delivered' ? 4 : b.status === 'dispatched' ? 3 : (b.status === 'packing' || b.status === 'ready') ? 2 : 1));
+          const stageA = Number(a.trackingStage ?? (a.status === 'delivered' ? 4 : a.status === 'dispatched' ? 3 : (a.status === 'packing' || a.status === 'ready') ? 2 : 1));
+          if (stageB !== stageA) return stageB - stageA;
+          const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime();
+          const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime();
+          return timeB - timeA;
+        });
+        const topOrder = sorted[0];
+        const ordCode = topOrder.orderNumber || topOrder.id;
+        if (ordCode) {
+          setSearchQuery(ordCode);
+          fetchOrderFromDb(ordCode);
+        }
+      }
     }
-  }, [initialOrderNo]);
+  }, [initialOrderNo, userOrders, userAuth?.email, userAuth?.phone]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +201,15 @@ export default function MobileTrackOrderView() {
       entry.subtotal += itemPrice * itemQty;
     });
 
-    return Array.from(vMap.values());
+    // Sort packages so the package with the latest status is at the top
+    return Array.from(vMap.values()).sort((a, b) => {
+      if (b.packageStage !== a.packageStage) {
+        return b.packageStage - a.packageStage;
+      }
+      const bTime = b.lastUpdated ? new Date(b.lastUpdated).getTime() : 0;
+      const aTime = a.lastUpdated ? new Date(a.lastUpdated).getTime() : 0;
+      return bTime - aTime;
+    });
   }, [searchedOrder]);
 
   const handleConfirmReceivedPackage = async (vendorId: string, vendorName: string) => {

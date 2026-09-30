@@ -93,17 +93,39 @@ export default function MobileProfileView() {
     loadOrders();
   }, [userAuth?.email, userAuth?.phone, bodyProfile?.email, bodyProfile?.phone]);
 
-  // Combine live orders with store orders (deduplicated)
+  // Combine live orders with store orders (deduplicated & strictly user-scoped)
   const effectiveOrders = useMemo(() => {
+    const userEmail = (userAuth?.email || bodyProfile?.email || '').toLowerCase().trim();
+    const userPhone = (userAuth?.phone || bodyProfile?.phone || '').replace(/\D/g, '');
+
     const map = new Map<string, any>();
-    userOrders.forEach((o) => {
+    
+    // Only include local store orders if they strictly belong to the current authenticated user
+    userOrders.forEach((o: any) => {
+      const oEmail = (o.customerEmail || o.customer_email || '').toLowerCase().trim();
+      const oPhone = (o.customerPhone || o.customer_phone || '').replace(/\D/g, '');
+      const belongsToUser = !userEmail && !userPhone
+        ? false
+        : (userEmail && oEmail && oEmail === userEmail) || (userPhone && userPhone.length >= 7 && oPhone.includes(userPhone));
+
+      if (belongsToUser) {
+        if (o.orderNumber || o.id) map.set(o.orderNumber || o.id, o);
+      }
+    });
+
+    liveOrders.forEach((o: any) => {
       if (o.orderNumber || o.id) map.set(o.orderNumber || o.id, o);
     });
-    liveOrders.forEach((o) => {
-      if (o.orderNumber || o.id) map.set(o.orderNumber || o.id, o);
+
+    return Array.from(map.values()).sort((a, b) => {
+      const stageB = Number(b.trackingStage ?? (b.status === 'delivered' ? 4 : b.status === 'dispatched' ? 3 : (b.status === 'packing' || b.status === 'ready') ? 2 : 1));
+      const stageA = Number(a.trackingStage ?? (a.status === 'delivered' ? 4 : a.status === 'dispatched' ? 3 : (a.status === 'packing' || a.status === 'ready') ? 2 : 1));
+      if (stageB !== stageA) return stageB - stageA;
+      const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime();
+      const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime();
+      return timeB - timeA;
     });
-    return Array.from(map.values());
-  }, [userOrders, liveOrders]);
+  }, [userOrders, liveOrders, userAuth?.email, bodyProfile?.email, userAuth?.phone, bodyProfile?.phone]);
 
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();

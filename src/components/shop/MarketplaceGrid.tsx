@@ -930,7 +930,7 @@ export default function MarketplaceGrid() {
                       </button>
 
                       <button
-                        onClick={() => product.stockQuantity === 0 ? null : addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
+                        onClick={() => product.stockQuantity === 0 ? null : setQuickLookProduct(product)}
                         disabled={product.stockQuantity === 0}
                         className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap border transition-all ${
                           product.stockQuantity === 0
