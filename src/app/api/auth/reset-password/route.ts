@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_URL = (!rawUrl || rawUrl.includes('bflddlhjlpdvceuypxkh'))
   ? 'https://npdaydpxzebxdmeevpvl.supabase.co'
@@ -16,7 +19,9 @@ const SUPABASE_SERVICE_KEY = (!rawServiceKey || rawServiceKey.length < 20)
   ? Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8')
   : rawServiceKey;
 
-const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function getPhoneCandidates(rawPhone: string): string[] {
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
     const trimmed = identifier.trim();
     let resolvedEmail = trimmed.toLowerCase();
 
-    // If identifier is not an email, resolve via Nigerian phone candidates
+    // If identifier is not an email, resolve via Nigerian phone candidates or brand name
     if (!trimmed.includes('@')) {
       const candidates = getPhoneCandidates(trimmed);
       const { data: vMatch } = await adminClient
@@ -89,35 +94,80 @@ export async function POST(request: Request) {
         if (pMatch?.email) {
           resolvedEmail = pMatch.email.trim().toLowerCase();
         } else {
-          return NextResponse.json(
-            { error: 'Account not found. Please verify your email or phone number.' },
-            { status: 404 }
-          );
+          // Check brand name
+          const { data: vBrand } = await adminClient
+            .from('vendors')
+            .select('email')
+            .or(`id.ilike.${trimmed},brand_name.ilike.${trimmed}`)
+            .maybeSingle();
+
+          if (vBrand?.email) {
+            resolvedEmail = vBrand.email.trim().toLowerCase();
+          } else {
+            return NextResponse.json(
+              { error: 'Account not found. Please verify your email or phone number.' },
+              { status: 404 }
+            );
+          }
         }
       }
     }
 
-    // 1. Verify OTP with Supabase Auth
     const cleanToken = token.trim();
-    const { data: verifyData, error: verifyErr } = await anonClient.auth.verifyOtp({
+    let verifiedUser: any = null;
+
+    // 1. Primary verification: verify with type 'email' (dispatched via Supabase signInWithOtp)
+    const { data: emailVerify, error: emailErr } = await anonClient.auth.verifyOtp({
       email: resolvedEmail,
       token: cleanToken,
-      type: 'recovery',
+      type: 'email',
     });
 
-    if (verifyErr || !verifyData?.user) {
-      console.error('[reset-password] verifyOtp error:', verifyErr);
+    if (!emailErr && emailVerify?.user) {
+      verifiedUser = emailVerify.user;
+    } else {
+      // 2. Fallback verification: verify with type 'recovery' (in case recovery email was dispatched)
+      const { data: recoveryVerify, error: recoveryErr } = await anonClient.auth.verifyOtp({
+        email: resolvedEmail,
+        token: cleanToken,
+        type: 'recovery',
+      });
+
+      if (!recoveryErr && recoveryVerify?.user) {
+        verifiedUser = recoveryVerify.user;
+      }
+    }
+
+    // 3. Fallback check: user_metadata verification_otp if stored
+    if (!verifiedUser) {
+      const { data: userList } = await adminClient.auth.admin.listUsers();
+      const targetUser = userList?.users?.find(
+        (u: any) => u.email?.toLowerCase() === resolvedEmail
+      );
+      if (targetUser) {
+        const storedOtp = targetUser.user_metadata?.verification_otp;
+        const expiresAt = targetUser.user_metadata?.verification_otp_expires_at;
+        if (storedOtp && storedOtp === cleanToken) {
+          if (!expiresAt || new Date(expiresAt) > new Date()) {
+            verifiedUser = targetUser;
+          }
+        }
+      }
+    }
+
+    if (!verifiedUser) {
       return NextResponse.json(
-        { error: 'The verification code is invalid or has expired. Please request a new code.' },
+        { error: 'The 6-digit verification code is invalid or has expired. Please check your email inbox and enter the code carefully.' },
         { status: 400 }
       );
     }
 
-    const userId = verifyData.user.id;
+    const userId = verifiedUser.id;
 
-    // 2. Update user's password securely via Supabase Admin API
+    // 4. Update user's password securely via Supabase Admin API
     const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
       password: newPassword,
+      email_confirm: true,
     });
 
     if (updateErr) {
