@@ -332,11 +332,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: orderError.message }, { status: 400 });
     }
 
-    // 2. Insert order items into order_items table without invalid image_url column
+    // 2. Fetch configured platform commission rate (defaults to 0%)
+    let commissionPercent = 0;
+    try {
+      const { data: commData } = await supabase
+        .from('vendors')
+        .select('bio')
+        .eq('id', 'admin-platform-commission')
+        .single();
+      if (commData?.bio) {
+        const parsed = JSON.parse(commData.bio);
+        if (parsed.isEnabled && Number(parsed.commissionPercent) > 0) {
+          commissionPercent = Number(parsed.commissionPercent);
+        }
+      }
+    } catch (_) {}
+
+    // Insert order items into order_items table without invalid image_url column
     if (body.items && Array.isArray(body.items) && body.items.length > 0) {
       const itemsToInsert = body.items.map((item: any) => {
         const qty = Number(item.quantity || 1);
         const itemPrice = Number(item.price || 0);
+        const itemTotal = itemPrice * qty;
+        const platformComm = commissionPercent > 0 ? Math.round(itemTotal * (commissionPercent / 100)) : 0;
+        const vendorPayout = itemTotal - platformComm;
+
         return {
           order_id: orderId,
           product_id: item.productId || item.id || `item-${Date.now()}`,
@@ -346,8 +366,8 @@ export async function POST(request: Request) {
           size: item.size || item.selectedSize || 'M',
           color: typeof item.color === 'string' ? item.color : (item.color?.hex || '#111111'),
           quantity: qty,
-          vendor_payout_amount: itemPrice * qty * 0.9,
-          platform_commission_amount: itemPrice * qty * 0.1,
+          vendor_payout_amount: vendorPayout,
+          platform_commission_amount: platformComm,
           status: 'escrow_secured',
         };
       });
@@ -456,14 +476,20 @@ export async function POST(request: Request) {
       const uniqueVendorIds: string[] = Array.from(new Set<string>((body.items || []).map((i: any) => String(i.vendorId || i.vendor_id || '').toLowerCase().trim())));
       uniqueVendorIds.forEach((vId: string) => {
         if (vId && typeof vId === 'string' && vId.includes('@')) {
+          const vItems = (body.items || []).filter((i: any) => (i.vendorId || i.vendor_id || '').toLowerCase().trim() === vId);
+          const vSubtotal = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+          const vPkg = initialVendorPackages[vId] || Object.entries(initialVendorPackages).find(([k]) => k.toLowerCase() === vId)?.[1];
+          const vShippingFee = (vPkg?.deliveryMethod === 'park_pickup') ? 0 : Number(vPkg?.shippingFee || 0);
+          const vTotal = vSubtotal + vShippingFee;
+
           sendVendorNewOrderEmail(vId, {
             orderNumber,
             customerName: body.customerName,
             customerEmail: body.customerEmail || '',
             deliveryAddress: body.deliveryAddress,
-            items: (body.items || []).filter((i: any) => (i.vendorId || i.vendor_id || '').toLowerCase().trim() === vId),
-            totalAmount: Number(body.totalAmount || 0),
-            shippingFee: Number(body.shippingFee || 0)
+            items: vItems,
+            totalAmount: vTotal,
+            shippingFee: vShippingFee
           }).catch(e => console.error('Vendor email error:', e));
         }
       });

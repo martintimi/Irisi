@@ -6,7 +6,7 @@ export async function PATCH(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { orderId, status, trackingStage, waybillNumber, courierName, driverPhone, releaseEscrow } = body;
+    const { orderId, vendorId, status, trackingStage, waybillNumber, courierName, driverPhone, releaseEscrow } = body;
 
     if (!orderId) {
       return NextResponse.json({ success: false, error: 'Order ID is required' }, { status: 400 });
@@ -32,6 +32,7 @@ export async function PATCH(request: Request) {
     // Update customer_measurements tracking details if provided
     const measurements = existingOrder.customer_measurements || {};
     const trackingDetails = measurements.trackingDetails || {};
+    const vendorPackages = measurements.vendorPackages || {};
 
     if (trackingStage !== undefined) {
       trackingDetails.trackingStage = Number(trackingStage);
@@ -49,10 +50,65 @@ export async function PATCH(request: Request) {
     if (driverPhone) trackingDetails.driverPhone = driverPhone;
 
     if (releaseEscrow) {
-      trackingDetails.escrowReleased = true;
-      trackingDetails.escrowReleasedAt = new Date().toISOString();
-      updates.status = 'delivered';
+      if (vendorId) {
+        // Targeted release for a specific vendor's package
+        const cleanVId = String(vendorId).toLowerCase().trim();
+        let targetKey = Object.keys(vendorPackages).find(k => k.toLowerCase().trim() === cleanVId) || cleanVId;
+
+        if (vendorPackages[targetKey]) {
+          vendorPackages[targetKey] = {
+            ...vendorPackages[targetKey],
+            status: 'delivered',
+            trackingStage: 4,
+            escrowReleased: true,
+            escrowReleasedAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+          };
+        }
+
+        // Update DB order_items strictly for this vendor
+        await supabase
+          .from('order_items')
+          .update({ status: 'delivered' })
+          .eq('order_id', orderId)
+          .ilike('vendor_id', `%${cleanVId}%`);
+
+        // Check if all packages are now completed
+        const allPkgs = Object.values(vendorPackages) as any[];
+        const allDelivered = allPkgs.length > 0 && allPkgs.every(p => p.trackingStage >= 4 || p.status === 'delivered');
+        if (allDelivered) {
+          updates.status = 'delivered';
+          trackingDetails.trackingStage = 4;
+          trackingDetails.escrowReleased = true;
+          trackingDetails.escrowReleasedAt = new Date().toISOString();
+        } else {
+          updates.status = existingOrder.status || 'dispatched';
+        }
+      } else {
+        // Global order release
+        trackingDetails.escrowReleased = true;
+        trackingDetails.escrowReleasedAt = new Date().toISOString();
+        updates.status = 'delivered';
+
+        Object.keys(vendorPackages).forEach(k => {
+          vendorPackages[k] = {
+            ...vendorPackages[k],
+            status: 'delivered',
+            trackingStage: 4,
+            escrowReleased: true,
+            escrowReleasedAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+          };
+        });
+
+        await supabase
+          .from('order_items')
+          .update({ status: 'delivered' })
+          .eq('order_id', orderId);
+      }
     }
+
+    measurements.vendorPackages = vendorPackages;
 
     measurements.trackingDetails = trackingDetails;
     updates.customer_measurements = measurements;

@@ -96,18 +96,34 @@ export default function VendorOrdersPage() {
     );
 
     const activeVendorId = getActiveVendorId();
-    const vendorKey = (items[0]?.vendorId || activeVendorId || '').toLowerCase().trim();
     const vendorPackages = ord.vendorPackages || ord.customer_measurements?.vendorPackages || {};
-    const myPkg = vendorPackages[vendorKey] || Object.values(vendorPackages)[0] || {};
+    
+    // Find this vendor's package reliably across keys (vendor_id, vendorId, activeVendorId)
+    const candidateKeys = Array.from(new Set<string>([
+      activeVendorId,
+      ...items.map((i: any) => i.vendorId || i.vendor_id || '')
+    ])).filter(Boolean).map(k => String(k).toLowerCase().trim());
+
+    let myPkg: any = null;
+    for (const key of candidateKeys) {
+      if (vendorPackages[key]) {
+        myPkg = vendorPackages[key];
+        break;
+      }
+      const matchedKey = Object.keys(vendorPackages).find(k => k.toLowerCase().trim() === key);
+      if (matchedKey && vendorPackages[matchedKey]) {
+        myPkg = vendorPackages[matchedKey];
+        break;
+      }
+    }
+    if (!myPkg) {
+      myPkg = Object.values(vendorPackages)[0] || {};
+    }
 
     const deliveryMethod = myPkg.deliveryMethod || ord.deliveryMethod || 'doorstep';
     const isParkPickup = deliveryMethod === 'park_pickup';
-    const totalPkgCount = Object.keys(vendorPackages).length || 1;
-    const vendorDeliveryFee = isParkPickup
-      ? 0
-      : (myPkg.shippingFee !== undefined
-          ? Number(myPkg.shippingFee)
-          : Math.round((Number(ord.shippingFee) || 0) / totalPkgCount));
+    // For motor park pickup, delivery fee is strictly 0 (customer pays the driver directly at terminal)
+    const vendorDeliveryFee = isParkPickup ? 0 : Number(myPkg.shippingFee || 0);
     // The vendor payout is STRICTLY their clothes earnings! Delivery fees are paid to courier riders or collected at the park.
     const totalPayout = vendorSubtotal;
 

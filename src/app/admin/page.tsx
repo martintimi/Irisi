@@ -133,6 +133,32 @@ export default function SuperAdminPage() {
       .catch(() => {});
   }, []);
 
+  // Platform Commission & Fee Setting State
+  const [commissionConfig, setCommissionConfig] = useState<{ commissionPercent: number; isEnabled: boolean }>({
+    commissionPercent: 0,
+    isEnabled: false,
+  });
+  const [commissionInput, setCommissionInput] = useState<string>('0');
+  const [commissionEnabledInput, setCommissionEnabledInput] = useState<boolean>(false);
+  const [isSavingCommission, setIsSavingCommission] = useState<boolean>(false);
+
+  // Fetch live platform commission rate from server API
+  useEffect(() => {
+    fetch('/api/admin/commission')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.config) {
+          setCommissionConfig({
+            commissionPercent: Number(data.config.commissionPercent || 0),
+            isEnabled: Boolean(data.config.isEnabled),
+          });
+          setCommissionInput(String(data.config.commissionPercent || 0));
+          setCommissionEnabledInput(Boolean(data.config.isEnabled));
+        }
+      })
+      .catch((err) => console.error('Error fetching commission config:', err));
+  }, []);
+
   // Live Orders Data from DB
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
@@ -348,19 +374,22 @@ export default function SuperAdminPage() {
     }
   };
 
-  // ORDER ACTIONS: Release Escrow (once delivered or verified)
-  const handleReleaseEscrow = async (orderId: string) => {
-    if (!confirm('Are you sure you want to release escrow funds for this order to the vendor?')) return;
+  // ORDER ACTIONS: Release Escrow (once delivered or verified - supports isolated per-vendor release)
+  const handleReleaseEscrow = async (orderId: string, vendorId?: string) => {
+    const confirmPrompt = vendorId
+      ? 'Are you sure you want to release escrow funds for this vendor?'
+      : 'Are you sure you want to release escrow funds for this order to the vendor?';
+    if (!confirm(confirmPrompt)) return;
     try {
       setActionLoadingId(orderId);
       const res = await fetch('/api/admin/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, releaseEscrow: true })
+        body: JSON.stringify({ orderId, vendorId, releaseEscrow: true })
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionSuccessMsg(`Escrow released for order ${orderId}! Vendor payout recorded.`);
+        setActionSuccessMsg(vendorId ? `Escrow released for vendor payout!` : `Escrow released for order ${orderId}!`);
         await fetchOrdersList();
         setTimeout(() => setActionSuccessMsg(''), 4000);
       }
@@ -492,14 +521,38 @@ export default function SuperAdminPage() {
     }
   };
 
-  // Derived Financial Calculations directly from real database orders
+  // Derived Financial Calculations directly from real database orders with isolated vendor settlement
   const financialStats = useMemo(() => {
     const totalGMV = orders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
-    const completedOrders = orders.filter(o => o.status === 'delivered' || o.trackingStage >= 4);
-    const settledPayouts = completedOrders.reduce((sum, o) => sum + Number(o.subtotal || 0), 0);
-    const escrowLocked = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
-      .reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
-    const platformCommission = Math.round(totalGMV * 0.10); // 10% marketplace fee
+    const activeFeePercent = commissionConfig.isEnabled ? Number(commissionConfig.commissionPercent || 0) : 0;
+    const platformCommission = Math.round(totalGMV * (activeFeePercent / 100));
+
+    let settledPayouts = 0;
+    let escrowLocked = 0;
+
+    orders.forEach((ord) => {
+      const vendorPackages = ord.vendorPackages || ord.customer_measurements?.vendorPackages || {};
+      (ord.items || []).forEach((item: any) => {
+        const vId = (item.vendorId || item.vendor_id || 'vendor').toLowerCase().trim();
+        const vPkg = vendorPackages[vId] || Object.entries(vendorPackages).find(([k]) => k.toLowerCase().trim() === vId)?.[1];
+        
+        // Check per-vendor delivery status: package level, item level, or global order level
+        const isVendorDelivered = (vPkg && (Number(vPkg.trackingStage) >= 4 || vPkg.status === 'delivered'))
+          || item.status === 'delivered'
+          || ord.status === 'delivered';
+
+        const itemTotal = Number(item.price || 0) * Number(item.quantity || 1);
+        const itemFee = Math.round(itemTotal * (activeFeePercent / 100));
+        const payout = itemTotal - itemFee;
+
+        if (isVendorDelivered) {
+          settledPayouts += payout;
+        } else {
+          escrowLocked += payout;
+        }
+      });
+    });
+
     const avgOrderValue = orders.length > 0 ? Math.round(totalGMV / orders.length) : 0;
 
     return {
@@ -507,13 +560,15 @@ export default function SuperAdminPage() {
       settledPayouts,
       escrowLocked,
       platformCommission,
+      activeFeePercent,
       avgOrderValue,
       totalOrdersCount: orders.length
     };
-  }, [orders]);
+  }, [orders, commissionConfig]);
 
-  // Derived Vendor Escrow Balances Breakdown with Itemized Orders
+  // Derived Vendor Escrow Balances Breakdown with Itemized Orders & Isolated Fulfillment
   const vendorEscrowBreakdown = useMemo(() => {
+    const activeFeePercent = commissionConfig.isEnabled ? Number(commissionConfig.commissionPercent || 0) : 0;
     const map = new Map<string, {
       vendorId: string;
       vendorName: string;
@@ -527,6 +582,7 @@ export default function SuperAdminPage() {
       itemsSold: Array<{
         orderId: string;
         orderNumber: string;
+        vendorId: string;
         date: string;
         customerName: string;
         customerCity: string;
@@ -542,19 +598,28 @@ export default function SuperAdminPage() {
     }>();
 
     orders.forEach((ord) => {
-      const isDelivered = ord.status === 'delivered' || ord.trackingStage >= 4;
+      const vendorPackages = ord.vendorPackages || ord.customer_measurements?.vendorPackages || {};
+
       (ord.items || []).forEach((item: any) => {
-        const vId = (item.vendorId || item.vendor_id || 'vendor').toLowerCase();
+        const vId = (item.vendorId || item.vendor_id || 'vendor').toLowerCase().trim();
         const vName = item.vendorName || vId.toUpperCase();
+        const vPkg = vendorPackages[vId] || Object.entries(vendorPackages).find(([k]) => k.toLowerCase().trim() === vId)?.[1];
+
+        // Isolated per-vendor delivery check:
+        const isDelivered = (vPkg && (Number(vPkg.trackingStage) >= 4 || vPkg.status === 'delivered'))
+          || item.status === 'delivered'
+          || ord.status === 'delivered';
+
         const itemTotal = Number(item.price || 0) * Number(item.quantity || 1);
-        const payoutAmount = itemTotal * 0.9;
-        const platformFee = itemTotal * 0.1;
+        const platformFee = Math.round(itemTotal * (activeFeePercent / 100));
+        const payoutAmount = itemTotal - platformFee;
 
         const matchedVendor = vendors.find(v => v.id === vId || (v.name && v.name.toLowerCase() === vName.toLowerCase()));
 
         const itemRecord = {
           orderId: ord.id,
           orderNumber: ord.orderNumber,
+          vendorId: vId,
           date: ord.date || ord.createdAt,
           customerName: ord.customerName,
           customerCity: ord.deliveryCity || 'Lagos',
@@ -565,7 +630,7 @@ export default function SuperAdminPage() {
           payoutAmount,
           platformFee,
           isDelivered,
-          status: ord.status,
+          status: isDelivered ? 'delivered' : (vPkg?.status || ord.status || 'escrow_secured'),
         };
 
         if (!map.has(vId)) {
@@ -596,7 +661,7 @@ export default function SuperAdminPage() {
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalSales - a.totalSales);
-  }, [orders, vendors]);
+  }, [orders, vendors, commissionConfig]);
 
   // Derived Unique Customers Directory from real database orders with full order history
   const customersList = useMemo(() => {
@@ -2910,9 +2975,103 @@ export default function SuperAdminPage() {
                 </button>
 
                 <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-1">
-                  <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold block">Platform Fee (10%)</span>
-                  <strong className="font-editorial text-3xl font-bold text-cyan-400">₦{financialStats.platformCommission.toLocaleString()}</strong>
-                  <span className="text-[10px] font-mono-luxury text-zinc-400 block">Calculated revenue</span>
+                  <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold block">
+                    Platform Fee ({financialStats.activeFeePercent}%)
+                  </span>
+                  <strong className="font-editorial text-3xl font-bold text-cyan-400">
+                    ₦{financialStats.platformCommission.toLocaleString()}
+                  </strong>
+                  <span className="text-[10px] font-mono-luxury text-zinc-400 block">
+                    {financialStats.activeFeePercent === 0 ? '0% Active (100% Vendor Payout)' : 'Calculated revenue'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Platform Fee & Commission Configuration Panel */}
+              <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="h-5 w-5 text-[var(--gold-accent)]" />
+                      <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                        Platform Commission & Fee Configuration
+                      </h3>
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] font-mono-luxury max-w-2xl">
+                      Configure the platform fee percentage deducted on garment sales. Currently set to <strong className="text-[var(--gold-accent)]">{commissionConfig.isEnabled ? `${commissionConfig.commissionPercent}%` : '0% (Disabled)'}</strong>. Vendors receive {100 - (commissionConfig.isEnabled ? commissionConfig.commissionPercent : 0)}% of sales. When you are ready to start charging fees, set your rate below and save.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={commissionEnabledInput}
+                        onChange={(e) => setCommissionEnabledInput(e.target.checked)}
+                        className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
+                      />
+                      <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
+                        {commissionEnabledInput ? 'Fee Charging Active' : 'Fee Disabled (0%)'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
+                  <div className="w-full sm:w-auto flex items-center gap-2">
+                    <span className="text-xs font-mono-luxury text-[var(--text-secondary)] shrink-0">
+                      Platform Fee Percentage (%):
+                    </span>
+                    <div className="relative w-32">
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        step="0.5"
+                        value={commissionInput}
+                        onChange={(e) => setCommissionInput(e.target.value)}
+                        placeholder="0"
+                        className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                      />
+                      <span className="absolute right-3 top-2.5 text-xs text-[var(--text-muted)] font-mono-luxury font-bold">%</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        setIsSavingCommission(true);
+                        const res = await fetch('/api/admin/commission', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            commissionPercent: Number(commissionInput || 0),
+                            isEnabled: commissionEnabledInput,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                          setCommissionConfig({
+                            commissionPercent: Number(data.config.commissionPercent || 0),
+                            isEnabled: Boolean(data.config.isEnabled),
+                          });
+                          confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
+                          setActionSuccessMsg(`Platform commission rate updated to ${data.config.commissionPercent}% (${data.config.isEnabled ? 'Active' : 'Disabled'})!`);
+                          setTimeout(() => setActionSuccessMsg(''), 4000);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update commission rate:', err);
+                      } finally {
+                        setIsSavingCommission(false);
+                      }
+                    }}
+                    disabled={isSavingCommission}
+                    className="w-full sm:w-auto px-5 py-2 rounded-full bg-[var(--gold-accent)] hover:bg-[#d8b357] text-black text-xs font-mono-luxury font-bold uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingCommission ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                    <span>Save Fee Setting</span>
+                  </button>
                 </div>
               </div>
 
@@ -3907,7 +4066,9 @@ export default function SuperAdminPage() {
                   Itemized Garments Sold ({selectedVendorPayoutModal.itemsSold?.length || 0})
                 </h4>
                 <span className="text-[11px] font-mono-luxury text-[var(--text-muted)]">
-                  90% Vendor Payout • 10% Platform Fee
+                  {financialStats.activeFeePercent === 0 
+                    ? '100% Vendor Payout • 0% Platform Fee' 
+                    : `${100 - financialStats.activeFeePercent}% Vendor Payout • ${financialStats.activeFeePercent}% Platform Fee`}
                 </span>
               </div>
 
@@ -3919,7 +4080,7 @@ export default function SuperAdminPage() {
                       <th className="pb-2.5 font-bold">Garment</th>
                       <th className="pb-2.5 font-bold">Customer</th>
                       <th className="pb-2.5 font-bold">Sale Price</th>
-                      <th className="pb-2.5 font-bold text-emerald-400">90% Payout</th>
+                      <th className="pb-2.5 font-bold text-emerald-400">Vendor Payout</th>
                       <th className="pb-2.5 font-bold">Status</th>
                       <th className="pb-2.5 font-bold text-right">Action</th>
                     </tr>
@@ -3949,7 +4110,7 @@ export default function SuperAdminPage() {
                           {!item.isDelivered ? (
                             <button
                               onClick={() => {
-                                handleReleaseEscrow(item.orderId);
+                                handleReleaseEscrow(item.orderId, item.vendorId || selectedVendorPayoutModal.vendorId);
                                 setSelectedVendorPayoutModal(null);
                               }}
                               className="px-2.5 py-1 rounded-full bg-emerald-500 text-black text-[10px] font-bold uppercase hover:bg-emerald-400 transition-all cursor-pointer"
