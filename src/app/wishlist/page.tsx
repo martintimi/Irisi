@@ -304,17 +304,6 @@ export default function WishlistPage() {
                         </button>
                       </div>
 
-                      {/* Bottom Image Action: Move to Bag */}
-                      <div className="absolute bottom-3 inset-x-3 z-10">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveToBag(product)}
-                          className="w-full py-2.5 rounded-full bg-black/90 dark:bg-white/95 text-white dark:text-black font-mono-luxury text-xs uppercase tracking-wider font-bold flex items-center justify-center gap-1.5 shadow-xl hover:opacity-95 active:scale-95 transition-all cursor-pointer"
-                        >
-                          <ShoppingBag className="h-3.5 w-3.5" />
-                          <span>Move to Bag</span>
-                        </button>
-                      </div>
                     </div>
 
                     {/* Card Body Details */}
