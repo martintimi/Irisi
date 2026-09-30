@@ -23,13 +23,6 @@ export default function CartPage() {
     isInVault,
   } = useStore();
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
   const handleProceedToCheckout = () => {
     if (!userAuth?.isLoggedIn) {
       router.push('/auth?redirect=/checkout');
@@ -43,7 +36,6 @@ export default function CartPage() {
       toggleVaultItem(item.product);
     }
     removeFromCart(item.product.id);
-    showToast(`Saved "${item.product.name}" to your wishlist`);
   };
 
   // Group items by vendor
@@ -82,16 +74,6 @@ export default function CartPage() {
 
   return (
     <>
-      {/* Toast Feedback */}
-      {toastMessage && (
-        <div className="fixed top-24 inset-x-4 z-50 max-w-md mx-auto p-3.5 rounded-2xl bg-black text-white dark:bg-white dark:text-black shadow-2xl border border-white/10 dark:border-black/10 flex items-center gap-3 text-xs font-bold animate-slideDown">
-          <Check className="h-4 w-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
-          <span className="truncate flex-1">{toastMessage}</span>
-          <Link href="/wishlist" className="underline uppercase tracking-wider text-[10px] shrink-0 hover:opacity-80">
-            View Wishlist →
-          </Link>
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* 1. DEDICATED MOBILE CART VIEW (< md screen sizes)                         */}
