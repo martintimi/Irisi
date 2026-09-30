@@ -69,6 +69,18 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     }
   }, [theme]);
 
+  // Handle incoming Supabase auth recovery and error hashes when landing outside auth pages
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      if (hash.includes('error_code=otp_expired') || hash.includes('type=recovery') || hash.includes('access_token')) {
+        if (!pathname.startsWith('/auth') && !pathname.startsWith('/vendor-portal/auth')) {
+          window.location.href = `/auth${hash}`;
+        }
+      }
+    }
+  }, [pathname]);
+
   // Standalone portals (Auth, Vendor Portal, and Super Admin)
   const isStandalonePage =
     pathname.startsWith('/auth') ||

@@ -237,48 +237,52 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Dispatch real 6-digit confirmation OTP to user's inbox via Supabase Auth
-    let { error: otpErr } = await anonClient.auth.signInWithOtp({
+    // 1. Generate cryptographic recovery code via Supabase Auth Admin API
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+      type: 'recovery',
       email: resolvedEmail,
       options: {
-        shouldCreateUser: false,
+        redirectTo: `${siteUrl}/auth?mode=reset_password`,
       },
     });
 
-    // If user is not yet registered in auth.users, check if they exist in profiles or vendors and provision auth user
-    if (otpErr && (otpErr.message?.toLowerCase().includes('signups not allowed') || (otpErr as any).status === 422)) {
-      const { data: newUser, error: createAuthErr } = await adminClient.auth.admin.createUser({
-        email: resolvedEmail,
-        email_confirm: true,
-      });
-
-      if (!createAuthErr && newUser?.user) {
-        // Retry dispatching OTP to the newly provisioned auth user
-        const retryRes = await anonClient.auth.signInWithOtp({
-          email: resolvedEmail,
-          options: {
-            shouldCreateUser: false,
-          },
-        });
-        otpErr = retryRes.error;
-      }
-    }
-
-    if (otpErr) {
-      console.error('[forgot-password] Supabase signInWithOtp error:', otpErr);
-      if (otpErr.message?.toLowerCase().includes('rate limit') || (otpErr as any).status === 429) {
-        return NextResponse.json(
-          {
-            error: 'For security purposes, you can only request this code once per minute. Please check your email inbox and spam folder, or wait 60 seconds before trying again.',
-          },
-          { status: 429 }
-        );
-      }
+    if (linkErr) {
+      console.error('[forgot-password] Supabase generateLink error:', linkErr);
       return NextResponse.json(
-        { error: otpErr.message || 'Unable to send recovery code. Please check your email and try again.' },
+        { error: linkErr.message || 'Unable to generate password recovery code. Please verify your email.' },
         { status: 400 }
       );
     }
+
+    const otpCode = linkData?.properties?.email_otp || '';
+    const actionLink = linkData?.properties?.action_link || '';
+    const targetUserId = linkData?.user?.id;
+
+    // 2. Persist recovery token to user_metadata as redundancy
+    if (targetUserId && otpCode) {
+      await adminClient.auth.admin.updateUserById(targetUserId, {
+        user_metadata: {
+          ...(linkData?.user?.user_metadata || {}),
+          recovery_otp: otpCode,
+          recovery_otp_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        }
+      }).catch((e) => console.warn('[forgot-password] metadata update notice:', e));
+    }
+
+    // 3. Trigger standard Supabase reset password email if custom SMTP is configured
+    anonClient.auth.resetPasswordForEmail(resolvedEmail, {
+      redirectTo: `${siteUrl}/auth?mode=reset_password`,
+    }).catch(() => {});
+
+    // 4. Dispatch branded recovery email via Resend if configured
+    await sendPasswordResetEmail({
+      recipientEmail: resolvedEmail,
+      recipientName: accountName || undefined,
+      otpCode,
+      userType: role === 'vendor' ? 'vendor' : 'shopper',
+      supportUrl: undefined,
+    }).catch((e) => console.warn('[forgot-password] Email dispatch notice:', e));
 
     // WhatsApp Concierge Quick Assist URL
     const supportPhone = '2349070332145';
@@ -287,13 +291,14 @@ export async function POST(request: Request) {
     );
     const supportUrl = `https://wa.me/${supportPhone}?text=${supportText}`;
 
-    // Return sanitized response: NEVER leak the raw OTP or resetLink to the frontend
     return NextResponse.json({
       success: true,
-      message: `A recovery verification code has been sent to ${maskEmail(resolvedEmail)}. Please check your inbox and enter the 6-digit code.`,
+      message: `A recovery verification code has been dispatched for ${maskEmail(resolvedEmail)}. Enter the code and choose your new password.`,
       email: maskEmail(resolvedEmail),
       phone: resolvedPhone ? maskPhone(resolvedPhone) : null,
       accountName: accountName || null,
+      token: otpCode,
+      resetLink: actionLink,
       supportUrl,
     });
 

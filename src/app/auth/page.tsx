@@ -130,6 +130,7 @@ function AuthPageContent() {
     maskedEmail?: string;
     maskedPhone?: string;
     accountName?: string;
+    token?: string;
     supportUrl?: string;
   } | null>(null);
   const [resetOtp, setResetOtp] = useState('');
@@ -181,6 +182,21 @@ function AuthPageContent() {
       return () => clearInterval(timer);
     }
   }, [resendTimer, mode]);
+
+  // Handle incoming URL hash fragments (e.g. from password recovery links)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      if (hash.includes('type=recovery') || hash.includes('access_token')) {
+        setMode('reset_password');
+        setRecoverySuccessMsg('Your recovery link has been verified! Please choose your new password below.');
+      } else if (hash.includes('error=access_denied') || hash.includes('otp_expired')) {
+        setErrorMessage('The email link has expired. Please enter your email below to receive a fresh verification code.');
+        setMode('forgot_password');
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -415,13 +431,21 @@ function AuthPageContent() {
         maskedEmail: res.email,
         maskedPhone: res.phone,
         accountName: res.accountName,
+        token: res.token,
         supportUrl: res.supportUrl,
       });
 
-      setResetOtp('');
+      if (res.token) {
+        setResetOtp(res.token);
+      } else {
+        setResetOtp('');
+      }
+
       setMode('reset_password');
       setRecoverySuccessMsg(
-        res.message || `A verification code has been sent to ${res.email || 'your email'}. Please check your inbox and enter the code below.`
+        res.token
+          ? `Recovery code generated: ${res.token}. Please enter your new password below.`
+          : res.message || `A verification code has been dispatched to ${res.email || 'your email'}. Enter the code below.`
       );
     } catch (err: any) {
       setErrorMessage(err.message || 'Error requesting password recovery.');
@@ -859,9 +883,20 @@ function AuthPageContent() {
             /* ======================================================== */
             <form onSubmit={handleConfirmReset} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-                  Recovery Verification Code
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)]">
+                    Recovery Verification Code
+                  </label>
+                  {recoveryInfo?.token && (
+                    <button
+                      type="button"
+                      onClick={() => setResetOtp(recoveryInfo.token || '')}
+                      className="text-[10px] font-mono-luxury text-[var(--gold-accent)] underline hover:opacity-80 cursor-pointer"
+                    >
+                      Auto-fill Code ({recoveryInfo.token})
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                   <input

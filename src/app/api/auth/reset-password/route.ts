@@ -116,37 +116,37 @@ export async function POST(request: Request) {
     const cleanToken = token.trim();
     let verifiedUser: any = null;
 
-    // 1. Primary verification: verify with type 'email' (dispatched via Supabase signInWithOtp)
-    const { data: emailVerify, error: emailErr } = await anonClient.auth.verifyOtp({
+    // 1. Primary verification: verify with type 'recovery' (matching Supabase generateLink and resetPasswordForEmail)
+    const { data: recoveryVerify, error: recoveryErr } = await anonClient.auth.verifyOtp({
       email: resolvedEmail,
       token: cleanToken,
-      type: 'email',
+      type: 'recovery',
     });
 
-    if (!emailErr && emailVerify?.user) {
-      verifiedUser = emailVerify.user;
+    if (!recoveryErr && recoveryVerify?.user) {
+      verifiedUser = recoveryVerify.user;
     } else {
-      // 2. Fallback verification: verify with type 'recovery' (in case recovery email was dispatched)
-      const { data: recoveryVerify, error: recoveryErr } = await anonClient.auth.verifyOtp({
+      // 2. Secondary verification: verify with type 'email' (in case OTP mailer was triggered)
+      const { data: emailVerify, error: emailErr } = await anonClient.auth.verifyOtp({
         email: resolvedEmail,
         token: cleanToken,
-        type: 'recovery',
+        type: 'email',
       });
 
-      if (!recoveryErr && recoveryVerify?.user) {
-        verifiedUser = recoveryVerify.user;
+      if (!emailErr && emailVerify?.user) {
+        verifiedUser = emailVerify.user;
       }
     }
 
-    // 3. Fallback check: user_metadata verification_otp if stored
+    // 3. Fallback verification: check user_metadata recovery_otp or verification_otp
     if (!verifiedUser) {
       const { data: userList } = await adminClient.auth.admin.listUsers();
       const targetUser = userList?.users?.find(
         (u: any) => u.email?.toLowerCase() === resolvedEmail
       );
       if (targetUser) {
-        const storedOtp = targetUser.user_metadata?.verification_otp;
-        const expiresAt = targetUser.user_metadata?.verification_otp_expires_at;
+        const storedOtp = targetUser.user_metadata?.recovery_otp || targetUser.user_metadata?.verification_otp;
+        const expiresAt = targetUser.user_metadata?.recovery_otp_expires_at || targetUser.user_metadata?.verification_otp_expires_at;
         if (storedOtp && storedOtp === cleanToken) {
           if (!expiresAt || new Date(expiresAt) > new Date()) {
             verifiedUser = targetUser;
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
 
     if (!verifiedUser) {
       return NextResponse.json(
-        { error: 'The 6-digit verification code is invalid or has expired. Please check your email inbox and enter the code carefully.' },
+        { error: 'The 6-digit verification code is invalid or has expired. Please check your code or click "Resend Code".' },
         { status: 400 }
       );
     }
@@ -168,6 +168,11 @@ export async function POST(request: Request) {
     const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
       password: newPassword,
       email_confirm: true,
+      user_metadata: {
+        ...(verifiedUser.user_metadata || {}),
+        recovery_otp: null,
+        recovery_otp_expires_at: null,
+      }
     });
 
     if (updateErr) {
