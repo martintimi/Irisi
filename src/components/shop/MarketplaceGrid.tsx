@@ -774,7 +774,7 @@ export default function MarketplaceGrid() {
                     alt={product.name}
                     fill
                     unoptimized
-                    className="object-cover transition-all duration-500 brightness-95 group-hover:brightness-100 group-hover:scale-105"
+                    className="object-cover transition-all duration-500 brightness-95 group-hover:brightness-100"
                   />
                   {!product.videoUrl && secondaryImage && (
                     <Image
@@ -782,7 +782,7 @@ export default function MarketplaceGrid() {
                       alt={`${product.name} alternate view`}
                       fill
                       unoptimized
-                      className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none group-hover:scale-105"
+                      className="object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                     />
                   )}
                   {product.videoUrl && (
@@ -919,15 +919,14 @@ export default function MarketplaceGrid() {
                   <div className="pt-2.5 sm:pt-3 border-t border-[var(--border-subtle)]">
                     {/* Desktop: 2-column grid with Style Look and Add to Bag */}
                     <div className="hidden md:grid md:grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setQuickLookProduct(product)}
+                      <Link
+                        href={`/shop/${product.id}`}
                         className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] cursor-pointer"
-                        title="Quick View"
+                        title="View Garment"
                       >
                         <Eye className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
-                        <span className="truncate">Quick View</span>
-                      </button>
+                        <span className="truncate">View</span>
+                      </Link>
 
                       <button
                         onClick={() => product.stockQuantity === 0 ? null : setQuickLookProduct(product)}
