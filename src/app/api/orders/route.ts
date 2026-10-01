@@ -1,4 +1,5 @@
-import { sendOrderConfirmationEmail, sendVendorNewOrderEmail, sendDispatchNotificationEmail, sendDeliverySettledEmail } from '@/lib/services/emailService';
+import { sendOrderConfirmationEmail, sendDispatchNotificationEmail } from '@/lib/services/emailService';
+import { sendVendorNewOrderNotification, sendVendorSettlementNotification } from '@/lib/services/vendorNotificationService';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { computeVendorPackageMetrics, checkLocationServiceability, createShipbubbleShipment } from '@/lib/services/logistics';
@@ -472,27 +473,54 @@ export async function POST(request: Request) {
         }).catch(e => console.error('Email error:', e));
       }
 
-      // Notify each unique vendor if an email is provided
-      const uniqueVendorIds: string[] = Array.from(new Set<string>((body.items || []).map((i: any) => String(i.vendorId || i.vendor_id || '').toLowerCase().trim())));
-      uniqueVendorIds.forEach((vId: string) => {
-        if (vId && typeof vId === 'string' && vId.includes('@')) {
+      // Notify each unique vendor by looking up their registered email from vendors table
+      const uniqueVendorIds: string[] = Array.from(
+        new Set<string>((body.items || []).map((i: any) => String(i.vendorId || i.vendor_id || '').toLowerCase().trim()).filter(Boolean))
+      );
+
+      if (uniqueVendorIds.length > 0) {
+        const { data: dbVendors } = await supabase
+          .from('vendors')
+          .select('id, brand_name, designer_name, email, phone, location')
+          .in('id', uniqueVendorIds);
+
+        const vendorMap = new Map<string, any>();
+        (dbVendors || []).forEach(v => vendorMap.set(v.id.toLowerCase().trim(), v));
+
+        for (const vId of uniqueVendorIds) {
+          const vRecord = vendorMap.get(vId);
+          const vEmail = vRecord?.email || (vId.includes('@') ? vId : '');
+          if (!vEmail) continue;
+
           const vItems = (body.items || []).filter((i: any) => (i.vendorId || i.vendor_id || '').toLowerCase().trim() === vId);
           const vSubtotal = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
           const vPkg = initialVendorPackages[vId] || Object.entries(initialVendorPackages).find(([k]) => k.toLowerCase() === vId)?.[1];
-          const vShippingFee = (vPkg?.deliveryMethod === 'park_pickup') ? 0 : Number(vPkg?.shippingFee || 0);
-          const vTotal = vSubtotal + vShippingFee;
 
-          sendVendorNewOrderEmail(vId, {
+          sendVendorNewOrderNotification({
+            vendor: {
+              id: vId,
+              brandName: vRecord?.brand_name || vId,
+              designerName: vRecord?.designer_name,
+              email: vEmail,
+              phone: vRecord?.phone,
+            },
             orderNumber,
             customerName: body.customerName,
-            customerEmail: body.customerEmail || '',
-            deliveryAddress: body.deliveryAddress,
-            items: vItems,
-            totalAmount: vTotal,
-            shippingFee: vShippingFee
-          }).catch(e => console.error('Vendor email error:', e));
+            deliveryCity: body.deliveryCity || body.city || 'Lagos',
+            deliveryState: body.deliveryState || body.state || 'Lagos',
+            deliveryMethod: vPkg?.deliveryMethod || 'doorstep',
+            items: vItems.map((it: any) => ({
+              productName: it.productName || it.name || 'Garment',
+              size: it.size || it.selectedSize || 'M',
+              color: typeof it.color === 'string' ? it.color : (it.color?.name || 'Standard'),
+              quantity: Number(it.quantity || 1),
+              price: Number(it.price || 0),
+              vendorPayout: Number(it.price || 0),
+            })),
+            totalPayout: vSubtotal,
+          }).catch(e => console.error('[Order] Vendor luxury email alert notice:', e));
         }
-      });
+      }
     } catch (e) {
       console.error('Email dispatch wrapper error:', e);
     }
@@ -695,18 +723,35 @@ export async function PATCH(request: Request) {
           vendorName: targetVendorId || 'Store Merchant'
         }).catch(e => console.error('Dispatch email error:', e));
       } else if (status === 'delivered') {
-        const recipient = targetVendorId && targetVendorId.includes('@') ? targetVendorId : '';
-        if (recipient) {
-          sendDeliverySettledEmail(recipient, {
-            orderNumber: existingOrder.order_number,
-            customerName: existingOrder.customer_name,
-            customerEmail: existingOrder.customer_email || '',
-            deliveryAddress: existingOrder.delivery_address,
-            items: existingOrder.order_items || [],
-            totalAmount: Number(existingOrder.total_amount || 0),
-            shippingFee: Number(existingOrder.shipping_fee || 0),
-            vendorName: targetVendorId || 'Store Merchant'
-          }).catch(e => console.error('Settled email error:', e));
+        const vIdToNotify = targetVendorId || (allVendorIds.size === 1 ? Array.from(allVendorIds)[0] : '');
+        if (vIdToNotify) {
+          const { data: vRecord } = await supabase
+            .from('vendors')
+            .select('id, brand_name, designer_name, email, phone, bank_name, account_number')
+            .eq('id', vIdToNotify)
+            .maybeSingle();
+
+          if (vRecord?.email) {
+            const vItems = sourceItems.filter((i: any) => (i.vendor_id || i.vendorId || '').toLowerCase().trim() === vIdToNotify.toLowerCase().trim());
+            const vPayout = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+
+            sendVendorSettlementNotification({
+              vendor: {
+                id: vRecord.id,
+                brandName: vRecord.brand_name || vIdToNotify,
+                designerName: vRecord.designer_name,
+                email: vRecord.email,
+                phone: vRecord.phone,
+                bankName: vRecord.bank_name,
+                accountNumber: vRecord.account_number,
+              },
+              orderNumber: existingOrder.order_number,
+              payoutAmount: vPayout || Number(existingOrder.total_amount || 0),
+              bankName: vRecord.bank_name,
+              accountNumber: vRecord.account_number,
+              customerName: existingOrder.customer_name,
+            }).catch(e => console.error('[Order] Vendor settlement email alert error:', e));
+          }
         }
       }
     } catch (e) {

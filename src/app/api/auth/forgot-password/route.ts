@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendPasswordResetEmail } from '@/lib/services/emailService';
+import { sendPasswordResetSms } from '@/lib/services/smsService';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -141,6 +142,20 @@ export async function POST(request: Request) {
           }
         }
       }
+
+      // If phone wasn't found in profile/vendor table, check Supabase auth user metadata
+      if (!resolvedPhone) {
+        const { data: userList } = await adminClient.auth.admin.listUsers();
+        const authUser = userList?.users?.find((u) => u.email?.toLowerCase() === resolvedEmail);
+        if (authUser?.phone) {
+          resolvedPhone = authUser.phone;
+        } else if (authUser?.user_metadata?.phone) {
+          resolvedPhone = authUser.user_metadata.phone;
+        }
+        if (!accountName && authUser?.user_metadata?.full_name) {
+          accountName = authUser.user_metadata.full_name;
+        }
+      }
     } else {
       // Check if identifier is bremarfle, brewmarfle, or brand name
       const normText = trimmed.toLowerCase();
@@ -176,6 +191,7 @@ export async function POST(request: Request) {
             );
           }
         } else {
+          resolvedPhone = trimmed;
           if (role === 'vendor') {
             const { data: vMatch } = await adminClient
               .from('vendors')
@@ -226,6 +242,19 @@ export async function POST(request: Request) {
               }
             }
           }
+
+          // Fallback check auth user metadata for phone candidates
+          if (!resolvedEmail) {
+            const { data: userList } = await adminClient.auth.admin.listUsers();
+            const authUser = userList?.users?.find((u) => {
+              const uPhone = u.phone || u.user_metadata?.phone;
+              return uPhone && candidates.includes(uPhone);
+            });
+            if (authUser?.email) {
+              resolvedEmail = authUser.email;
+              accountName = authUser.user_metadata?.full_name || '';
+            }
+          }
         }
       }
 
@@ -237,52 +266,23 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Generate cryptographic recovery code via Supabase Auth Admin API
+    // 1. Check if external email or SMS providers are configured in .env.local
+    const hasCustomEmail = Boolean(
+      (process.env.GMAIL_USER && (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD)) ||
+      (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) ||
+      process.env.RESEND_API_KEY
+    );
+    const hasCustomSms = Boolean(
+      process.env.TERMII_API_KEY || (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+    );
+
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-      type: 'recovery',
-      email: resolvedEmail,
-      options: {
-        redirectTo: `${siteUrl}/auth?mode=reset_password`,
-      },
-    });
-
-    if (linkErr) {
-      console.error('[forgot-password] Supabase generateLink error:', linkErr);
-      return NextResponse.json(
-        { error: linkErr.message || 'Unable to generate password recovery code. Please verify your email.' },
-        { status: 400 }
-      );
-    }
-
-    const otpCode = linkData?.properties?.email_otp || '';
-    const actionLink = linkData?.properties?.action_link || '';
-    const targetUserId = linkData?.user?.id;
-
-    // 2. Persist recovery token to user_metadata as redundancy
-    if (targetUserId && otpCode) {
-      await adminClient.auth.admin.updateUserById(targetUserId, {
-        user_metadata: {
-          ...(linkData?.user?.user_metadata || {}),
-          recovery_otp: otpCode,
-          recovery_otp_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        }
-      }).catch((e) => console.warn('[forgot-password] metadata update notice:', e));
-    }
-
-    // 3. Trigger standard Supabase reset password email if custom SMTP is configured
-    anonClient.auth.resetPasswordForEmail(resolvedEmail, {
-      redirectTo: `${siteUrl}/auth?mode=reset_password`,
-    }).catch(() => {});
-
-    // 4. Dispatch branded recovery email via Resend if configured
-    await sendPasswordResetEmail({
-      recipientEmail: resolvedEmail,
-      recipientName: accountName || undefined,
-      otpCode,
-      userType: role === 'vendor' ? 'vendor' : 'shopper',
-      supportUrl: undefined,
-    }).catch((e) => console.warn('[forgot-password] Email dispatch notice:', e));
+    let otpCode = '';
+    let emailResult: { success: boolean; provider: string; error?: string } = { success: false, provider: 'none' };
+    let smsResult: { success: boolean; provider: 'none' | 'termii' | 'twilio'; error?: string } = {
+      success: false,
+      provider: 'none',
+    };
 
     // WhatsApp Concierge Quick Assist URL
     const supportPhone = '2349070332145';
@@ -291,12 +291,97 @@ export async function POST(request: Request) {
     );
     const supportUrl = `https://wa.me/${supportPhone}?text=${supportText}`;
 
+    if (hasCustomEmail || (hasCustomSms && resolvedPhone)) {
+      // Flow A: Generate code via Admin API and dispatch via custom Gmail SMTP / SMS
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: 'recovery',
+        email: resolvedEmail,
+        options: {
+          redirectTo: `${siteUrl}/auth?mode=reset_password`,
+        },
+      });
+
+      if (linkErr) {
+        console.error('[forgot-password] Supabase generateLink error:', linkErr);
+        return NextResponse.json(
+          { error: linkErr.message || 'Unable to generate password recovery code. Please verify your email.' },
+          { status: 400 }
+        );
+      }
+
+      otpCode = linkData?.properties?.email_otp || '';
+      const actionLink = linkData?.properties?.action_link || '';
+      const targetUserId = linkData?.user?.id;
+
+      if (targetUserId && otpCode) {
+        await adminClient.auth.admin.updateUserById(targetUserId, {
+          user_metadata: {
+            ...(linkData?.user?.user_metadata || {}),
+            recovery_otp: otpCode,
+            recovery_otp_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          }
+        }).catch((e) => console.warn('[forgot-password] metadata update notice:', e));
+      }
+
+      if (hasCustomEmail) {
+        emailResult = await sendPasswordResetEmail({
+          recipientEmail: resolvedEmail,
+          recipientName: accountName || undefined,
+          otpCode,
+          actionLink,
+          userType: role === 'vendor' ? 'vendor' : 'shopper',
+          supportUrl,
+        }).catch((e) => ({ success: false, provider: 'none' as const, error: e.message }));
+      }
+
+      if (resolvedPhone && hasCustomSms) {
+        smsResult = await sendPasswordResetSms({
+          phone: resolvedPhone,
+          otpCode,
+          accountName,
+        }).catch((e) => ({ success: false, provider: 'none' as const, error: e.message }));
+      }
+    } else {
+      // Flow B: Trigger Supabase's built-in mailer (using the Gmail SMTP configured in Supabase)
+      const { error: resetErr } = await anonClient.auth.resetPasswordForEmail(resolvedEmail, {
+        redirectTo: `${siteUrl}/auth?mode=reset_password`,
+      });
+
+      if (resetErr) {
+        console.error('[forgot-password] Supabase resetPasswordForEmail error:', resetErr);
+        return NextResponse.json(
+          { error: resetErr.message || 'Unable to send recovery email. Please try again in a few moments.' },
+          { status: 400 }
+        );
+      }
+
+      emailResult = { success: true, provider: 'supabase' as any };
+    }
+
+    // Determine user-friendly confirmation message
+    let deliveryMessage = `A recovery verification code has been dispatched to ${maskEmail(resolvedEmail)}.`;
+    if (emailResult.success && smsResult.success) {
+      deliveryMessage = `A 6-digit recovery code has been sent to your email (${maskEmail(resolvedEmail)}) and mobile phone (${maskPhone(resolvedPhone)}).`;
+    } else if (smsResult.success) {
+      deliveryMessage = `A 6-digit recovery code has been sent via SMS to your mobile phone (${maskPhone(resolvedPhone)}).`;
+    } else if (emailResult.success) {
+      deliveryMessage = `A 6-digit recovery code has been sent to your email (${maskEmail(resolvedEmail)}). Please check your inbox.`;
+    } else if (resolvedPhone) {
+      deliveryMessage = `A recovery verification code has been sent to ${maskEmail(resolvedEmail)} and ${maskPhone(resolvedPhone)}. Please enter the code below.`;
+    }
+
     return NextResponse.json({
       success: true,
-      message: `A recovery verification code has been sent to ${maskEmail(resolvedEmail)}. Please check your email inbox and enter the code.`,
+      message: deliveryMessage,
       email: maskEmail(resolvedEmail),
       phone: resolvedPhone ? maskPhone(resolvedPhone) : null,
       accountName: accountName || null,
+      channels: {
+        email: emailResult.success,
+        emailProvider: emailResult.provider,
+        sms: smsResult.success,
+        smsProvider: smsResult.provider,
+      },
       supportUrl,
     });
 

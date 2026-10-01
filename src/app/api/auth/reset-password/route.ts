@@ -122,6 +122,10 @@ export async function POST(request: Request) {
         type: 'recovery',
       });
 
+      if (recoveryErr) {
+        console.warn('[reset-password] Supabase verifyOtp recovery error:', recoveryErr.message);
+      }
+
       if (!recoveryErr && recoveryVerify?.user) {
         verifiedUser = recoveryVerify.user;
       } else {
@@ -131,6 +135,10 @@ export async function POST(request: Request) {
           token: cleanToken,
           type: 'email',
         });
+
+        if (emailErr) {
+          console.warn('[reset-password] Supabase verifyOtp email error:', emailErr.message);
+        }
 
         if (!emailErr && emailVerify?.user) {
           verifiedUser = emailVerify.user;
@@ -164,6 +172,12 @@ export async function POST(request: Request) {
     }
 
     if (!verifiedUser) {
+      if (cleanToken) {
+        return NextResponse.json(
+          { error: 'The 6-digit verification code entered is invalid or has expired. Please check your latest email or click "Resend Code" to receive a fresh code.' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: 'The 6-digit verification code is required, or please click the recovery link sent to your email.' },
         { status: 400 }

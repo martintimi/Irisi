@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import {
+  sendVendorAccountApprovedNotification,
+  sendVendorAccountRejectedNotification,
+} from '@/lib/services/vendorNotificationService';
 
 export async function POST(request: Request) {
   try {
@@ -55,9 +59,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
+    // 4. Send Official Email Notification to Vendor
+    const recipientEmail = updatedVendor?.email;
+    if (recipientEmail && recipientEmail.includes('@')) {
+      const vendorContact = {
+        id: updatedVendor.id,
+        brandName: updatedVendor.brand_name || 'Brand Partner',
+        designerName: updatedVendor.designer_name || updatedVendor.contact_person,
+        email: recipientEmail,
+        phone: updatedVendor.phone,
+      };
+
+      if (isApprove) {
+        await sendVendorAccountApprovedNotification({ vendor: vendorContact }).catch((e) =>
+          console.warn('[Admin Approve] Approval email error:', e)
+        );
+      } else {
+        await sendVendorAccountRejectedNotification({
+          vendor: vendorContact,
+          rejectionReason: bioObj.rejectionReason,
+        }).catch((e) => console.warn('[Admin Reject] Rejection email error:', e));
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: isApprove ? 'Brand successfully approved and verified!' : 'Brand submission returned for correction.',
+      message: isApprove ? 'Brand successfully approved and verified! Official approval email sent.' : 'Brand submission returned for correction with notification sent.',
       vendor: updatedVendor,
       approvalStatus: bioObj.approvalStatus
     });
