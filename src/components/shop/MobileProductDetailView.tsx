@@ -434,7 +434,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   useEffect(() => {
     if (mediaItems.length <= 1) return;
     const currentItem = mediaItems[activeMediaIndex];
-    const duration = currentItem?.type === 'video' ? 6500 : 4000;
+    const duration = currentItem?.type === 'video' ? 11500 : 4000;
 
     const timer = setTimeout(() => {
       if (carouselRef.current && !isDraggingCarousel.current) {

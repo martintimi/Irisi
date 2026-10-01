@@ -733,9 +733,9 @@ export default function PublishGarmentPage() {
     setVideoError('');
     setPendingTrimFile(null);
 
-    // 1. Enforce file size limit (max 15MB)
-    if (file.size > 15 * 1024 * 1024) {
-      setVideoError('Video must be under 15MB. Please upload a short 3–5s clip.');
+    // 1. Enforce file size limit (max 40MB for raw videos, auto-trimmed to ~3–5MB)
+    if (file.size > 40 * 1024 * 1024) {
+      setVideoError('Video must be under 40MB. Please upload a clip up to 10 seconds.');
       return;
     }
 
@@ -748,9 +748,9 @@ export default function PublishGarmentPage() {
     video.onloadedmetadata = async () => {
       URL.revokeObjectURL(tempUrl);
       const roundedDur = Math.round(video.duration);
-      if (video.duration > 5.5) {
+      if (video.duration > 10.5) {
         setPendingTrimFile(file);
-        setVideoError(`Video is ${roundedDur}s long (recommended catalog length is 3–5s for fast loading).`);
+        setVideoError(`Video is ${roundedDur}s long (recommended catalog length is up to 10s for fast loading).`);
         return;
       }
 
@@ -768,7 +768,7 @@ export default function PublishGarmentPage() {
     setPendingTrimFile(null);
     try {
       const trimmed = await trimVideoInBrowser(fileToTrim, {
-        targetSeconds: 5,
+        targetSeconds: 10,
         onProgress: (p) => setTrimProgress(p)
       });
       await processAndUploadVideo(trimmed);
@@ -1561,7 +1561,7 @@ export default function PublishGarmentPage() {
             )}
           </div>
 
-          {/* Section 2: Product Video (Optional 3–5s micro-clip) */}
+          {/* Section 2: Product Video (Optional up to 10s micro-clip) */}
           <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase font-bold text-[var(--text-primary)] font-mono-luxury flex items-center gap-2">
@@ -1569,12 +1569,12 @@ export default function PublishGarmentPage() {
                 <span>2. Product Video (Optional)</span>
               </span>
               <span className="text-[11px] font-mono-luxury text-[var(--gold-accent)] font-bold">
-                3–5s micro-clip
+                Up to 10s clip
               </span>
             </div>
 
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-              Upload a short 3–5 second video clip of the product in motion. This video autoplays smoothly in the catalog to showcase the piece.
+              Upload a short video clip (up to 10 seconds) of the product in motion. This video autoplays smoothly in the catalog to showcase the piece.
             </p>
 
             {!videoPreview && videoError && (
@@ -1585,7 +1585,7 @@ export default function PublishGarmentPage() {
                     <p className="font-bold text-amber-300">{videoError}</p>
                     {pendingTrimFile && (
                       <p className="text-[11px] text-[var(--text-secondary)]">
-                        We can automatically trim the first 5 seconds for you right now so it loads instantly for shoppers.
+                        We can automatically trim the first 10 seconds for you right now so it loads instantly for shoppers.
                       </p>
                     )}
                   </div>
@@ -1602,12 +1602,12 @@ export default function PublishGarmentPage() {
                       {isTrimmingVideo ? (
                         <>
                           <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                          <span>Trimming to 5s ({trimProgress}%)...</span>
+                          <span>Trimming to 10s ({trimProgress}%)...</span>
                         </>
                       ) : (
                         <>
                           <Sparkles className="h-3.5 w-3.5" />
-                          <span>Auto-Trim to First 5s &amp; Use</span>
+                          <span>Auto-Trim to First 10s &amp; Use</span>
                         </>
                       )}
                     </button>
@@ -1686,7 +1686,7 @@ export default function PublishGarmentPage() {
                     Click to Upload Product Video
                   </span>
                   <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)] block max-w-sm mx-auto">
-                    Short 3–5s video clip of the product (Max 15MB, MP4 / WebM / MOV)
+                    Short video clip of the product (Max 40MB, MP4 / WebM / MOV, up to 10s)
                   </span>
                 </div>
               )}

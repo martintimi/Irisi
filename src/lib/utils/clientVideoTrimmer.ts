@@ -1,6 +1,6 @@
 /**
  * Client-Side Video Trimmer Utility
- * Allows vendors to trim videos longer than 5 seconds directly in their browser
+ * Allows vendors to trim videos longer than 10 seconds directly in their browser
  * without needing external video editing tools.
  */
 
@@ -19,7 +19,7 @@ export async function trimVideoInBrowser(
     throw new Error('Video trimming is only supported in browser environments');
   }
 
-  const targetSeconds = options.targetSeconds || 5;
+  const targetSeconds = options.targetSeconds || 10;
   const maxDimension = options.maxDimension || 1280;
   const videoBitrate = options.videoBitrate || 2500000; // 2.5 Mbps
   const onProgress = options.onProgress;

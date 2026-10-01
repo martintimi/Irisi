@@ -717,9 +717,9 @@ export default function MobileVendorPublish({
     setVideoError('');
     setPendingTrimFile(null);
 
-    // 1. Enforce file size limit (max 15MB)
-    if (file.size > 15 * 1024 * 1024) {
-      setVideoError('Video must be under 15MB. Please upload a short 3–5s clip.');
+    // 1. Enforce file size limit (max 40MB for raw videos, auto-trimmed to ~3–5MB)
+    if (file.size > 40 * 1024 * 1024) {
+      setVideoError('Video must be under 40MB. Please upload a clip up to 10 seconds.');
       return;
     }
 
@@ -732,9 +732,9 @@ export default function MobileVendorPublish({
     video.onloadedmetadata = async () => {
       URL.revokeObjectURL(tempUrl);
       const roundedDur = Math.round(video.duration);
-      if (video.duration > 5.5) {
+      if (video.duration > 10.5) {
         setPendingTrimFile(file);
-        setVideoError(`Video is ${roundedDur}s long (recommended catalog length is 3–5s for fast loading).`);
+        setVideoError(`Video is ${roundedDur}s long (recommended catalog length is up to 10s for fast loading).`);
         return;
       }
 
@@ -757,7 +757,7 @@ export default function MobileVendorPublish({
     setPendingTrimFile(null);
     try {
       const trimmed = await trimVideoInBrowser(fileToTrim, {
-        targetSeconds: 5,
+        targetSeconds: 10,
         onProgress: (p) => setTrimProgress(p)
       });
       await processAndUploadVideo(trimmed);
@@ -1424,7 +1424,7 @@ export default function MobileVendorPublish({
         )}
       </div>
 
-      {/* 2. Product Video (Optional 3-5s clip) */}
+      {/* 2. Product Video (Optional up to 10s clip) */}
       <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-2.5 shadow-sm">
         <div className="flex items-center justify-between">
           <span className="text-xs uppercase font-bold text-[var(--text-primary)] font-mono-luxury flex items-center gap-1.5">
@@ -1432,7 +1432,7 @@ export default function MobileVendorPublish({
             <span>2. Product Video (Optional)</span>
           </span>
           <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)] font-bold">
-            3–5s micro-clip
+            Up to 10s clip
           </span>
         </div>
 
@@ -1444,7 +1444,7 @@ export default function MobileVendorPublish({
                 <p className="font-bold text-amber-300">{videoError}</p>
                 {pendingTrimFile && (
                   <p className="text-[10px] text-[var(--text-secondary)]">
-                    We can automatically trim the first 5 seconds for you right now so it loads instantly for shoppers.
+                    We can automatically trim the first 10 seconds for you right now so it loads instantly for shoppers.
                   </p>
                 )}
               </div>
@@ -1461,12 +1461,12 @@ export default function MobileVendorPublish({
                   {isTrimmingVideo ? (
                     <>
                       <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                      <span>Trimming to 5s ({trimProgress}%)...</span>
+                      <span>Trimming to 10s ({trimProgress}%)...</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-3.5 w-3.5" />
-                      <span>Auto-Trim to 5s &amp; Use</span>
+                      <span>Auto-Trim to 10s &amp; Use</span>
                     </>
                   )}
                 </button>
@@ -1542,7 +1542,7 @@ export default function MobileVendorPublish({
                 Tap to Add Product Video
               </span>
               <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] block max-w-xs mx-auto">
-                Short 3–5 second clip of product or movement (Max 15MB)
+                Short 5–10 second clip of product or movement (Max 40MB)
               </span>
             </div>
           )}

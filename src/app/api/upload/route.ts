@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
       let finalUrl = uploadResult.secure_url || uploadResult.url;
       if (isVideo && shouldTrim && finalUrl && finalUrl.includes('/upload/')) {
-        finalUrl = finalUrl.replace('/upload/', '/upload/so_0,eo_5/');
+        finalUrl = finalUrl.replace('/upload/', '/upload/so_0,eo_10/');
       }
 
       return NextResponse.json({

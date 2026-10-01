@@ -372,8 +372,8 @@ export default function BatchProductUploadView({
   const handleBatchItemVideoSelect = async (itemId: string, file: File | null) => {
     if (!file) return;
 
-    if (file.size > 15 * 1024 * 1024) {
-      updateItem(itemId, { videoError: 'Video must be under 15MB. Please upload a short 3–5s clip.' });
+    if (file.size > 40 * 1024 * 1024) {
+      updateItem(itemId, { videoError: 'Video must be under 40MB. Please upload a clip up to 10 seconds.' });
       return;
     }
 
@@ -385,10 +385,10 @@ export default function BatchProductUploadView({
     video.onloadedmetadata = async () => {
       URL.revokeObjectURL(tempUrl);
       const roundedDur = Math.round(video.duration);
-      if (video.duration > 5.5) {
+      if (video.duration > 10.5) {
         updateItem(itemId, {
           pendingTrimVideo: file,
-          videoError: `Video is ${roundedDur}s long (recommended is 3–5s).`,
+          videoError: `Video is ${roundedDur}s long (recommended is up to 10s).`,
         });
         return;
       }
@@ -410,7 +410,7 @@ export default function BatchProductUploadView({
 
     try {
       const trimmed = await trimVideoInBrowser(fileToTrim, {
-        targetSeconds: 5,
+        targetSeconds: 10,
         onProgress: (p) => updateItem(itemId, { trimProgress: p })
       });
       await processAndUploadBatchVideo(itemId, trimmed);
@@ -1342,7 +1342,7 @@ export default function BatchProductUploadView({
                               <p className="font-bold text-amber-300">{item.videoError}</p>
                               {item.pendingTrimVideo && (
                                 <p className="text-[9px] text-[var(--text-secondary)]">
-                                  Automatically trim to first 5 seconds?
+                                  Automatically trim to first 10 seconds?
                                 </p>
                               )}
                             </div>
@@ -1363,7 +1363,7 @@ export default function BatchProductUploadView({
                                 ) : (
                                   <>
                                     <Sparkles className="h-2.5 w-2.5" />
-                                    <span>Auto-Trim to 5s &amp; Use</span>
+                                    <span>Auto-Trim to 10s &amp; Use</span>
                                   </>
                                 )}
                               </button>
