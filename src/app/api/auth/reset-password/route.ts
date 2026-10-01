@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerSupabase } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -59,10 +60,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Account identifier is required.' }, { status: 400 });
     }
 
-    if (!token || typeof token !== 'string' || !token.trim()) {
-      return NextResponse.json({ error: 'Verification code is required.' }, { status: 400 });
-    }
-
     if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
       return NextResponse.json(
         { error: 'Password must be at least 6 characters long.' },
@@ -113,58 +110,69 @@ export async function POST(request: Request) {
       }
     }
 
-    const cleanToken = token.trim();
+    const cleanToken = (token || '').trim();
     let verifiedUser: any = null;
 
-    // 1. Primary verification: verify with type 'recovery' (matching Supabase generateLink and resetPasswordForEmail)
-    const { data: recoveryVerify, error: recoveryErr } = await anonClient.auth.verifyOtp({
-      email: resolvedEmail,
-      token: cleanToken,
-      type: 'recovery',
-    });
-
-    if (!recoveryErr && recoveryVerify?.user) {
-      verifiedUser = recoveryVerify.user;
-    } else {
-      // 2. Secondary verification: verify with type 'email' (in case OTP mailer was triggered)
-      const { data: emailVerify, error: emailErr } = await anonClient.auth.verifyOtp({
+    // 1. If 6-digit code was provided, verify with Supabase Auth
+    if (cleanToken) {
+      // 1a. Primary verification: verify with type 'recovery'
+      const { data: recoveryVerify, error: recoveryErr } = await anonClient.auth.verifyOtp({
         email: resolvedEmail,
         token: cleanToken,
-        type: 'email',
+        type: 'recovery',
       });
 
-      if (!emailErr && emailVerify?.user) {
-        verifiedUser = emailVerify.user;
-      }
-    }
+      if (!recoveryErr && recoveryVerify?.user) {
+        verifiedUser = recoveryVerify.user;
+      } else {
+        // 1b. Secondary verification: verify with type 'email'
+        const { data: emailVerify, error: emailErr } = await anonClient.auth.verifyOtp({
+          email: resolvedEmail,
+          token: cleanToken,
+          type: 'email',
+        });
 
-    // 3. Fallback verification: check user_metadata recovery_otp or verification_otp
-    if (!verifiedUser) {
-      const { data: userList } = await adminClient.auth.admin.listUsers();
-      const targetUser = userList?.users?.find(
-        (u: any) => u.email?.toLowerCase() === resolvedEmail
-      );
-      if (targetUser) {
-        const storedOtp = targetUser.user_metadata?.recovery_otp || targetUser.user_metadata?.verification_otp;
-        const expiresAt = targetUser.user_metadata?.recovery_otp_expires_at || targetUser.user_metadata?.verification_otp_expires_at;
-        if (storedOtp && storedOtp === cleanToken) {
-          if (!expiresAt || new Date(expiresAt) > new Date()) {
-            verifiedUser = targetUser;
+        if (!emailErr && emailVerify?.user) {
+          verifiedUser = emailVerify.user;
+        }
+      }
+
+      // 1c. Fallback verification: check user_metadata recovery_otp
+      if (!verifiedUser) {
+        const { data: userList } = await adminClient.auth.admin.listUsers();
+        const targetUser = userList?.users?.find(
+          (u: any) => u.email?.toLowerCase() === resolvedEmail
+        );
+        if (targetUser) {
+          const storedOtp = targetUser.user_metadata?.recovery_otp || targetUser.user_metadata?.verification_otp;
+          const expiresAt = targetUser.user_metadata?.recovery_otp_expires_at || targetUser.user_metadata?.verification_otp_expires_at;
+          if (storedOtp && storedOtp === cleanToken) {
+            if (!expiresAt || new Date(expiresAt) > new Date()) {
+              verifiedUser = targetUser;
+            }
           }
         }
+      }
+    } else {
+      // 2. No code provided: Check if user has an active recovery session from clicking email link
+      const serverSupabase = await createServerSupabase();
+      const { data: { user: sessionUser } } = await serverSupabase.auth.getUser();
+
+      if (sessionUser && (sessionUser.email?.toLowerCase() === resolvedEmail || !resolvedEmail)) {
+        verifiedUser = sessionUser;
       }
     }
 
     if (!verifiedUser) {
       return NextResponse.json(
-        { error: 'The 6-digit verification code is invalid or has expired. Please check your code or click "Resend Code".' },
+        { error: 'The 6-digit verification code is required, or please click the recovery link sent to your email.' },
         { status: 400 }
       );
     }
 
     const userId = verifiedUser.id;
 
-    // 4. Update user's password securely via Supabase Admin API
+    // 3. Update user's password securely via Supabase Admin API
     const { error: updateErr } = await adminClient.auth.admin.updateUserById(userId, {
       password: newPassword,
       email_confirm: true,

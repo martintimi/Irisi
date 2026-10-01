@@ -293,12 +293,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `A recovery verification code has been dispatched for ${maskEmail(resolvedEmail)}. Enter the code and choose your new password.`,
+      message: `A recovery verification code has been sent to ${maskEmail(resolvedEmail)}. Please check your email inbox and enter the code.`,
       email: maskEmail(resolvedEmail),
       phone: resolvedPhone ? maskPhone(resolvedPhone) : null,
       accountName: accountName || null,
-      token: otpCode,
-      resetLink: actionLink,
       supportUrl,
     });
 

@@ -83,9 +83,9 @@ function VendorAuthPageContent() {
     maskedEmail?: string;
     maskedPhone?: string;
     accountName?: string;
-    token?: string;
     supportUrl?: string;
   } | null>(null);
+  const [isVerifiedViaEmailLink, setIsVerifiedViaEmailLink] = useState(false);
   const [resetOtp, setResetOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -282,10 +282,12 @@ function VendorAuthPageContent() {
       const hash = window.location.hash || '';
       if (hash.includes('type=recovery') || hash.includes('access_token')) {
         setAuthMode('reset_password');
-        setRecoverySuccessMsg('Your recovery link has been verified! Please choose your new password below.');
+        setIsVerifiedViaEmailLink(true);
+        setRecoverySuccessMsg('Your email recovery link has been verified! Please choose your new password below.');
       } else if (hash.includes('error=access_denied') || hash.includes('otp_expired')) {
         setErrorMessage('The email link has expired. Please enter your business email below to receive a fresh verification code.');
         setAuthMode('forgot_password');
+        setIsVerifiedViaEmailLink(false);
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
@@ -551,21 +553,14 @@ function VendorAuthPageContent() {
         maskedEmail: res.email,
         maskedPhone: res.phone,
         accountName: res.accountName,
-        token: res.token,
         supportUrl: res.supportUrl,
       });
 
-      if (res.token) {
-        setResetOtp(res.token);
-      } else {
-        setResetOtp('');
-      }
-
+      setResetOtp('');
+      setIsVerifiedViaEmailLink(false);
       setAuthMode('reset_password');
       setRecoverySuccessMsg(
-        res.token
-          ? `Recovery code generated: ${res.token}. Please enter your new password below.`
-          : res.message || `A verification code has been dispatched to ${res.email || 'your email'}. Enter the code below.`
+        res.message || `A recovery verification code has been sent to ${res.email || 'your email'}. Please check your inbox and enter the code below.`
       );
     } catch (err: any) {
       setErrorMessage(err.message || 'Error processing password recovery.');
@@ -576,8 +571,8 @@ function VendorAuthPageContent() {
 
   const handleConfirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetOtp.trim()) {
-      setErrorMessage('Please enter the verification code sent to your email.');
+    if (!isVerifiedViaEmailLink && !resetOtp.trim()) {
+      setErrorMessage('Please enter the 6-digit verification code sent to your email.');
       return;
     }
     if (!newPassword || newPassword.length < 6) {
@@ -1039,36 +1034,32 @@ function VendorAuthPageContent() {
                 </div>
               )}
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] font-bold">
+              {isVerifiedViaEmailLink ? (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2.5 text-xs text-emerald-400 font-mono-luxury">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>Email verified via secure recovery link. Set your new password below.</span>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
                     Recovery Verification Code
                   </label>
-                  {recoveryInfo?.token && (
-                    <button
-                      type="button"
-                      onClick={() => setResetOtp(recoveryInfo.token || '')}
-                      className="text-[10px] font-mono-luxury text-[var(--gold-accent)] underline hover:opacity-80 cursor-pointer"
-                    >
-                      Auto-fill Code ({recoveryInfo.token})
-                    </button>
-                  )}
+                  <div className="relative">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      required
+                      value={resetOtp}
+                      onChange={(e) => setResetOtp(e.target.value.trim())}
+                      placeholder="Enter 6-digit code from your email"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-mono-luxury tracking-wider focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5">
+                    Check your email inbox {recoveryInfo?.maskedEmail ? `(${recoveryInfo.maskedEmail})` : ''} and spam folder for your 6-digit verification code.
+                  </p>
                 </div>
-                <div className="relative">
-                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    required
-                    value={resetOtp}
-                    onChange={(e) => setResetOtp(e.target.value.trim())}
-                    placeholder="Enter code from your email"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-mono-luxury tracking-wider focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
-                  />
-                </div>
-                <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5">
-                  Check your inbox {recoveryInfo?.maskedEmail ? `(${recoveryInfo.maskedEmail})` : ''} and spam folder for your recovery verification code.
-                </p>
-              </div>
+              )}
 
               <div>
                 <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
