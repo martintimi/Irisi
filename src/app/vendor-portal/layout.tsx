@@ -60,6 +60,15 @@ export default function VendorPortalLayout({
     try {
       const res = await vendorFetch('/api/vendor/profile');
       const data = await res.json();
+
+      // If vendor is suspended, immediately force logout and redirect to auth with suspension details
+      if (res.status === 403 || data.isSuspended || data.approvalStatus === 'suspended') {
+        const reason = encodeURIComponent(data.suspensionReason || data.error || 'Account suspended by administration.');
+        vendorLogout();
+        router.push(`/vendor-portal/auth?suspended=true&reason=${reason}`);
+        return;
+      }
+
       if (res.ok && data.success && data.vendor) {
         const v = data.vendor;
         const verified = !!v.is_verified || !!v.isVerified;

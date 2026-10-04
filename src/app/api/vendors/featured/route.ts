@@ -60,9 +60,9 @@ export async function GET() {
 
     (dbVendors || []).forEach((v: any) => {
       const vId = (v.id || '').toLowerCase().trim();
+      // Only showcase verified, non-suspended vendors with real published inventory
+      if (!v.is_verified) return;
       const vendorProducts = productsByVendor.get(vId) || [];
-
-      // Only showcase vendors with real published inventory
       if (vendorProducts.length === 0) return;
 
       // Parse bio and location from JSON bio if applicable
@@ -73,6 +73,7 @@ export async function GET() {
       if (bioText.startsWith('{') && bioText.endsWith('}')) {
         try {
           const parsed = JSON.parse(bioText);
+          if (parsed.approvalStatus === 'suspended') return;
           bioText = parsed.bio || '';
           city = parsed.city || '';
           state = parsed.state || '';

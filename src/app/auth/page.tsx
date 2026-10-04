@@ -104,7 +104,16 @@ function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get('redirect') || '/shop';
-  const { setUserAuth, setSelectedGender, setBodyProfile } = useStore();
+  const { userAuth, setUserAuth, setSelectedGender, setBodyProfile } = useStore();
+
+  // Guard: If user is already authenticated, they should NEVER be on the auth/login page!
+  // Only route here if logged out or session expired.
+  useEffect(() => {
+    if (userAuth?.isLoggedIn) {
+      const target = redirectTarget && redirectTarget !== '/auth' ? redirectTarget : '/shop';
+      router.replace(target);
+    }
+  }, [userAuth?.isLoggedIn, redirectTarget, router]);
 
   const [mode, setMode] = useState<'signup' | 'login' | 'verify_otp' | 'forgot_password' | 'reset_password'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -286,7 +295,7 @@ function AuthPageContent() {
           colors: ['#e6c367', '#10b981', '#ffffff']
         });
 
-        router.push(redirectTarget);
+        router.replace(redirectTarget);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authentication failed. Please check your connection.');
@@ -384,7 +393,7 @@ function AuthPageContent() {
         colors: ['#e6c367', '#10b981', '#ffffff']
       });
 
-      router.push(redirectTarget);
+      router.replace(redirectTarget);
     } catch (err: any) {
       setErrorMessage(err.message || 'OTP verification failed.');
     } finally {
@@ -502,7 +511,7 @@ function AuthPageContent() {
           colors: ['#e6c367', '#10b981', '#ffffff']
         });
 
-        router.push(redirectTarget);
+        router.replace(redirectTarget);
         return;
       }
 

@@ -10,10 +10,10 @@ export async function GET() {
 
   if (!key) {
     return NextResponse.json({
-      status: 'fallback_only',
-      carrierGateway: 'Nigerian Distance Matrix Active',
+      status: 'vendor_matrix_active',
+      carrierGateway: 'Vendor Atelier Rates & Regional Logistics Matrix Active',
       shipbubbleConnected: false,
-      message: 'No SHIPBUBBLE_API_KEY detected in environment. Using high-precision Nigerian courier matrix.'
+      message: 'Operating on vendor-configured atelier rates and regional logistics matrix.'
     });
   }
 
@@ -38,8 +38,8 @@ export async function GET() {
     });
   } catch (err: any) {
     return NextResponse.json({
-      status: 'degraded',
-      carrierGateway: 'Nigerian Distance Matrix Fallback Active',
+      status: 'vendor_matrix_active',
+      carrierGateway: 'Vendor Atelier Rates & Regional Logistics Matrix Active',
       shipbubbleConnected: false,
       error: err.message
     });

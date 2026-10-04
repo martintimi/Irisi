@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendDispatchNotificationEmail, sendDeliverySettledEmail } from '@/lib/services/emailService';
+import { sendDispatchNotificationEmail, sendDeliverySettledEmail, sendOrderDeliveredCustomerEmail } from '@/lib/services/emailService';
 
 /**
  * Shipbubble Live Webhook Listener
@@ -89,10 +89,19 @@ export async function POST(request: Request) {
       // Send emails
       if (isDelivered) {
         if (matchingOrder.customer_email) {
-          console.log(`[SHIPBUBBLE] Order ${matchingOrder.order_number} marked delivered.`);
+          console.log(`[SHIPBUBBLE] Order ${matchingOrder.order_number} marked delivered. Sending customer email.`);
+          await sendOrderDeliveredCustomerEmail({
+            orderNumber: matchingOrder.order_number,
+            customerName: matchingOrder.customer_name,
+            customerEmail: matchingOrder.customer_email,
+            deliveryAddress: matchingOrder.delivery_address || 'Nigeria',
+            items: customerMeasurements.items || [],
+            totalAmount: matchingOrder.total_amount || 0,
+            shippingFee: matchingOrder.shipping_fee || 0
+          }).catch(e => console.error('[Shipbubble Webhook] Delivered email error:', e));
         }
       } else if (isDispatched && matchingOrder.customer_email) {
-        sendDispatchNotificationEmail({
+        await sendDispatchNotificationEmail({
           orderNumber: matchingOrder.order_number,
           customerName: matchingOrder.customer_name,
           customerEmail: matchingOrder.customer_email,

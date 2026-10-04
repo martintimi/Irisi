@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
-import { X, Check, ShoppingBag, ShieldCheck, Zap, Sparkles } from 'lucide-react';
+import { X, Check, ShoppingBag, ShieldCheck, Zap, Sparkles, Ruler } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
@@ -40,6 +40,7 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
+  const [sizeGuideTab, setSizeGuideTab] = useState<'check_size' | 'size_guide'>('check_size');
 
   useEffect(() => {
     if (product) {
@@ -131,21 +132,41 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
 
         {/* 1-Tap Ready-to-Wear Size Selector */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-mono-luxury">
+          <div className="flex items-center justify-between text-xs font-mono-luxury flex-wrap gap-y-1">
             <div className="flex items-center gap-2">
               <span className="uppercase text-[var(--text-secondary)] font-bold">Select Size:</span>
-              {!isAccessory && (
+              <span className="text-[var(--gold-accent)] font-bold px-1.5 py-0.5 rounded bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[11px]">
+                {selectedSize}
+              </span>
+            </div>
+
+            {!isAccessory && (
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setIsFitPredictorOpen(true)}
-                  className="text-[10px] text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 hover:underline cursor-pointer bg-[var(--gold-subtle)] px-2 py-0.5 rounded-full border border-[var(--gold-accent)]/30"
+                  onClick={() => {
+                    setSizeGuideTab('size_guide');
+                    setIsFitPredictorOpen(true);
+                  }}
+                  className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold inline-flex items-center gap-1 cursor-pointer bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)]"
+                >
+                  <Ruler className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
+                  <span>Size Guide</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSizeGuideTab('check_size');
+                    setIsFitPredictorOpen(true);
+                  }}
+                  className="text-[10px] text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 cursor-pointer bg-[var(--gold-subtle)] px-2 py-0.5 rounded-full border border-[var(--gold-accent)]/30 shadow-xs"
                 >
                   <Sparkles className="h-2.5 w-2.5" />
-                  <span>Find My Size</span>
+                  <span>Check Size</span>
                 </button>
-              )}
-            </div>
-            <span className="text-[var(--gold-accent)] font-bold">Size: {selectedSize}</span>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-5 gap-2">
@@ -286,13 +307,16 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
 
       </div>
 
-      {/* Fit Predictor Modal */}
+      {/* Fit Predictor & Size Guide Modal */}
       <FitPredictorModal
         isOpen={isFitPredictorOpen}
         onClose={() => setIsFitPredictorOpen(false)}
         onSelectSize={(sz) => setSelectedSize(sz)}
         category={product.category}
         availableSizes={availableSizes}
+        product={product}
+        selectedSize={selectedSize}
+        initialTab={sizeGuideTab}
       />
     </div>
   );

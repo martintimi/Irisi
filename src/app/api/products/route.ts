@@ -149,12 +149,17 @@ export async function GET(request: Request) {
           parkPickupEnabled: true,
         };
 
+        let isSuspended = false;
+
         if (v.bio && v.bio.startsWith('{') && v.bio.endsWith('}')) {
           try {
             const parsed = JSON.parse(v.bio);
             city = parsed.city || '';
             state = parsed.state || '';
             dispatchDays = parsed.dispatchDays || '1-2 business days';
+            if (parsed.approvalStatus === 'suspended') {
+              isSuspended = true;
+            }
             if (parsed.shippingRates) {
               shippingRates = { ...shippingRates, ...parsed.shippingRates };
             }
@@ -181,7 +186,8 @@ export async function GET(request: Request) {
           state: state || 'Lagos',
           dispatchDays,
           shippingRates,
-          is_verified: !!v.is_verified,
+          is_suspended: isSuspended,
+          is_verified: !isSuspended && !!v.is_verified,
         });
       });
     }
@@ -422,16 +428,24 @@ export async function GET(request: Request) {
       };
     });
 
+    // Marketplace Integrity & Vendor Suspension Filter:
+    // Products from suspended vendors are strictly hidden from shoppers under all queries
+    const activeProducts = formatted.filter(p => {
+      const vInfo = vendorMap.get(p.vendor_id);
+      if (vInfo?.is_suspended) return false;
+      return true;
+    });
+
     // Public Marketplace Gating: If browsing the public store without a vendor filter,
     // only return products from approved & verified vendors
     const isPublicQuery = !vendorId || vendorId === 'all';
     const finalProducts = isPublicQuery
-      ? formatted.filter(p => {
+      ? activeProducts.filter(p => {
           const vInfo = vendorMap.get(p.vendor_id);
           // Only show verified vendors on public shop (or fallback demo items)
           return vInfo ? vInfo.is_verified === true : true;
         })
-      : formatted;
+      : activeProducts;
 
     const responsePayload = {
       success: true,

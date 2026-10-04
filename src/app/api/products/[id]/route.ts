@@ -73,10 +73,14 @@ export async function GET(
     const unitsSold = (orderItemsRes.data || []).reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
 
     if (vendor) {
+        let isSuspended = false;
         vendorName = vendor.brand_name || vendor.designer_name || 'Verified Vendor';
         if (vendor.bio && vendor.bio.startsWith('{') && vendor.bio.endsWith('}')) {
           try {
             const parsed = JSON.parse(vendor.bio);
+            if (parsed.approvalStatus === 'suspended') {
+              isSuspended = true;
+            }
             vendorCity = parsed.city || '';
             vendorState = parsed.state || '';
             dispatchDays = parsed.dispatchDays || '1-2 business days';
@@ -84,6 +88,13 @@ export async function GET(
               shippingRates = { ...shippingRates, ...parsed.shippingRates };
             }
           } catch (e) {}
+        }
+
+        if (isSuspended) {
+          return NextResponse.json(
+            { error: 'This product listing is currently unavailable.' },
+            { status: 404 }
+          );
         }
 
         if (!vendorCity && vendor.location) {

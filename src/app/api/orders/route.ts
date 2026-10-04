@@ -1,4 +1,4 @@
-import { sendOrderConfirmationEmail, sendDispatchNotificationEmail } from '@/lib/services/emailService';
+import { sendOrderConfirmationEmail, sendDispatchNotificationEmail, sendOrderPackedEmail, sendOrderDeliveredCustomerEmail } from '@/lib/services/emailService';
 import { sendVendorNewOrderNotification, sendVendorSettlementNotification } from '@/lib/services/vendorNotificationService';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
         items: relevantItems.map((item: any) => {
           const pId = item.product_id || item.productId;
           const vId = item.vendor_id || item.vendorId || 'moji-wears';
-          const pName = item.product_name || item.productName || 'Garment';
+          const pName = item.product_name || item.productName || 'Item';
           const matchedImage = item.image_url || item.imageUrl || productImageMap.get(pId) || '/images/no-product.svg';
           const rawColor = item.color || item.colorName || 'As Pictured';
           const isHex = typeof rawColor === 'string' && rawColor.startsWith('#');
@@ -212,7 +212,7 @@ export async function POST(request: Request) {
         const chosenCourierName = passedPkg?.courierName || (isPark ? 'Motor Park Bus Waybill' : (courierServiceType === 'pickup' ? 'Fez delivery' : 'Station Drop-off'));
         const pkgFee = passedPkg?.shippingFee !== undefined
           ? Number(passedPkg.shippingFee)
-          : (isPark ? 0 : Math.round(Number(body.shippingFee || 4500) / totalVendorCount));
+          : (isPark ? 0 : (totalVendorCount > 0 ? Math.round(Number(body.shippingFee || 0) / totalVendorCount) : 0));
 
         // Attempt live Shipbubble shipment creation if tokens are present
         let bookedShipment: any = null;
@@ -461,56 +461,153 @@ export async function POST(request: Request) {
 
     // Dispatch automated background email alerts
     try {
-      if (body.customerEmail) {
-        sendOrderConfirmationEmail({
-          orderNumber,
-          customerName: body.customerName,
-          customerEmail: body.customerEmail,
-          deliveryAddress: body.deliveryAddress,
-          items: body.items || [],
-          totalAmount: Number(body.totalAmount || 0),
-          shippingFee: Number(body.shippingFee || 0)
-        }).catch(e => console.error('Email error:', e));
+      const emailPromises: Promise<any>[] = [];
+
+      // 1. Queue Order Confirmation Email to Buyer
+      if (body.customerEmail && body.customerEmail.includes('@')) {
+        console.log(`[Orders POST] 🛒 Queuing customer order confirmation email to ${body.customerEmail}`);
+        emailPromises.push(
+          sendOrderConfirmationEmail({
+            orderNumber,
+            customerName: body.customerName,
+            customerEmail: body.customerEmail,
+            deliveryAddress: body.deliveryAddress,
+            items: body.items || [],
+            totalAmount: Number(body.totalAmount || 0),
+            shippingFee: Number(body.shippingFee || 0)
+          }).then(res => {
+            console.log(`[Order Confirmation] ✅ Customer email successfully sent to ${body.customerEmail}:`, res);
+            return res;
+          }).catch(err => {
+            console.error(`[Order Confirmation] ❌ Customer email failed for ${body.customerEmail}:`, err);
+            return { success: false, error: err?.message };
+          })
+        );
       }
 
-      // Notify each unique vendor by looking up their registered email from vendors table
-      const uniqueVendorIds: string[] = Array.from(
-        new Set<string>((body.items || []).map((i: any) => String(i.vendorId || i.vendor_id || '').toLowerCase().trim()).filter(Boolean))
-      );
+      // 2. Fetch all registered vendors to ensure 100% resilient matching
+      const { data: allDbVendors } = await supabase
+        .from('vendors')
+        .select('id, brand_name, designer_name, email, phone, location');
 
-      if (uniqueVendorIds.length > 0) {
-        const { data: dbVendors } = await supabase
-          .from('vendors')
-          .select('id, brand_name, designer_name, email, phone, location')
-          .in('id', uniqueVendorIds);
+      // Also fetch products for any item without explicit vendorId
+      const itemProductIds = (body.items || []).map((i: any) => i.productId || i.id).filter(Boolean);
+      const productVendorMap = new Map<string, string>();
+      if (itemProductIds.length > 0) {
+        const { data: dbProducts } = await supabase
+          .from('products')
+          .select('id, vendor_id')
+          .in('id', itemProductIds);
+        (dbProducts || []).forEach((p: any) => {
+          if (p.id && p.vendor_id) productVendorMap.set(p.id, p.vendor_id);
+        });
+      }
 
-        const vendorMap = new Map<string, any>();
-        (dbVendors || []).forEach(v => vendorMap.set(v.id.toLowerCase().trim(), v));
+      const findVendorRecord = (rawId: string, rawName: string, productId?: string) => {
+        if (!allDbVendors || allDbVendors.length === 0) return null;
+        const vIdClean = (rawId || '').toLowerCase().trim();
+        const vNameClean = (rawName || '').toLowerCase().trim();
+        const vSlug = vIdClean.replace(/[^a-z0-9]/g, '');
 
-        for (const vId of uniqueVendorIds) {
-          const vRecord = vendorMap.get(vId);
-          const vEmail = vRecord?.email || (vId.includes('@') ? vId : '');
-          if (!vEmail) continue;
+        // Match 1: Direct ID match
+        let found = allDbVendors.find(v => v.id.toLowerCase().trim() === vIdClean);
+        if (found) return found;
 
-          const vItems = (body.items || []).filter((i: any) => (i.vendorId || i.vendor_id || '').toLowerCase().trim() === vId);
-          const vSubtotal = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
-          const vPkg = initialVendorPackages[vId] || Object.entries(initialVendorPackages).find(([k]) => k.toLowerCase() === vId)?.[1];
+        // Match 2: Normalized slug match
+        if (vSlug) {
+          found = allDbVendors.find(v => v.id.toLowerCase().replace(/[^a-z0-9]/g, '') === vSlug);
+          if (found) return found;
+        }
 
+        // Match 3: Brand name match
+        if (vNameClean) {
+          found = allDbVendors.find(v => (v.brand_name || '').toLowerCase().trim() === vNameClean);
+          if (found) return found;
+          const nameSlug = vNameClean.replace(/[^a-z0-9]/g, '');
+          found = allDbVendors.find(v => (v.brand_name || '').toLowerCase().replace(/[^a-z0-9]/g, '') === nameSlug);
+          if (found) return found;
+        }
+
+        // Match 4: Database Product vendor_id
+        if (productId && productVendorMap.has(productId)) {
+          const dbVId = productVendorMap.get(productId)!.toLowerCase().trim();
+          found = allDbVendors.find(v => v.id.toLowerCase().trim() === dbVId || v.id.toLowerCase().replace(/[^a-z0-9]/g, '') === dbVId.replace(/[^a-z0-9]/g, ''));
+          if (found) return found;
+        }
+
+        // Match 5: Substring / partial match
+        if (vIdClean && vIdClean.length >= 3) {
+          found = allDbVendors.find(v => v.id.toLowerCase().includes(vIdClean) || vIdClean.includes(v.id.toLowerCase()));
+          if (found) return found;
+        }
+
+        return null;
+      };
+
+      // Group items by matched vendor
+      const vendorGroups = new Map<string, { vendor: any; items: any[]; pkg: any }>();
+
+      (body.items || []).forEach((item: any) => {
+        const rawVId = String(item.vendorId || item.vendor_id || '').trim();
+        const rawVName = String(item.vendorName || item.vendor_name || '').trim();
+        const pId = item.productId || item.id;
+        const vRec = findVendorRecord(rawVId, rawVName, pId);
+
+        const vKey = vRec ? vRec.id : (rawVId || 'store-merchant');
+        const vEmail = vRec?.email || (rawVId.includes('@') ? rawVId : '');
+
+        if (!vendorGroups.has(vKey)) {
+          const vPkg = initialVendorPackages[vKey] ||
+            initialVendorPackages[rawVId] ||
+            Object.entries(initialVendorPackages).find(([k]) => k.toLowerCase() === vKey.toLowerCase() || k.toLowerCase() === rawVId.toLowerCase())?.[1];
+
+          vendorGroups.set(vKey, {
+            vendor: {
+              id: vKey,
+              brandName: vRec?.brand_name || rawVName || vKey,
+              designerName: vRec?.designer_name,
+              email: vEmail,
+              phone: vRec?.phone,
+              location: vRec?.location,
+            },
+            items: [],
+            pkg: vPkg
+          });
+        }
+
+        vendorGroups.get(vKey)!.items.push(item);
+      });
+
+      // 3. Queue New Order Notification for each vendor
+      for (const [vKey, group] of vendorGroups.entries()) {
+        const vEmail = group.vendor.email;
+        if (!vEmail || !vEmail.includes('@')) {
+          console.warn(`[Orders POST] ⚠️ Vendor "${group.vendor.brandName}" (${vKey}) does not have a registered email address. Skipping email.`);
+          continue;
+        }
+
+        const vItems = group.items;
+        const vSubtotal = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+        const deliveryMethod = group.pkg?.deliveryMethod || body.packageMethods?.[vKey] || 'doorstep';
+
+        console.log(`[Orders POST] 📦 Queuing vendor new order notification to ${group.vendor.brandName} (${vEmail}) for order ${orderNumber}`);
+
+        emailPromises.push(
           sendVendorNewOrderNotification({
             vendor: {
-              id: vId,
-              brandName: vRecord?.brand_name || vId,
-              designerName: vRecord?.designer_name,
+              id: group.vendor.id,
+              brandName: group.vendor.brandName,
+              designerName: group.vendor.designerName,
               email: vEmail,
-              phone: vRecord?.phone,
+              phone: group.vendor.phone,
             },
             orderNumber,
             customerName: body.customerName,
             deliveryCity: body.deliveryCity || body.city || 'Lagos',
             deliveryState: body.deliveryState || body.state || 'Lagos',
-            deliveryMethod: vPkg?.deliveryMethod || 'doorstep',
+            deliveryMethod,
             items: vItems.map((it: any) => ({
-              productName: it.productName || it.name || 'Garment',
+              productName: it.productName || it.name || 'Item',
               size: it.size || it.selectedSize || 'M',
               color: typeof it.color === 'string' ? it.color : (it.color?.name || 'Standard'),
               quantity: Number(it.quantity || 1),
@@ -518,8 +615,23 @@ export async function POST(request: Request) {
               vendorPayout: Number(it.price || 0),
             })),
             totalPayout: vSubtotal,
-          }).catch(e => console.error('[Order] Vendor luxury email alert notice:', e));
-        }
+          }).then(res => {
+            console.log(`[Vendor Notification] ✅ Vendor email successfully sent to ${vEmail} (${group.vendor.brandName}):`, res);
+            return res;
+          }).catch(err => {
+            console.error(`[Vendor Notification] ❌ Vendor email failed for ${vEmail}:`, err);
+            return { success: false, error: err?.message };
+          })
+        );
+      }
+
+      // CRITICAL: Await all email promises with Promise.allSettled so serverless function does NOT terminate early
+      if (emailPromises.length > 0) {
+        console.log(`[Orders POST] ⏳ Awaiting ${emailPromises.length} outgoing emails...`);
+        const results = await Promise.allSettled(emailPromises);
+        console.log(`[Orders POST] 🚀 Finished dispatching ${results.length} emails:`,
+          results.map(r => r.status === 'fulfilled' ? r.value : r.reason)
+        );
       }
     } catch (e) {
       console.error('Email dispatch wrapper error:', e);
@@ -601,9 +713,9 @@ export async function PATCH(request: Request) {
       }
     });
 
+    let matchedVendorKey = targetVendorId;
     if (targetVendorId && targetVendorId !== 'all') {
       // Find matching vendor key among known vendors
-      let matchedVendorKey = targetVendorId;
       const cleanTarget = targetVendorId.replace(/[^a-z0-9]/g, '');
 
       for (const vId of allVendorIds) {
@@ -707,22 +819,86 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    // Dispatch automated dispatch or settlement email alerts
+    // Dispatch automated lifecycle email alerts (Packaging, Dispatch, Delivery, Settlement)
     try {
-      if (status === 'dispatched' && existingOrder.customer_email) {
-        sendDispatchNotificationEmail({
-          orderNumber: existingOrder.order_number,
-          customerName: existingOrder.customer_name,
-          customerEmail: existingOrder.customer_email,
-          deliveryAddress: existingOrder.delivery_address,
-          items: existingOrder.order_items || [],
-          totalAmount: Number(existingOrder.total_amount || 0),
-          shippingFee: Number(existingOrder.shipping_fee || 0),
-          driverPhone: driverPhone || '',
-          waybillNumber: waybillNumber || '',
-          vendorName: targetVendorId || 'Store Merchant'
-        }).catch(e => console.error('Dispatch email error:', e));
-      } else if (status === 'delivered') {
+      const patchEmailPromises: Promise<any>[] = [];
+      const stageNum = Number(trackingStage || 1);
+      const pkgForVendor = existingVendorPackages[targetVendorId] ||
+        (matchedVendorKey ? existingVendorPackages[matchedVendorKey] : null) ||
+        Object.values(existingVendorPackages)[0] || {};
+
+      // Stage 3: Dispatched with waybill & rider details
+      if ((status === 'dispatched' || stageNum === 3) && existingOrder.customer_email) {
+        console.log(`[Orders PATCH] 🚚 Queuing dispatch notification email to customer ${existingOrder.customer_email}`);
+        patchEmailPromises.push(
+          sendDispatchNotificationEmail({
+            orderNumber: existingOrder.order_number,
+            customerName: existingOrder.customer_name,
+            customerEmail: existingOrder.customer_email,
+            deliveryAddress: existingOrder.delivery_address,
+            items: existingOrder.order_items || sourceItems || [],
+            totalAmount: Number(existingOrder.total_amount || 0),
+            shippingFee: Number(existingOrder.shipping_fee || 0),
+            driverPhone: driverPhone || (pkgForVendor as any).driverPhone || '',
+            waybillNumber: waybillNumber || (pkgForVendor as any).waybillNumber || '',
+            vendorName: (pkgForVendor as any).vendorName || targetVendorId || 'Store Merchant'
+          }).then(res => {
+            console.log(`[Dispatch Email] ✅ Sent to customer ${existingOrder.customer_email}:`, res);
+            return res;
+          }).catch(e => {
+            console.error('[Dispatch Email] ❌ Failed:', e);
+            return { success: false, error: e?.message };
+          })
+        );
+      }
+      // Stage 2: Packaged & quality-checked
+      else if ((status === 'packing' || stageNum === 2) && existingOrder.customer_email) {
+        console.log(`[Orders PATCH] 📦 Queuing order packed email to customer ${existingOrder.customer_email}`);
+        patchEmailPromises.push(
+          sendOrderPackedEmail({
+            orderNumber: existingOrder.order_number,
+            customerName: existingOrder.customer_name,
+            customerEmail: existingOrder.customer_email,
+            deliveryAddress: existingOrder.delivery_address,
+            items: existingOrder.order_items || sourceItems || [],
+            totalAmount: Number(existingOrder.total_amount || 0),
+            shippingFee: Number(existingOrder.shipping_fee || 0),
+            vendorName: (pkgForVendor as any).vendorName || targetVendorId || 'Store Merchant'
+          }).then(res => {
+            console.log(`[Packed Email] ✅ Sent to customer ${existingOrder.customer_email}:`, res);
+            return res;
+          }).catch(e => {
+            console.error('[Packed Email] ❌ Failed:', e);
+            return { success: false, error: e?.message };
+          })
+        );
+      }
+      // Stage 4: Delivered & escrow settlement released
+      else if (status === 'delivered' || stageNum === 4) {
+        // Customer email: order delivered confirmation
+        if (existingOrder.customer_email) {
+          console.log(`[Orders PATCH] ✅ Queuing order delivered email to customer ${existingOrder.customer_email}`);
+          patchEmailPromises.push(
+            sendOrderDeliveredCustomerEmail({
+              orderNumber: existingOrder.order_number,
+              customerName: existingOrder.customer_name,
+              customerEmail: existingOrder.customer_email,
+              deliveryAddress: existingOrder.delivery_address,
+              items: existingOrder.order_items || sourceItems || [],
+              totalAmount: Number(existingOrder.total_amount || 0),
+              shippingFee: Number(existingOrder.shipping_fee || 0),
+              vendorName: (pkgForVendor as any).vendorName || targetVendorId || 'Store Merchant'
+            }).then(res => {
+              console.log(`[Delivered Customer Email] ✅ Sent to ${existingOrder.customer_email}:`, res);
+              return res;
+            }).catch(e => {
+              console.error('[Delivered Customer Email] ❌ Failed:', e);
+              return { success: false, error: e?.message };
+            })
+          );
+        }
+
+        // Vendor email: payment settlement released
         const vIdToNotify = targetVendorId || (allVendorIds.size === 1 ? Array.from(allVendorIds)[0] : '');
         if (vIdToNotify) {
           const { data: vRecord } = await supabase
@@ -735,24 +911,42 @@ export async function PATCH(request: Request) {
             const vItems = sourceItems.filter((i: any) => (i.vendor_id || i.vendorId || '').toLowerCase().trim() === vIdToNotify.toLowerCase().trim());
             const vPayout = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
 
-            sendVendorSettlementNotification({
-              vendor: {
-                id: vRecord.id,
-                brandName: vRecord.brand_name || vIdToNotify,
-                designerName: vRecord.designer_name,
-                email: vRecord.email,
-                phone: vRecord.phone,
+            console.log(`[Orders PATCH] 💰 Queuing settlement email to vendor ${vRecord.brand_name} (${vRecord.email})`);
+            patchEmailPromises.push(
+              sendVendorSettlementNotification({
+                vendor: {
+                  id: vRecord.id,
+                  brandName: vRecord.brand_name || vIdToNotify,
+                  designerName: vRecord.designer_name,
+                  email: vRecord.email,
+                  phone: vRecord.phone,
+                  bankName: vRecord.bank_name,
+                  accountNumber: vRecord.account_number,
+                },
+                orderNumber: existingOrder.order_number,
+                payoutAmount: vPayout || Number(existingOrder.total_amount || 0),
                 bankName: vRecord.bank_name,
                 accountNumber: vRecord.account_number,
-              },
-              orderNumber: existingOrder.order_number,
-              payoutAmount: vPayout || Number(existingOrder.total_amount || 0),
-              bankName: vRecord.bank_name,
-              accountNumber: vRecord.account_number,
-              customerName: existingOrder.customer_name,
-            }).catch(e => console.error('[Order] Vendor settlement email alert error:', e));
+                customerName: existingOrder.customer_name,
+              }).then(res => {
+                console.log(`[Settlement Email] ✅ Sent to vendor ${vRecord.email}:`, res);
+                return res;
+              }).catch(e => {
+                console.error('[Settlement Email] ❌ Failed:', e);
+                return { success: false, error: e?.message };
+              })
+            );
           }
         }
+      }
+
+      // CRITICAL: Await all patch email promises before returning response
+      if (patchEmailPromises.length > 0) {
+        console.log(`[Orders PATCH] ⏳ Awaiting ${patchEmailPromises.length} outgoing emails...`);
+        const patchResults = await Promise.allSettled(patchEmailPromises);
+        console.log(`[Orders PATCH] 🚀 Finished dispatching ${patchResults.length} notification emails:`,
+          patchResults.map(r => r.status === 'fulfilled' ? r.value : r.reason)
+        );
       }
     } catch (e) {
       console.error('Patch email dispatch error:', e);

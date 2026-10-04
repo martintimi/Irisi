@@ -188,7 +188,7 @@ export default function SuperAdminPage() {
   const [vendors, setVendors] = useState<any[]>([]);
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [vendorSearch, setVendorSearch] = useState('');
-  const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'suspended'>('all');
 
   // Escrow Ledger Interactive State
   const [financeFilter, setFinanceFilter] = useState<'all' | 'locked' | 'settled'>('all');
@@ -227,6 +227,8 @@ export default function SuperAdminPage() {
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
   const [rejectionModalVendor, setRejectionModalVendor] = useState<any | null>(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [suspensionModalVendor, setSuspensionModalVendor] = useState<any | null>(null);
+  const [suspensionReasonInput, setSuspensionReasonInput] = useState('');
 
   // Auto-rotate editorial carousel on login
   useEffect(() => {
@@ -521,6 +523,66 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleSuspendBrandSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!suspensionModalVendor) return;
+
+    try {
+      setActionLoadingId(suspensionModalVendor.id);
+      const res = await fetch('/api/admin/vendors/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: suspensionModalVendor.id,
+          action: 'suspend',
+          suspensionReason: suspensionReasonInput || 'Account suspended by administration.'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionSuccessMsg(`Brand "${suspensionModalVendor.name}" has been suspended. Storefront hidden & portal access disabled.`);
+        setSuspensionModalVendor(null);
+        setSuspensionReasonInput('');
+        await fetchVendorsList();
+        setTimeout(() => setActionSuccessMsg(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error suspending brand:', err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleUnsuspendBrand = async (vendorId: string, vendorName?: string) => {
+    try {
+      setActionLoadingId(vendorId);
+      const res = await fetch('/api/admin/vendors/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId,
+          action: 'unsuspend'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionSuccessMsg(`Brand "${vendorName || vendorId}" reinstated successfully! Products are now live on the marketplace.`);
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#ffffff', '#e6c367']
+        });
+        await fetchVendorsList();
+        setTimeout(() => setActionSuccessMsg(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error reinstating brand:', err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // Derived Financial Calculations directly from real database orders with isolated vendor settlement
   const financialStats = useMemo(() => {
     const totalGMV = orders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
@@ -810,10 +872,12 @@ export default function SuperAdminPage() {
         (v.location || '').toLowerCase().includes(q) ||
         (v.email || '').toLowerCase().includes(q);
 
+      const isSuspended = v.isSuspended === true || v.approvalStatus === 'suspended';
       let matchesFilter = true;
-      if (approvalFilter === 'pending') matchesFilter = v.approvalStatus === 'pending' || !v.isVerified;
-      if (approvalFilter === 'approved') matchesFilter = v.approvalStatus === 'approved' || v.isVerified;
-      if (approvalFilter === 'rejected') matchesFilter = v.approvalStatus === 'rejected';
+      if (approvalFilter === 'pending') matchesFilter = !isSuspended && (v.approvalStatus === 'pending' || !v.isVerified) && v.approvalStatus !== 'rejected';
+      if (approvalFilter === 'approved') matchesFilter = !isSuspended && (v.approvalStatus === 'approved' || v.isVerified);
+      if (approvalFilter === 'rejected') matchesFilter = !isSuspended && v.approvalStatus === 'rejected';
+      if (approvalFilter === 'suspended') matchesFilter = isSuspended;
 
       return matchesSearch && matchesFilter;
     });
@@ -835,8 +899,9 @@ export default function SuperAdminPage() {
     });
   }, [orders, financeSearch, financeFilter]);
 
-  const pendingCount = vendors.filter(v => v.approvalStatus === 'pending' || !v.isVerified).length;
-  const approvedCount = vendors.filter(v => v.approvalStatus === 'approved' || v.isVerified).length;
+  const pendingCount = vendors.filter(v => (v.approvalStatus === 'pending' || !v.isVerified) && v.approvalStatus !== 'suspended' && v.approvalStatus !== 'rejected' && !v.isSuspended).length;
+  const approvedCount = vendors.filter(v => (v.approvalStatus === 'approved' || v.isVerified) && v.approvalStatus !== 'suspended' && !v.isSuspended).length;
+  const suspendedCount = vendors.filter(v => v.approvalStatus === 'suspended' || v.isSuspended === true).length;
 
   // Derived multi-vendor shipments list
   const allShipments = useMemo(() => {
@@ -2640,7 +2705,7 @@ export default function SuperAdminPage() {
               </div>
 
               {/* Status Counters */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-1">
                   <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold block">Total Registered Brands</span>
                   <strong className="font-editorial text-3xl font-bold text-[var(--text-primary)]">{vendors.length}</strong>
@@ -2653,12 +2718,16 @@ export default function SuperAdminPage() {
                   <span className="text-[10px] font-mono-luxury uppercase text-emerald-400 font-bold block">Approved & Verified</span>
                   <strong className="font-editorial text-3xl font-bold text-emerald-400">{approvedCount}</strong>
                 </div>
+                <div className="p-5 rounded-3xl surface-card border border-rose-500/30 bg-rose-500/5 space-y-1">
+                  <span className="text-[10px] font-mono-luxury uppercase text-rose-400 font-bold block">Suspended Stores</span>
+                  <strong className="font-editorial text-3xl font-bold text-rose-400">{suspendedCount}</strong>
+                </div>
               </div>
 
               {/* Filters & Search */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl surface-card border border-[var(--border-subtle)]">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {(['all', 'pending', 'approved', 'rejected'] as const).map((filter) => (
+                  {(['all', 'pending', 'approved', 'rejected', 'suspended'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setApprovalFilter(filter)}
@@ -2668,7 +2737,7 @@ export default function SuperAdminPage() {
                           : 'surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                       }`}
                     >
-                      {filter}
+                      {filter === 'suspended' ? `suspended (${suspendedCount})` : filter}
                     </button>
                   ))}
                 </div>
@@ -2702,15 +2771,20 @@ export default function SuperAdminPage() {
               ) : (
                 <div className="space-y-4">
                   {filteredVendors.map((vendor) => {
+                    const isSuspended = vendor.isSuspended === true || vendor.approvalStatus === 'suspended';
                     const hasSensitivePendingUpdate = vendor.hasSensitivePendingUpdate === true;
-                    const isApproved = (vendor.isVerified || vendor.approvalStatus === 'approved') && !hasSensitivePendingUpdate;
-                    const isPending = vendor.approvalStatus === 'pending' || !vendor.isVerified || hasSensitivePendingUpdate;
+                    const isApproved = !isSuspended && (vendor.isVerified || vendor.approvalStatus === 'approved') && !hasSensitivePendingUpdate;
+                    const isPending = !isSuspended && (vendor.approvalStatus === 'pending' || !vendor.isVerified || hasSensitivePendingUpdate);
                     const isActioning = actionLoadingId === vendor.id;
 
                     return (
                       <div
                         key={vendor.id}
-                        className="p-6 sm:p-7 rounded-3xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/40 transition-all space-y-5 shadow-sm"
+                        className={`p-6 sm:p-7 rounded-3xl surface-card border transition-all space-y-5 shadow-sm ${
+                          isSuspended
+                            ? 'border-rose-500/40 bg-rose-500/[0.02]'
+                            : 'border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/40'
+                        }`}
                       >
                         {/* Header */}
                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -2729,11 +2803,13 @@ export default function SuperAdminPage() {
                                   {vendor.name}
                                 </h3>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold uppercase ${
-                                  isApproved
+                                  isSuspended
+                                    ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                                    : isApproved
                                     ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                                     : 'bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse'
                                 }`}>
-                                  ● {isApproved ? 'Verified & Active' : 'Pending Review'}
+                                  ● {isSuspended ? 'Suspended by Admin' : isApproved ? 'Verified & Active' : 'Pending Review'}
                                 </span>
 
                                 {/* Specialty Badge */}
@@ -2775,28 +2851,68 @@ export default function SuperAdminPage() {
                                   &ldquo;{vendor.bio}&rdquo;
                                 </p>
                               )}
+
+                              {isSuspended && (
+                                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs font-mono-luxury text-rose-300 space-y-1 mt-1">
+                                  <div className="flex items-center gap-1.5 text-rose-400 font-bold uppercase text-[10px]">
+                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                    <span>Suspension Reason:</span>
+                                    {vendor.suspendedAt && <span className="text-[9px] text-rose-300/60 font-normal">({new Date(vendor.suspendedAt).toLocaleDateString()})</span>}
+                                  </div>
+                                  <p className="italic text-rose-200">
+                                    &ldquo;{vendor.suspensionReason || 'Store suspended pending administrative review.'}&rdquo;
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {isPending && (
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                            {isSuspended ? (
                               <button
-                                onClick={() => handleApproveBrand(vendor.id)}
+                                onClick={() => handleUnsuspendBrand(vendor.id, vendor.name)}
                                 disabled={isActioning}
                                 className="px-4 py-2 rounded-full bg-emerald-500 text-black text-xs font-mono-luxury uppercase font-bold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md hover:shadow-lg"
+                                title="Restore verified status and reinstate store"
                               >
-                                {isActioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                                <span>Approve & Activate Brand</span>
+                                {isActioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                                <span>Reinstate Store</span>
                               </button>
-                            )}
+                            ) : (
+                              <>
+                                {isPending && (
+                                  <button
+                                    onClick={() => handleApproveBrand(vendor.id)}
+                                    disabled={isActioning}
+                                    className="px-4 py-2 rounded-full bg-emerald-500 text-black text-xs font-mono-luxury uppercase font-bold hover:bg-emerald-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-md hover:shadow-lg"
+                                  >
+                                    {isActioning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                    <span>Approve & Activate Brand</span>
+                                  </button>
+                                )}
 
-                            <button
-                              onClick={() => setRejectionModalVendor(vendor)}
-                              disabled={isActioning}
-                              className="px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold hover:border-rose-500 text-rose-400 transition-all cursor-pointer"
-                            >
-                              Return / Notes
-                            </button>
+                                <button
+                                  onClick={() => setRejectionModalVendor(vendor)}
+                                  disabled={isActioning}
+                                  className="px-4 py-2 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold hover:border-amber-500 text-amber-400 transition-all cursor-pointer"
+                                >
+                                  Return / Notes
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setSuspensionModalVendor(vendor);
+                                    setSuspensionReasonInput('');
+                                  }}
+                                  disabled={isActioning}
+                                  className="px-4 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-mono-luxury uppercase font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                                  title="Suspend merchant store and hide products"
+                                >
+                                  <ShieldAlert className="h-3.5 w-3.5" />
+                                  <span>Suspend Store</span>
+                                </button>
+                              </>
+                            )}
 
                             <Link
                               href={`/brand/${encodeURIComponent(vendor.name)}`}
@@ -3840,6 +3956,92 @@ export default function SuperAdminPage() {
                 >
                   {actionLoadingId === rejectionModalVendor.id ? <Sparkles className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                   <span>Return to Vendor</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* VENDOR ACCOUNT SUSPENSION MODAL */}
+      {suspensionModalVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-lg surface-card p-6 sm:p-7 rounded-3xl border border-rose-500/40 space-y-5 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                  Suspend Merchant Account
+                </h3>
+                <span className="text-xs font-mono-luxury text-rose-400 font-bold">
+                  Brand: {suspensionModalVendor.name}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 font-mono-luxury leading-relaxed space-y-1">
+              <p className="font-bold">⚠️ When suspended:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-rose-200/80">
+                <li>All products will be hidden from shoppers across the marketplace and search.</li>
+                <li>The vendor will be immediately blocked from logging into the merchant portal.</li>
+                <li>An official suspension notice email with your reason will be sent to the vendor.</li>
+              </ul>
+            </div>
+
+            <form onSubmit={handleSuspendBrandSubmit} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] font-bold">
+                    Reason for Suspension (Optional)
+                  </label>
+                  <span className="text-[10px] font-mono-luxury text-[var(--text-muted)]">Not required</span>
+                </div>
+                <textarea
+                  rows={3}
+                  value={suspensionReasonInput}
+                  onChange={(e) => setSuspensionReasonInput(e.target.value)}
+                  placeholder="Optional: Add a reason or note for the vendor (you can leave this blank)..."
+                  className="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-rose-500/30 text-xs text-[var(--text-primary)] leading-relaxed focus:border-rose-500 focus:outline-none resize-none font-mono-luxury"
+                />
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Repeated fulfillment delays & unresponsive to dispatch',
+                  'Counterfeit or inaccurate product listings',
+                  'Violation of merchant terms and marketplace policies',
+                  'Investigation of customer chargeback / order disputes'
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setSuspensionReasonInput(preset)}
+                    className="text-[10px] px-2.5 py-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-rose-400 hover:border-rose-500/40 transition-all font-mono-luxury text-left"
+                  >
+                    + {preset}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSuspensionModalVendor(null)}
+                  className="px-5 py-2.5 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold hover:bg-[var(--bg-surface)] cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={actionLoadingId === suspensionModalVendor.id}
+                  className="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-mono-luxury uppercase font-bold hover:bg-rose-500 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {actionLoadingId === suspensionModalVendor.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+                  <span>Confirm Suspension</span>
                 </button>
               </div>
             </form>

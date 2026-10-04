@@ -206,6 +206,26 @@ export async function POST(request: Request) {
         }, { status: 404 });
       }
 
+      // Check if vendor account has been suspended by administration
+      let isSuspended = false;
+      let suspensionReason = '';
+      if (vendorRecord.bio && vendorRecord.bio.startsWith('{') && vendorRecord.bio.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(vendorRecord.bio);
+          if (parsed.approvalStatus === 'suspended') {
+            isSuspended = true;
+            suspensionReason = parsed.suspensionReason || 'Store suspended by administration.';
+          }
+        } catch (e) {}
+      }
+
+      if (isSuspended) {
+        const reasonDetail = suspensionReason ? ` Reason: "${suspensionReason}".` : '';
+        return NextResponse.json({
+          error: `Your merchant account has been suspended by administration.${reasonDetail} Please contact ÌRÍSÍ Concierge Support on WhatsApp to appeal.`
+        }, { status: 403 });
+      }
+
       const response = NextResponse.json({
         success: true,
         user,
@@ -222,6 +242,25 @@ export async function POST(request: Request) {
 
     // Default fallback
     if (vendorRecord) {
+      let isSuspended = false;
+      let suspensionReason = '';
+      if (vendorRecord.bio && vendorRecord.bio.startsWith('{') && vendorRecord.bio.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(vendorRecord.bio);
+          if (parsed.approvalStatus === 'suspended') {
+            isSuspended = true;
+            suspensionReason = parsed.suspensionReason || '';
+          }
+        } catch (e) {}
+      }
+
+      if (isSuspended) {
+        const reasonDetail = suspensionReason ? ` Reason: "${suspensionReason}".` : '';
+        return NextResponse.json({
+          error: `Your merchant account has been suspended by administration.${reasonDetail} Please contact ÌRÍSÍ Concierge Support on WhatsApp to appeal.`
+        }, { status: 403 });
+      }
+
       const response = NextResponse.json({
         success: true,
         user,

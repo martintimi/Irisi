@@ -16,7 +16,15 @@ import confetti from 'canvas-confetti';
 import MobileProductDetailView from '@/components/shop/MobileProductDetailView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import Product3DModal from '@/components/3d/Product3DModal';
+import FitPredictorModal from '@/components/shop/FitPredictorModal';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
+
+interface MediaItem {
+  type: 'image' | 'video';
+  url: string;
+  colorName?: string;
+  colorHex?: string;
+}
 
 function getProductArchetype(prod: any): string {
   if (!prod) return 'other';
@@ -95,14 +103,22 @@ export default function ProductDetailPage() {
   const [isSlideshowPlaying, setIsSlideshowPlaying] = useState(true);
   const [isGalleryHovered, setIsGalleryHovered] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [sizeGuideTab, setSizeGuideTab] = useState<'check_size' | 'size_guide'>('check_size');
   const slideVideoRef = useRef<HTMLVideoElement>(null);
 
-interface MediaItem {
-  type: 'image' | 'video';
-  url: string;
-  colorName?: string;
-  colorHex?: string;
-}
+  const availableSizes: string[] = useMemo(() => {
+    if (!product) return ['M', 'L', 'XL'];
+    if (product.category === 'accessories') return ['One Size'];
+    if (Array.isArray(product.sizes) && product.sizes.length > 0) return product.sizes;
+    if (product.sizeStock && typeof product.sizeStock === 'object' && Object.keys(product.sizeStock).length > 0) {
+      return Object.keys(product.sizeStock).filter((sz: string) => {
+        const v = product.sizeStock[sz];
+        return typeof v === 'object' ? v?.enabled !== false : Number(v) > 0;
+      });
+    }
+    return ['M', 'L', 'XL'];
+  }, [product]);
 
   // Multi-media gallery items (Photos + Catwalk/Runway Video)
   const mediaList = useMemo<MediaItem[]>(() => {
@@ -914,17 +930,54 @@ interface MediaItem {
             </div>
           ) : (
             <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-mono-luxury">
-                <span className="text-[var(--text-secondary)] uppercase font-bold">
-                  {product.category === 'footwear' ? 'Select Shoe Size (EU):' : 'Select Size:'}
-                </span>
-                {isOutOfStock ? (
-                  <span className="text-rose-400 font-bold">Out of Stock</span>
-                ) : currentSizeStock <= 5 ? (
-                  <span className="text-amber-500 font-bold animate-pulse">Only {currentSizeStock} left!</span>
-                ) : (
-                  <span className="text-emerald-500 font-bold">{currentSizeStock} available</span>
-                )}
+              <div className="flex items-center justify-between text-xs font-mono-luxury flex-wrap gap-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-[var(--text-secondary)] uppercase font-bold">
+                    {product.category === 'footwear' ? 'Select Shoe Size (EU):' : 'Select Size:'}
+                  </span>
+
+                  {/* Shein-Style Dual Buttons: Size Guide & Check My Size */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSizeGuideTab('size_guide');
+                        setIsSizeGuideOpen(true);
+                      }}
+                      className="text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold inline-flex items-center gap-1.5 px-3 py-1 rounded-full surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 transition-all cursor-pointer"
+                    >
+                      <Ruler className="h-3 w-3 text-[var(--gold-accent)]" />
+                      <span>Size Guide</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSizeGuideTab('check_size');
+                        setIsSizeGuideOpen(true);
+                      }}
+                      className="text-[11px] text-[var(--gold-accent)] font-bold inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/40 hover:bg-[var(--gold-accent)]/20 transition-all cursor-pointer shadow-xs"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      <span>Check My Size</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {selectedSize && (
+                    <span className="text-[var(--gold-accent)] font-bold px-2 py-0.5 rounded-md bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30">
+                      {selectedSize}
+                    </span>
+                  )}
+                  {isOutOfStock ? (
+                    <span className="text-rose-400 font-bold">Out of Stock</span>
+                  ) : currentSizeStock <= 5 ? (
+                    <span className="text-amber-500 font-bold animate-pulse">Only {currentSizeStock} left!</span>
+                  ) : (
+                    <span className="text-emerald-500 font-bold">{currentSizeStock} available</span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2.5 font-mono-luxury text-xs pt-1">
@@ -1495,6 +1548,18 @@ interface MediaItem {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Fit Predictor & Size Guide Modal */}
+      <FitPredictorModal
+        isOpen={isSizeGuideOpen}
+        onClose={() => setIsSizeGuideOpen(false)}
+        onSelectSize={(sz) => setSelectedSize(sz)}
+        category={product?.category}
+        availableSizes={availableSizes}
+        product={product}
+        selectedSize={selectedSize}
+        initialTab={sizeGuideTab}
+      />
     </>
   );
 }

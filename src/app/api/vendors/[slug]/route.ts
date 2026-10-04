@@ -45,6 +45,7 @@ export async function GET(
     let city = '';
     let state = '';
     let dispatchDays = '1-2 business days';
+    let isSuspended = false;
     let socialLinks: any = {
       instagram: '',
       tiktok: '',
@@ -55,6 +56,9 @@ export async function GET(
     if (bioText.startsWith('{') && bioText.endsWith('}')) {
       try {
         const parsed = JSON.parse(bioText);
+        if (parsed.approvalStatus === 'suspended') {
+          isSuspended = true;
+        }
         bioText = parsed.bio || '';
         logoUrl = parsed.logoUrl || parsed.logo || logoUrl;
         city = parsed.city || '';
@@ -64,6 +68,10 @@ export async function GET(
           socialLinks = { ...socialLinks, ...parsed.socialLinks };
         }
       } catch (e) {}
+    }
+
+    if (isSuspended) {
+      return NextResponse.json({ error: `Brand storefront for "${slug}" is currently unavailable` }, { status: 404 });
     }
 
     // Return exact bio without mock fallbacks

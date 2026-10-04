@@ -38,6 +38,13 @@ export interface PackageShippingRequest {
   widthCm?: number;
   heightCm?: number;
   items?: any[];
+  shippingRates?: {
+    sameCity?: number;
+    closeHub?: number;
+    interstate?: number;
+    parkPickup?: number;
+    parkPickupEnabled?: boolean;
+  };
 }
 
 export interface LiveCarrierRate {
@@ -144,7 +151,7 @@ function normalizeState(stateName: string): string {
   return match || 'Lagos';
 }
 
-export const WAYBILL_SAFETY_BUFFER = 300; // Flat ₦300 safety margin added to courier waybill
+export const WAYBILL_SAFETY_BUFFER = 0; // Strictly 0 margin - exact vendor pricing without artificial buffers
 
 /**
  * Backward compatibility wrapper for existing imports
@@ -277,8 +284,8 @@ export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Pr
               const p = item.product || item;
               const unitWeight = estimateItemWeightKg(p);
               return {
-                name: p.name || 'Garment Piece',
-                description: `${p.category || 'Apparel'} (${p.vendorName || 'Atelier'})`,
+                name: p.name || 'Fashion Item',
+                description: `${p.category || 'Apparel'} (${p.vendorName || 'Store'})`,
                 unit_weight: Number(unitWeight.toFixed(2)),
                 unit_amount: Number(p.price || 20000),
                 quantity: Number(item.quantity || 1)
@@ -286,8 +293,8 @@ export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Pr
             })
           : [
               {
-                name: 'Fashion Garment Package',
-                description: 'Tailored Luxury Fashion',
+                name: 'Fashion Package',
+                description: 'Boutique Fashion Order',
                 unit_weight: Number(packageWeight.toFixed(2)),
                 unit_amount: 35000,
                 quantity: 1
@@ -373,42 +380,39 @@ export async function calculateLiveShippingRate(pkg: PackageShippingRequest): Pr
         }
       }
     } catch (err) {
-      console.warn('[Logistics API] Shipbubble live rate call failed, using Nigerian distance matrix fallback:', err);
+      console.warn('[Logistics API] Live carrier quote unavailable, using vendor profile rates:', err);
     }
   }
 
-  // 3. High-Accuracy Nigerian Matrix Engine (All include +₦300 Waybill Buffer)
-  let baseDoorstepFee = 4500;
+  // 3. Nigerian Delivery Rate Engine (Strictly uses Vendor's Configured Atelier Shipping Rates)
+  const rates = pkg.shippingRates;
+  let baseDoorstepFee: number;
   let deliveryEta = '2-4 business days';
-  let courierName = 'GIG Logistics / Red Star Express';
+  let courierName = 'Interstate Doorstep Courier';
 
   if (isSameCity) {
-    baseDoorstepFee = 1500;
+    baseDoorstepFee = rates?.sameCity !== undefined
+      ? Number(rates.sameCity)
+      : 1000;
     deliveryEta = 'Same-day / 24h Express';
     courierName = 'Direct Dispatch Rider (Local)';
-  } else if (isSameState) {
-    baseDoorstepFee = 2200;
+  } else if (isSameState || isSameRegion) {
+    baseDoorstepFee = rates?.closeHub !== undefined
+      ? Number(rates.closeHub)
+      : rates?.sameCity !== undefined
+      ? Number(rates.sameCity)
+      : 2500;
     deliveryEta = '1-2 business days';
-    courierName = 'Intra-State Express Courier (Fez / GIGL)';
-  } else if (isSameRegion) {
-    baseDoorstepFee = 2800;
-    deliveryEta = '1-2 business days';
-    courierName = 'Regional Linehaul Drop (GIG Logistics)';
-  } else if (
-    (originRegion === 'SouthWest' && destRegion === 'NorthCentral') ||
-    (originRegion === 'NorthCentral' && destRegion === 'SouthWest') ||
-    (originRegion === 'SouthWest' && destRegion === 'SouthSouth')
-  ) {
-    baseDoorstepFee = 3800;
-    deliveryEta = '2-3 business days';
-    courierName = 'Interstate Linehaul (GIG Logistics / DHL)';
+    courierName = isSameState ? 'Intra-State Express Courier' : 'Regional Linehaul Courier';
   } else {
-    baseDoorstepFee = 4800;
-    deliveryEta = '3-5 business days';
-    courierName = 'National Express (DHL / Fez Interstate)';
+    baseDoorstepFee = rates?.interstate !== undefined
+      ? Number(rates.interstate)
+      : 4500;
+    deliveryEta = '2-4 business days';
+    courierName = 'National Express Courier';
   }
 
-  const finalDoorstepFee = baseDoorstepFee + WAYBILL_SAFETY_BUFFER + extraWeightSurcharge;
+  const finalDoorstepFee = baseDoorstepFee + extraWeightSurcharge;
   const doorstepServiceType: 'pickup' | 'dropoff' = serviceability.hasDoorstepPickup ? 'pickup' : 'dropoff';
 
   return {
@@ -593,7 +597,7 @@ export async function createShipbubbleShipment(req: ShipmentBookingRequest): Pro
       courierServiceType: 'dropoff',
       trackingUrl: `/track-order?orderNumber=${encodeURIComponent(req.orderNumber)}`,
       status: 'pending_packaging',
-      instructions: `Package garment and drop at your local interstate bus park. Hand to driver heading to ${terminalName}. Customer pays collection fee upon arrival.`,
+      instructions: `Package order securely and drop at your local interstate bus park. Hand to driver heading to ${terminalName}. Customer pays collection fee upon arrival.`,
       dropoffStation: terminalName
     };
   }

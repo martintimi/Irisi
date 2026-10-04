@@ -55,6 +55,8 @@ export async function GET(request: Request) {
       let secondaryState = '';
       let hasSecondaryHub = false;
       let hasSensitivePendingUpdate = false;
+      let suspensionReason = '';
+      let suspendedAt = '';
 
       if (bioText.startsWith('{') && bioText.endsWith('}')) {
         try {
@@ -71,6 +73,8 @@ export async function GET(request: Request) {
           isProfileSaved = parsed.isProfileSaved === true;
           approvalStatus = parsed.approvalStatus || (v.is_verified ? 'approved' : isProfileSaved ? 'pending' : 'unsubmitted');
           rejectionReason = parsed.rejectionReason || '';
+          suspensionReason = parsed.suspensionReason || '';
+          suspendedAt = parsed.suspendedAt || '';
           specialty = parsed.specialty || parsed.vendorSpecialty || specialty;
           city = parsed.city || '';
           state = parsed.state || '';
@@ -92,6 +96,8 @@ export async function GET(request: Request) {
 
       const vendorProducts = (dbProducts || []).filter((p: any) => p.vendor_id === v.id);
       const totalInventoryValue = vendorProducts.reduce((sum: number, p: any) => sum + (Number(p.price) || 0), 0);
+
+      const isSuspended = approvalStatus === 'suspended';
 
       return {
         id: v.id,
@@ -119,10 +125,13 @@ export async function GET(request: Request) {
         tiktok: socialLinks.tiktok || '',
         snapchat: socialLinks.snapchat || '',
         whatsapp: socialLinks.whatsapp || v.phone || '',
-        isVerified: !!v.is_verified,
+        isVerified: !isSuspended && !!v.is_verified,
         isProfileSaved,
         approvalStatus,
         rejectionReason,
+        isSuspended,
+        suspensionReason,
+        suspendedAt,
         productCount: vendorProducts.length,
         totalInventoryValue,
         rating: v.rating || 5.0,

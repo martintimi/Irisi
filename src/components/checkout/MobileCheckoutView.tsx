@@ -156,7 +156,8 @@ export default function MobileCheckoutView() {
           destinationState: formData.state || 'Lagos',
           destinationCity: formData.city || 'Lagos',
           itemCount: pkg.items.length,
-          totalWeightKg: Math.max(0.5, Number(pkgWeight.toFixed(2)))
+          totalWeightKg: Math.max(0.5, Number(pkgWeight.toFixed(2))),
+          shippingRates: pkg.shippingRates
         };
       });
 
@@ -206,17 +207,29 @@ export default function MobileCheckoutView() {
     Object.values(groupedItems).forEach((pkg) => {
       const live = liveRates[pkg.vendorId];
       const chosenMethod = packageMethods[pkg.vendorId] || 'doorstep';
+      const customerCity = (formData.city || '').toLowerCase().trim();
+      const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
+      const customerState = (formData.state || '').toLowerCase().trim();
+      const vendorState = (pkg.vendorState || '').toLowerCase().trim();
+      const isSameCity = !!(customerCity && vendorCity && (customerCity === vendorCity || customerCity.includes(vendorCity) || vendorCity.includes(customerCity)));
+      const isSameState = !!(customerState && vendorState && customerState === vendorState);
+
+      const vendorDoorstepFee = isSameCity
+        ? Number(pkg.shippingRates?.sameCity ?? 1000)
+        : isSameState
+        ? Number(pkg.shippingRates?.closeHub ?? pkg.shippingRates?.sameCity ?? 2500)
+        : Number(pkg.shippingRates?.interstate ?? 4500);
 
       if (live) {
         const isDoor = chosenMethod === 'doorstep';
         const rateObj = isDoor ? live.doorstep : live.parkPickup;
 
         calcs[pkg.vendorId] = {
-          fee: rateObj?.fee || (isDoor ? 4500 : 0),
+          fee: isDoor ? (rateObj?.fee !== undefined ? rateObj.fee : vendorDoorstepFee) : 0,
           method: chosenMethod,
-          reason: isDoor ? (rateObj?.serviceType || 'Doorstep Courier') : 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
+          reason: isDoor ? (rateObj?.serviceType || 'Doorstep Courier') : 'Pay Driver on Pickup',
           isSameCity: live.isSameCity,
-          courierName: rateObj?.courierName || (isDoor ? 'GIG Logistics' : 'Motor Park Waybill'),
+          courierName: rateObj?.courierName || (isDoor ? 'Doorstep Courier Partner' : 'Motor Park Waybill'),
           eta: rateObj?.estimatedDeliveryDays || (isDoor ? '1-3 business days' : '1-2 business days'),
           packageWeightKg: live.packageWeightKg,
           packageDimensions: live.packageDimensions,
@@ -228,15 +241,11 @@ export default function MobileCheckoutView() {
           motorParks: live.motorParks || getMotorParksForState(formData.state),
         };
       } else {
-        const customerCity = (formData.city || '').toLowerCase().trim();
-        const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
-        const isSameCity = !!(customerCity && vendorCity && (customerCity === vendorCity || customerCity.includes(vendorCity) || vendorCity.includes(customerCity)));
-
         if (chosenMethod === 'park_pickup') {
           calcs[pkg.vendorId] = {
             fee: 0,
             method: 'park_pickup',
-            reason: 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
+            reason: 'Pay Driver on Pickup',
             isSameCity: false,
             courierName: 'Interstate Bus Terminal Waybill',
             eta: '1-2 business days',
@@ -248,11 +257,11 @@ export default function MobileCheckoutView() {
           };
         } else {
           calcs[pkg.vendorId] = {
-            fee: isSameCity ? 1500 : 4500,
+            fee: vendorDoorstepFee,
             method: 'doorstep',
-            reason: isSameCity ? 'Same-City Direct Rider' : 'Interstate Doorstep Courier',
+            reason: isSameCity ? 'Same-City Direct Rider' : isSameState ? 'Intra-State Doorstep' : 'Interstate Doorstep Courier',
             isSameCity,
-            courierName: isSameCity ? 'Direct Dispatch Rider' : 'GIG Logistics Express',
+            courierName: isSameCity ? 'Direct Dispatch Rider' : 'Doorstep Courier Partner',
             eta: isSameCity ? 'Same-day / 24h' : '2-3 business days',
             packageWeightKg: 0.8,
             packageDimensions: '32×24×6cm',
@@ -397,7 +406,7 @@ export default function MobileCheckoutView() {
           ? 'Motor Park Bus Waybill'
           : (rateObj?.courierName || calc?.courierName || 'Shipbubble Courier');
 
-        const shippingFee = isPark ? 0 : (rateObj?.fee || calc?.fee || 0);
+        const shippingFee = isPark ? 0 : (rateObj?.fee !== undefined ? rateObj.fee : (calc?.fee ?? 0));
 
         vendorPackagesPayload[vId] = {
           vendorId: vId,
@@ -415,8 +424,8 @@ export default function MobileCheckoutView() {
           selectedParkTerminal: isPark ? (selectedParkTerminals[vId] || motorParkName || `${formData.city} Motor Park`) : undefined,
           dropoffStation: isPark ? (selectedParkTerminals[vId] || motorParkName) : (rateObj?.dropoffStation || calc?.dropoffStation),
           instructions: rateObj?.instructions || calc?.instructions || (isPark
-            ? 'Package garment and drop at local motor park. Customer pays collection fee upon arrival.'
-            : `${courierName} rider will pick up from your atelier once marked ready.`),
+            ? 'Package order securely and drop at local motor park. Customer pays collection fee upon arrival.'
+            : `${courierName} rider will pick up from your store location once marked ready.`),
           packageWeightKg: live?.packageWeightKg || calc?.packageWeightKg || 1.0,
           packageDimensions: live?.packageDimensions || calc?.packageDimensions || '32×24×6cm',
           status: 'escrow_secured',
@@ -504,12 +513,12 @@ export default function MobileCheckoutView() {
 
         <div className="space-y-2">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury font-bold uppercase">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Escrow Payment Secured</span>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>Order Confirmed &amp; Verified</span>
           </div>
 
           <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-            Order Dispatched to Designers & Brands!
+            Order Placed Successfully!
           </h1>
           <p className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold">
             Reference: {orderPlaced.orderNumber}
@@ -525,9 +534,13 @@ export default function MobileCheckoutView() {
             <span className="text-[var(--text-secondary)]">Destination:</span>
             <span className="font-bold text-[var(--text-primary)] text-right truncate max-w-[200px]">{orderPlaced.deliveryAddress}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[var(--text-secondary)]">Total Escrow Paid:</span>
+          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
+            <span className="text-[var(--text-secondary)]">Total Paid:</span>
             <span className="font-bold text-[var(--gold-accent)] text-sm">₦{Number(orderPlaced.totalAmount || 0).toLocaleString()}</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-start gap-2 text-[11px] text-[var(--text-secondary)]">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span>Your order details have been sent to the store. They are packaging your items for courier dispatch.</span>
           </div>
         </div>
 
@@ -570,7 +583,7 @@ export default function MobileCheckoutView() {
             Shopper Sign In Required
           </h2>
           <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-            Please log in or create an account to proceed with your checkout, protect your payment in escrow, and track your delivery.
+            Please log in or create an account to proceed with your checkout and complete your order.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--gold-accent)]">
@@ -596,7 +609,13 @@ export default function MobileCheckoutView() {
         <div className="flex items-center gap-2.5">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => {
+              if (cart.length > 0) {
+                router.push('/cart');
+              } else {
+                router.push('/shop');
+              }
+            }}
             className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white"
             aria-label="Back"
           >
@@ -604,7 +623,7 @@ export default function MobileCheckoutView() {
           </button>
           <div>
             <h1 className="font-editorial text-xl font-bold text-[var(--text-primary)] leading-tight">
-              Escrow Checkout
+              Secure Checkout
             </h1>
             <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold flex items-center gap-1">
               <ShieldCheck className="h-3 w-3" />
@@ -862,7 +881,7 @@ export default function MobileCheckoutView() {
             </div>
 
             <div className="pt-2.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold">
-              <span className="text-[var(--text-primary)]">Total Due Now (Escrow):</span>
+              <span className="text-[var(--text-primary)]">Total Due Now:</span>
               <span className="font-editorial text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)]">
                 ₦{grandTotal.toLocaleString()}
               </span>
@@ -873,17 +892,17 @@ export default function MobileCheckoutView() {
           <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-emerald-400 text-[10px] leading-snug">
             <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
             <div>
-              <strong>Buyer Protection Guarantee:</strong> Your payment is held securely and only released after your delivery is verified and confirmed.
+              <strong>Buyer Protection Guarantee:</strong> Your purchase is secure and covered by ÌRÍSÍ customer protection.
             </div>
           </div>
         </div>
 
       </form>
 
-      {/* 3. FIXED BOTTOM ESCROW PAYMENT TRIGGER */}
+      {/* 3. FIXED BOTTOM PAYMENT TRIGGER */}
       <div className="fixed bottom-0 inset-x-0 z-40 bg-[#0a0a0c]/90 dark:bg-[#0a0a0c]/90 bg-white/95 backdrop-blur-2xl border-t border-black/10 dark:border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3">
         <div>
-          <span className="text-[9px] font-mono-luxury text-[var(--text-muted)] uppercase block">Total Escrow:</span>
+          <span className="text-[9px] font-mono-luxury text-[var(--text-muted)] uppercase block">Total Due:</span>
           <div className="font-editorial text-xl font-bold text-amber-600 dark:text-[var(--gold-accent)] leading-none mt-0.5">
             ₦{grandTotal.toLocaleString()}
           </div>
@@ -895,7 +914,7 @@ export default function MobileCheckoutView() {
           className="flex-1 max-w-[220px] py-3.5 px-4 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
         >
           <Lock className="h-4 w-4" />
-          <span>Pay via Escrow</span>
+          <span>Proceed to Pay</span>
         </button>
       </div>
 
@@ -907,7 +926,7 @@ export default function MobileCheckoutView() {
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                <span className="font-editorial text-lg font-bold text-[var(--text-primary)]">Ìrísí Escrow Gateway</span>
+                <span className="font-editorial text-lg font-bold text-[var(--text-primary)]">Ìrísí Secure Checkout</span>
               </div>
               <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold">256-Bit Encrypted</span>
             </div>
@@ -928,7 +947,7 @@ export default function MobileCheckoutView() {
             </div>
 
             <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono-luxury text-emerald-400 leading-relaxed">
-              Your money is locked safely in Ìrísí Escrow and only released to each designer after you confirm your clothes are delivered.
+              Your payment is secure and protected. Your order will be immediately processed and confirmed upon checkout.
             </div>
 
             <div className="space-y-2 pt-2">
@@ -941,7 +960,7 @@ export default function MobileCheckoutView() {
                 {isProcessing ? (
                   <>
                     <Sparkles className="h-4 w-4 animate-spin text-black" />
-                    <span>Processing Escrow...</span>
+                    <span>Processing Payment...</span>
                   </>
                 ) : (
                   <>
@@ -990,7 +1009,7 @@ export default function MobileCheckoutView() {
                 ₦{grandTotal.toLocaleString()}
               </div>
               <p className="text-[11px] font-mono-luxury text-[var(--text-muted)]">
-                Recipient: Ìrísí Escrow Treasury
+                Recipient: Ìrísí Marketplace
               </p>
             </div>
 
@@ -1020,7 +1039,7 @@ export default function MobileCheckoutView() {
             </div>
 
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono-luxury text-amber-400 text-left leading-relaxed">
-              <strong>Test Mode:</strong> No personal Paystack key added in <code className="text-white">.env.local</code> yet. This simulates a successful Paystack card payment and secures your order into Ìrísí Escrow.
+              <strong>Test Mode:</strong> Simulates a successful payment and confirms your order.
             </div>
 
             <div className="space-y-2 pt-1">
@@ -1036,7 +1055,7 @@ export default function MobileCheckoutView() {
                 {isProcessing ? (
                   <>
                     <Sparkles className="h-4 w-4 animate-spin text-black" />
-                    <span>Securing Escrow...</span>
+                    <span>Processing Order...</span>
                   </>
                 ) : (
                   <>

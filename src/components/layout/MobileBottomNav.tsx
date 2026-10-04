@@ -243,7 +243,7 @@ export default function MobileBottomNav() {
               <span className="text-[10px] tracking-tight leading-none">Wishlist</span>
             </Link>
 
-            {/* 5. Profile / Login */}
+            {/* 5. Profile / Account */}
             <Link
               href={isLoggedIn ? '/profile' : '/auth'}
               className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
@@ -251,14 +251,14 @@ export default function MobileBottomNav() {
                   ? 'text-black dark:text-white font-semibold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
-              aria-label={isLoggedIn ? 'Profile' : 'Login'}
+              aria-label={isLoggedIn ? 'Account' : 'Account'}
             >
               <CircleUserRound
                 strokeWidth={isActive('/profile') || isActive('/auth') ? 2 : 1.4}
                 className="h-[21px] w-[21px]"
               />
               <span className="text-[10px] tracking-tight leading-none">
-                {isLoggedIn ? 'Profile' : 'Login'}
+                {isLoggedIn ? 'Account' : 'Account'}
               </span>
             </Link>
 

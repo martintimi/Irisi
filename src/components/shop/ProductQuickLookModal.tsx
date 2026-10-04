@@ -13,6 +13,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
+import FitPredictorModal from '@/components/shop/FitPredictorModal';
 
 interface ProductQuickLookModalProps {
   product: Product | null;
@@ -34,6 +35,8 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   const [selectedSize, setSelectedSize] = useState<string>('M');
   const [selectedColor, setSelectedColor] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [sizeGuideTab, setSizeGuideTab] = useState<'check_size' | 'size_guide'>('check_size');
 
   useEffect(() => {
     if (product) {
@@ -44,13 +47,17 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
     }
   }, [product, bodyProfile]);
 
-  if (!product) return null;
-
-  const fitResult = calculateFitMatch(bodyProfile, product);
-  const isWorn = activeOutfit[product.category]?.id === product.id;
-  const isSaved = isInVault(product.id);
+  const fitResult = product ? calculateFitMatch(bodyProfile, product) : {
+    recommendedSize: 'M',
+    matchScore: 94,
+    fitLabel: 'Tailored Match',
+    insights: []
+  };
+  const isWorn = product ? activeOutfit[product.category]?.id === product.id : false;
+  const isSaved = product ? isInVault(product.id) : false;
 
   const currentStock = (() => {
+    if (!product) return 0;
     if (product.sizeStock && typeof product.sizeStock === 'object') {
       const anyStock: any = product.sizeStock;
       const variantKey = selectedColor?.name && selectedSize ? `${selectedColor.name.trim()}_${selectedSize.trim()}` : null;
@@ -65,6 +72,7 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   })();
 
   const handleTryOn = () => {
+    if (!product) return;
     if (isWorn) {
       removeOutfitItem(product.category);
     } else {
@@ -74,48 +82,59 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   };
 
   const handleAddToCart = () => {
+    if (!product) return;
     addToCart(product, selectedSize, selectedColor, quantity);
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 },
-      colors: ['#e6c367', '#f59e0b', '#ffffff']
-    });
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 },
+        colors: ['#e6c367', '#f59e0b', '#ffffff']
+      });
+    } catch {}
     onClose();
   };
 
   const handleToggleVault = () => {
+    if (!product) return;
     toggleVaultItem(product);
     if (!isSaved) {
-      confetti({
-        particleCount: 40,
-        spread: 50,
-        origin: { y: 0.6 },
-        colors: ['#e6c367', '#f59e0b', '#ffffff']
-      });
+      try {
+        confetti({
+          particleCount: 40,
+          spread: 50,
+          origin: { y: 0.6 },
+          colors: ['#e6c367', '#f59e0b', '#ffffff']
+        });
+      } catch {}
     }
   };
 
   const handleViewFullDetails = () => {
+    if (!product) return;
     onClose();
     router.push(`/shop/${product.id}`);
   };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-        {/* Backdrop Fade */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
-        />
+    <>
+      <AnimatePresence>
+        {product && (
+          <div key={`quick-look-portal-${product.id}`} className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+            {/* Backdrop Fade */}
+            <motion.div
+              key="quick-look-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
+            />
 
-        {/* Modal Window with Scale & Fade Animation */}
-        <motion.div
+            {/* Modal Window with Scale & Fade Animation */}
+            <motion.div
+              key={`quick-look-window-${product.id}`}
           initial={{ opacity: 0, scale: 0.94, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -218,8 +237,42 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
 
               {/* Sizing & Live Remaining Stock Status */}
               <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs font-mono-luxury">
-                  <span className="text-[var(--text-secondary)] uppercase font-bold">Choose Size:</span>
+                <div className="flex items-center justify-between text-xs font-mono-luxury flex-wrap gap-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[var(--text-secondary)] uppercase font-bold">Choose Size:</span>
+                    <span className="text-[var(--gold-accent)] font-bold px-1.5 py-0.5 rounded bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[11px]">
+                      {selectedSize}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSizeGuideTab('size_guide');
+                        setIsSizeGuideOpen(true);
+                      }}
+                      className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold inline-flex items-center gap-1 cursor-pointer bg-[var(--bg-secondary)] px-2 py-0.5 rounded-full border border-[var(--border-subtle)]"
+                    >
+                      <Ruler className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
+                      <span>Size Guide</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSizeGuideTab('check_size');
+                        setIsSizeGuideOpen(true);
+                      }}
+                      className="text-[10px] text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 cursor-pointer bg-[var(--gold-subtle)] px-2 py-0.5 rounded-full border border-[var(--gold-accent)]/30 shadow-xs"
+                    >
+                      <Sparkles className="h-2.5 w-2.5" />
+                      <span>Check Size</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right text-[11px] font-mono-luxury">
                   {currentStock === 0 ? (
                     <span className="text-rose-400 font-bold">Out of Stock</span>
                   ) : currentStock <= 5 ? (
@@ -233,14 +286,14 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {(product.sizes || ['S', 'M', 'L', 'XL', 'XXL']).map((sz) => {
+                  {(product.sizes || ['S', 'M', 'L', 'XL', 'XXL']).map((sz, szIdx) => {
                     const isSelected = selectedSize === sz;
                     const szStock = product.sizeStock?.[sz];
                     const isOutOfStock = szStock === 0;
 
                     return (
                       <button
-                        key={sz}
+                        key={`quick-size-${sz || szIdx}`}
                         type="button"
                         disabled={isOutOfStock}
                         onClick={() => setSelectedSize(sz)}
@@ -349,9 +402,9 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
 
               {/* Tags */}
               <div className="flex flex-wrap gap-1.5">
-                {product.tags.map((t) => (
+                {(product.tags || []).map((t, tIdx) => (
                   <span
-                    key={t}
+                    key={`quick-tag-${t || tIdx}`}
                     className="text-[10px] font-mono-luxury uppercase px-2.5 py-0.5 rounded-md bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--text-muted)]"
                   >
                     #{t}
@@ -403,6 +456,23 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    )}
+  </AnimatePresence>
+
+  {/* Fit Predictor & Size Guide Modal */}
+  {product && (
+    <FitPredictorModal
+      key={`fit-predictor-quicklook-${product.id}`}
+      isOpen={isSizeGuideOpen}
+      onClose={() => setIsSizeGuideOpen(false)}
+      onSelectSize={(sz) => setSelectedSize(sz)}
+      category={product.category}
+      availableSizes={product.sizes}
+      product={product}
+      selectedSize={selectedSize}
+      initialTab={sizeGuideTab}
+    />
+  )}
+</>
   );
 }

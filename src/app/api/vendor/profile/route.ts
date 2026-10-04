@@ -70,6 +70,16 @@ export async function GET(request: Request) {
     let secondaryState = '';
     let hasSecondaryHub = false;
 
+    let isSuspended = false;
+    let suspensionReason = '';
+    let shippingRates: any = {
+      sameCity: 1000,
+      closeHub: 2500,
+      interstate: 4500,
+      parkPickup: 1500,
+      parkPickupEnabled: true,
+    };
+
     if (bioText.startsWith('{') && bioText.endsWith('}')) {
       try {
         const parsed = JSON.parse(bioText);
@@ -78,6 +88,11 @@ export async function GET(request: Request) {
         isProfileSaved = parsed.isProfileSaved === true;
         approvalStatus = parsed.approvalStatus || (vendor?.is_verified ? 'approved' : isProfileSaved ? 'pending' : 'unsubmitted');
         rejectionReason = parsed.rejectionReason || '';
+        suspensionReason = parsed.suspensionReason || '';
+        if (parsed.approvalStatus === 'suspended') {
+          isSuspended = true;
+          approvalStatus = 'suspended';
+        }
         city = parsed.city || '';
         state = parsed.state || '';
         secondaryCity = parsed.secondaryCity || '';
@@ -87,13 +102,26 @@ export async function GET(request: Request) {
         const rawSpec = parsed.specialty || parsed.vendorSpecialty || (vendor?.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
         vendorSpecialty = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
         logoUrl = parsed.logoUrl || parsed.logo || vendor?.logo_url || vendor?.logo || '';
+        if (parsed.shippingRates) {
+          shippingRates = { ...shippingRates, ...parsed.shippingRates };
+        }
       } catch (e) {}
     } else if (bioText && bioText.trim().length > 0) {
       isProfileSaved = true;
     }
 
-    const verified = !!vendor?.is_verified;
-    const finalApprovalStatus = verified ? 'approved' : (approvalStatus || 'pending');
+    const verified = !isSuspended && !!vendor?.is_verified;
+    const finalApprovalStatus = isSuspended ? 'suspended' : verified ? 'approved' : (approvalStatus || 'pending');
+
+    if (isSuspended || finalApprovalStatus === 'suspended') {
+      return NextResponse.json({
+        success: false,
+        isSuspended: true,
+        approvalStatus: 'suspended',
+        suspensionReason,
+        error: `Your merchant account has been suspended by administration. Reason: "${suspensionReason || 'Account suspended by administration.'}". Please contact ÌRÍSÍ Concierge Support on WhatsApp to appeal.`
+      }, { status: 403 });
+    }
 
     return NextResponse.json({
       success: true,
@@ -112,9 +140,12 @@ export async function GET(request: Request) {
         secondaryState,
         hasSecondaryHub,
         dispatchDays,
+        shippingRates,
         isProfileSaved: isProfileSaved || verified,
         approvalStatus: finalApprovalStatus,
         rejectionReason,
+        isSuspended,
+        suspensionReason,
       }
     });
   } catch (error: any) {
@@ -184,6 +215,12 @@ export async function POST(request: Request) {
       try { existingBioObj = JSON.parse(existingVendor.bio); } catch (e) {}
     }
 
+    if (existingBioObj.approvalStatus === 'suspended') {
+      return NextResponse.json({
+        error: 'Cannot update profile: your merchant account is currently suspended by administration.'
+      }, { status: 403 });
+    }
+
     // Check if sensitive fields (banking, phone, social handles, or dispatch hubs) were altered
     let hasSensitiveChanges = false;
     if (wasVerified) {
@@ -239,6 +276,14 @@ export async function POST(request: Request) {
     const finalVerified = wasVerified && !hasSensitiveChanges;
     const finalApprovalStatus = finalVerified ? 'approved' : 'pending';
 
+    const shippingRates = body.shippingRates || {
+      sameCity: body.sameCityFee !== undefined ? Number(body.sameCityFee) : (existingBioObj.shippingRates?.sameCity ?? 1000),
+      closeHub: body.closeHubFee !== undefined ? Number(body.closeHubFee) : (existingBioObj.shippingRates?.closeHub ?? 2500),
+      interstate: body.interstateFee !== undefined ? Number(body.interstateFee) : (existingBioObj.shippingRates?.interstate ?? 4500),
+      parkPickup: body.parkPickupFee !== undefined ? Number(body.parkPickupFee) : (existingBioObj.shippingRates?.parkPickup ?? 1500),
+      parkPickupEnabled: body.parkPickupEnabled !== undefined ? !!body.parkPickupEnabled : (existingBioObj.shippingRates?.parkPickupEnabled ?? true),
+    };
+
     const bioPayload = JSON.stringify({
       bio: body.bio || '',
       logoUrl,
@@ -251,6 +296,7 @@ export async function POST(request: Request) {
       secondaryState,
       hasSecondaryHub,
       dispatchDays: body.dispatchDays || '1-2 business days',
+      shippingRates,
       isProfileSaved: true,
       approvalStatus: finalApprovalStatus,
       rejectionReason: '',
@@ -300,6 +346,7 @@ export async function POST(request: Request) {
         secondaryState,
         hasSecondaryHub,
         dispatchDays: body.dispatchDays || '1-2 business days',
+        shippingRates,
         isProfileSaved: true,
         is_verified: finalVerified,
         isVerified: finalVerified,

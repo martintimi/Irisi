@@ -37,10 +37,10 @@ const CONCIERGE_WHATSAPP_URL = 'https://wa.me/2349070332145';
 /**
  * Universal transporter helper: uses Gmail SMTP, Custom SMTP, or Resend
  */
-async function sendLuxuryEmail(to: string, subject: string, html: string): Promise<{ success: boolean; provider: string; error?: string }> {
+export async function sendLuxuryEmail(to: string, subject: string, html: string): Promise<{ success: boolean; provider: string; error?: string }> {
   // 1. Gmail SMTP
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD;
+  const gmailUser = (process.env.GMAIL_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD || '').trim();
   if (gmailUser && gmailPass) {
     try {
       const transporter = nodemailer.createTransport({
@@ -48,17 +48,17 @@ async function sendLuxuryEmail(to: string, subject: string, html: string): Promi
         auth: { user: gmailUser, pass: gmailPass },
       });
 
-      await transporter.sendMail({
-        from: `"ÌRÍSÍ Merchant Relations" <${gmailUser}>`,
+      const info = await transporter.sendMail({
+        from: `"ÌRÍSÍ Marketplace" <${gmailUser}>`,
         to,
         subject,
         html,
       });
 
-      console.log(`[VENDOR NOTIFICATION] ✅ Sent via Gmail SMTP to ${to} (${subject})`);
+      console.log(`[EMAIL DISPATCH] ✅ Sent via Gmail SMTP to ${to} (${subject}) - ID: ${info?.messageId || 'ok'}`);
       return { success: true, provider: 'gmail_smtp' };
     } catch (err: any) {
-      console.warn(`[VENDOR NOTIFICATION] ⚠️ Gmail SMTP failed for ${to}:`, err.message);
+      console.warn(`[EMAIL DISPATCH] ⚠️ Gmail SMTP failed for ${to}:`, err.message);
     }
   }
 
@@ -214,7 +214,7 @@ export async function sendVendorNewOrderNotification(params: {
     </div>
     <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">You Have a New Order, ${vendor.brandName}!</h2>
     <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Customer <strong>${customerName}</strong> has placed an order for your pieces. Escrow funds are locked securely, and payment will be credited to your account upon delivery:
+      Customer <strong>${customerName}</strong> has placed an order from your store. Payment has been received, and your payout will be credited to your account upon delivery:
     </p>
 
     <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
@@ -281,7 +281,7 @@ export async function sendVendorSettlementNotification(params: {
     </div>
     <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Payment Disbursed to ${vendor.brandName}</h2>
     <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Customer <strong>${customerName || 'The customer'}</strong> has confirmed delivery for Order <strong>${orderNumber}</strong>. Your earnings have been released from escrow and settled:
+      Customer <strong>${customerName || 'The customer'}</strong> has confirmed delivery for Order <strong>${orderNumber}</strong>. Your payout earnings have been settled and disbursed:
     </p>
 
     <!-- Amount Banner -->
@@ -775,4 +775,108 @@ export async function sendVendorWeekendRushReminder(params: {
   `;
 
   return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Prepare for the Weekend Rush, ${vendor.brandName}! 🛍️`, wrapLuxuryTemplate('Weekend Prep', bodyContent));
+}
+
+// ============================================================================
+// 12. VENDOR STORE ACCOUNT SUSPENDED BY ADMIN
+// ============================================================================
+export async function sendVendorAccountSuspendedNotification(params: {
+  vendor: VendorContact;
+  suspensionReason: string;
+}) {
+  const { vendor, suspensionReason } = params;
+
+  const bodyContent = `
+    <div style="background-color: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
+      <span style="color: #f43f5e; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">⚠️ Store Account Suspended</span>
+    </div>
+
+    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Notice of Account Suspension: ${vendor.brandName}</h2>
+    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+      Hello ${vendor.designerName || vendor.brandName},<br><br>
+      This is an official communication from the ÌRÍSÍ Compliance and Governance Team. Please be advised that your merchant storefront and product listings have been temporarily <strong>suspended</strong>.
+    </p>
+
+    <!-- Suspension Reason Box -->
+    <div style="background-color: #0c0d0e; border: 1.5px solid rgba(244, 63, 94, 0.35); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
+      <span style="color: #f43f5e; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; display: block; margin-bottom: 8px;">Reason for Suspension:</span>
+      <p style="color: #ffffff; font-size: 14px; line-height: 1.6; margin: 0; font-family: monospace; background-color: rgba(255, 255, 255, 0.04); padding: 12px 14px; border-radius: 10px;">
+        &ldquo;${suspensionReason || 'Store suspended due to compliance review or policy breach.'}&rdquo;
+      </p>
+    </div>
+
+    <!-- Impact Details -->
+    <div style="background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
+      <h3 style="color: #e6c367; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 700;">Account Status Restrictions:</h3>
+      <ul style="color: #9ca3af; font-size: 12px; line-height: 1.7; margin: 0; padding-left: 20px;">
+        <li>Your catalog pieces are hidden from shoppers across the marketplace and search.</li>
+        <li>Active sessions and portal login access have been restricted until resolved.</li>
+        <li>Any pending escrow disbursements for delivered orders remain securely registered.</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
+      <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+        Contact Concierge to Appeal Suspension &rarr;
+      </a>
+    </div>
+
+    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
+      If you believe this action was taken in error or if you have questions regarding store reinstatement, please message our merchant concierge immediately.
+    </p>
+  `;
+
+  return sendLuxuryEmail(
+    vendor.email,
+    `ÌRÍSÍ Notice: Merchant Account Suspended - ${vendor.brandName}`,
+    wrapLuxuryTemplate('Account Suspended', bodyContent)
+  );
+}
+
+// ============================================================================
+// 13. VENDOR STORE ACCOUNT REINSTATED BY ADMIN
+// ============================================================================
+export async function sendVendorAccountReinstatedNotification(params: {
+  vendor: VendorContact;
+  portalUrl?: string;
+}) {
+  const { vendor, portalUrl } = params;
+  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal';
+
+  const bodyContent = `
+    <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
+      <span style="color: #10b981; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">✅ Account Reinstated &amp; Active</span>
+    </div>
+
+    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Store Reinstated: Welcome Back, ${vendor.brandName}! ✨</h2>
+    <p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0 0 20px;">
+      We are pleased to inform you that your merchant account suspension has been lifted by the ÌRÍSÍ administration. Your store is now fully verified and reinstated.
+    </p>
+
+    <!-- Restored Features Box -->
+    <div style="background-color: #0c0d0e; border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
+      <h3 style="color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 700;">Restored Store Privileges:</h3>
+      <ul style="color: #d1d5db; font-size: 12px; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li>All active catalog pieces are live and discoverable by shoppers across Nigeria.</li>
+        <li>Merchant portal login and management features have been fully re-enabled.</li>
+        <li>Escrow settlements and order fulfillment operations are active.</li>
+      </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
+      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+        Access Merchant Portal &rarr;
+      </a>
+    </div>
+
+    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
+      Thank you for your cooperation and commitment to high-standard craftsmanship on ÌRÍSÍ.
+    </p>
+  `;
+
+  return sendLuxuryEmail(
+    vendor.email,
+    `ÌRÍSÍ Notice: Merchant Account Reinstated - Welcome Back ${vendor.brandName}! ✨`,
+    wrapLuxuryTemplate('Account Reinstated', bodyContent)
+  );
 }

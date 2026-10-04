@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
   ArrowLeft, ArrowRight, Bookmark, Heart, Share2, Sparkles, ShieldCheck, MapPin,
-  Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2,
+  Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2, Ruler,
   ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn,
   Video, Volume2, VolumeX, MessageCircle, User, Layers,
   Play, Pause, Loader2
@@ -103,6 +103,7 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
   const [isReviewsOpen, setIsReviewsOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isFitPredictorOpen, setIsFitPredictorOpen] = useState(false);
+  const [sizeGuideTab, setSizeGuideTab] = useState<'check_size' | 'size_guide'>('check_size');
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [hasNudged, setHasNudged] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -945,23 +946,42 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           </div>
         ) : (
           <div className="p-4 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2.5 shadow-sm">
-            <div className="flex items-center justify-between text-xs font-mono-luxury">
+            <div className="flex items-center justify-between text-xs font-mono-luxury flex-wrap gap-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text-secondary)] uppercase font-bold">
                   {product.category === 'footwear' ? 'Shoe Size (EU):' : 'Select Size:'}
                 </span>
-                {product.category !== 'footwear' && (
-                  <button
-                    type="button"
-                    onClick={() => setIsFitPredictorOpen(true)}
-                    className="text-[10px] text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 hover:underline cursor-pointer bg-[var(--gold-subtle)] px-2 py-0.5 rounded-full border border-[var(--gold-accent)]/30"
-                  >
-                    <Sparkles className="h-2.5 w-2.5" />
-                    <span>Find My Size</span>
-                  </button>
-                )}
+                <span className="text-[var(--gold-accent)] font-bold px-1.5 py-0.5 rounded bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[11px]">
+                  {selectedSize}
+                </span>
               </div>
-              <span className="text-[var(--gold-accent)] font-bold">{selectedSize}</span>
+
+              {/* Shein-Style Dual Buttons: Size Guide & Check My Size */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSizeGuideTab('size_guide');
+                    setIsFitPredictorOpen(true);
+                  }}
+                  className="text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold inline-flex items-center gap-1 cursor-pointer bg-[var(--bg-secondary)] px-2.5 py-0.5 rounded-full border border-[var(--border-subtle)]"
+                >
+                  <Ruler className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
+                  <span>Size Guide</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSizeGuideTab('check_size');
+                    setIsFitPredictorOpen(true);
+                  }}
+                  className="text-[10px] text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 cursor-pointer bg-[var(--gold-subtle)] px-2.5 py-0.5 rounded-full border border-[var(--gold-accent)]/30 shadow-xs"
+                >
+                  <Sparkles className="h-2.5 w-2.5" />
+                  <span>Check My Size</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2 font-mono-luxury text-xs">
@@ -1542,13 +1562,16 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
         )}
       </AnimatePresence>
 
-      {/* Fit Predictor Modal */}
+      {/* Fit Predictor & Size Guide Modal */}
       <FitPredictorModal
         isOpen={isFitPredictorOpen}
         onClose={() => setIsFitPredictorOpen(false)}
         onSelectSize={(sz) => setSelectedSize(sz)}
         category={product.category}
         availableSizes={availableSizes}
+        product={product}
+        selectedSize={selectedSize}
+        initialTab={sizeGuideTab}
       />
 
     </div>

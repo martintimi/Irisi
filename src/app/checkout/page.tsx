@@ -164,7 +164,8 @@ export default function CheckoutPage() {
           destinationState: formData.state || 'Lagos',
           destinationCity: formData.city || 'Lagos',
           itemCount: pkg.items.length,
-          totalWeightKg: Math.max(0.5, Number(pkgWeight.toFixed(2)))
+          totalWeightKg: Math.max(0.5, Number(pkgWeight.toFixed(2))),
+          shippingRates: pkg.shippingRates
         };
       });
 
@@ -214,17 +215,29 @@ export default function CheckoutPage() {
     Object.values(groupedItems).forEach((pkg) => {
       const live = liveRates[pkg.vendorId];
       const chosenMethod = packageMethods[pkg.vendorId] || 'doorstep';
+      const customerCity = (formData.city || '').toLowerCase().trim();
+      const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
+      const customerState = (formData.state || '').toLowerCase().trim();
+      const vendorState = (pkg.vendorState || '').toLowerCase().trim();
+      const isSameCity = !!(customerCity && vendorCity && (customerCity === vendorCity || customerCity.includes(vendorCity) || vendorCity.includes(customerCity)));
+      const isSameState = !!(customerState && vendorState && customerState === vendorState);
+
+      const vendorDoorstepFee = isSameCity
+        ? Number(pkg.shippingRates?.sameCity ?? 1000)
+        : isSameState
+        ? Number(pkg.shippingRates?.closeHub ?? pkg.shippingRates?.sameCity ?? 2500)
+        : Number(pkg.shippingRates?.interstate ?? 4500);
 
       if (live) {
         const isDoor = chosenMethod === 'doorstep';
         const rateObj = isDoor ? live.doorstep : live.parkPickup;
 
         calcs[pkg.vendorId] = {
-          fee: rateObj?.fee || (isDoor ? 4500 : 0),
+          fee: isDoor ? (rateObj?.fee !== undefined ? rateObj.fee : vendorDoorstepFee) : 0,
           method: chosenMethod,
-          reason: isDoor ? (rateObj?.serviceType || 'Doorstep Courier') : 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
+          reason: isDoor ? (rateObj?.serviceType || 'Doorstep Courier') : 'Pay Driver on Pickup',
           isSameCity: live.isSameCity,
-          courierName: rateObj?.courierName || (isDoor ? 'GIG Logistics' : 'Motor Park Waybill'),
+          courierName: rateObj?.courierName || (isDoor ? 'Doorstep Courier Partner' : 'Motor Park Waybill'),
           eta: rateObj?.estimatedDeliveryDays || (isDoor ? '1-3 business days' : '1-2 business days'),
           packageWeightKg: live.packageWeightKg,
           packageDimensions: live.packageDimensions,
@@ -236,15 +249,11 @@ export default function CheckoutPage() {
           motorParks: live.motorParks || getMotorParksForState(formData.state),
         };
       } else {
-        const customerCity = (formData.city || '').toLowerCase().trim();
-        const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
-        const isSameCity = !!(customerCity && vendorCity && (customerCity === vendorCity || customerCity.includes(vendorCity) || vendorCity.includes(customerCity)));
-
         if (chosenMethod === 'park_pickup') {
           calcs[pkg.vendorId] = {
             fee: 0,
             method: 'park_pickup',
-            reason: 'Pay Driver on Pickup (~₦1,500 - ₦2,500)',
+            reason: 'Pay Driver on Pickup',
             isSameCity: false,
             courierName: 'Interstate Bus Terminal Waybill',
             eta: '1-2 business days',
@@ -256,11 +265,11 @@ export default function CheckoutPage() {
           };
         } else {
           calcs[pkg.vendorId] = {
-            fee: isSameCity ? 1500 : 4500,
+            fee: vendorDoorstepFee,
             method: 'doorstep',
-            reason: isSameCity ? 'Same-City Direct Rider' : 'Interstate Doorstep Courier',
+            reason: isSameCity ? 'Same-City Direct Rider' : isSameState ? 'Intra-State Doorstep' : 'Interstate Doorstep Courier',
             isSameCity,
-            courierName: isSameCity ? 'Direct Dispatch Rider' : 'GIG Logistics Express',
+            courierName: isSameCity ? 'Direct Dispatch Rider' : 'Doorstep Courier Partner',
             eta: isSameCity ? 'Same-day / 24h' : '2-3 business days',
             packageWeightKg: 0.8,
             packageDimensions: '32×24×6cm',
@@ -408,7 +417,7 @@ export default function CheckoutPage() {
           ? 'Motor Park Bus Waybill'
           : (rateObj?.courierName || calc?.courierName || 'Shipbubble Courier');
 
-        const shippingFee = isPark ? 0 : (rateObj?.fee || calc?.fee || 0);
+        const shippingFee = isPark ? 0 : (rateObj?.fee !== undefined ? rateObj.fee : (calc?.fee ?? 0));
 
         vendorPackagesPayload[vId] = {
           vendorId: vId,
@@ -426,8 +435,8 @@ export default function CheckoutPage() {
           selectedParkTerminal: isPark ? (selectedParkTerminals[vId] || motorParkName || `${formData.city} Motor Park`) : undefined,
           dropoffStation: isPark ? (selectedParkTerminals[vId] || motorParkName) : (rateObj?.dropoffStation || calc?.dropoffStation),
           instructions: rateObj?.instructions || calc?.instructions || (isPark
-            ? 'Package garment and drop at local motor park. Customer pays collection fee upon arrival.'
-            : `${courierName} rider will pick up from your atelier once marked ready.`),
+            ? 'Package order securely and drop at local motor park. Customer pays collection fee upon arrival.'
+            : `${courierName} rider will pick up from your store location once marked ready.`),
           packageWeightKg: live?.packageWeightKg || calc?.packageWeightKg || 1.0,
           packageDimensions: live?.packageDimensions || calc?.packageDimensions || '32×24×6cm',
           status: 'escrow_secured',
@@ -523,12 +532,12 @@ export default function CheckoutPage() {
 
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury font-bold uppercase tracking-wider">
-            <ShieldCheck className="h-4 w-4" />
-            <span>Escrow Payment Confirmed & Secured</span>
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Order Confirmed &amp; Verified</span>
           </div>
 
           <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)] leading-tight pt-1">
-            Order Sent to Designers & Brands!
+            Order Placed Successfully!
           </h1>
           <p className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold tracking-wider">
             Order Reference: {orderPlaced.orderNumber}
@@ -545,12 +554,12 @@ export default function CheckoutPage() {
             <span className="font-bold text-[var(--text-primary)] text-right">{orderPlaced.deliveryAddress}</span>
           </div>
           <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-            <span className="text-[var(--text-secondary)]">Total Paid (Escrow):</span>
+            <span className="text-[var(--text-secondary)]">Total Paid:</span>
             <span className="font-bold text-[var(--gold-accent)] text-sm">₦{Number(orderPlaced.totalAmount || 0).toLocaleString()}</span>
           </div>
           <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-start gap-2.5 text-[11px] text-[var(--text-secondary)]">
-            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span>Each vendor has been notified with your sizes. They are preparing your garments for courier dispatch. Funds will only be released after you confirm receipt.</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+            <span>Your order details have been sent to the store. They are packaging your items for courier dispatch.</span>
           </div>
         </div>
 
@@ -596,7 +605,7 @@ export default function CheckoutPage() {
             Shopper Sign In Required
           </h2>
           <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed max-w-sm mx-auto">
-            Please sign in to your shopper account or create a new account to proceed to checkout and secure your order with Nigerian escrow.
+            Please sign in to your shopper account or create a new account to proceed to checkout and complete your order.
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--gold-accent)]">
@@ -630,7 +639,7 @@ export default function CheckoutPage() {
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold">
-              Secure Escrow Checkout
+              Secure Checkout
             </span>
           </div>
           <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mt-1">
@@ -910,7 +919,7 @@ export default function CheckoutPage() {
             {/* Price Calculations */}
             <div className="space-y-2.5 pt-3 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
               <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span>Garments Subtotal:</span>
+                <span>Items Subtotal:</span>
                 <span className="font-bold text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
               </div>
 
@@ -969,7 +978,7 @@ export default function CheckoutPage() {
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                <span className="font-editorial text-lg font-bold text-[var(--text-primary)]">Ìrísí Escrow Gateway</span>
+                <span className="font-editorial text-lg font-bold text-[var(--text-primary)]">Ìrísí Secure Checkout</span>
               </div>
               <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold">256-Bit Encrypted</span>
             </div>
@@ -1086,7 +1095,7 @@ export default function CheckoutPage() {
                 ₦{grandTotal.toLocaleString()}
               </div>
               <p className="text-[11px] font-mono-luxury text-[var(--text-muted)]">
-                Recipient: Ìrísí Escrow Treasury
+                Recipient: Ìrísí Marketplace
               </p>
             </div>
 
@@ -1116,7 +1125,7 @@ export default function CheckoutPage() {
             </div>
 
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono-luxury text-amber-400 text-left leading-relaxed">
-              <strong>Test Mode:</strong> No personal Paystack key added in <code className="text-white">.env.local</code> yet. This simulates a successful Paystack card payment and secures your order into Ìrísí Escrow.
+              <strong>Test Mode:</strong> Simulates a successful payment and confirms your order.
             </div>
 
             <div className="space-y-2 pt-1">
@@ -1132,7 +1141,7 @@ export default function CheckoutPage() {
                 {isProcessing ? (
                   <>
                     <Sparkles className="h-4 w-4 animate-spin text-black" />
-                    <span>Securing Escrow...</span>
+                    <span>Processing Order...</span>
                   </>
                 ) : (
                   <>

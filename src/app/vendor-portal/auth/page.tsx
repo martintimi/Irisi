@@ -154,6 +154,12 @@ function VendorAuthPageContent() {
         }));
       }
     }
+
+    const isSuspendedParam = searchParams.get('suspended') === 'true';
+    if (isSuspendedParam) {
+      const reason = searchParams.get('reason') || 'Account suspended by administration.';
+      setErrorMessage(`Your merchant atelier account has been suspended by administration. Reason: "${reason}". Please contact ÌRÍSÍ Concierge Support on WhatsApp to appeal.`);
+    }
   }, [searchParams]);
 
   const [isResolvingBank, setIsResolvingBank] = useState(false);
@@ -856,20 +862,44 @@ function VendorAuthPageContent() {
             </div>
           )}
 
-          {/* Error Message Alert with Auto-Dismiss */}
+          {/* Error Message Alert with Auto-Dismiss and Suspension Appeal Link */}
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono-luxury flex items-center justify-between gap-2.5 animate-fadeIn">
-              <div className="flex items-center gap-2.5">
-                <div className="h-2 w-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
-                <span>{errorMessage}</span>
+            <div className={`p-4 rounded-2xl border text-xs font-mono-luxury animate-fadeIn space-y-2.5 ${
+              errorMessage.toLowerCase().includes('suspended')
+                ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 shadow-lg'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+            }`}>
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shrink-0 mt-1 animate-ping" />
+                  <div>
+                    <strong className="block text-rose-400 font-bold uppercase text-[10px] tracking-wider mb-0.5">
+                      {errorMessage.toLowerCase().includes('suspended') ? '⚠️ Account Suspended Notice' : 'Notice'}
+                    </strong>
+                    <span>{errorMessage}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMessage('')}
+                  className="text-[10px] text-rose-400/60 hover:text-rose-300 transition-colors uppercase font-bold cursor-pointer shrink-0"
+                >
+                  Dismiss
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setErrorMessage('')}
-                className="text-[10px] text-rose-400/60 hover:text-rose-300 transition-colors uppercase font-bold cursor-pointer"
-              >
-                Dismiss
-              </button>
+
+              {errorMessage.toLowerCase().includes('suspended') && (
+                <div className="pt-2 border-t border-rose-500/20 flex justify-end">
+                  <a
+                    href="https://wa.me/2349070332145?text=Hello%20ÌRÍSÍ%20Concierge,%20my%20merchant%20account%20was%20suspended.%20I%20would%20like%20to%20appeal%20for%20reinstatement."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[11px] font-bold transition-all shadow-sm"
+                  >
+                    <span>💬 Chat With Concierge to Appeal Suspension &rarr;</span>
+                  </a>
+                </div>
+              )}
             </div>
           )}
 
