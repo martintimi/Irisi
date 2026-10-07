@@ -460,3 +460,139 @@ export async function sendPasswordResetEmail(payload: PasswordResetEmailPayload)
     error: 'No active email provider configured in .env.local',
   };
 }
+
+export interface SignupVerificationEmailPayload {
+  recipientEmail: string;
+  recipientName?: string;
+  otpCode: string;
+  actionLink?: string;
+  userType?: 'vendor' | 'shopper';
+  supportUrl?: string;
+}
+
+function buildSignupVerificationEmailHtml(payload: SignupVerificationEmailPayload): string {
+  const { recipientName, otpCode, actionLink, userType, supportUrl } = payload;
+  const isVendor = userType === 'vendor';
+  const roleLabel = isVendor ? 'Merchant Store' : 'Shopper Account';
+  const headline = isVendor ? 'Verify Your Store Account' : 'Verify Your Account';
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>ÌRÍSÍ Account Verification</title>
+    </head>
+    <body style="background-color: #08090a; color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #08090a;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.2); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.6);">
+              <!-- Luxury Brand Header -->
+              <tr>
+                <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
+                  <img src="https://irisimi-nig.vercel.app/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
+                  <h1 style="color: #e6c367; font-size: 26px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
+                  <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion &amp; Commerce</p>
+                </td>
+              </tr>
+              <!-- Content Body -->
+              <tr>
+                <td style="padding: 36px 32px;">
+                  <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">${headline}</h2>
+                  <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+                    Hello ${recipientName || (isVendor ? 'Merchant Partner' : 'Valued Client')},<br><br>
+                    Welcome to ÌRÍSÍ! Use the 6-digit verification code below to confirm your business email and complete your <strong>${roleLabel}</strong> registration:
+                  </p>
+                  <!-- 6-Digit OTP Box -->
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+                    <tr>
+                      <td align="center" style="background-color: #0a0b0d; border: 1.5px dashed #e6c367; border-radius: 16px; padding: 26px 20px;">
+                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #e6c367; display: block;">${otpCode}</span>
+                        <span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 10px; font-weight: 500;">Valid for 15 minutes • Single-use only</span>
+                      </td>
+                    </tr>
+                  </table>
+                  ${actionLink ? `
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+                      <tr>
+                        <td align="center">
+                          <a href="${actionLink}" style="display: inline-block; background-color: #e6c367; color: #0a0b0d; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">Confirm Account Instantly &rarr;</a>
+                        </td>
+                      </tr>
+                    </table>
+                  ` : ''}
+                  <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0 0 24px;">
+                    If you did not initiate this registration on ÌRÍSÍ, you can safely ignore this email.
+                  </p>
+                  <!-- Support Concierge -->
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 22px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${supportUrl || 'https://wa.me/2349070332145'}" style="color: #e6c367; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">Need assistance? Chat with ÌRÍSÍ Merchant Concierge on WhatsApp &rarr;</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Sends a signup account verification email containing the 6-digit OTP code directly via Gmail SMTP / custom SMTP.
+ */
+export async function sendSignupVerificationEmail(payload: SignupVerificationEmailPayload): Promise<{
+  success: boolean;
+  provider: 'gmail_smtp' | 'smtp' | 'resend' | 'none';
+  error?: string;
+}> {
+  const { recipientEmail, otpCode, userType } = payload;
+  const isVendor = userType === 'vendor';
+  const roleLabel = isVendor ? 'Merchant Store' : 'Shopper Account';
+  const emailHtml = buildSignupVerificationEmailHtml(payload);
+  const emailSubject = `ÌRÍSÍ - Your 6-Digit Verification Code is ${otpCode}`;
+
+  console.log(`[EMAIL DISPATCH] 🔐 Signup verification code generated for ${recipientEmail} (${roleLabel})`);
+
+  // Direct delivery via Gmail SMTP if configured
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD;
+  if (gmailUser && gmailPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPass,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"ÌRÍSÍ Marketplace" <${gmailUser}>`,
+        to: recipientEmail,
+        subject: emailSubject,
+        html: emailHtml,
+      });
+
+      console.log(`[EMAIL DISPATCH] ✅ Gmail SMTP delivered signup verification email to ${recipientEmail}`);
+      return { success: true, provider: 'gmail_smtp' };
+    } catch (err: any) {
+      console.warn(`[EMAIL DISPATCH] ⚠️ Gmail SMTP delivery error for signup:`, err.message);
+    }
+  }
+
+  // Fallback to sendLuxuryEmail
+  const res = await sendLuxuryEmail(recipientEmail, emailSubject, emailHtml);
+  return {
+    success: res.success,
+    provider: (res.provider as any) || 'none',
+    error: res.error,
+  };
+}

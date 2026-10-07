@@ -121,19 +121,44 @@ export async function POST(request: Request) {
       .or(`user_id.eq.${verifiedUser.id},email.eq.${normalizedEmail}`)
       .maybeSingle();
 
+    let activeVendor = vendor;
+    const isVendorIntent = verifiedUser.user_metadata?.user_type === 'vendor' ||
+      body.userType === 'vendor' ||
+      (verifiedUser.user_metadata?.full_name && /clothing|couture|atelier|boutique|brand|apparel|designs/i.test(verifiedUser.user_metadata.full_name));
+
+    if (!activeVendor && isVendorIntent) {
+      const brand = verifiedUser.user_metadata?.brand_name || verifiedUser.user_metadata?.full_name || 'My Store';
+      const cleanBrandId = brand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `vendor-${Date.now()}`;
+      const { data: createdVendor } = await adminClient.from('vendors').upsert({
+        id: cleanBrandId,
+        user_id: verifiedUser.id,
+        brand_name: brand,
+        designer_name: brand,
+        contact_person: brand,
+        email: normalizedEmail,
+        phone: verifiedUser.user_metadata?.phone || '',
+        location: 'Lagos, Nigeria',
+        vendor_type: 'boutique_seller',
+        is_verified: false,
+      }, { onConflict: 'id' }).select().maybeSingle();
+      if (createdVendor) {
+        activeVendor = createdVendor;
+      }
+    }
+
     const response = NextResponse.json({
       success: true,
       user: verifiedUser,
       session: authSession,
       profile: profile || null,
-      vendor: vendor || null,
+      vendor: activeVendor || null,
       message: 'Account successfully verified and activated!'
     });
 
     // 5. Set authenticated session cookies
-    if (vendor) {
-      response.cookies.set('irisi_vendor_id', vendor.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
-      response.cookies.set('veyra_vendor_id', vendor.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+    if (activeVendor) {
+      response.cookies.set('irisi_vendor_id', activeVendor.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+      response.cookies.set('veyra_vendor_id', activeVendor.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
     } else if (profile) {
       response.cookies.set('veyra_shopper_id', verifiedUser.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
     }

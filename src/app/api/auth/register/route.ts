@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { sendSignupVerificationEmail } from '@/lib/services/emailService';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -57,32 +57,18 @@ export async function POST(request: Request) {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // 1. Check if email already exists in database
-    const { data: existingProfile } = await adminClient
-      .from('profiles')
-      .select('id, email, phone')
-      .ilike('email', normalizedEmail)
-      .maybeSingle();
+    // 1. Check if user already exists in auth
+    const { data: userList } = await adminClient.auth.admin.listUsers();
+    const existingAuthUser = userList?.users?.find((u: any) => u.email?.toLowerCase() === normalizedEmail);
 
-    if (existingProfile) {
+    // If an account is ALREADY CONFIRMED, prevent duplicate creation
+    if (existingAuthUser && existingAuthUser.email_confirmed_at) {
       return NextResponse.json({
         error: 'An account with this email address already exists. Please Sign In instead.'
       }, { status: 400 });
     }
 
-    const { data: existingVendor } = await adminClient
-      .from('vendors')
-      .select('id, email, phone')
-      .ilike('email', normalizedEmail)
-      .maybeSingle();
-
-    if (existingVendor) {
-      return NextResponse.json({
-        error: 'A merchant account with this email already exists. Please Sign In instead.'
-      }, { status: 400 });
-    }
-
-    // 2. Check if phone already exists (if provided)
+    // 2. Check if phone already exists for a confirmed account (if provided)
     if (cleanPhone) {
       const { data: existingPhone } = await adminClient
         .from('profiles')
@@ -90,49 +76,98 @@ export async function POST(request: Request) {
         .eq('phone', cleanPhone)
         .maybeSingle();
 
-      if (existingPhone) {
+      if (existingPhone && (!existingAuthUser || existingPhone.id !== existingAuthUser.id)) {
         return NextResponse.json({
           error: 'An account with this mobile phone number already exists. Please Sign In or use another number.'
         }, { status: 400 });
       }
     }
 
-    // 3. Create account via Supabase Auth (which dispatches the 6-digit OTP code to the user's email via configured Gmail SMTP)
-    const supabase = await createClient();
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: normalizedEmail,
-      password,
-      options: {
-        data: {
-          full_name: fullName || brandName || normalizedEmail.split('@')[0],
-          phone: cleanPhone,
-          gender: gender || 'male',
-          user_type: userType,
-        },
-      },
+    // 3. Generate account & 6-digit OTP code via Supabase Admin API
+    // This bypasses Supabase cloud's rate-limited mail service and allows us to dispatch directly via our Gmail SMTP!
+    let userId = '';
+    let otpCode = '';
+    let actionLink = '';
+    let authUser: any = null;
+
+    if (existingAuthUser) {
+      userId = existingAuthUser.id;
+      authUser = existingAuthUser;
+      if (password) {
+        await adminClient.auth.admin.updateUserById(userId, { password }).catch(e => console.warn('Update password notice:', e));
+      }
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: 'signup',
+        email: normalizedEmail,
+        password: password || 'IrisiAuth2026!',
+        options: {
+          data: {
+            full_name: fullName || brandName || normalizedEmail.split('@')[0],
+            phone: cleanPhone,
+            gender: gender || 'male',
+            user_type: userType,
+          }
+        }
+      });
+
+      if (linkErr) {
+        console.error('generateLink error for unconfirmed user:', linkErr);
+        return NextResponse.json({ error: linkErr.message }, { status: 400 });
+      }
+
+      otpCode = linkData?.properties?.email_otp || '';
+      actionLink = linkData?.properties?.action_link || '';
+    } else {
+      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+        type: 'signup',
+        email: normalizedEmail,
+        password,
+        options: {
+          data: {
+            full_name: fullName || brandName || normalizedEmail.split('@')[0],
+            phone: cleanPhone,
+            gender: gender || 'male',
+            user_type: userType,
+          }
+        }
+      });
+
+      if (linkErr) {
+        console.error('generateLink error for new user:', linkErr);
+        return NextResponse.json({ error: linkErr.message }, { status: 400 });
+      }
+
+      userId = linkData?.user?.id;
+      authUser = linkData?.user;
+      otpCode = linkData?.properties?.email_otp || '';
+      actionLink = linkData?.properties?.action_link || '';
+    }
+
+    if (!userId || !otpCode) {
+      return NextResponse.json({ error: 'Failed to generate verification credentials' }, { status: 500 });
+    }
+
+    // 4. Save 6-digit OTP into user_metadata for reliable verification
+    await adminClient.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        ...(authUser?.user_metadata || {}),
+        verification_otp: otpCode,
+        verification_otp_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        full_name: fullName || brandName || normalizedEmail.split('@')[0],
+        phone: cleanPhone,
+        user_type: userType,
+      }
     });
 
-    if (authError) {
-      console.error('Supabase Auth signUp error:', authError);
-      if (authError.message?.toLowerCase().includes('rate limit')) {
-        return NextResponse.json({
-          error: 'Email rate limit reached on authentication service. Please wait a short while before requesting another verification email.'
-        }, { status: 429 });
-      }
-      return NextResponse.json({ error: authError.message }, { status: 400 });
-    }
-
-    // Check if user identity already exists
-    if (authData?.user && Array.isArray(authData.user.identities) && authData.user.identities.length === 0) {
-      return NextResponse.json({
-        error: 'An account with this email address already exists. Please Sign In instead.'
-      }, { status: 400 });
-    }
-
-    const userId = authData?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: 'Failed to create user account' }, { status: 400 });
-    }
+    // 5. Dispatch the verification email containing the 6-digit OTP via our verified Gmail SMTP
+    const emailResult = await sendSignupVerificationEmail({
+      recipientEmail: normalizedEmail,
+      recipientName: brandName || fullName || undefined,
+      otpCode,
+      actionLink,
+      userType,
+    });
+    console.log(`[Register POST] 📨 Dispatched signup OTP email to ${normalizedEmail}:`, emailResult);
 
     const twinId = `VY-NIG-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -182,7 +217,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        user: authData.user,
+        user: authUser || { id: userId, email: normalizedEmail },
         userType: 'vendor',
         vendorProfile: vendorData,
         message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your email inbox to activate your store.`
@@ -211,7 +246,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        user: authData.user,
+        user: authUser || { id: userId, email: normalizedEmail },
         userType: 'shopper',
         profile: {
           name: profileData.full_name,
