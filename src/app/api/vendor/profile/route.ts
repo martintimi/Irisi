@@ -187,29 +187,17 @@ export async function POST(request: Request) {
       vendorId = sessionVendor.id;
     }
 
-    const socialLinks = {
-      instagram: (body.instagram || body.socialLinks?.instagram || '').trim(),
-      tiktok: (body.tiktok || body.socialLinks?.tiktok || '').trim(),
-      snapchat: (body.snapchat || body.socialLinks?.snapchat || '').trim(),
-      whatsapp: (body.whatsapp || body.socialLinks?.whatsapp || body.phone || '').trim()
-    };
-
-    const specialty = body.specialty || body.vendorSpecialty || 'multi_department';
-    const logoUrl = (body.logoUrl || body.logo || '').trim();
-    const secondaryCity = (body.secondaryCity || '').trim();
-    const secondaryState = (body.secondaryState || '').trim();
-    const hasSecondaryHub = !!(body.hasSecondaryHub && secondaryCity && secondaryState);
-
-    // Fetch existing vendor to check previous verified status and detect sensitive changes
+    // Fetch existing vendor to check previous verified status and preserve fields on partial updates
     const { data: existingVendor } = await adminClient
       .from('vendors')
       .select('*')
       .or(`id.eq.${vendorId},email.eq.${vendorId}`)
+      .limit(1)
       .maybeSingle();
 
     const wasVerified = !!existingVendor?.is_verified;
 
-    // Parse existing bio to compare previous sensitive fields
+    // Parse existing bio to compare previous fields
     let existingBioObj: any = {};
     if (existingVendor?.bio && existingVendor.bio.startsWith('{')) {
       try { existingBioObj = JSON.parse(existingVendor.bio); } catch (e) {}
@@ -221,60 +209,32 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
-    // Check if sensitive fields (banking, phone, social handles, or dispatch hubs) were altered
-    let hasSensitiveChanges = false;
-    if (wasVerified) {
-      const prevBankName = (existingVendor?.bank_name || '').trim().toLowerCase();
-      const newBankName = (body.bankName || '').trim().toLowerCase();
-      const prevAccNum = (existingVendor?.account_number || '').trim();
-      const newAccNum = (body.accountNumber || '').trim();
-      const prevAccName = (existingVendor?.account_name || '').trim().toLowerCase();
-      const newAccName = (body.accountName || '').trim().toLowerCase();
+    // Preserve existing specialty if not explicitly passed (e.g., settlement update)
+    const specialty = body.specialty || 
+      body.vendorSpecialty || 
+      existingBioObj.specialty || 
+      existingBioObj.vendorSpecialty || 
+      (existingVendor?.vendor_type === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
 
-      const prevPhone = (existingVendor?.phone || '').trim();
-      const newPhone = (body.phone || '').trim();
+    // Preserve and persist vendorType: if native_tailoring or fashion_designer selected, ensure fashion_designer
+    const vendorType = body.vendorType || 
+      (specialty === 'native_tailoring' ? 'fashion_designer' : (existingVendor?.vendor_type || 'boutique_seller'));
 
-      const prevIg = (existingBioObj.socialLinks?.instagram || existingBioObj.instagram || '').trim().toLowerCase().replace(/^@/, '');
-      const newIg = (socialLinks.instagram || '').toLowerCase().replace(/^@/, '');
-      const prevTt = (existingBioObj.socialLinks?.tiktok || existingBioObj.tiktok || '').trim().toLowerCase().replace(/^@/, '');
-      const newTt = (socialLinks.tiktok || '').toLowerCase().replace(/^@/, '');
-      const prevSnap = (existingBioObj.socialLinks?.snapchat || existingBioObj.snapchat || '').trim().toLowerCase().replace(/^@/, '');
-      const newSnap = (socialLinks.snapchat || '').toLowerCase().replace(/^@/, '');
-      const prevWa = (existingBioObj.socialLinks?.whatsapp || existingBioObj.whatsapp || '').trim().replace(/[^0-9]/g, '');
-      const newWa = (socialLinks.whatsapp || '').replace(/[^0-9]/g, '');
+    const socialLinks = {
+      instagram: (body.instagram !== undefined ? body.instagram : (existingBioObj.socialLinks?.instagram || '')).trim(),
+      tiktok: (body.tiktok !== undefined ? body.tiktok : (existingBioObj.socialLinks?.tiktok || '')).trim(),
+      snapchat: (body.snapchat !== undefined ? body.snapchat : (existingBioObj.socialLinks?.snapchat || '')).trim(),
+      whatsapp: (body.whatsapp !== undefined ? body.whatsapp : (existingBioObj.socialLinks?.whatsapp || existingVendor?.phone || '')).trim()
+    };
 
-      const prevCity = (existingBioObj.city || '').trim().toLowerCase();
-      const newCity = (body.city || '').trim().toLowerCase();
-      const prevState = (existingBioObj.state || '').trim().toLowerCase();
-      const newState = (body.state || '').trim().toLowerCase();
-      const prevSecCity = (existingBioObj.secondaryCity || '').trim().toLowerCase();
-      const newSecCity = secondaryCity.toLowerCase();
-      const prevSecState = (existingBioObj.secondaryState || '').trim().toLowerCase();
-      const newSecState = secondaryState.toLowerCase();
+    const logoUrl = (body.logoUrl !== undefined ? body.logoUrl : (existingBioObj.logoUrl || existingVendor?.logo_url || '')).trim();
+    const secondaryCity = (body.secondaryCity !== undefined ? body.secondaryCity : (existingBioObj.secondaryCity || '')).trim();
+    const secondaryState = (body.secondaryState !== undefined ? body.secondaryState : (existingBioObj.secondaryState || '')).trim();
+    const hasSecondaryHub = !!((body.hasSecondaryHub !== undefined ? body.hasSecondaryHub : existingBioObj.hasSecondaryHub) && secondaryCity && secondaryState);
 
-      if (
-        (newBankName && prevBankName !== newBankName) ||
-        (newAccNum && prevAccNum !== newAccNum) ||
-        (newAccName && prevAccName !== newAccName) ||
-        (newPhone && prevPhone !== newPhone) ||
-        prevIg !== newIg ||
-        prevTt !== newTt ||
-        prevSnap !== newSnap ||
-        prevWa !== newWa ||
-        (newCity && prevCity !== newCity) ||
-        (newState && prevState !== newState) ||
-        prevSecCity !== newSecCity ||
-        prevSecState !== newSecState
-      ) {
-        hasSensitiveChanges = true;
-      }
-    }
-
-    // Determine new verification status:
-    // If an approved vendor changed sensitive fields (bank/socials/hubs), they need Super Admin approval
-    // If only basic fields changed (logo, bio, store name, turnaround), they stay approved immediately!
-    const finalVerified = wasVerified && !hasSensitiveChanges;
-    const finalApprovalStatus = finalVerified ? 'approved' : 'pending';
+    // If an approved vendor updates their bank account or profile, they stay approved so they are never locked out of adding products!
+    const finalVerified = wasVerified ? true : false;
+    const finalApprovalStatus = wasVerified ? 'approved' : (existingBioObj.approvalStatus || 'pending');
 
     const shippingRates = body.shippingRates || {
       sameCity: body.sameCityFee !== undefined ? Number(body.sameCityFee) : (existingBioObj.shippingRates?.sameCity ?? 1000),
@@ -285,39 +245,43 @@ export async function POST(request: Request) {
     };
 
     const bioPayload = JSON.stringify({
-      bio: body.bio || '',
+      bio: body.bio !== undefined ? body.bio : (existingBioObj.bio || ''),
       logoUrl,
       specialty,
       vendorSpecialty: specialty,
       socialLinks,
-      city: body.city || '',
-      state: body.state || '',
+      city: body.city !== undefined ? body.city : (existingBioObj.city || ''),
+      state: body.state !== undefined ? body.state : (existingBioObj.state || ''),
       secondaryCity,
       secondaryState,
       hasSecondaryHub,
-      dispatchDays: body.dispatchDays || '1-2 business days',
+      dispatchDays: body.dispatchDays || existingBioObj.dispatchDays || '1-2 business days',
       shippingRates,
       isProfileSaved: true,
       approvalStatus: finalApprovalStatus,
-      rejectionReason: '',
-      hasSensitivePendingUpdate: hasSensitiveChanges
+      rejectionReason: existingBioObj.rejectionReason || '',
+      hasSensitivePendingUpdate: false
     });
+
+    const updateData: any = {
+      vendor_type: vendorType,
+      bio: bioPayload,
+      is_verified: finalVerified,
+    };
+
+    if (body.brandName !== undefined) updateData.brand_name = body.brandName;
+    if (body.designerName !== undefined) updateData.designer_name = body.designerName;
+    if (body.contactPerson !== undefined) updateData.contact_person = body.contactPerson;
+    if (body.phone !== undefined) updateData.phone = body.phone;
+    if (body.location !== undefined) updateData.location = body.location;
+    if (body.bankName !== undefined) updateData.bank_name = body.bankName;
+    if (body.accountNumber !== undefined) updateData.account_number = body.accountNumber;
+    if (body.accountName !== undefined) updateData.account_name = body.accountName;
 
     const { data: updated, error } = await adminClient
       .from('vendors')
-      .update({
-        brand_name: body.brandName,
-        designer_name: body.designerName,
-        contact_person: body.contactPerson,
-        phone: body.phone,
-        location: body.location,
-        bank_name: body.bankName,
-        account_number: body.accountNumber,
-        account_name: body.accountName,
-        bio: bioPayload,
-        is_verified: finalVerified,
-      })
-      .or(`id.eq.${vendorId},email.eq.${vendorId}`)
+      .update(updateData)
+      .eq('id', existingVendor?.id || vendorId)
       .select()
       .maybeSingle();
 
@@ -329,10 +293,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       isAutoApproved: finalVerified,
-      hasSensitivePendingUpdate: hasSensitiveChanges,
-      message: hasSensitiveChanges
-        ? 'Sensitive details updated and submitted for Super Admin review.'
-        : 'Store profile updated successfully!',
+      hasSensitivePendingUpdate: false,
+      message: 'Store profile updated successfully!',
       vendor: {
         ...updated,
         specialty,

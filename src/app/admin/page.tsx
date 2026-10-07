@@ -476,7 +476,7 @@ export default function SuperAdminPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionSuccessMsg(`Brand "${vendorId}" approved and verified live!`);
+        setActionSuccessMsg(data.message || `Brand approved and verified live!`);
         confetti({
           particleCount: 50,
           spread: 60,
@@ -485,6 +485,8 @@ export default function SuperAdminPage() {
         });
         await fetchVendorsList();
         setTimeout(() => setActionSuccessMsg(''), 4000);
+      } else {
+        alert(data.error || 'Failed to approve brand. Please try again.');
       }
     } catch (err) {
       console.error('Error approving brand:', err);

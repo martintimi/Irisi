@@ -133,17 +133,23 @@ export default function VendorSettlementsPage() {
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3 text-xs font-mono-luxury">
                   <span className="text-[var(--text-secondary)] uppercase">Settlement Bank:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{vendorProfile.bankName || 'Guaranty Trust Bank (GTBank)'}</span>
+                  <span className="font-bold text-[var(--text-primary)]">
+                    {vendorProfile.accountNumber ? (vendorProfile.bankName || 'Guaranty Trust Bank (GTBank)') : 'Not Configured'}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3 text-xs font-mono-luxury">
                   <span className="text-[var(--text-secondary)] uppercase">Account Number:</span>
-                  <span className="font-bold font-mono text-[var(--gold-accent)] tracking-wider">{vendorProfile.accountNumber || '0123456789'}</span>
+                  <span className="font-bold font-mono text-[var(--gold-accent)] tracking-wider">
+                    {vendorProfile.accountNumber || 'No Account Linked'}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3 text-xs font-mono-luxury">
                   <span className="text-[var(--text-secondary)] uppercase">Account Name:</span>
-                  <span className="font-bold text-[var(--text-primary)]">{vendorProfile.accountName || vendorProfile.brandName}</span>
+                  <span className="font-bold text-[var(--text-primary)]">
+                    {vendorProfile.accountNumber ? (vendorProfile.accountName || vendorProfile.brandName) : 'Pending Setup'}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1 text-xs font-mono-luxury">

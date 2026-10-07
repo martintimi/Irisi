@@ -79,6 +79,9 @@ export default function MobileVendorSettlements({
           bankName: editBankName,
           accountNumber: editAccountNumber,
           accountName: editAccountName,
+          specialty: vendorProfile.specialty || vendorProfile.vendorSpecialty,
+          vendorSpecialty: vendorProfile.specialty || vendorProfile.vendorSpecialty,
+          vendorType: vendorProfile.vendorType,
         })
       });
       const data = await res.json();
@@ -129,8 +132,8 @@ export default function MobileVendorSettlements({
   }, [orders, inEscrowOrders, completedOrders, filterTab]);
 
   const handleCopyAccount = () => {
-    const acc = vendorProfile?.accountNumber || '0123456789';
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    const acc = vendorProfile?.accountNumber;
+    if (acc && typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(acc);
       setCopiedAccount(true);
       setTimeout(() => setCopiedAccount(false), 2000);
@@ -375,30 +378,38 @@ export default function MobileVendorSettlements({
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-[var(--text-secondary)] uppercase">Bank Name:</span>
               <strong className="text-[var(--text-primary)]">
-                {vendorProfile?.bankName || 'Guaranty Trust Bank (GTBank)'}
+                {vendorProfile?.accountNumber ? (vendorProfile?.bankName || 'Guaranty Trust Bank (GTBank)') : 'Not Configured'}
               </strong>
             </div>
 
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-[var(--text-secondary)] uppercase">NUBAN Account:</span>
               <div className="flex items-center gap-1.5">
-                <strong className="text-[var(--gold-accent)] font-mono tracking-wider">
-                  {vendorProfile?.accountNumber || '0123456789'}
-                </strong>
-                <button
-                  type="button"
-                  onClick={handleCopyAccount}
-                  className="p-1 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
-                >
-                  {copiedAccount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                </button>
+                {vendorProfile?.accountNumber ? (
+                  <>
+                    <strong className="text-[var(--gold-accent)] font-mono tracking-wider">
+                      {vendorProfile.accountNumber}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={handleCopyAccount}
+                      className="p-1 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
+                    >
+                      {copiedAccount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-amber-400 font-mono text-[10px] uppercase font-bold">
+                    No Account Linked
+                  </span>
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-[var(--text-secondary)] uppercase">Account Name:</span>
               <strong className="text-[var(--text-primary)] uppercase truncate max-w-[180px]">
-                {vendorProfile?.accountName || vendorProfile?.brandName || 'Verified Merchant'}
+                {vendorProfile?.accountNumber ? (vendorProfile?.accountName || vendorProfile?.brandName || 'Verified Merchant') : 'Pending Setup'}
               </strong>
             </div>
           </div>
