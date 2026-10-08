@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer';
-import { sendLuxuryEmail } from '@/lib/services/vendorNotificationService';
+import {
+  sendLuxuryEmail,
+  sendVendorNewOrderNotification,
+  sendVendorSettlementNotification
+} from '@/lib/services/vendorNotificationService';
 
 export interface OrderEmailPayload {
   orderNumber: string;
@@ -134,9 +138,31 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
 }
 
 export async function sendVendorNewOrderEmail(vendorEmail: string, payload: OrderEmailPayload) {
-  if (!vendorEmail || !vendorEmail.includes('@')) return { success: false };
-  console.log(`[EMAIL DISPATCH] 📨 Sent Vendor New Order Notification to ${vendorEmail} for ${payload.orderNumber}`);
-  return { success: true };
+  if (!vendorEmail || !vendorEmail.includes('@')) return { success: false, error: 'Invalid vendor email' };
+  console.log(`[EMAIL DISPATCH] 📨 Dispatching Vendor New Order Notification to ${vendorEmail} for ${payload.orderNumber}`);
+  const vBrand = payload.vendorName || 'Store Merchant';
+  const vId = vBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return sendVendorNewOrderNotification({
+    vendor: {
+      id: vId,
+      brandName: vBrand,
+      email: vendorEmail,
+    },
+    orderNumber: payload.orderNumber,
+    customerName: payload.customerName,
+    deliveryCity: 'Lagos',
+    deliveryState: 'Lagos',
+    deliveryMethod: 'doorstep',
+    items: (payload.items || []).map(i => ({
+      productName: i.productName,
+      size: i.size || 'M',
+      color: i.color || 'Standard',
+      quantity: Number(i.quantity || 1),
+      price: Number(i.price || 0),
+      vendorPayout: Number(i.price || 0),
+    })),
+    totalPayout: Number(payload.totalAmount || 0),
+  });
 }
 
 export async function sendDispatchNotificationEmail(payload: OrderEmailPayload) {
@@ -258,9 +284,20 @@ export async function sendOrderDeliveredCustomerEmail(payload: OrderEmailPayload
 }
 
 export async function sendDeliverySettledEmail(vendorEmail: string, payload: OrderEmailPayload) {
-  if (!vendorEmail || !vendorEmail.includes('@')) return { success: false };
-  console.log(`[EMAIL DISPATCH] 💰 Sent Settlement Alert to ${vendorEmail} for ${payload.orderNumber}`);
-  return { success: true };
+  if (!vendorEmail || !vendorEmail.includes('@')) return { success: false, error: 'Invalid vendor email' };
+  console.log(`[EMAIL DISPATCH] 💰 Dispatching Settlement Alert to ${vendorEmail} for ${payload.orderNumber}`);
+  const vBrand = payload.vendorName || 'Store Merchant';
+  const vId = vBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return sendVendorSettlementNotification({
+    vendor: {
+      id: vId,
+      brandName: vBrand,
+      email: vendorEmail,
+    },
+    orderNumber: payload.orderNumber,
+    payoutAmount: Number(payload.totalAmount || 0),
+    customerName: payload.customerName,
+  });
 }
 
 export interface PasswordResetEmailPayload {
@@ -366,98 +403,11 @@ export async function sendPasswordResetEmail(payload: PasswordResetEmailPayload)
 
   console.log(`[EMAIL DISPATCH] 🔐 Password recovery verification code generated for ${recipientEmail} (${roleLabel})`);
 
-  // 1. Direct delivery via Gmail SMTP if configured
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD;
-  if (gmailUser && gmailPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: gmailUser,
-          pass: gmailPass,
-        },
-      });
-
-      await transporter.sendMail({
-        from: `"ÌRÍSÍ Luxury Security" <${gmailUser}>`,
-        to: recipientEmail,
-        subject: emailSubject,
-        html: emailHtml,
-      });
-
-      console.log(`[EMAIL DISPATCH] ✅ Gmail SMTP delivered recovery email to ${recipientEmail}`);
-      return { success: true, provider: 'gmail_smtp' };
-    } catch (err: any) {
-      console.warn(`[EMAIL DISPATCH] ⚠️ Gmail SMTP delivery error:`, err.message);
-    }
-  }
-
-  // 2. Direct delivery via Custom SMTP if configured
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  if (smtpHost && smtpUser && smtpPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM || `"ÌRÍSÍ Security" <${smtpUser}>`,
-        to: recipientEmail,
-        subject: emailSubject,
-        html: emailHtml,
-      });
-
-      console.log(`[EMAIL DISPATCH] ✅ Custom SMTP delivered recovery email to ${recipientEmail}`);
-      return { success: true, provider: 'smtp' };
-    } catch (err: any) {
-      console.warn(`[EMAIL DISPATCH] ⚠️ Custom SMTP delivery error:`, err.message);
-    }
-  }
-
-  // 3. Direct delivery via Resend API if configured
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (resendApiKey) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'ÌRÍSÍ Security <security@irisi.ng>',
-          to: recipientEmail,
-          subject: emailSubject,
-          html: emailHtml,
-        }),
-      });
-
-      if (response.ok) {
-        console.log(`[EMAIL DISPATCH] ✅ Resend delivered recovery email to ${recipientEmail}`);
-        return { success: true, provider: 'resend' };
-      } else {
-        const errText = await response.text();
-        console.warn(`[EMAIL DISPATCH] ⚠️ Resend delivery failed (${response.status}):`, errText);
-      }
-    } catch (err: any) {
-      console.warn(`[EMAIL DISPATCH] ⚠️ Resend exception:`, err.message);
-    }
-  }
-
-  console.log(`[EMAIL DISPATCH] ℹ️ Recovery email for ${recipientEmail} with code ${otpCode} logged. No active SMTP (GMAIL_USER/GMAIL_APP_PASSWORD) or RESEND_API_KEY found in .env.local.`);
+  const res = await sendLuxuryEmail(recipientEmail, emailSubject, emailHtml, { fromName: 'ÌRÍSÍ Luxury Security' });
   return {
-    success: false,
-    provider: 'none',
-    error: 'No active email provider configured in .env.local',
+    success: res.success,
+    provider: (res.provider as any) || 'none',
+    error: res.error,
   };
 }
 
@@ -561,35 +511,7 @@ export async function sendSignupVerificationEmail(payload: SignupVerificationEma
 
   console.log(`[EMAIL DISPATCH] 🔐 Signup verification code generated for ${recipientEmail} (${roleLabel})`);
 
-  // Direct delivery via Gmail SMTP if configured
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD;
-  if (gmailUser && gmailPass) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: gmailUser,
-          pass: gmailPass,
-        },
-      });
-
-      await transporter.sendMail({
-        from: `"ÌRÍSÍ Marketplace" <${gmailUser}>`,
-        to: recipientEmail,
-        subject: emailSubject,
-        html: emailHtml,
-      });
-
-      console.log(`[EMAIL DISPATCH] ✅ Gmail SMTP delivered signup verification email to ${recipientEmail}`);
-      return { success: true, provider: 'gmail_smtp' };
-    } catch (err: any) {
-      console.warn(`[EMAIL DISPATCH] ⚠️ Gmail SMTP delivery error for signup:`, err.message);
-    }
-  }
-
-  // Fallback to sendLuxuryEmail
-  const res = await sendLuxuryEmail(recipientEmail, emailSubject, emailHtml);
+  const res = await sendLuxuryEmail(recipientEmail, emailSubject, emailHtml, { fromName: 'ÌRÍSÍ Luxury Security' });
   return {
     success: res.success,
     provider: (res.provider as any) || 'none',
