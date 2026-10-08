@@ -191,7 +191,14 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const supabase = await createClient();
+    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    let supabase = adminClient;
+    try {
+      const client = await createClient();
+      if (client) supabase = client;
+    } catch (_) {}
 
     const orderNumber = body.orderNumber || `#VY-ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     const orderId = body.id || `ord-${Date.now()}`;
@@ -325,11 +332,11 @@ export async function POST(request: Request) {
     const { data: orderData, error: orderError } = await supabase.from('orders').insert({
       id: orderId,
       order_number: orderNumber,
-      customer_name: body.customerName,
+      customer_name: body.customerName || body.name || 'Shopper Client',
       customer_email: body.customerEmail || '',
-      customer_phone: body.customerPhone,
-      delivery_address: body.deliveryAddress,
-      delivery_city: body.deliveryCity || 'Lagos',
+      customer_phone: body.customerPhone || body.phone || '+2348000000000',
+      delivery_address: body.deliveryAddress || body.address || 'Lagos, Nigeria',
+      delivery_city: body.deliveryCity || body.city || 'Lagos',
       subtotal: Number(body.subtotal || 0),
       shipping_fee: Number(body.shippingFee || 0),
       total_amount: Number(body.totalAmount || 0),
@@ -472,28 +479,29 @@ export async function POST(request: Request) {
 
     // Dispatch automated background email alerts
     try {
-      const emailPromises: Promise<any>[] = [];
+      const emailTasks: Array<() => Promise<any>> = [];
 
       // 1. Queue Order Confirmation Email to Buyer
       if (body.customerEmail && body.customerEmail.includes('@')) {
-        console.log(`[Orders POST] 🛒 Queuing customer order confirmation email to ${body.customerEmail}`);
-        emailPromises.push(
-          sendOrderConfirmationEmail({
-            orderNumber,
-            customerName: body.customerName,
-            customerEmail: body.customerEmail,
-            deliveryAddress: body.deliveryAddress,
-            items: body.items || [],
-            totalAmount: Number(body.totalAmount || 0),
-            shippingFee: Number(body.shippingFee || 0)
-          }).then(res => {
+        emailTasks.push(async () => {
+          console.log(`[Orders POST] 🛒 Sending customer order confirmation email to ${body.customerEmail}`);
+          try {
+            const res = await sendOrderConfirmationEmail({
+              orderNumber,
+              customerName: body.customerName,
+              customerEmail: body.customerEmail,
+              deliveryAddress: body.deliveryAddress,
+              items: body.items || [],
+              totalAmount: Number(body.totalAmount || 0),
+              shippingFee: Number(body.shippingFee || 0)
+            });
             console.log(`[Order Confirmation] ✅ Customer email successfully sent to ${body.customerEmail}:`, res);
             return res;
-          }).catch(err => {
+          } catch (err: any) {
             console.error(`[Order Confirmation] ❌ Customer email failed for ${body.customerEmail}:`, err);
             return { success: false, error: err?.message };
-          })
-        );
+          }
+        });
       }
 
       // 2. Fetch all registered vendors with adminClient to bypass RLS and guarantee email retrieval
@@ -629,48 +637,51 @@ export async function POST(request: Request) {
         const vSubtotal = vItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
         const deliveryMethod = group.pkg?.deliveryMethod || body.packageMethods?.[vKey] || 'doorstep';
 
-        console.log(`[Orders POST] 📦 Queuing vendor new order notification to ${group.vendor.brandName} (${vEmail}) for order ${orderNumber}`);
-
-        emailPromises.push(
-          sendVendorNewOrderNotification({
-            vendor: {
-              id: group.vendor.id,
-              brandName: group.vendor.brandName,
-              designerName: group.vendor.designerName,
-              email: vEmail,
-              phone: group.vendor.phone,
-            },
-            orderNumber,
-            customerName: body.customerName,
-            deliveryCity: body.deliveryCity || body.city || 'Lagos',
-            deliveryState: body.deliveryState || body.state || 'Lagos',
-            deliveryMethod,
-            items: vItems.map((it: any) => ({
-              productName: it.productName || it.name || 'Item',
-              size: it.size || it.selectedSize || 'M',
-              color: typeof it.color === 'string' ? it.color : (it.color?.name || 'Standard'),
-              quantity: Number(it.quantity || 1),
-              price: Number(it.price || 0),
-              vendorPayout: Number(it.price || 0),
-            })),
-            totalPayout: vSubtotal,
-          }).then(res => {
+        emailTasks.push(async () => {
+          console.log(`[Orders POST] 📦 Sending vendor new order notification to ${group.vendor.brandName} (${vEmail}) for order ${orderNumber}`);
+          try {
+            const res = await sendVendorNewOrderNotification({
+              vendor: {
+                id: group.vendor.id,
+                brandName: group.vendor.brandName,
+                designerName: group.vendor.designerName,
+                email: vEmail,
+                phone: group.vendor.phone,
+              },
+              orderNumber,
+              customerName: body.customerName,
+              deliveryCity: body.deliveryCity || body.city || 'Lagos',
+              deliveryState: body.deliveryState || body.state || 'Lagos',
+              deliveryMethod,
+              items: vItems.map((it: any) => ({
+                productName: it.productName || it.name || 'Item',
+                size: it.size || it.selectedSize || 'M',
+                color: typeof it.color === 'string' ? it.color : (it.color?.name || 'Standard'),
+                quantity: Number(it.quantity || 1),
+                price: Number(it.price || 0),
+                vendorPayout: Number(it.price || 0),
+              })),
+              totalPayout: vSubtotal,
+            });
             console.log(`[Vendor Notification] ✅ Vendor email successfully sent to ${vEmail} (${group.vendor.brandName}):`, res);
             return res;
-          }).catch(err => {
+          } catch (err: any) {
             console.error(`[Vendor Notification] ❌ Vendor email failed for ${vEmail}:`, err);
             return { success: false, error: err?.message };
-          })
-        );
+          }
+        });
       }
 
-      // CRITICAL: Await all email promises with Promise.allSettled so serverless function does NOT terminate early
-      if (emailPromises.length > 0) {
-        console.log(`[Orders POST] ⏳ Awaiting ${emailPromises.length} outgoing emails...`);
-        const results = await Promise.allSettled(emailPromises);
-        console.log(`[Orders POST] 🚀 Finished dispatching ${results.length} emails:`,
-          results.map(r => r.status === 'fulfilled' ? r.value : r.reason)
-        );
+      // Execute all emails sequentially to ensure 100% reliable single-socket delivery
+      if (emailTasks.length > 0) {
+        console.log(`[Orders POST] ⏳ Dispatching ${emailTasks.length} outgoing emails sequentially...`);
+        for (let i = 0; i < emailTasks.length; i++) {
+          await emailTasks[i]();
+          if (i < emailTasks.length - 1) {
+            await new Promise(r => setTimeout(r, 600));
+          }
+        }
+        console.log(`[Orders POST] 🚀 Finished dispatching all ${emailTasks.length} emails.`);
       }
     } catch (e) {
       console.error('Email dispatch wrapper error:', e);
@@ -703,7 +714,14 @@ export async function PATCH(request: Request) {
     const headerVendorId = request.headers.get('x-vendor-id');
     const targetVendorId = (vendorId || headerVendorId || '').toLowerCase().trim();
 
-    const supabase = await createClient();
+    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    let supabase = adminClient;
+    try {
+      const client = await createClient();
+      if (client) supabase = client;
+    } catch (_) {}
 
     let query = supabase.from('orders').select('*');
     if (orderNumber) {
