@@ -7,7 +7,7 @@ import {
   Sparkles, Check, ShoppingBag, ShieldCheck, Truck, RotateCcw,
   Star, Heart, ArrowLeft, ArrowRight, Share2, Ruler,
   Building, Phone, MapPin, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, Loader2, Store, Clock, Package, Play, User, Layers,
-  Pause, ChevronLeft, X, Maximize2
+  Pause, ChevronLeft, X, Maximize2, Plus
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -74,6 +74,8 @@ export default function ProductDetailPage() {
     isInVault,
     setOutfitItem,
     userAuth,
+    followedVendors,
+    toggleFollowVendor,
   } = useStore();
 
   const cachedProduct = useMemo(() => {
@@ -775,13 +777,54 @@ export default function ProductDetailPage() {
           {/* Header & Vendor */}
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-4">
-              <Link
-                href={`/brand/${encodeURIComponent(product.vendorName)}`}
-                className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline"
-              >
-                <Store className="h-3.5 w-3.5" />
-                <span>{product.vendorName}</span>
-              </Link>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <Link
+                  href={`/brand/${encodeURIComponent(product.vendorName)}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline"
+                >
+                  <Store className="h-3.5 w-3.5" />
+                  <span>{product.vendorName}</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const vKey = (product.vendorId || product.vendorName || '').toLowerCase();
+                    toggleFollowVendor(vKey);
+                    try {
+                      const isNowFollowed = !(followedVendors || []).includes(vKey);
+                      await fetch('/api/vendors/follow', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          vendorSlug: product.vendorName,
+                          vendorId: product.vendorId,
+                          shopperEmail: userAuth?.email,
+                          action: isNowFollowed ? 'follow' : 'unfollow',
+                        })
+                      });
+                    } catch (_) {}
+                  }}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-mono-luxury uppercase font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                    (followedVendors || []).includes((product.vendorId || product.vendorName || '').toLowerCase())
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  }`}
+                  title={(followedVendors || []).includes((product.vendorId || product.vendorName || '').toLowerCase()) ? 'Following this brand' : 'Follow this brand for fresh drops'}
+                >
+                  {(followedVendors || []).includes((product.vendorId || product.vendorName || '').toLowerCase()) ? (
+                    <>
+                      <Check className="h-3 w-3 stroke-[3]" />
+                      <span>Following</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-3 w-3 stroke-[3]" />
+                      <span>Follow</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               <button
                 type="button"

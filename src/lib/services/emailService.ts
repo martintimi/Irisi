@@ -690,3 +690,128 @@ export async function sendSignupVerificationEmail(payload: SignupVerificationEma
     error: res.error,
   };
 }
+
+export interface AbandonedCartItem {
+  id?: string;
+  name: string;
+  price: number;
+  imageUrl?: string;
+  quantity?: number;
+  size?: string;
+  color?: string;
+  category?: string;
+  vendorName?: string;
+}
+
+export interface AbandonedCartPayload {
+  customerEmail: string;
+  customerName?: string;
+  items: AbandonedCartItem[];
+  totalAmount: number;
+  checkoutUrl?: string;
+}
+
+/**
+ * 4. ABANDONED CART RECOVERY EMAIL
+ * Re-engages shoppers who left pieces in cart (clothing, accessories, bags, watches, footwear)
+ * with a high-converting, friendly Nigerian luxury reminder.
+ */
+export async function sendAbandonedCartEmail(payload: AbandonedCartPayload) {
+  const { customerEmail, customerName, items, totalAmount } = payload;
+  if (!customerEmail || !customerEmail.includes('@')) {
+    return { success: false, error: 'Invalid customer email' };
+  }
+
+  const displayName = customerName || 'there';
+  const checkoutUrl = payload.checkoutUrl || 'https://irisimi-nig.vercel.app/checkout';
+
+  // Check if cart contains accessories (bags, watches, sunglasses, jewelry, belts, etc.)
+  const hasAccessories = items.some(it => {
+    const cat = (it.category || '').toLowerCase();
+    const nm = (it.name || '').toLowerCase();
+    return cat.includes('access') || nm.includes('bag') || nm.includes('watch') ||
+      nm.includes('glass') || nm.includes('shade') || nm.includes('belt') ||
+      nm.includes('chain') || nm.includes('ring') || nm.includes('shoe');
+  });
+
+  const subject = hasAccessories
+    ? `Still eyeing this piece? 👀 Your cart is waiting on ÌRÍSÍ`
+    : `Still thinking about this fit? 👀 Your pieces are waiting on ÌRÍSÍ`;
+
+  const itemsHtml = items.map(it => `
+    <tr>
+      <td style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); vertical-align: middle;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+          <tr>
+            ${it.imageUrl ? `
+              <td width="56" style="vertical-align: middle; padding-right: 12px;">
+                <img src="${it.imageUrl}" alt="${it.name}" width="52" height="52" style="border-radius: 10px; object-fit: cover; display: block; border: 1px solid rgba(255,255,255,0.1);" />
+              </td>
+            ` : ''}
+            <td style="vertical-align: middle;">
+              <strong style="color: #ffffff; font-size: 13px; display: block;">${it.name}</strong>
+              <span style="color: #9ca3af; font-size: 11px; display: block; margin-top: 2px;">
+                ${it.size && it.size !== 'One Size' ? `Size: ${it.size} • ` : ''}${it.color ? `Color: ${it.color} • ` : ''}Qty: ${it.quantity || 1}
+                ${it.vendorName ? ` • By: ${it.vendorName}` : ''}
+              </span>
+            </td>
+            <td align="right" style="vertical-align: middle; color: #e6c367; font-weight: 700; font-size: 13px; font-family: monospace;">
+              ₦${Number(it.price || 0).toLocaleString()}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  `).join('');
+
+  const bodyContent = `
+    <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
+      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">
+        ✨ YOUR BAG IS RESERVED
+      </span>
+    </div>
+
+    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 12px; font-weight: 700;">
+      You Left Something Special in Your Cart! 👀
+    </h2>
+    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+      Hello ${displayName}, we noticed you left pieces in your cart on ÌRÍSÍ. Whether it's a handcrafted statement accessory, luxury timepiece, or tailored designer fit, boutique stocks move quickly across Nigeria.
+    </p>
+
+    <!-- Cart Items Table -->
+    <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 16px 20px; margin-bottom: 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${itemsHtml}
+        <tr>
+          <td style="padding-top: 14px; color: #9ca3af; font-size: 12px; font-weight: 600;">
+            Estimated Subtotal:
+          </td>
+          <td align="right" style="padding-top: 14px; color: #e6c367; font-weight: 800; font-size: 16px; font-family: monospace;">
+            ₦${Number(totalAmount || 0).toLocaleString()}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Escrow Protection Guarantee -->
+    <div style="background-color: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 14px; padding: 14px 16px; margin-bottom: 24px; text-align: center;">
+      <strong style="color: #10b981; font-size: 13px; display: block; margin-bottom: 4px;">🛡️ 100% Escrow Protection Guaranteed</strong>
+      <span style="color: #9ca3af; font-size: 12px; line-height: 1.4; display: block;">
+        No wahala! Your funds stay securely held in escrow until your package reaches you and you confirm your satisfaction.
+      </span>
+    </div>
+
+    <!-- Call to Action -->
+    <div style="text-align: center; margin-bottom: 24px;">
+      <a href="${checkoutUrl}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 36px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+        Complete Your Order with Escrow &rarr;
+      </a>
+    </div>
+
+    <p style="color: #6b7280; font-size: 11px; text-align: center; margin: 0;">
+      Need help with sizing or delivery options? Tap WhatsApp VIP Concierge below anytime.
+    </p>
+  `;
+
+  return sendLuxuryEmail(customerEmail, subject, wrapEmailHtml('Cart Reminder', bodyContent));
+}

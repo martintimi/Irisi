@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
+import { sendNewDropNotificationEmail } from '@/lib/services/emailService';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -815,6 +816,48 @@ export async function POST(request: Request) {
     }
 
 
+
+    // Notify genuine followers of this specific atelier / accessories brand in background
+    try {
+      (async () => {
+        const vKey = (vendorName || body.vendorName || (typeof resolvedVendorId === 'string' ? resolvedVendorId : '') || '').toLowerCase().trim();
+        if (!vKey) return;
+
+        // Query genuine followers from Supabase
+        const { data: dbFollowers } = await supabase
+          .from('vendor_followers')
+          .select('shopper_email')
+          .eq('vendor_id', vKey);
+
+        const followerEmails = new Set<string>();
+        (dbFollowers || []).forEach((f: any) => {
+          const em = (f.shopper_email || '').toLowerCase().trim();
+          if (em && em.includes('@')) followerEmails.add(em);
+        });
+
+        if (followerEmails.size === 0) return;
+
+        const activeVendorName = (vendorName || body.vendorName || 'Verified Brand').toUpperCase();
+
+        for (const sEmail of followerEmails) {
+          try {
+            await sendNewDropNotificationEmail({
+              customerEmail: sEmail,
+              customerName: 'Valued Client',
+              vendorName: activeVendorName,
+              product: {
+                id: productId,
+                name,
+                price: Number(price),
+                imageUrl: finalImage,
+                category,
+              }
+            });
+            await new Promise(r => setTimeout(r, 300));
+          } catch (_) {}
+        }
+      })().catch(e => console.warn('Follower drop alert error:', e));
+    } catch (_) {}
 
     return NextResponse.json({
       success: true,

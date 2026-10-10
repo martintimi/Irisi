@@ -201,6 +201,8 @@ export default function SuperAdminPage() {
   const [isShopperMailModalOpen, setIsShopperMailModalOpen] = useState(false);
   const [shopperMailMode, setShopperMailMode] = useState<'broadcast' | 'single'>('broadcast');
   const [shopperMailTarget, setShopperMailTarget] = useState<any | null>(null);
+  const [isRecoveringCarts, setIsRecoveringCarts] = useState(false);
+  const [cartRecoveryMsg, setCartRecoveryMsg] = useState('');
 
   // Vendor Payouts & Settlement Modal State
   const [selectedVendorPayoutModal, setSelectedVendorPayoutModal] = useState<any | null>(null);
@@ -3442,6 +3444,37 @@ export default function SuperAdminPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                   <button
                     type="button"
+                    disabled={isRecoveringCarts}
+                    onClick={async () => {
+                      setIsRecoveringCarts(true);
+                      setCartRecoveryMsg('');
+                      try {
+                        const res = await fetch('/api/cart/abandon', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'recover', force: true }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setCartRecoveryMsg(`✅ Processed recovery: ${data.recoveredCount || 0} abandoned cart reminder${data.recoveredCount === 1 ? '' : 's'} dispatched!`);
+                        } else {
+                          setCartRecoveryMsg('No eligible abandoned carts to recover at this time.');
+                        }
+                      } catch {
+                        setCartRecoveryMsg('Network error while triggering cart recovery.');
+                      } finally {
+                        setIsRecoveringCarts(false);
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl surface-card border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 font-mono-luxury font-bold text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap disabled:opacity-50"
+                    title="Send reminder emails to shoppers who left items in cart"
+                  >
+                    <ShoppingBag className="h-4 w-4 text-amber-400" />
+                    <span>{isRecoveringCarts ? 'Recovering Carts...' : '🛒 Recover Carts'}</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => {
                       setShopperMailTarget(null);
                       setShopperMailMode('broadcast');
@@ -3465,6 +3498,13 @@ export default function SuperAdminPage() {
                   </div>
                 </div>
               </div>
+
+              {cartRecoveryMsg && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono-luxury flex items-center justify-between">
+                  <span>{cartRecoveryMsg}</span>
+                  <button onClick={() => setCartRecoveryMsg('')} className="p-1 hover:text-white cursor-pointer">✕</button>
+                </div>
+              )}
 
               {filteredShoppers.length === 0 ? (
                 <div className="p-12 text-center surface-card rounded-3xl border border-[var(--border-subtle)] space-y-3">

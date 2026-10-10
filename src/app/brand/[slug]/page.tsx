@@ -8,7 +8,7 @@ import {
   Sparkles, Check, ShoppingBag, Layers, ShieldCheck, Truck, RotateCcw,
   Star, Heart, ArrowLeft, ArrowRight, Share2, Ruler, Scissors,
   Building, Phone, MapPin, CheckCircle2, ChevronRight, MessageCircle,
-  Copy, ExternalLink, SlidersHorizontal, Bookmark, Eye, Store, Loader2
+  Copy, ExternalLink, SlidersHorizontal, Bookmark, Eye, Store, Loader2, Plus
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -47,6 +47,9 @@ export default function BrandStorefrontPage() {
     setOutfitItem,
     toggleVaultItem,
     isInVault,
+    followedVendors,
+    toggleFollowVendor,
+    userAuth,
   } = useStore();
 
   const [vendor, setVendor] = useState<any | null>(null);
@@ -159,6 +162,11 @@ export default function BrandStorefrontPage() {
   const tiktokUrl = vendor.tiktok ? `https://tiktok.com/@${vendor.tiktok.replace('@', '')}` : null;
   const snapUrl = vendor.snapchat ? `https://snapchat.com/add/${vendor.snapchat.replace('@', '')}` : null;
   const waUrl = vendor.whatsapp ? `https://wa.me/${vendor.whatsapp.replace(/[^0-9]/g, '')}` : null;
+  const isFollowed = (followedVendors || []).includes((rawSlug || vendor?.id || '').toLowerCase());
+  const isAccessoriesSeller = products.some(p => p.category === 'accessories') ||
+    vendor?.specialty?.toLowerCase().includes('accessories') ||
+    vendor?.vendorType?.toLowerCase().includes('accessories') ||
+    vendor?.vendorSpecialty?.toLowerCase().includes('accessories');
 
   return (
     <>
@@ -313,8 +321,44 @@ export default function BrandStorefrontPage() {
             </div>
           </div>
 
-          {/* Stat Pills */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Stat Pills & Follow Button */}
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={async () => {
+                toggleFollowVendor(rawSlug || vendor.id);
+                try {
+                  await fetch('/api/vendors/follow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      vendorSlug: rawSlug,
+                      vendorId: vendor.id,
+                      shopperEmail: userAuth?.email,
+                      action: isFollowed ? 'unfollow' : 'follow',
+                    })
+                  });
+                } catch (_) {}
+              }}
+              className={`px-5 py-3 rounded-2xl text-xs font-mono-luxury uppercase font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer ${
+                isFollowed
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30'
+                  : 'bg-gradient-to-r from-[var(--gold-accent)] via-amber-300 to-[var(--gold-accent)] text-black hover:brightness-105 active:scale-95'
+              }`}
+            >
+              {isFollowed ? (
+                <>
+                  <Check className="h-4 w-4 stroke-[3]" />
+                  <span>Following</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>Follow {isAccessoriesSeller ? 'Brand' : isBoutique ? 'Boutique' : 'Atelier'}</span>
+                </>
+              )}
+            </button>
+
             <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-center min-w-[100px]">
               <span className="text-[9px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold block">Live Drops</span>
               <strong className="font-editorial text-2xl font-bold text-[var(--text-primary)]">

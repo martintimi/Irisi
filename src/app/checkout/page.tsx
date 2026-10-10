@@ -288,6 +288,41 @@ export default function CheckoutPage() {
   const totalShippingFee = Object.values(packageShippingCalculations).reduce((sum, item) => sum + item.fee, 0);
   const grandTotal = subtotal + totalShippingFee;
 
+  // Track active cart session for abandoned cart protection & recovery
+  useEffect(() => {
+    const shopperEmail = formData.email || userAuth?.email || bodyProfile?.email;
+    if (!shopperEmail || !shopperEmail.includes('@') || cart.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        await fetch('/api/cart/abandon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'record',
+            customerEmail: shopperEmail,
+            customerName: formData.name || userAuth?.name || bodyProfile?.name,
+            customerPhone: formData.phone || userAuth?.phone,
+            items: cart.map(item => ({
+              id: item.product.id,
+              name: item.product.name,
+              price: item.product.price,
+              quantity: item.quantity,
+              size: item.selectedSize,
+              color: item.selectedColor?.name || 'Standard',
+              imageUrl: item.selectedColor?.imageUrl || item.product.imageUrl,
+              category: item.product.category,
+              vendorName: item.product.vendorName,
+            })),
+            totalAmount: grandTotal,
+          })
+        });
+      } catch (_) {}
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [formData.email, formData.name, formData.phone, userAuth?.email, userAuth?.name, userAuth?.phone, bodyProfile?.email, bodyProfile?.name, cart, grandTotal]);
+
   const vendorIds = useMemo(() => Object.keys(groupedItems), [groupedItems]);
   const isAllParkPickup = vendorIds.length === 0 || vendorIds.every(
     vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method || 'park_pickup') === 'park_pickup'
@@ -502,6 +537,20 @@ export default function CheckoutPage() {
       createNewOrder(orderPayload);
       setOrderPlaced(orderPayload);
       clearCart();
+
+      // Clear abandoned cart registry upon successful order conversion
+      const shopperEmail = formData.email || userAuth?.email || bodyProfile?.email;
+      if (shopperEmail) {
+        fetch('/api/cart/abandon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'clear',
+            customerEmail: shopperEmail,
+          })
+        }).catch(() => {});
+      }
+
       setIsProcessing(false);
       setShowPaymentModal(false);
 
