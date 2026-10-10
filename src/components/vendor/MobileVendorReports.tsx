@@ -123,7 +123,7 @@ export default function MobileVendorReports({
           <div className="space-y-2.5">
             {orders.map((row, idx) => {
               const rowSubtotal = (row.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-              const rowPayout = rowSubtotal + (Number(row.shippingFee) || 2500);
+              const rowPayout = rowSubtotal;
 
               return (
                 <div

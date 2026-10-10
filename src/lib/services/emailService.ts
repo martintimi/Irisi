@@ -21,6 +21,7 @@ export interface OrderEmailPayload {
     imageUrl?: string;
   }>;
   totalAmount: number;
+  subtotal?: number;
   shippingFee: number;
   driverPhone?: string;
   waybillNumber?: string;
@@ -161,7 +162,7 @@ export async function sendVendorNewOrderEmail(vendorEmail: string, payload: Orde
       price: Number(i.price || 0),
       vendorPayout: Number(i.price || 0),
     })),
-    totalPayout: Number(payload.totalAmount || 0),
+    totalPayout: Number(payload.subtotal ?? (payload.items || []).reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 1)), 0)),
   });
 }
 
@@ -295,7 +296,7 @@ export async function sendDeliverySettledEmail(vendorEmail: string, payload: Ord
       email: vendorEmail,
     },
     orderNumber: payload.orderNumber,
-    payoutAmount: Number(payload.totalAmount || 0),
+    payoutAmount: Number(payload.subtotal ?? (payload.items || []).reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 1)), 0)),
     customerName: payload.customerName,
   });
 }

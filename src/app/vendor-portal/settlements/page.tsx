@@ -34,13 +34,15 @@ export default function VendorSettlementsPage() {
     loadSettlements();
   }, [loadSettlements]);
 
-  const totalEscrowLocked = orders.reduce((sum, ord) => {
-    const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-    // Escrow balance is strictly clothes sales. Delivery fees belong to couriers / transport drivers.
-    return sum + itemsTotal;
-  }, 0);
+  const totalEscrowLocked = orders
+    .filter(o => (o.trackingStage || 1) < 4)
+    .reduce((sum, ord) => {
+      const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
+      // Escrow balance is strictly merchandise sales. Delivery fees belong to couriers / transport drivers.
+      return sum + itemsTotal;
+    }, 0);
 
-  const completedOrders = orders.filter(o => o.trackingStage >= 4);
+  const completedOrders = orders.filter(o => (o.trackingStage || 1) >= 4);
   const totalSettled = completedOrders.reduce((sum, ord) => {
     const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
     return sum + itemsTotal;

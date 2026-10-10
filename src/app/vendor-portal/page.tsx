@@ -162,15 +162,13 @@ export default function VendorOverviewPage() {
     .filter(o => (o.trackingStage || 1) < 4)
     .reduce((sum, ord) => {
       const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-      const shipping = Number(ord.shippingFee) || 2500;
-      return sum + itemsTotal + shipping;
+      return sum + itemsTotal;
     }, 0);
 
   const completedOrders = orders.filter(o => (o.trackingStage || 1) >= 4);
   const totalSettled = completedOrders.reduce((sum, ord) => {
     const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-    const shipping = Number(ord.shippingFee) || 2500;
-    return sum + itemsTotal + shipping;
+    return sum + itemsTotal;
   }, 0);
 
   const totalLiveInventory = dbProducts.reduce((acc, p) => {

@@ -159,7 +159,7 @@ export default function VendorReportsPage() {
                   <tbody className="divide-y divide-[var(--border-subtle)] text-[var(--text-primary)]">
                     {orders.map((row, idx) => {
                       const rowSubtotal = (row.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-                      const rowPayout = rowSubtotal + (Number(row.shippingFee) || 2500);
+                      const rowPayout = rowSubtotal;
 
                       return (
                         <tr key={idx} className="hover:bg-[var(--bg-primary)]/50 transition-colors">
