@@ -255,7 +255,7 @@ export default function CheckoutPage() {
             method: 'park_pickup',
             reason: 'Pay Driver on Pickup',
             isSameCity: false,
-            courierName: 'Interstate Bus Terminal Waybill',
+            courierName: 'Motor Park Bus Waybill',
             eta: '1-2 business days',
             packageWeightKg: 0.8,
             packageDimensions: '32×24×6cm',

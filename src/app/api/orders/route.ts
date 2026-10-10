@@ -288,14 +288,14 @@ export async function POST(request: Request) {
           packagingType: metrics.packagingType,
           hasDoorstepPickup: courierServiceType === 'pickup',
           instructions: isPark
-            ? 'Package garment and drop at local motor park. Customer pays collection fee upon arrival.'
+            ? 'Package item(s) securely and take to local motor park. Customer pays driver collection fee upon arrival.'
             : (courierServiceType === 'pickup'
               ? `${resolvedCourier} dispatch rider will arrive at your registered atelier address to collect the parcel.`
               : `Doorstep pickup unavailable in ${vCity}. Drop off at ${serviceability.nearestStationRecommendation}.`),
           dropoffStation: isPark
-            ? (body.selectedParkTerminals?.[vId] || `${body.deliveryState || 'Destination'} Central Terminal`)
+            ? (body.selectedParkTerminals?.[vId]?.replace(/Terminal/gi, 'Motor Park') || `${body.deliveryState || body.deliveryCity || 'Destination'} Motor Park`)
             : (courierServiceType === 'dropoff' ? serviceability.nearestStationRecommendation : undefined),
-          selectedParkTerminal: isPark ? (body.selectedParkTerminals?.[vId] || `${body.deliveryState || 'Destination'} Central Terminal`) : undefined,
+          selectedParkTerminal: isPark ? (body.selectedParkTerminals?.[vId]?.replace(/Terminal/gi, 'Motor Park') || `${body.deliveryState || body.deliveryCity || 'Destination'} Motor Park`) : undefined,
           pickupStatus: 'pending_packaging',
           requestToken: passedPkg?.requestToken,
           serviceCode: passedPkg?.serviceCode,

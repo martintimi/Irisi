@@ -121,7 +121,7 @@ export default function MobileVendorOrders({
           </h3>
           <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
             {activeTab === 'all'
-              ? 'New orders containing your brand garments will appear here instantly.'
+              ? 'New orders containing your brand products will appear here instantly.'
               : `No orders currently in the ${activeTab} stage.`}
           </p>
         </div>
@@ -232,14 +232,10 @@ export default function MobileVendorOrders({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
-                  <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                    <span className="text-[var(--text-muted)] block text-[9px]">Waybill No:</span>
+                <div className="text-[10px] font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
+                  <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between">
+                    <span className="text-[var(--text-muted)] text-[9px]">Waybill / Tracking:</span>
                     <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || 'Pending'}</span>
-                  </div>
-                  <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                    <span className="text-[var(--text-muted)] block text-[9px]">Package Weight:</span>
-                    <span className="font-bold text-[var(--text-primary)]">{ord.packageWeightKg || 0.8}kg</span>
                   </div>
                 </div>
 
@@ -256,10 +252,10 @@ export default function MobileVendorOrders({
                   <span className="text-[var(--text-secondary)]">Destination:</span>
                   <span className="font-bold text-[var(--text-primary)] text-right truncate max-w-[180px]">{ord.deliveryAddress}</span>
                 </div>
-                {ord.deliveryMethod === 'park_pickup' && ord.dropoffStation && (
+                {ord.deliveryMethod === 'park_pickup' && (
                   <div className="flex items-center justify-between text-[11px] text-amber-400">
-                    <span>Collection Terminal:</span>
-                    <span className="font-bold truncate max-w-[170px]">{ord.dropoffStation}</span>
+                    <span>Delivery Mode:</span>
+                    <span className="font-bold truncate max-w-[170px]">Motor Park Waybill</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-[11px]">

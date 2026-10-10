@@ -35,9 +35,9 @@ export default function ShippingWaybillModal({
     order.deliveryMethod === 'park_pickup' ||
     order.packageMethods?.[order.items?.[0]?.vendorId] === 'park_pickup';
 
-  const destinationTerminal = order.dropoffStation || order.selectedParkTerminal || '';
-  const destinationAddress = isParkPickup && destinationTerminal
-    ? `${destinationTerminal} (${order.deliveryCity || 'Terminal Pickup'})`
+  const destinationTerminal = (order.dropoffStation || order.selectedParkTerminal || '').replace(/Terminal/gi, 'Motor Park');
+  const destinationAddress = isParkPickup
+    ? (destinationTerminal ? `${destinationTerminal} (${order.deliveryCity || 'Motor Park Pickup'})` : `${order.deliveryCity || order.deliveryAddress} (Motor Park Pickup)`)
     : (order.deliveryAddress || `${order.deliveryCity || 'Nigeria'}`);
 
   const vendorName = vendorProfile?.brandName || order.items?.[0]?.vendorName || 'Verified Partner';
@@ -64,7 +64,7 @@ DESTINATION: ${destinationAddress}
 WAYBILL NO: ${waybillNo}
 COURIER: ${courierName}
 PIECES:
-${itemsSummary || '• Garment Parcel'}
+${itemsSummary || '• Order Parcel'}
 PAYMENT: ${isParkPickup ? 'Pay Driver on Collection at Park' : 'Prepaid Escrow (Do Not Collect Cash)'}
 FROM: ${vendorName} (${vendorPhone})
 -------------------------`;
@@ -213,7 +213,7 @@ FROM: ${vendorName} (${vendorPhone})
               </div>
               {isParkPickup ? (
                 <div className="pt-1 text-[11px] text-amber-400 font-bold border-t border-amber-500/20">
-                  ⚠️ NOTE: Customer pays collection transport fee to driver at park terminal.
+                  ⚠️ NOTE: Customer pays collection transport fee to driver at the motor park.
                 </div>
               ) : (
                 <div className="pt-1 text-[11px] text-emerald-400 font-bold border-t border-emerald-500/20">
@@ -418,7 +418,7 @@ FROM: ${vendorName} (${vendorPhone})
               <div className="bg-gray-100 p-2.5 rounded-lg border border-gray-300 text-[10px] font-mono text-gray-700 leading-snug">
                 {isParkPickup ? (
                   <>
-                    <strong>MOTOR PARK DRIVER INSTRUCTIONS:</strong> Contact passenger/recipient ({customerPhone}) upon bus arrival at destination terminal. Collect park waybill collection fee on handover.
+                    <strong>MOTOR PARK DRIVER INSTRUCTIONS:</strong> Contact passenger/recipient ({customerPhone}) upon bus arrival at destination motor park. Collect park waybill collection fee on handover.
                   </>
                 ) : (
                   <>

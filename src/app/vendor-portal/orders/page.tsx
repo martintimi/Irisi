@@ -139,7 +139,11 @@ export default function VendorOrdersPage() {
     const packageWeightKg = myPkg.packageWeightKg || 1.1;
     const packageDimensions = myPkg.packageDimensions || '35×25×6cm';
     const dropoffStation = myPkg.dropoffStation || myPkg.selectedParkTerminal;
-    const instructions = myPkg.instructions || (deliveryMethod === 'park_pickup' ? 'Take parcel to local motor park. Customer pays collection fee.' : (courierServiceType === 'pickup' ? `${courierName} dispatch rider will arrive for pickup at your registered address.` : 'Drop off at nearest courier office.'));
+    const instructions = myPkg.instructions
+      ? myPkg.instructions.replace(/garment/gi, 'item(s)')
+      : (deliveryMethod === 'park_pickup'
+        ? 'Package item(s) securely and take to local motor park. Customer pays driver collection fee upon arrival.'
+        : (courierServiceType === 'pickup' ? `${courierName} dispatch rider will arrive for pickup at your registered address.` : 'Drop off at nearest courier office.'));
 
     return {
       id: ord.id,
@@ -395,7 +399,7 @@ export default function VendorOrdersPage() {
             No Orders in this Status
           </h3>
           <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-            Incoming orders containing your brand garments will appear here.
+            Incoming orders containing your brand products will appear here.
           </p>
         </div>
       ) : (
@@ -509,17 +513,10 @@ export default function VendorOrdersPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
+                <div className="text-xs font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
                     <span className="text-[var(--text-muted)]">Waybill / Tracking:</span>
-                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                    <span className="text-[var(--text-muted)]">Package Weight:</span>
-                    <span className="font-bold text-[var(--text-primary)]">
-                      {ord.packageWeightKg}kg ({ord.packageDimensions}) <span className="text-[9px] text-emerald-400 font-normal">· Auto-assigned</span>
-                    </span>
+                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || 'Pending'}</span>
                   </div>
                 </div>
 
@@ -534,8 +531,8 @@ export default function VendorOrdersPage() {
                 <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                   <div className="text-[var(--text-muted)] text-[10px] uppercase">Delivery Address:</div>
                   <div className="font-bold text-[var(--text-primary)] mt-0.5">{ord.deliveryAddress}</div>
-                  {ord.deliveryMethod === 'park_pickup' && ord.dropoffStation && (
-                    <div className="text-[10px] text-amber-400 mt-1 font-bold">Terminal: {ord.dropoffStation}</div>
+                  {ord.deliveryMethod === 'park_pickup' && (
+                    <div className="text-[10px] text-amber-400 mt-1 font-bold">Motor Park Waybill · Pay on Collection</div>
                   )}
                 </div>
 
@@ -545,14 +542,14 @@ export default function VendorOrdersPage() {
                     {ord.deliveryMethod === 'park_pickup' ? 'Pay on Collection' : `₦${ord.vendorDeliveryFee.toLocaleString()}`}
                   </div>
                   <div className="text-[10px] text-[var(--text-muted)]">
-                    {ord.deliveryMethod === 'park_pickup' ? 'Customer pays driver at motor park terminal' : 'Courier dispatch fee (remitted to courier partner)'}
+                    {ord.deliveryMethod === 'park_pickup' ? 'Customer pays bus driver directly on collection' : 'Courier dispatch fee (remitted to courier partner)'}
                   </div>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
                   <div className="text-[var(--text-muted)] text-[10px] uppercase">Your Total Escrow Payout:</div>
                   <div className="font-bold text-emerald-400 text-base mt-0.5">₦{ord.totalPayout.toLocaleString()}</div>
-                  <div className="text-[10px] text-[var(--text-muted)]">Clothes Earnings (100% Escrow Secured)</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Item Earnings (100% Escrow Secured)</div>
                 </div>
               </div>
 
@@ -565,7 +562,7 @@ export default function VendorOrdersPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Phone className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                    <span>Driver / Station: <strong>{ord.trackingDetails.driverPhone}</strong></span>
+                    <span>Driver Phone: <strong>{ord.trackingDetails.driverPhone}</strong></span>
                   </div>
                 </div>
               )}
