@@ -18,11 +18,11 @@ export const SHOPPER_EMAIL_PRESETS: ShopperEmailPreset[] = [
     badgeText: '✨ WEEKEND LOOKBOOK & DRIP',
     subject: 'Weekend Drip Alert! Fresh Senator Sets & Boutique Drops on ÌRÍSÍ 🔥',
     headline: 'Your Weekend Look Is Waiting For You! 🙌',
-    bodyText: `Happy weekend! Weekend don reach and you know how we dey do am for ÌRÍSÍ. Top Nigerian fashion designers just updated their collections with fresh Senator sets, luxury kaftans, and clean streetwear.
+    bodyText: `The weekend is here, and you know how we do it on ÌRÍSÍ! Verified Nigerian designers have just refreshed their racks with sharp Senator sets, luxury kaftans, and stylish pieces for your wardrobe.
 
-Whether you have an owambe, dinner, or relaxed Sunday vibes, everything is tailored to perfection and 100% Escrow Protected.
+Whether you have an owambe, an evening dinner, or relaxed Sunday vibes, every piece is tailored to perfection and 100% Escrow Protected.
 
-No stress, no stories. Find your perfect fit today!`,
+No stress, no stories. Step into your best look today!`,
     buttonLabel: 'Shop Weekend Drip Now',
     buttonUrl: 'https://irisimi-nig.vercel.app/shop',
   },

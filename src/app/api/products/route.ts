@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
-import { sendNewDropNotificationEmail } from '@/lib/services/emailService';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -815,44 +814,7 @@ export async function POST(request: Request) {
       console.warn('Optional product_variants insert skipped:', variantErr);
     }
 
-    // Trigger New Drop alert emails to active shoppers in background
-    try {
-      (async () => {
-        const { data: recentOrders } = await supabase
-          .from('orders')
-          .select('customer_name, customer_email')
-          .order('created_at', { ascending: false })
-          .limit(40);
 
-        const uniqueShoppers = new Map<string, string>();
-        (recentOrders || []).forEach((o: any) => {
-          const em = (o.customer_email || '').toLowerCase().trim();
-          if (em && em.includes('@') && !uniqueShoppers.has(em)) {
-            uniqueShoppers.set(em, o.customer_name || 'Boss');
-          }
-        });
-
-        const activeVendorName = (vendorName || body.vendorName || (typeof resolvedVendorId === 'string' ? resolvedVendorId : '') || 'A Verified Designer').toUpperCase();
-
-        for (const [sEmail, sName] of uniqueShoppers.entries()) {
-          try {
-            await sendNewDropNotificationEmail({
-              customerEmail: sEmail,
-              customerName: sName,
-              vendorName: activeVendorName,
-              product: {
-                id: productId,
-                name,
-                price: Number(price),
-                imageUrl: finalImage,
-                category,
-              }
-            });
-            await new Promise(r => setTimeout(r, 350));
-          } catch (_) {}
-        }
-      })().catch(err => console.warn('New drop broadcast error:', err));
-    } catch (_) {}
 
     return NextResponse.json({
       success: true,
