@@ -35,6 +35,7 @@ export default function MobileVendorOrders({
   const [dispatchModalOrder, setDispatchModalOrder] = useState<any | null>(null);
   const [waybillInput, setWaybillInput] = useState('');
   const [driverPhoneInput, setDriverPhoneInput] = useState('');
+  const [dispatchError, setDispatchError] = useState('');
 
   const toPackCount = vendorOrders.filter((o: any) => o.trackingStage <= 2).length;
   const dispatchedCount = vendorOrders.filter((o: any) => o.trackingStage === 3).length;
@@ -49,14 +50,24 @@ export default function MobileVendorOrders({
 
   const handleOpenDispatch = (ord: any) => {
     setDispatchModalOrder(ord);
-    setWaybillInput('');
-    setDriverPhoneInput('');
+    setWaybillInput(ord.waybillNumber || ord.trackingDetails?.waybillNumber || '');
+    setDriverPhoneInput(ord.driverPhone || ord.trackingDetails?.driverPhone || '');
+    setDispatchError('');
   };
 
   const handleModalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dispatchModalOrder) return;
-    await onConfirmDispatch(dispatchModalOrder, waybillInput, driverPhoneInput);
+    const waybill = waybillInput.trim();
+    const driverPhone = driverPhoneInput.trim();
+
+    if (!waybill && !driverPhone) {
+      setDispatchError('Please enter at least a Waybill / Tracking Number or Driver Phone Number.');
+      return;
+    }
+
+    setDispatchError('');
+    await onConfirmDispatch(dispatchModalOrder, waybill, driverPhone);
     setDispatchModalOrder(null);
   };
 
@@ -235,7 +246,7 @@ export default function MobileVendorOrders({
                 <div className="text-[10px] font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
                   <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between">
                     <span className="text-[var(--text-muted)] text-[9px]">Waybill / Tracking:</span>
-                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || 'Pending'}</span>
+                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || ord.trackingDetails?.waybillNumber || 'Pending'}</span>
                   </div>
                 </div>
 
@@ -272,17 +283,41 @@ export default function MobileVendorOrders({
                 </div>
               </div>
 
-              {/* Courier & Driver details if dispatched - NO DUPLICATE WAYBILL */}
-              {ord.trackingStage >= 3 && ord.trackingDetails?.driverPhone && (
-                <div className="p-2.5 rounded-2xl bg-[var(--gold-subtle)]/40 border border-[var(--gold-accent)]/30 flex items-center justify-between text-[11px] font-mono-luxury text-[var(--text-primary)]">
-                  <div className="flex items-center gap-1.5">
-                    <Truck className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                    <span>Courier: <strong>{ord.courierName}</strong></span>
+              {/* Courier, Tracking Number & Driver details if dispatched */}
+              {ord.trackingStage >= 3 && (
+                <div className="p-3 rounded-2xl bg-[var(--gold-subtle)]/30 border border-[var(--gold-accent)]/30 space-y-2 text-[11px] font-mono-luxury text-[var(--text-primary)]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Truck className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
+                      <span>Transporter: <strong className="text-[var(--text-primary)]">{ord.courierName}</strong></span>
+                    </div>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase border border-emerald-500/30">
+                      In Transit
+                    </span>
                   </div>
-                  <a href={`tel:${ord.trackingDetails.driverPhone}`} className="text-[var(--gold-accent)] font-bold flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    <span>{ord.trackingDetails.driverPhone}</span>
-                  </a>
+
+                  <div className="grid grid-cols-1 gap-1.5 pt-1.5 border-t border-[var(--border-subtle)]/50">
+                    {(ord.waybillNumber || ord.trackingDetails?.waybillNumber) && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[var(--text-muted)] text-[10px]">Waybill / Tracking:</span>
+                        <strong className="text-[var(--gold-accent)] font-mono">
+                          {ord.waybillNumber || ord.trackingDetails?.waybillNumber}
+                        </strong>
+                      </div>
+                    )}
+                    {(ord.driverPhone || ord.trackingDetails?.driverPhone) && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[var(--text-muted)] text-[10px]">Driver / Rider Phone:</span>
+                        <a
+                          href={`tel:${ord.driverPhone || ord.trackingDetails?.driverPhone}`}
+                          className="text-[var(--gold-accent)] font-bold flex items-center gap-1 hover:underline"
+                        >
+                          <Phone className="h-3 w-3" />
+                          <span>{ord.driverPhone || ord.trackingDetails?.driverPhone}</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -394,31 +429,46 @@ export default function MobileVendorOrders({
             </div>
 
             <form onSubmit={handleModalSubmit} className="space-y-3 text-xs font-mono-luxury">
+              {dispatchError && (
+                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-1.5 font-bold">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{dispatchError}</span>
+                </div>
+              )}
+
               <div>
                 <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Dispatch Rider / Driver Phone Number:
+                  Waybill / Tracking No (For Courier or Bus):
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal normal-case ml-1">
+                    (Required if no driver phone)
+                  </span>
                 </label>
                 <input
-                  type="tel"
-                  value={driverPhoneInput}
-                  onChange={(e) => setDriverPhoneInput(e.target.value)}
-                  placeholder="e.g. 08012345678"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
-                  required
+                  type="text"
+                  value={waybillInput}
+                  onChange={(e) => { setWaybillInput(e.target.value); setDispatchError(''); }}
+                  placeholder="e.g. GIG-1234 or PARK-LAGOS-01"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
                 />
               </div>
 
               <div>
                 <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Waybill / Tracking No (Optional):
+                  Dispatch Rider / Driver Phone Number:
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal normal-case ml-1">
+                    (Optional if tracking code is entered)
+                  </span>
                 </label>
                 <input
-                  type="text"
-                  value={waybillInput}
-                  onChange={(e) => setWaybillInput(e.target.value)}
-                  placeholder="e.g. GIG-1234 or PARK-LAGOS-01"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  type="tel"
+                  value={driverPhoneInput}
+                  onChange={(e) => { setDriverPhoneInput(e.target.value); setDispatchError(''); }}
+                  placeholder="e.g. 08012345678"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
                 />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  Customer will receive this number to contact the rider directly upon arrival.
+                </p>
               </div>
 
               <div className="pt-2 flex items-center gap-2">

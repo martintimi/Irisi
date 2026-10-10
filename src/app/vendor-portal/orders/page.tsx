@@ -29,6 +29,7 @@ export default function VendorOrdersPage() {
   const [dispatchModalOrder, setDispatchModalOrder] = useState<any | null>(null);
   const [waybillInput, setWaybillInput] = useState('');
   const [driverPhoneInput, setDriverPhoneInput] = useState('');
+  const [dispatchError, setDispatchError] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Read active vendor ID reliably from store, localStorage, or cookie
@@ -85,6 +86,74 @@ export default function VendorOrdersPage() {
     };
   }, [loadVendorDbOrders]);
 
+  // Helper to instantly update dbOrders and nested vendorPackages in memory
+  const updateDbOrdersOptimistically = useCallback((orderIdentifier: string, updates: {
+    status: string;
+    trackingStage: number;
+    pickupStatus?: string;
+    waybillNumber?: string;
+    driverPhone?: string;
+  }) => {
+    setDbOrders(prev => prev.map(o => {
+      const isTarget = o.orderNumber === orderIdentifier || o.id === orderIdentifier;
+      if (!isTarget) return o;
+
+      const rawPkgs = o.vendorPackages || o.customer_measurements?.vendorPackages || {};
+      const updatedPkgs: Record<string, any> = { ...rawPkgs };
+
+      // Ensure every package record in vendorPackages gets updated
+      Object.keys(updatedPkgs).forEach(key => {
+        updatedPkgs[key] = {
+          ...updatedPkgs[key],
+          status: updates.status,
+          trackingStage: updates.trackingStage,
+          ...(updates.pickupStatus ? { pickupStatus: updates.pickupStatus } : {}),
+          ...(updates.waybillNumber !== undefined ? { waybillNumber: updates.waybillNumber } : {}),
+          ...(updates.driverPhone !== undefined ? { driverPhone: updates.driverPhone } : {}),
+          lastUpdated: new Date().toISOString()
+        };
+      });
+
+      // Also ensure default / fallback keys are present if empty
+      const targetVendorId = getActiveVendorId();
+      if (targetVendorId && !updatedPkgs[targetVendorId]) {
+        updatedPkgs[targetVendorId] = {
+          status: updates.status,
+          trackingStage: updates.trackingStage,
+          ...(updates.pickupStatus ? { pickupStatus: updates.pickupStatus } : {}),
+          ...(updates.waybillNumber !== undefined ? { waybillNumber: updates.waybillNumber } : {}),
+          ...(updates.driverPhone !== undefined ? { driverPhone: updates.driverPhone } : {}),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+
+      const updatedTrackingDetails = {
+        ...(o.trackingDetails || {}),
+        status: updates.status,
+        trackingStage: updates.trackingStage,
+        ...(updates.waybillNumber !== undefined ? { waybillNumber: updates.waybillNumber } : {}),
+        ...(updates.driverPhone !== undefined ? { driverPhone: updates.driverPhone } : {}),
+        lastUpdated: new Date().toISOString()
+      };
+
+      return {
+        ...o,
+        status: updates.status,
+        trackingStage: updates.trackingStage,
+        ...(updates.pickupStatus ? { pickupStatus: updates.pickupStatus } : {}),
+        ...(updates.waybillNumber !== undefined ? { waybillNumber: updates.waybillNumber } : {}),
+        ...(updates.driverPhone !== undefined ? { driverPhone: updates.driverPhone } : {}),
+        trackingDetails: updatedTrackingDetails,
+        vendorPackages: updatedPkgs,
+        customer_measurements: o.customer_measurements ? {
+          ...o.customer_measurements,
+          vendorPackages: updatedPkgs,
+          trackingDetails: updatedTrackingDetails
+        } : undefined
+      };
+    }));
+  }, [getActiveVendorId]);
+
   // Process returned DB orders
   const vendorOrders = dbOrders.map((ord: any) => {
     const items = ord.items || [];
@@ -124,7 +193,7 @@ export default function VendorOrdersPage() {
     const isParkPickup = deliveryMethod === 'park_pickup';
     // For motor park pickup, delivery fee is strictly 0 (customer pays the driver directly at terminal)
     const vendorDeliveryFee = isParkPickup ? 0 : Number(myPkg.shippingFee || 0);
-    // The vendor payout is STRICTLY their clothes earnings! Delivery fees are paid to courier riders or collected at the park.
+    // The vendor payout is STRICTLY their item earnings! Delivery fees are paid to courier riders or collected at the park.
     const totalPayout = vendorSubtotal;
 
     const trackingStage = Number(myPkg.trackingStage || ord.trackingStage || (
@@ -133,7 +202,8 @@ export default function VendorOrdersPage() {
       (ord.status === 'packing' || ord.status === 'ready') ? 2 : 1
     ));
     const courierName = myPkg.courierName || (deliveryMethod === 'park_pickup' ? 'Motor Park Bus Waybill' : 'Shipbubble Courier');
-    const waybillNumber = myPkg.waybillNumber || myPkg.trackingNumber || ord.trackingDetails?.waybillNumber || '';
+    const waybillNumber = myPkg.waybillNumber || myPkg.trackingNumber || ord.waybillNumber || ord.trackingDetails?.waybillNumber || '';
+    const driverPhone = myPkg.driverPhone || ord.driverPhone || ord.trackingDetails?.driverPhone || '';
     const courierServiceType = myPkg.courierServiceType || 'pickup';
     const pickupStatus = myPkg.pickupStatus || (trackingStage === 4 ? 'delivered' : trackingStage === 3 ? 'in_transit' : trackingStage === 2 ? (courierServiceType === 'pickup' ? 'ready_for_pickup' : 'ready_for_dropoff') : 'pending_packaging');
     const packageWeightKg = myPkg.packageWeightKg || 1.1;
@@ -160,10 +230,15 @@ export default function VendorOrdersPage() {
       totalPayout,
       status: myPkg.status || ord.status || 'escrow_secured',
       trackingStage,
-      trackingDetails: ord.trackingDetails || {},
+      trackingDetails: {
+        ...(ord.trackingDetails || {}),
+        waybillNumber: waybillNumber || ord.trackingDetails?.waybillNumber || '',
+        driverPhone: driverPhone || ord.trackingDetails?.driverPhone || '',
+      },
       deliveryMethod,
       courierName,
       waybillNumber,
+      driverPhone,
       courierServiceType,
       pickupStatus,
       packageWeightKg,
@@ -181,12 +256,24 @@ export default function VendorOrdersPage() {
     return true;
   });
 
-  // Action 1: Pack & Mark Ready (Stage 1 -> Stage 2)
+  // Action 1: Pack & Mark Ready (Stage 1 -> Stage 2) with instant optimistic update
   const handlePackReady = async (ord: any) => {
-    setIsUpdatingStatus(true);
+    const orderNumberOrId = ord.orderNumber || ord.id;
     const activeVendorId = getActiveVendorId();
     const targetVendorId = ord.items?.[0]?.vendorId || activeVendorId;
     const nextPickupStatus = ord.courierServiceType === 'pickup' ? 'ready_for_pickup' : 'ready_for_dropoff';
+
+    // Instant optimistic update in memory
+    updateDbOrdersOptimistically(orderNumberOrId, {
+      status: 'packing',
+      trackingStage: 2,
+      pickupStatus: nextPickupStatus,
+    });
+    updateOrderStatus(ord.orderNumber, 'packing', 2, targetVendorId);
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+
+    // Background server sync
+    setIsUpdatingStatus(true);
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -205,15 +292,8 @@ export default function VendorOrdersPage() {
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        updateOrderStatus(ord.orderNumber, 'packing', 2, targetVendorId);
-        setDbOrders(prev => prev.map(o => (o.orderNumber === ord.orderNumber || o.id === ord.id) ? {
-          ...o,
-          status: 'packing',
-          trackingStage: 2,
-          pickupStatus: nextPickupStatus
-        } : o));
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      if (!res.ok || !data.success) {
+        console.warn('Pack ready background sync response:', data);
       }
     } catch (e) {
       console.error('Failed to update packing status:', e);
@@ -225,8 +305,9 @@ export default function VendorOrdersPage() {
   // Action 2: Open Dispatch Waybill Modal (Stage 2 -> Stage 3)
   const openDispatchModal = (ord: any) => {
     setDispatchModalOrder(ord);
-    setWaybillInput('');
-    setDriverPhoneInput('');
+    setWaybillInput(ord.waybillNumber || ord.trackingDetails?.waybillNumber || '');
+    setDriverPhoneInput(ord.driverPhone || ord.trackingDetails?.driverPhone || '');
+    setDispatchError('');
   };
 
   // Action 3: Confirm Dispatch with Waybill / Driver info
@@ -234,9 +315,32 @@ export default function VendorOrdersPage() {
     e.preventDefault();
     if (!dispatchModalOrder) return;
 
-    setIsUpdatingStatus(true);
+    const waybill = waybillInput.trim();
+    const driverPhone = driverPhoneInput.trim();
+
+    if (!waybill && !driverPhone) {
+      setDispatchError('Please provide at least a Waybill / Tracking Number or Driver Phone Number.');
+      return;
+    }
+
+    const orderNumberOrId = dispatchModalOrder.orderNumber || dispatchModalOrder.id;
     const activeVendorId = getActiveVendorId();
     const targetVendorId = dispatchModalOrder.items?.[0]?.vendorId || activeVendorId;
+
+    // Instant optimistic update in memory
+    updateDbOrdersOptimistically(orderNumberOrId, {
+      status: 'dispatched',
+      trackingStage: 3,
+      waybillNumber: waybill,
+      driverPhone: driverPhone
+    });
+    updateOrderStatus(dispatchModalOrder.orderNumber, 'dispatched', 3, targetVendorId);
+    confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+    setDispatchModalOrder(null);
+    setDispatchError('');
+
+    // Background server sync
+    setIsUpdatingStatus(true);
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -249,27 +353,15 @@ export default function VendorOrdersPage() {
           orderId: dispatchModalOrder.id,
           status: 'dispatched',
           trackingStage: 3,
-          waybillNumber: waybillInput.trim(),
-          driverPhone: driverPhoneInput.trim(),
+          waybillNumber: waybill,
+          driverPhone: driverPhone,
           vendorId: targetVendorId
         })
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        updateOrderStatus(dispatchModalOrder.orderNumber, 'dispatched', 3, targetVendorId);
-        setDbOrders(prev => prev.map(o => (o.orderNumber === dispatchModalOrder.orderNumber || o.id === dispatchModalOrder.id) ? {
-          ...o,
-          status: 'dispatched',
-          trackingStage: 3,
-          trackingDetails: {
-            waybillNumber: waybillInput.trim(),
-            driverPhone: driverPhoneInput.trim()
-          }
-        } : o));
-
-        setDispatchModalOrder(null);
-        confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+      if (!res.ok || !data.success) {
+        console.warn('Dispatch background sync response:', data);
       }
     } catch (e) {
       console.error('Failed to update dispatch status:', e);
@@ -279,9 +371,22 @@ export default function VendorOrdersPage() {
   };
 
   const handleMobileConfirmDispatch = async (ord: any, waybill: string, driverPhone: string) => {
-    setIsUpdatingStatus(true);
+    const orderNumberOrId = ord.orderNumber || ord.id;
     const activeVendorId = getActiveVendorId();
     const targetVendorId = ord.items?.[0]?.vendorId || activeVendorId;
+
+    // Instant optimistic update in memory
+    updateDbOrdersOptimistically(orderNumberOrId, {
+      status: 'dispatched',
+      trackingStage: 3,
+      waybillNumber: waybill.trim(),
+      driverPhone: driverPhone.trim()
+    });
+    updateOrderStatus(ord.orderNumber, 'dispatched', 3, targetVendorId);
+    confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+
+    // Background server sync
+    setIsUpdatingStatus(true);
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -301,19 +406,8 @@ export default function VendorOrdersPage() {
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        updateOrderStatus(ord.orderNumber, 'dispatched', 3, targetVendorId);
-        setDbOrders(prev => prev.map(o => (o.orderNumber === ord.orderNumber || o.id === ord.id) ? {
-          ...o,
-          status: 'dispatched',
-          trackingStage: 3,
-          trackingDetails: {
-            waybillNumber: waybill.trim(),
-            driverPhone: driverPhone.trim()
-          }
-        } : o));
-
-        confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+      if (!res.ok || !data.success) {
+        console.warn('Mobile dispatch background sync response:', data);
       }
     } catch (e) {
       console.error('Failed to update dispatch status:', e);
@@ -516,7 +610,7 @@ export default function VendorOrdersPage() {
                 <div className="text-xs font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
                     <span className="text-[var(--text-muted)]">Waybill / Tracking:</span>
-                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || 'Pending'}</span>
+                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || ord.trackingDetails?.waybillNumber || 'Pending'}</span>
                   </div>
                 </div>
 
@@ -553,16 +647,38 @@ export default function VendorOrdersPage() {
                 </div>
               </div>
 
-              {/* Courier & Driver contact details if already dispatched - NO DUPLICATE WAYBILL */}
-              {ord.trackingStage >= 3 && ord.trackingDetails?.driverPhone && (
-                <div className="p-3.5 rounded-2xl bg-[var(--gold-subtle)]/40 border border-[var(--gold-accent)]/30 flex items-center justify-between text-xs font-mono-luxury text-[var(--text-primary)] flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
-                    <span>Courier Assigned: <strong>{ord.courierName}</strong></span>
+              {/* Courier & Driver contact details if already dispatched */}
+              {ord.trackingStage >= 3 && (
+                <div className="p-3.5 rounded-2xl bg-[var(--gold-subtle)]/40 border border-[var(--gold-accent)]/30 space-y-2 text-xs font-mono-luxury text-[var(--text-primary)]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
+                      <span>Courier / Transporter: <strong>{ord.courierName}</strong></span>
+                    </div>
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase border border-emerald-500/30">
+                      Dispatched · In Transit
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                    <span>Driver Phone: <strong>{ord.trackingDetails.driverPhone}</strong></span>
+
+                  <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-[var(--border-subtle)]/50">
+                    {(ord.waybillNumber || ord.trackingDetails?.waybillNumber) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[var(--text-muted)] text-[11px]">Waybill / Tracking No:</span>
+                        <strong className="text-[var(--gold-accent)] font-mono">{ord.waybillNumber || ord.trackingDetails?.waybillNumber}</strong>
+                      </div>
+                    )}
+                    {(ord.driverPhone || ord.trackingDetails?.driverPhone) && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                        <span className="text-[var(--text-muted)] text-[11px]">Driver Phone:</span>
+                        <a
+                          href={`tel:${ord.driverPhone || ord.trackingDetails?.driverPhone}`}
+                          className="font-bold text-[var(--gold-accent)] hover:underline"
+                        >
+                          {ord.driverPhone || ord.trackingDetails?.driverPhone}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -657,7 +773,7 @@ export default function VendorOrdersPage() {
         </div>
       )}
 
-      {/* Dispatch Waybill Modal */}
+      {/* Dispatch Waybill Modal (Desktop) */}
       {dispatchModalOrder && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="surface-card rounded-3xl p-6 sm:p-8 max-w-md w-full border border-[var(--border-subtle)] space-y-5 animate-fadeIn shadow-2xl">
@@ -685,34 +801,46 @@ export default function VendorOrdersPage() {
             </div>
 
             <form onSubmit={handleConfirmDispatch} className="space-y-4 text-xs font-mono-luxury">
-              <div>
-                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Dispatch Rider / Driver Phone Number:
-                </label>
-                <input
-                  type="tel"
-                  value={driverPhoneInput}
-                  onChange={(e) => setDriverPhoneInput(e.target.value)}
-                  placeholder="e.g. 09043*****"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
-                  required
-                />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  Customer will receive this number to contact the rider directly upon arrival.
-                </p>
-              </div>
+              {dispatchError && (
+                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-1.5 font-bold">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{dispatchError}</span>
+                </div>
+              )}
 
               <div>
                 <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Waybill / Tracking / Park Number (Optional):
+                  Waybill / Tracking / Park Number:
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal normal-case ml-1">
+                    (For couriers or bus waybills)
+                  </span>
                 </label>
                 <input
                   type="text"
                   value={waybillInput}
-                  onChange={(e) => setWaybillInput(e.target.value)}
+                  onChange={(e) => { setWaybillInput(e.target.value); setDispatchError(''); }}
                   placeholder="e.g. GIG-918239 or PEACE-PARK-01"
                   className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                  Dispatch Rider / Driver Phone Number:
+                  <span className="text-[10px] text-[var(--text-muted)] font-normal normal-case ml-1">
+                    (Optional if tracking code is provided)
+                  </span>
+                </label>
+                <input
+                  type="tel"
+                  value={driverPhoneInput}
+                  onChange={(e) => { setDriverPhoneInput(e.target.value); setDispatchError(''); }}
+                  placeholder="e.g. 09043*****"
+                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
+                />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  Customer will receive this number to contact the rider directly upon arrival.
+                </p>
               </div>
 
               <div className="pt-2 flex items-center gap-3">
@@ -737,7 +865,9 @@ export default function VendorOrdersPage() {
         </div>
       )}
 
-      {/* 4. PRINTABLE COURIER SHIPPING WAYBILL MODAL */}
+      </div>
+
+      {/* 3. PRINTABLE COURIER SHIPPING WAYBILL MODAL (Mounted globally for both mobile & desktop) */}
       {selectedWaybillOrder && (
         <ShippingWaybillModal
           order={selectedWaybillOrder}
@@ -745,8 +875,6 @@ export default function VendorOrdersPage() {
           onClose={() => setSelectedWaybillOrder(null)}
         />
       )}
-
-      </div>
     </>
   );
 }
