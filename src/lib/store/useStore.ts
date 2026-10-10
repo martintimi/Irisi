@@ -122,7 +122,7 @@ export const defaultVendorProfile: VendorProfile = {
   phone: '',
   location: '',
   vendorType: 'boutique_seller',
-  bankName: 'Guaranty Trust Bank (GTBank)',
+  bankName: '',
   accountNumber: '',
   accountName: '',
   instagram: '',

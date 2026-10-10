@@ -181,7 +181,7 @@ export default function VendorAtelierProfilePage() {
           location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : '') || '',
           vendorType: normalizedType,
           specialty: spec,
-          bankName: v.bankName || v.bank_name || 'Guaranty Trust Bank (GTBank)',
+          bankName: v.bankName || v.bank_name || '',
           accountNumber: v.accountNumber || v.account_number || '',
           accountName: v.accountName || v.account_name || '',
           bio: v.bio || '',

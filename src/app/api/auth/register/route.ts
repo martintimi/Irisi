@@ -217,9 +217,9 @@ export async function POST(request: Request) {
         phone: cleanPhone,
         location: (location && location.trim()) || '',
         vendor_type: vendorType || (finalSpecialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'),
-        bank_name: bankName || 'Guaranty Trust Bank (GTBank)',
-        account_number: accountNumber || '',
-        account_name: accountName || '',
+        bank_name: (accountNumber && bankName) ? bankName.trim() : (bankName ? bankName.trim() : ''),
+        account_number: (accountNumber && accountNumber.trim()) || '',
+        account_name: (accountName && accountName.trim()) || '',
         is_verified: false, // Remains UNVERIFIED until Admin approves
         bio: JSON.stringify(initialBioObj)
       }, { onConflict: 'id' }).select().single();

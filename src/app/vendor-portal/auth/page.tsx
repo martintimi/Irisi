@@ -105,8 +105,8 @@ function VendorAuthPageContent() {
     location: '',
     vendorType: 'fashion_designer' as 'fashion_designer' | 'boutique_seller',
     specialty: 'native_tailoring' as VendorSpecialty,
-    bankName: 'Guaranty Trust Bank',
-    bankCode: '058',
+    bankName: '',
+    bankCode: '',
     accountNumber: '',
     accountName: '',
   });
@@ -333,7 +333,7 @@ function VendorAuthPageContent() {
           vendorType: isBoutiqueVendor(res.vendor) ? 'boutique_seller' : 'fashion_designer',
           specialty: res.vendor.specialty || res.vendor.vendorSpecialty || 'multi_department',
           vendorSpecialty: res.vendor.specialty || res.vendor.vendorSpecialty || 'multi_department',
-          bankName: res.vendor.bank_name || 'Guaranty Trust Bank (GTBank)',
+          bankName: res.vendor.bank_name || '',
           accountNumber: res.vendor.account_number || '',
           accountName: res.vendor.account_name || '',
           instagram: res.vendor.instagram || '',
@@ -389,9 +389,9 @@ function VendorAuthPageContent() {
         vendorType: regForm.vendorType,
         specialty: regForm.specialty,
         vendorSpecialty: regForm.specialty,
-        bankName: regForm.bankName,
+        bankName: regForm.accountNumber.trim() ? (regForm.bankName || '') : '',
         accountNumber: regForm.accountNumber.trim(),
-        accountName: regForm.accountName.trim(),
+        accountName: regForm.accountNumber.trim() ? regForm.accountName.trim() : '',
       });
 
       if (!res.success) {
@@ -496,9 +496,9 @@ function VendorAuthPageContent() {
         vendorType: isBoutiqueVendor(activeProfile) || isBoutiqueVendor(regForm.vendorType) ? 'boutique_seller' : 'fashion_designer',
         specialty: activeProfile.specialty || activeProfile.vendorSpecialty || regForm.specialty || 'multi_department',
         vendorSpecialty: activeProfile.specialty || activeProfile.vendorSpecialty || regForm.specialty || 'multi_department',
-        bankName: activeProfile.bank_name || activeProfile.bankName || regForm.bankName,
-        accountNumber: activeProfile.account_number || activeProfile.accountNumber || regForm.accountNumber,
-        accountName: activeProfile.account_name || activeProfile.accountName || regForm.accountName,
+        bankName: activeProfile.bank_name || activeProfile.bankName || (regForm.accountNumber ? regForm.bankName : '') || '',
+        accountNumber: activeProfile.account_number || activeProfile.accountNumber || regForm.accountNumber || '',
+        accountName: activeProfile.account_name || activeProfile.accountName || regForm.accountName || '',
         instagram: activeProfile.instagram || '',
         bio: activeProfile.bio || '',
       });
@@ -629,7 +629,7 @@ function VendorAuthPageContent() {
           vendorType: isBoutiqueVendor(loginRes.vendor) ? 'boutique_seller' : 'fashion_designer',
           specialty: loginRes.vendor.specialty || loginRes.vendor.vendorSpecialty || 'multi_department',
           vendorSpecialty: loginRes.vendor.specialty || loginRes.vendor.vendorSpecialty || 'multi_department',
-          bankName: loginRes.vendor.bank_name || 'Guaranty Trust Bank (GTBank)',
+          bankName: loginRes.vendor.bank_name || '',
           accountNumber: loginRes.vendor.account_number || '',
           accountName: loginRes.vendor.account_name || '',
           instagram: loginRes.vendor.instagram || '',
@@ -1566,18 +1566,19 @@ function VendorAuthPageContent() {
                       value={regForm.bankName}
                       onChange={(e) => {
                         const selectedBankName = e.target.value;
-                        const code = getBankCodeByName(selectedBankName);
+                        const code = selectedBankName ? getBankCodeByName(selectedBankName) : '';
                         setRegForm((prev) => ({
                           ...prev,
                           bankName: selectedBankName,
                           bankCode: code,
                         }));
-                        if (regForm.accountNumber.length === 10) {
+                        if (regForm.accountNumber.length === 10 && code) {
                           resolveBankAccount(regForm.accountNumber, code);
                         }
                       }}
                       className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
                     >
+                      <option value="">Select Settlement Bank (Optional)</option>
                       {NIGERIAN_BANKS.map((b) => (
                         <option key={b.code} value={b.name}>
                           {b.name}

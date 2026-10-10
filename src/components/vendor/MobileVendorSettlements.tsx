@@ -32,8 +32,8 @@ export default function MobileVendorSettlements({
 
   // Bank editing & Paystack resolution state
   const [isEditingBank, setIsEditingBank] = useState(false);
-  const [editBankName, setEditBankName] = useState(vendorProfile?.bankName || 'Guaranty Trust Bank');
-  const [editBankCode, setEditBankCode] = useState(() => getBankCodeByName(vendorProfile?.bankName || 'Guaranty Trust Bank'));
+  const [editBankName, setEditBankName] = useState(vendorProfile?.bankName || '');
+  const [editBankCode, setEditBankCode] = useState(() => vendorProfile?.bankName ? getBankCodeByName(vendorProfile.bankName) : '');
   const [editAccountNumber, setEditAccountNumber] = useState(vendorProfile?.accountNumber || '');
   const [editAccountName, setEditAccountName] = useState(vendorProfile?.accountName || '');
   const [isResolving, setIsResolving] = useState(false);
@@ -378,7 +378,7 @@ export default function MobileVendorSettlements({
             <div className="flex items-center justify-between text-[11px]">
               <span className="text-[var(--text-secondary)] uppercase">Bank Name:</span>
               <strong className="text-[var(--text-primary)]">
-                {vendorProfile?.accountNumber ? (vendorProfile?.bankName || 'Guaranty Trust Bank (GTBank)') : 'Not Configured'}
+                {vendorProfile?.accountNumber ? (vendorProfile?.bankName || 'Not Configured') : 'Not Configured'}
               </strong>
             </div>
 

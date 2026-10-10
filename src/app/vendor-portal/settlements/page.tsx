@@ -134,7 +134,7 @@ export default function VendorSettlementsPage() {
                 <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3 text-xs font-mono-luxury">
                   <span className="text-[var(--text-secondary)] uppercase">Settlement Bank:</span>
                   <span className="font-bold text-[var(--text-primary)]">
-                    {vendorProfile.accountNumber ? (vendorProfile.bankName || 'Guaranty Trust Bank (GTBank)') : 'Not Configured'}
+                    {vendorProfile.accountNumber ? (vendorProfile.bankName || 'Not Configured') : 'Not Configured'}
                   </span>
                 </div>
 
