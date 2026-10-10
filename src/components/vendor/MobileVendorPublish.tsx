@@ -49,6 +49,7 @@ const MALE_CATEGORIES = [
   { id: 'men_jewelry_chains', label: 'Chains, Rings & Jewelry (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_watches', label: 'Luxury Wristwatches (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_eyewear', label: 'Sunglasses & Glasses (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'men_belts', label: 'Designer Belts & Leather Belts (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_caps_hats', label: 'Caps, Hats & Beanies (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
@@ -77,6 +78,7 @@ const FEMALE_CATEGORIES = [
   { id: 'women_jewelry', label: 'Jewelry, Necklaces & Bangles (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_watches', label: 'Women’s Luxury Watches (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_sunglasses', label: 'Sunglasses & Shades (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'women_belts', label: 'Belts, Corset Belts & Chains (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
@@ -95,6 +97,7 @@ const UNISEX_CATEGORIES = [
   { id: 'unisex_jewelry', label: 'Chains, Rings & Jewelry (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_watches', label: 'Wristwatches & Timepieces (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_sunglasses', label: 'Sunglasses & Eyewear (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'unisex_belts', label: 'Belts & Buckles (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Hats (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
@@ -172,27 +175,27 @@ export default function MobileVendorPublish({
   const [showCustomSizeInput, setShowCustomSizeInput] = useState(false);
   const [sizeStock, setSizeStock] = useState<{ [size: string]: { enabled: boolean; quantity: number | string } }>(
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry'
-      ? { 'One Size': { enabled: true, quantity: 20 } }
+      ? { 'One Size': { enabled: false, quantity: '' } }
       : vendorSpecialty === 'footwear'
       ? {
-          '38': { enabled: false, quantity: 0 },
-          '39': { enabled: true, quantity: 5 },
-          '40': { enabled: true, quantity: 10 },
-          '41': { enabled: true, quantity: 10 },
-          '42': { enabled: true, quantity: 10 },
-          '43': { enabled: true, quantity: 10 },
-          '44': { enabled: true, quantity: 5 },
-          '45': { enabled: false, quantity: 0 },
-          '46': { enabled: false, quantity: 0 },
-          '47': { enabled: false, quantity: 0 },
-          '48': { enabled: false, quantity: 0 },
+          '38': { enabled: false, quantity: '' },
+          '39': { enabled: false, quantity: '' },
+          '40': { enabled: false, quantity: '' },
+          '41': { enabled: false, quantity: '' },
+          '42': { enabled: false, quantity: '' },
+          '43': { enabled: false, quantity: '' },
+          '44': { enabled: false, quantity: '' },
+          '45': { enabled: false, quantity: '' },
+          '46': { enabled: false, quantity: '' },
+          '47': { enabled: false, quantity: '' },
+          '48': { enabled: false, quantity: '' },
         }
       : {
-          'S': { enabled: true, quantity: 10 },
-          'M': { enabled: true, quantity: 20 },
-          'L': { enabled: true, quantity: 20 },
-          'XL': { enabled: true, quantity: 10 },
-          'XXL': { enabled: false, quantity: 0 },
+          'S': { enabled: false, quantity: '' },
+          'M': { enabled: false, quantity: '' },
+          'L': { enabled: false, quantity: '' },
+          'XL': { enabled: false, quantity: '' },
+          'XXL': { enabled: false, quantity: '' },
         }
   );
 
@@ -257,6 +260,37 @@ export default function MobileVendorPublish({
     }
   }, [errorMessage]);
 
+  // Sync vendor specialty when vendorProfile is resolved
+  useEffect(() => {
+    if (!vendorProfile) return;
+    const spec = getVendorSpecialty(vendorProfile);
+    if (!name && uploadedImages.length === 0) {
+      if (spec === 'accessories' || spec === 'jewelry' || spec === 'caps') {
+        setCatFilterTab('accessories');
+        setCategory('accessories');
+        setSubCategory(spec === 'caps' ? 'men_caps_hats' : spec === 'jewelry' ? 'men_jewelry_chains' : 'men_bags_backpacks');
+        setSizeStock({ 'One Size': { enabled: false, quantity: '' } });
+      } else if (spec === 'footwear') {
+        setCatFilterTab('footwear');
+        setCategory('footwear');
+        setSubCategory('men_slides_palms');
+        setSizeStock({
+          '38': { enabled: false, quantity: '' },
+          '39': { enabled: false, quantity: '' },
+          '40': { enabled: false, quantity: '' },
+          '41': { enabled: false, quantity: '' },
+          '42': { enabled: false, quantity: '' },
+          '43': { enabled: false, quantity: '' },
+          '44': { enabled: false, quantity: '' },
+          '45': { enabled: false, quantity: '' },
+          '46': { enabled: false, quantity: '' },
+          '47': { enabled: false, quantity: '' },
+          '48': { enabled: false, quantity: '' },
+        });
+      }
+    }
+  }, [vendorProfile, name, uploadedImages.length]);
+
   const rawCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
 
   const currentCategoryList = useMemo(() => {
@@ -288,12 +322,13 @@ export default function MobileVendorPublish({
       { keywords: ['boubou', 'bubu', 'abaya'], match: id => id.includes('boubou') },
       { keywords: ['lace', 'ankara', 'iro', 'buba'], match: id => id.includes('lace') || id.includes('ankara') },
       
-      // Accessories / Headwear / Watches / Jewelry / Bags
+      // Accessories / Headwear / Watches / Jewelry / Bags / Belts
       { keywords: ['fila', 'aso-oke', 'asooke'], match: id => id.includes('caps_fila') },
       { keywords: ['cap', 'hat', 'beanie', 'snapback', 'beret', 'bucket hat'], match: id => id.includes('caps') || id.includes('hats') },
       { keywords: ['watch', 'wristwatch', 'rolex', 'timepiece', 'chronograph'], match: id => id.includes('watches') },
       { keywords: ['sunglasses', 'glasses', 'shades', 'eyewear', 'spectacles'], match: id => id.includes('sunglasses') || id.includes('eyewear') },
       { keywords: ['chain', 'necklace', 'pendant', 'cuban', 'ring', 'bangle', 'bracelet', 'earring', 'jewelry', 'jewellery'], match: id => id.includes('jewelry') || id.includes('chains') },
+      { keywords: ['belt', 'belts', 'buckle', 'leather belt'], match: id => id.includes('belts') },
       { keywords: ['backpack', 'duffel', 'travel bag', 'gym bag', 'rucksack'], match: id => id.includes('backpacks') },
       { keywords: ['crossbody', 'chest rig', 'waist bag', 'fanny pack', 'sling bag'], match: id => id.includes('crossbody') },
       { keywords: ['handbag', 'tote bag', 'shoulder bag', 'tote', 'leather tote'], match: id => id.includes('handbags') },
@@ -338,7 +373,7 @@ export default function MobileVendorPublish({
     }
   };
   const currentSizeList = useMemo(() => {
-    const base = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
+    const base = category === 'footwear' ? FOOTWEAR_SIZES : (category === 'accessories' || category === 'bags') ? ACCESSORY_SIZES : APPAREL_SIZES;
     const custom = Object.keys(sizeStock).filter((sz) => !base.includes(sz) && sz !== 'One Size');
     return [...base, ...custom];
   }, [category, sizeStock]);
@@ -352,7 +387,7 @@ export default function MobileVendorPublish({
       ...prev,
       [trimmed]: {
         enabled: true,
-        quantity: prev[trimmed]?.quantity !== undefined && prev[trimmed]?.quantity !== '' ? prev[trimmed].quantity : 10,
+        quantity: prev[trimmed]?.quantity !== undefined && prev[trimmed]?.quantity !== '' ? prev[trimmed].quantity : '',
       },
     }));
     setCustomSizeInput('');
@@ -373,29 +408,29 @@ export default function MobileVendorPublish({
 
     if (generalCat === 'footwear') {
       setSizeStock({
-        '38': { enabled: false, quantity: 0 },
-        '39': { enabled: true, quantity: 5 },
-        '40': { enabled: true, quantity: 10 },
-        '41': { enabled: true, quantity: 10 },
-        '42': { enabled: true, quantity: 10 },
-        '43': { enabled: true, quantity: 10 },
-        '44': { enabled: true, quantity: 5 },
-        '45': { enabled: false, quantity: 0 },
-        '46': { enabled: false, quantity: 0 },
-        '47': { enabled: false, quantity: 0 },
-        '48': { enabled: false, quantity: 0 },
+        '38': { enabled: false, quantity: '' },
+        '39': { enabled: false, quantity: '' },
+        '40': { enabled: false, quantity: '' },
+        '41': { enabled: false, quantity: '' },
+        '42': { enabled: false, quantity: '' },
+        '43': { enabled: false, quantity: '' },
+        '44': { enabled: false, quantity: '' },
+        '45': { enabled: false, quantity: '' },
+        '46': { enabled: false, quantity: '' },
+        '47': { enabled: false, quantity: '' },
+        '48': { enabled: false, quantity: '' },
       });
-    } else if (generalCat === 'accessories') {
+    } else if (generalCat === 'accessories' || generalCat === 'bags') {
       setSizeStock({
-        'One Size': { enabled: true, quantity: 20 },
+        'One Size': { enabled: false, quantity: '' },
       });
     } else {
       setSizeStock({
-        'S': { enabled: true, quantity: 10 },
-        'M': { enabled: true, quantity: 20 },
-        'L': { enabled: true, quantity: 20 },
-        'XL': { enabled: true, quantity: 10 },
-        'XXL': { enabled: false, quantity: 0 },
+        'S': { enabled: false, quantity: '' },
+        'M': { enabled: false, quantity: '' },
+        'L': { enabled: false, quantity: '' },
+        'XL': { enabled: false, quantity: '' },
+        'XXL': { enabled: false, quantity: '' },
       });
     }
   };
@@ -805,16 +840,24 @@ export default function MobileVendorPublish({
       ...prev,
       [size]: {
         ...prev[size],
+        enabled: cleanQty === '' ? false : Number(cleanQty) > 0,
         quantity: typeof cleanQty === 'number' && isNaN(cleanQty) ? '' : cleanQty
       }
     }));
   };
 
   const handleToggleSize = (size: string) => {
-    setSizeStock(prev => ({
-      ...prev,
-      [size]: { ...prev[size], enabled: !prev[size]?.enabled }
-    }));
+    setSizeStock(prev => {
+      const willEnable = !prev[size]?.enabled;
+      return {
+        ...prev,
+        [size]: {
+          ...prev[size],
+          enabled: willEnable,
+          quantity: willEnable ? (prev[size]?.quantity && Number(prev[size]?.quantity) > 0 ? prev[size]?.quantity : 1) : 0,
+        }
+      };
+    });
   };
 
   const handleAddTag = (e: React.KeyboardEvent) => {
@@ -848,23 +891,26 @@ export default function MobileVendorPublish({
     setSizeStock(
       category === 'footwear'
         ? {
-            '39': { enabled: true, quantity: 5 },
-            '40': { enabled: true, quantity: 10 },
-            '41': { enabled: true, quantity: 10 },
-            '42': { enabled: true, quantity: 10 },
-            '43': { enabled: true, quantity: 10 },
-            '44': { enabled: true, quantity: 5 },
-            '45': { enabled: false, quantity: 0 },
-            '46': { enabled: false, quantity: 0 },
+            '38': { enabled: false, quantity: '' },
+            '39': { enabled: false, quantity: '' },
+            '40': { enabled: false, quantity: '' },
+            '41': { enabled: false, quantity: '' },
+            '42': { enabled: false, quantity: '' },
+            '43': { enabled: false, quantity: '' },
+            '44': { enabled: false, quantity: '' },
+            '45': { enabled: false, quantity: '' },
+            '46': { enabled: false, quantity: '' },
+            '47': { enabled: false, quantity: '' },
+            '48': { enabled: false, quantity: '' },
           }
-        : category === 'accessories'
-        ? { 'One Size': { enabled: true, quantity: 20 } }
+        : (category === 'accessories' || category === 'bags')
+        ? { 'One Size': { enabled: false, quantity: '' } }
         : {
-            'S': { enabled: true, quantity: 10 },
-            'M': { enabled: true, quantity: 20 },
-            'L': { enabled: true, quantity: 20 },
-            'XL': { enabled: true, quantity: 10 },
-            'XXL': { enabled: false, quantity: 0 },
+            'S': { enabled: false, quantity: '' },
+            'M': { enabled: false, quantity: '' },
+            'L': { enabled: false, quantity: '' },
+            'XL': { enabled: false, quantity: '' },
+            'XXL': { enabled: false, quantity: '' },
           }
     );
     setIsPublishSuccess(false);
@@ -892,7 +938,7 @@ export default function MobileVendorPublish({
 
     const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled && Number(sizeStock[s]?.quantity) > 0);
     if (enabledSizes.length === 0) {
-      setErrorMessage(category === 'accessories' ? 'Please set stock quantity' : 'Enable at least one size with stock');
+      setErrorMessage((category === 'accessories' || category === 'bags') ? 'Please set stock quantity' : 'Enable at least one size with stock');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -1634,7 +1680,7 @@ export default function MobileVendorPublish({
               Category / Piece Type <strong className="text-rose-400">*</strong>
             </label>
             <span className="text-[9px] text-[var(--gold-accent)] font-bold uppercase">
-              {category === 'footwear' ? 'Shoe Sizing' : category === 'accessories' ? 'Jewelry / One-Size' : 'Apparel Sizing'}
+              {category === 'footwear' ? 'Shoe Sizing' : (category === 'accessories' || category === 'bags') ? 'Accessories / One-Size' : 'Apparel Sizing'}
             </span>
           </div>
 
@@ -1650,6 +1696,30 @@ export default function MobileVendorPublish({
             }}
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
           >
+            {/* If vendor is accessories/jewelry/caps, show Bags & Accessories first */}
+            {(vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps') && (
+              <>
+                {filteredCategoryList.some(c => c.group === 'accessories') && (
+                  <optgroup label="Accessories, Bags & Jewelry">
+                    {filteredCategoryList.filter(c => c.group === 'accessories').map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {filteredCategoryList.some(c => c.group === 'bags') && (
+                  <optgroup label="Bags & Backpacks">
+                    {filteredCategoryList.filter(c => c.group === 'bags').map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </>
+            )}
+
             {/* Native & Cultural */}
             {filteredCategoryList.some(c => c.group === 'native') && (
               <optgroup label="Native & Cultural Wear">
@@ -1683,8 +1753,8 @@ export default function MobileVendorPublish({
               </optgroup>
             )}
 
-            {/* Bags */}
-            {filteredCategoryList.some(c => c.group === 'bags') && (
+            {/* Bags (for non-accessories vendors) */}
+            {!(vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps') && filteredCategoryList.some(c => c.group === 'bags') && (
               <optgroup label="Bags & Backpacks">
                 {filteredCategoryList.filter(c => c.group === 'bags').map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -1694,8 +1764,8 @@ export default function MobileVendorPublish({
               </optgroup>
             )}
 
-            {/* Accessories & Jewelry */}
-            {filteredCategoryList.some(c => c.group === 'accessories') && (
+            {/* Accessories & Jewelry (for non-accessories vendors) */}
+            {!(vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps') && filteredCategoryList.some(c => c.group === 'accessories') && (
               <optgroup label="Accessories, Caps & Jewelry">
                 {filteredCategoryList.filter(c => c.group === 'accessories').map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -1742,10 +1812,10 @@ export default function MobileVendorPublish({
       <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm font-mono-luxury text-xs">
         <div className="flex items-center justify-between">
           <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
-            {category === 'footwear' ? '3. Shoe / Slide Sizing (EU)' : category === 'accessories' ? '3. Inventory Stock' : '3. Ready-to-Wear Sizes'}
+            {category === 'footwear' ? '3. Shoe / Slide Sizing (EU)' : (category === 'accessories' || category === 'bags') ? '3. Inventory Stock' : '3. Ready-to-Wear Sizes'}
           </span>
           <div className="flex items-center gap-2">
-            {category !== 'accessories' && (
+            {(category !== 'accessories' && category !== 'bags') && (
               <button
                 type="button"
                 onClick={() => setShowCustomSizeInput(!showCustomSizeInput)}
@@ -1759,7 +1829,7 @@ export default function MobileVendorPublish({
           </div>
         </div>
 
-        {showCustomSizeInput && category !== 'accessories' && (
+        {showCustomSizeInput && category !== 'accessories' && category !== 'bags' && (
           <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/50 flex items-center gap-2 animate-fadeIn">
             <input
               type="text"
@@ -1795,16 +1865,16 @@ export default function MobileVendorPublish({
           </div>
         )}
 
-        {category === 'accessories' ? (
+        {(category === 'accessories' || category === 'bags') ? (
           <div>
             <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[11px]">
-              Total Available Units
+              Total Available Units <strong className="text-rose-400">*</strong>
             </label>
             <input
               type="text"
               inputMode="numeric"
-              value={sizeStock['One Size']?.quantity === '' ? '' : (sizeStock['One Size']?.quantity ?? 20)}
-              placeholder="0"
+              value={sizeStock['One Size']?.quantity === '' ? '' : (sizeStock['One Size']?.quantity ?? '')}
+              placeholder="Enter stock quantity (e.g. 10)"
               onFocus={(e) => e.target.select()}
               onChange={(e) => handleSizeStockChange('One Size', e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm font-bold text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
@@ -1852,7 +1922,7 @@ export default function MobileVendorPublish({
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={qty === '' ? '' : (qty ?? 0)}
+                      value={qty === '' ? '' : (qty ?? '')}
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => handleSizeStockChange(sz, e.target.value)}

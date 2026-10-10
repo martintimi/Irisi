@@ -214,7 +214,7 @@ export default function CheckoutPage() {
 
     Object.values(groupedItems).forEach((pkg) => {
       const live = liveRates[pkg.vendorId];
-      const chosenMethod = packageMethods[pkg.vendorId] || 'doorstep';
+      const chosenMethod = packageMethods[pkg.vendorId] || 'park_pickup';
       const customerCity = (formData.city || '').toLowerCase().trim();
       const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
       const customerState = (formData.state || '').toLowerCase().trim();
@@ -289,11 +289,11 @@ export default function CheckoutPage() {
   const grandTotal = subtotal + totalShippingFee;
 
   const vendorIds = useMemo(() => Object.keys(groupedItems), [groupedItems]);
-  const isAllParkPickup = vendorIds.length > 0 && vendorIds.every(
-    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method) === 'park_pickup'
+  const isAllParkPickup = vendorIds.length === 0 || vendorIds.every(
+    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method || 'park_pickup') === 'park_pickup'
   );
-  const hasDoorstep = vendorIds.length === 0 || vendorIds.some(
-    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method || 'doorstep') === 'doorstep'
+  const hasDoorstep = vendorIds.some(
+    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method) === 'doorstep'
   );
 
   const [motorParkName, setMotorParkName] = useState<string>('');
@@ -696,26 +696,6 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setAllDeliveryMethods('doorstep')}
-                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
-                      !isAllParkPickup
-                        ? 'bg-[var(--gold-subtle)]/40 border-[var(--gold-accent)] shadow-sm'
-                        : 'bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--gold-accent)]/50'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-xl shrink-0 ${!isAllParkPickup ? 'bg-[var(--gold-accent)] text-black font-bold' : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'}`}>
-                      <Home className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold font-mono-luxury text-[var(--text-primary)]">Doorstep Courier Delivery</div>
-                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-snug">
-                        Express courier delivery direct to your home or office address.
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => setAllDeliveryMethods('park_pickup')}
                     className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
                       isAllParkPickup
@@ -730,6 +710,26 @@ export default function CheckoutPage() {
                       <div className="text-xs font-bold font-mono-luxury text-[var(--text-primary)]">Motor Park / Bus Driver Delivery</div>
                       <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-snug">
                         Sent via bus driver to the motor park in your city. Pay driver on collection (No street address required).
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAllDeliveryMethods('doorstep')}
+                    className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer ${
+                      !isAllParkPickup
+                        ? 'bg-[var(--gold-subtle)]/40 border-[var(--gold-accent)] shadow-sm'
+                        : 'bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--gold-accent)]/50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-xl shrink-0 ${!isAllParkPickup ? 'bg-[var(--gold-accent)] text-black font-bold' : 'bg-[var(--bg-secondary)] text-[var(--text-muted)]'}`}>
+                      <Home className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold font-mono-luxury text-[var(--text-primary)]">Doorstep Courier Delivery</div>
+                      <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-snug">
+                        Express courier delivery direct to your home or office address.
                       </p>
                     </div>
                   </button>

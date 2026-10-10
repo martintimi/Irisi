@@ -54,6 +54,7 @@ export const MALE_CATEGORIES = [
   { id: 'men_jewelry_chains', label: 'Chains, Necklaces & Rings (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_watches', label: 'Luxury Wristwatches (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_eyewear', label: 'Sunglasses & Glasses (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'men_belts', label: 'Designer Belts & Leather Goods (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_caps_hats', label: 'Caps, Hats & Beanies (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
@@ -82,6 +83,7 @@ export const FEMALE_CATEGORIES = [
   { id: 'women_jewelry', label: 'Jewelry, Necklaces & Bangles (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_watches', label: 'Women’s Luxury Watches (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_sunglasses', label: 'Sunglasses & Shades (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'women_belts', label: 'Designer Belts & Waist Chains (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
@@ -101,6 +103,7 @@ export const UNISEX_CATEGORIES = [
   { id: 'unisex_jewelry', label: 'Chains, Rings & Jewelry (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_watches', label: 'Wristwatches & Timepieces (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_sunglasses', label: 'Sunglasses & Eyewear (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  { id: 'unisex_belts', label: 'Designer Belts & Small Leather Goods (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Bucket Hats (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
@@ -181,27 +184,27 @@ export default function PublishGarmentPage() {
   const [showCustomSizeInput, setShowCustomSizeInput] = useState(false);
   const [sizeStock, setSizeStock] = useState<{ [size: string]: { enabled: boolean; quantity: number | string } }>(
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry'
-      ? { 'One Size': { enabled: true, quantity: 20 } }
+      ? { 'One Size': { enabled: true, quantity: '' } }
       : vendorSpecialty === 'footwear'
       ? {
-          '38': { enabled: false, quantity: 0 },
-          '39': { enabled: true, quantity: 5 },
-          '40': { enabled: true, quantity: 10 },
-          '41': { enabled: true, quantity: 10 },
-          '42': { enabled: true, quantity: 10 },
-          '43': { enabled: true, quantity: 10 },
-          '44': { enabled: true, quantity: 5 },
-          '45': { enabled: false, quantity: 0 },
-          '46': { enabled: false, quantity: 0 },
-          '47': { enabled: false, quantity: 0 },
-          '48': { enabled: false, quantity: 0 },
+          '38': { enabled: false, quantity: '' },
+          '39': { enabled: false, quantity: '' },
+          '40': { enabled: false, quantity: '' },
+          '41': { enabled: false, quantity: '' },
+          '42': { enabled: false, quantity: '' },
+          '43': { enabled: false, quantity: '' },
+          '44': { enabled: false, quantity: '' },
+          '45': { enabled: false, quantity: '' },
+          '46': { enabled: false, quantity: '' },
+          '47': { enabled: false, quantity: '' },
+          '48': { enabled: false, quantity: '' },
         }
       : {
-          'S': { enabled: true, quantity: 10 },
-          'M': { enabled: true, quantity: 20 },
-          'L': { enabled: true, quantity: 20 },
-          'XL': { enabled: true, quantity: 10 },
-          'XXL': { enabled: false, quantity: 0 },
+          'S': { enabled: false, quantity: '' },
+          'M': { enabled: false, quantity: '' },
+          'L': { enabled: false, quantity: '' },
+          'XL': { enabled: false, quantity: '' },
+          'XXL': { enabled: false, quantity: '' },
         }
   );
 
@@ -289,24 +292,38 @@ export default function PublishGarmentPage() {
           state: v.state || ''
         });
 
-        if (spec === 'jewelry') {
+        if (spec === 'jewelry' || spec === 'accessories' || spec === 'caps') {
           setCatFilterTab('accessories');
           setCategory('accessories');
-          setSubCategory('men_jewelry_chains');
-          setSizeStock({ 'One Size': { enabled: true, quantity: 20 } });
+          setSubCategory(spec === 'caps' ? 'men_caps_hats' : spec === 'jewelry' ? 'men_jewelry_chains' : 'men_bags_backpacks');
+          setSizeStock({ 'One Size': { enabled: true, quantity: '' } });
         } else if (spec === 'footwear') {
           setCatFilterTab('footwear');
           setCategory('footwear');
           setSubCategory('men_slides_palms');
           setSizeStock({
-            '39': { enabled: true, quantity: 5 },
-            '40': { enabled: true, quantity: 10 },
-            '41': { enabled: true, quantity: 10 },
-            '42': { enabled: true, quantity: 10 },
-            '43': { enabled: true, quantity: 10 },
-            '44': { enabled: true, quantity: 5 },
-            '45': { enabled: false, quantity: 0 },
-            '46': { enabled: false, quantity: 0 },
+            '38': { enabled: false, quantity: '' },
+            '39': { enabled: false, quantity: '' },
+            '40': { enabled: false, quantity: '' },
+            '41': { enabled: false, quantity: '' },
+            '42': { enabled: false, quantity: '' },
+            '43': { enabled: false, quantity: '' },
+            '44': { enabled: false, quantity: '' },
+            '45': { enabled: false, quantity: '' },
+            '46': { enabled: false, quantity: '' },
+            '47': { enabled: false, quantity: '' },
+            '48': { enabled: false, quantity: '' },
+          });
+        } else {
+          setCatFilterTab('apparel');
+          setCategory(initialMaleList[0]?.generalCat || 'clothing');
+          setSubCategory(initialMaleList[0]?.id || 'streetwear_hoodie');
+          setSizeStock({
+            'S': { enabled: false, quantity: '' },
+            'M': { enabled: false, quantity: '' },
+            'L': { enabled: false, quantity: '' },
+            'XL': { enabled: false, quantity: '' },
+            'XXL': { enabled: false, quantity: '' },
           });
         }
       }
@@ -346,7 +363,7 @@ export default function PublishGarmentPage() {
   }, [genderTarget, catFilterTab, isBoutique]);
 
   const currentSizeList = useMemo(() => {
-    const base = category === 'footwear' ? FOOTWEAR_SIZES : category === 'accessories' ? ACCESSORY_SIZES : APPAREL_SIZES;
+    const base = category === 'footwear' ? FOOTWEAR_SIZES : (category === 'accessories' || category === 'bags') ? ACCESSORY_SIZES : APPAREL_SIZES;
     const custom = Object.keys(sizeStock).filter((sz) => !base.includes(sz) && sz !== 'One Size');
     return [...base, ...custom];
   }, [category, sizeStock]);
@@ -360,7 +377,7 @@ export default function PublishGarmentPage() {
       ...prev,
       [trimmed]: {
         enabled: true,
-        quantity: prev[trimmed]?.quantity !== undefined && prev[trimmed]?.quantity !== '' ? prev[trimmed].quantity : 10,
+        quantity: prev[trimmed]?.quantity !== undefined && prev[trimmed]?.quantity !== '' ? prev[trimmed].quantity : '',
       },
     }));
     setCustomSizeInput('');
@@ -382,29 +399,29 @@ export default function PublishGarmentPage() {
 
     if (generalCat === 'footwear') {
       setSizeStock({
-        '38': { enabled: false, quantity: 0 },
-        '39': { enabled: true, quantity: 5 },
-        '40': { enabled: true, quantity: 10 },
-        '41': { enabled: true, quantity: 10 },
-        '42': { enabled: true, quantity: 10 },
-        '43': { enabled: true, quantity: 10 },
-        '44': { enabled: true, quantity: 5 },
-        '45': { enabled: false, quantity: 0 },
-        '46': { enabled: false, quantity: 0 },
-        '47': { enabled: false, quantity: 0 },
-        '48': { enabled: false, quantity: 0 },
+        '38': { enabled: false, quantity: '' },
+        '39': { enabled: false, quantity: '' },
+        '40': { enabled: false, quantity: '' },
+        '41': { enabled: false, quantity: '' },
+        '42': { enabled: false, quantity: '' },
+        '43': { enabled: false, quantity: '' },
+        '44': { enabled: false, quantity: '' },
+        '45': { enabled: false, quantity: '' },
+        '46': { enabled: false, quantity: '' },
+        '47': { enabled: false, quantity: '' },
+        '48': { enabled: false, quantity: '' },
       });
-    } else if (generalCat === 'accessories') {
+    } else if (generalCat === 'accessories' || generalCat === 'bags') {
       setSizeStock({
-        'One Size': { enabled: true, quantity: 20 }
+        'One Size': { enabled: true, quantity: '' }
       });
     } else {
       setSizeStock({
-        'S': { enabled: true, quantity: 10 },
-        'M': { enabled: true, quantity: 20 },
-        'L': { enabled: true, quantity: 20 },
-        'XL': { enabled: true, quantity: 10 },
-        'XXL': { enabled: false, quantity: 0 },
+        'S': { enabled: false, quantity: '' },
+        'M': { enabled: false, quantity: '' },
+        'L': { enabled: false, quantity: '' },
+        'XL': { enabled: false, quantity: '' },
+        'XXL': { enabled: false, quantity: '' },
       });
     }
   };
@@ -822,10 +839,17 @@ export default function PublishGarmentPage() {
   };
 
   const handleToggleSize = (size: string) => {
-    setSizeStock(prev => ({
-      ...prev,
-      [size]: { ...prev[size], enabled: !prev[size]?.enabled }
-    }));
+    setSizeStock(prev => {
+      const willEnable = !prev[size]?.enabled;
+      return {
+        ...prev,
+        [size]: {
+          ...prev[size],
+          enabled: willEnable,
+          quantity: willEnable ? (prev[size]?.quantity && Number(prev[size]?.quantity) > 0 ? prev[size]?.quantity : 1) : 0,
+        }
+      };
+    });
   };
 
   const handleAddTag = (e: React.KeyboardEvent) => {
@@ -859,7 +883,7 @@ export default function PublishGarmentPage() {
 
     const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled && Number(sizeStock[s]?.quantity) > 0);
     if (enabledSizes.length === 0) {
-      setErrorMessage(category === 'accessories' ? 'Please specify available stock quantity.' : 'Please enable at least one size with stock quantity.');
+      setErrorMessage((category === 'accessories' || category === 'bags') ? 'Please specify available stock quantity.' : 'Please enable at least one size with stock quantity.');
       return;
     }
 
@@ -1799,7 +1823,7 @@ export default function PublishGarmentPage() {
                   Garment / Accessory Category <strong className="text-rose-400">*</strong>
                 </label>
                 <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)] font-bold uppercase">
-                  {category === 'footwear' ? 'Shoe Sizing Active' : category === 'accessories' ? 'Jewelry / One-Size Stock Active' : 'Apparel Sizing Active'}
+                  {category === 'footwear' ? 'Shoe Sizing Active' : (category === 'accessories' || category === 'bags') ? 'Accessories / One-Size Stock Active' : 'Apparel Sizing Active'}
                 </span>
               </div>
 
@@ -1807,9 +1831,9 @@ export default function PublishGarmentPage() {
               <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
                 {[
                   { id: 'all', label: 'All Categories', icon: Layers, allowed: true },
+                  { id: 'accessories', label: 'Accessories & Bags', icon: Sparkles, allowed: true },
                   { id: 'apparel', label: isBoutique ? 'Apparel & Streetwear' : 'Apparel & Native Sets', icon: Shirt, allowed: true },
                   { id: 'footwear', label: 'Footwear & Slides', icon: Footprints, allowed: true },
-                  { id: 'accessories', label: 'Caps, Bags & Jewelry', icon: Sparkles, allowed: true },
                 ].filter(t => t.allowed).map((tab) => {
                   const IconComp = tab.icon;
                   return (
@@ -2137,18 +2161,18 @@ export default function PublishGarmentPage() {
               </div>
             )}
 
-            {/* If Accessory: Super Simple Single Quantity Input */}
-            {category === 'accessories' ? (
+            {/* If Accessory or Bag: Super Simple Single Quantity Input */}
+            {(category === 'accessories' || category === 'bags') ? (
               <div className="p-5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] max-w-sm">
                 <label className="block text-[11px] font-mono-luxury uppercase font-bold text-[var(--text-secondary)] mb-2">
-                  Total Units in Stock
+                  Total Units in Stock <strong className="text-rose-400">*</strong>
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={sizeStock['One Size']?.quantity === '' ? '' : (sizeStock['One Size']?.quantity ?? 20)}
-                    placeholder="0"
+                    value={sizeStock['One Size']?.quantity === '' ? '' : (sizeStock['One Size']?.quantity ?? '')}
+                    placeholder="Enter stock quantity (e.g. 10)"
                     onFocus={(e) => e.target.select()}
                     onChange={(e) => handleSizeStockChange('One Size', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-sm font-bold text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"

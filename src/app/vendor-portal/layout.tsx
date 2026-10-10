@@ -156,7 +156,7 @@ export default function VendorPortalLayout({
     },
     {
       id: 'tour-nav-publish',
-      label: specialtyInfo.publishLabel,
+      label: 'Add Drop',
       href: '/vendor-portal/publish',
       icon: UploadCloud,
       active: pathname === '/vendor-portal/publish'
@@ -170,7 +170,7 @@ export default function VendorPortalLayout({
     },
     {
       id: 'tour-nav-orders',
-      label: specialtyInfo.ordersLabel,
+      label: 'Orders',
       href: '/vendor-portal/orders',
       icon: PackageCheck,
       active: pathname === '/vendor-portal/orders'
@@ -184,7 +184,7 @@ export default function VendorPortalLayout({
     },
     {
       id: 'tour-nav-atelier',
-      label: specialtyInfo.storeProfileLabel,
+      label: 'Store Profile',
       href: '/vendor-portal/atelier',
       icon: Building,
       active: pathname === '/vendor-portal/atelier'
