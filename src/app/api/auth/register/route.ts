@@ -169,6 +169,20 @@ export async function POST(request: Request) {
     });
     console.log(`[Register POST] 📨 Dispatched signup OTP email to ${normalizedEmail}:`, emailResult);
 
+    // If direct SMTP failed, trigger Supabase native auth email fallback
+    if (!emailResult.success) {
+      console.warn(`[Register POST] ⚠️ Direct email dispatch failed (${emailResult.error}), trying Supabase native resend fallback...`);
+      try {
+        await adminClient.auth.resend({
+          type: 'signup',
+          email: normalizedEmail,
+        });
+        console.log(`[Register POST] ✅ Supabase native auth resend triggered for ${normalizedEmail}`);
+      } catch (sbErr: any) {
+        console.warn(`[Register POST] Supabase native resend notice:`, sbErr?.message);
+      }
+    }
+
     const twinId = `VY-NIG-${Math.floor(100 + Math.random() * 900)}`;
 
     if (userType === 'vendor') {

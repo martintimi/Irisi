@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     const userType = targetUser.user_metadata?.user_type || 'vendor';
     const recipientName = targetUser.user_metadata?.brand_name || targetUser.user_metadata?.full_name || undefined;
 
-    await sendSignupVerificationEmail({
+    const emailResult = await sendSignupVerificationEmail({
       recipientEmail: normalizedEmail,
       recipientName,
       otpCode,
@@ -87,7 +87,21 @@ export async function POST(request: Request) {
       userType,
     });
 
-    console.log(`[Resend OTP] 📨 Dispatched fresh OTP (${otpCode}) to ${normalizedEmail}`);
+    console.log(`[Resend OTP] 📨 Dispatched fresh OTP (${otpCode}) to ${normalizedEmail}:`, emailResult);
+
+    // If direct SMTP failed, trigger Supabase native auth email fallback
+    if (!emailResult.success) {
+      console.warn(`[Resend OTP] ⚠️ Direct email dispatch failed (${emailResult.error}), trying Supabase native resend fallback...`);
+      try {
+        await adminClient.auth.resend({
+          type: 'signup',
+          email: normalizedEmail,
+        });
+        console.log(`[Resend OTP] ✅ Supabase native auth resend triggered for ${normalizedEmail}`);
+      } catch (sbErr: any) {
+        console.warn(`[Resend OTP] Supabase native resend notice:`, sbErr?.message);
+      }
+    }
 
     return NextResponse.json({
       success: true,

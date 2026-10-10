@@ -266,12 +266,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Check if external email or SMS providers are configured in .env.local
-    const hasCustomEmail = Boolean(
-      (process.env.GMAIL_USER && (process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD)) ||
-      (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) ||
-      process.env.RESEND_API_KEY
-    );
+    // 1. Check if external email or SMS providers are configured
+    const hasCustomEmail = true;
     const hasCustomSms = Boolean(
       process.env.TERMII_API_KEY || (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
     );
@@ -332,6 +328,19 @@ export async function POST(request: Request) {
           userType: role === 'vendor' ? 'vendor' : 'shopper',
           supportUrl,
         }).catch((e) => ({ success: false, provider: 'none' as const, error: e.message }));
+
+        // Fallback to Supabase native email if direct SMTP failed
+        if (!emailResult.success) {
+          console.warn('[forgot-password] Direct email failed, triggering Supabase native reset email fallback...');
+          try {
+            await anonClient.auth.resetPasswordForEmail(resolvedEmail, {
+              redirectTo: `${siteUrl}/auth?mode=reset_password`,
+            });
+            emailResult = { success: true, provider: 'supabase_fallback' as any };
+          } catch (sbErr: any) {
+            console.warn('[forgot-password] Supabase fallback notice:', sbErr?.message);
+          }
+        }
       }
 
       if (resolvedPhone && hasCustomSms) {
