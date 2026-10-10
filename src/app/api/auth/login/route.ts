@@ -24,6 +24,9 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
+    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
 
     let resolvedEmail = normalizedEmail;
 
@@ -48,47 +51,51 @@ export async function POST(request: Request) {
           : '+234' + cleanPhone;
 
         if (expectedRole === 'vendor') {
-          const { data: vMatch } = await supabase
+          const { data: vMatches } = await adminClient
             .from('vendors')
             .select('email, phone')
             .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
-            .maybeSingle();
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-          if (vMatch?.email) {
-            resolvedEmail = vMatch.email.trim().toLowerCase();
+          if (vMatches?.[0]?.email) {
+            resolvedEmail = vMatches[0].email.trim().toLowerCase();
           }
         } else {
-          const { data: pMatch } = await supabase
+          const { data: pMatches } = await adminClient
             .from('profiles')
             .select('email, phone')
             .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
-            .maybeSingle();
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-          if (pMatch?.email) {
-            resolvedEmail = pMatch.email.trim().toLowerCase();
+          if (pMatches?.[0]?.email) {
+            resolvedEmail = pMatches[0].email.trim().toLowerCase();
           } else {
-            const { data: vMatch } = await supabase
+            const { data: vMatches } = await adminClient
               .from('vendors')
               .select('email, phone')
               .or(`phone.eq.${localPhone},phone.eq.${intlPhone},phone.eq.${cleanPhone}`)
-              .maybeSingle();
+              .order('created_at', { ascending: false })
+              .limit(1);
 
-            if (vMatch?.email) {
-              resolvedEmail = vMatch.email.trim().toLowerCase();
+            if (vMatches?.[0]?.email) {
+              resolvedEmail = vMatches[0].email.trim().toLowerCase();
             }
           }
         }
       } else {
         // Not a phone number: check by vendor ID, brand name, or email prefix
         if (expectedRole === 'vendor') {
-          const { data: vBrand } = await supabase
+          const { data: vBrands } = await adminClient
             .from('vendors')
             .select('email')
             .or(`id.ilike.${normalizedEmail},brand_name.ilike.${normalizedEmail},email.ilike.${normalizedEmail}@%`)
-            .maybeSingle();
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-          if (vBrand?.email) {
-            resolvedEmail = vBrand.email.trim().toLowerCase();
+          if (vBrands?.[0]?.email) {
+            resolvedEmail = vBrands[0].email.trim().toLowerCase();
           }
         }
       }
@@ -124,9 +131,6 @@ export async function POST(request: Request) {
     // Fallback sync for known system/default passwords if user previously migrated or used platform default
     if (authError && (password === 'IrisiVendor2026!' || password === 'Password123!' || password === 'Irisi2026!' || password === 'VeyraVendor2026!')) {
       try {
-        const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-          auth: { autoRefreshToken: false, persistSession: false }
-        });
         const { data: userList } = await adminClient.auth.admin.listUsers();
         const targetUser = userList?.users?.find((u: any) => u.email?.toLowerCase() === resolvedEmail.toLowerCase());
         if (targetUser) {
@@ -155,18 +159,41 @@ export async function POST(request: Request) {
     const metadataType = user.user_metadata?.user_type; // 'shopper' | 'vendor'
     const token = authData.session?.access_token || user.id;
 
-    // 2. Query both tables to verify exact account existence
-    const { data: vendorRecord } = await supabase
+    // 2. Query both tables with adminClient to bypass RLS and avoid single-row PGRST116 constraint errors
+    const { data: vendorList } = await adminClient
       .from('vendors')
       .select('*')
       .or(`user_id.eq.${user.id},email.eq.${normalizedEmail}`)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
 
-    const { data: profileRecord } = await supabase
+    // Multi-row resolution priority:
+    // 1) Linked to this auth user AND verified
+    // 2) Linked to this auth user (most recently created)
+    // 3) Verified store matching email
+    // 4) Most recent store matching email
+    const vendorRecord = (vendorList || []).find((v: any) => v.user_id === user.id && v.is_verified)
+      || (vendorList || []).find((v: any) => v.user_id === user.id)
+      || (vendorList || []).find((v: any) => v.is_verified)
+      || vendorList?.[0]
+      || null;
+
+    // Self-healing link: if vendorRecord exists but has no user_id, bind it to this auth user
+    if (vendorRecord && !vendorRecord.user_id) {
+      try {
+        await adminClient.from('vendors').update({ user_id: user.id }).eq('id', vendorRecord.id);
+        vendorRecord.user_id = user.id;
+      } catch (_) {}
+    }
+
+    const { data: profileList } = await adminClient
       .from('profiles')
       .select('*')
       .or(`id.eq.${user.id},email.eq.${normalizedEmail}`)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
+
+    const profileRecord = (profileList || []).find((p: any) => p.id === user.id)
+      || profileList?.[0]
+      || null;
 
     // 3. Strict Role Isolation Check
     if (expectedRole === 'shopper') {
@@ -235,8 +262,9 @@ export async function POST(request: Request) {
         vendor: vendorRecord,
       });
 
-      response.cookies.set('veyra_vendor_id', vendorRecord.id, { path: '/', httpOnly: false });
-      response.cookies.set('veyra_vendor_token', token, { path: '/', httpOnly: false });
+      response.cookies.set('irisi_vendor_id', vendorRecord.id, { path: '/', httpOnly: false, maxAge: 2592000, sameSite: 'lax' });
+      response.cookies.set('veyra_vendor_id', vendorRecord.id, { path: '/', httpOnly: false, maxAge: 2592000, sameSite: 'lax' });
+      response.cookies.set('veyra_vendor_token', token, { path: '/', httpOnly: false, maxAge: 2592000, sameSite: 'lax' });
       return response;
     }
 
@@ -269,7 +297,9 @@ export async function POST(request: Request) {
         userType: 'vendor',
         vendor: vendorRecord,
       });
-      response.cookies.set('veyra_vendor_id', vendorRecord.id, { path: '/', httpOnly: false });
+      response.cookies.set('irisi_vendor_id', vendorRecord.id, { path: '/', httpOnly: false, maxAge: 2592000, sameSite: 'lax' });
+      response.cookies.set('veyra_vendor_id', vendorRecord.id, { path: '/', httpOnly: false, maxAge: 2592000, sameSite: 'lax' });
+      response.cookies.set('veyra_vendor_token', token, { path: '/', httpOnly: false, maxAge: 2592000, sameSite: 'lax' });
       return response;
     } else {
       const response = NextResponse.json({

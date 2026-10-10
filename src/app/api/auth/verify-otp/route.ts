@@ -109,17 +109,27 @@ export async function POST(request: Request) {
     // 3. Fetch updated profiles (vendor is_verified remains false until Admin approves)
 
     // 4. Fetch updated profiles
-    const { data: profile } = await adminClient
+    const { data: profileList } = await adminClient
       .from('profiles')
       .select('*')
       .or(`id.eq.${verifiedUser.id},email.eq.${normalizedEmail}`)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
 
-    const { data: vendor } = await adminClient
+    const profile = (profileList || []).find((p: any) => p.id === verifiedUser.id)
+      || profileList?.[0]
+      || null;
+
+    const { data: vendorList } = await adminClient
       .from('vendors')
       .select('*')
       .or(`user_id.eq.${verifiedUser.id},email.eq.${normalizedEmail}`)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
+
+    const vendor = (vendorList || []).find((v: any) => v.user_id === verifiedUser.id && v.is_verified)
+      || (vendorList || []).find((v: any) => v.user_id === verifiedUser.id)
+      || (vendorList || []).find((v: any) => v.is_verified)
+      || vendorList?.[0]
+      || null;
 
     let activeVendor = vendor;
     const isVendorIntent = verifiedUser.user_metadata?.user_type === 'vendor' ||

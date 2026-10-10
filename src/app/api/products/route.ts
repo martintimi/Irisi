@@ -67,9 +67,14 @@ export async function GET(request: Request) {
     if (vendorId && vendorId !== 'all') {
       let resolvedVId = vendorId.trim();
       if (resolvedVId.includes('@')) {
-        const { data: vRec } = await supabase.from('vendors').select('id').eq('email', resolvedVId.toLowerCase()).maybeSingle();
-        if (vRec?.id) {
-          resolvedVId = vRec.id;
+        const { data: vRecs } = await supabase
+          .from('vendors')
+          .select('id, is_verified')
+          .eq('email', resolvedVId.toLowerCase())
+          .order('created_at', { ascending: false });
+        const target = (vRecs || []).find((v: any) => v.is_verified) || vRecs?.[0];
+        if (target?.id) {
+          resolvedVId = target.id;
         }
       }
       query = query.or(`vendor_id.eq.${resolvedVId},vendor_id.ilike.%${resolvedVId}%`);

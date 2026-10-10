@@ -24,26 +24,39 @@ export async function GET(request: Request) {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    let query = adminClient.from('vendors').select('*');
+    let vendorList: any[] = [];
+    const cleanVId = vendorId && vendorId.trim().length > 0 && vendorId !== 'undefined' && vendorId !== 'null'
+      ? vendorId.trim()
+      : '';
 
-    if (vendorId && vendorId.trim().length > 0 && vendorId !== 'undefined' && vendorId !== 'null') {
-      const cleanVId = vendorId.trim();
-      query = query.or(`id.eq.${cleanVId},email.eq.${cleanVId}`);
+    if (cleanVId) {
+      const { data, error } = await adminClient
+        .from('vendors')
+        .select('*')
+        .or(`id.eq.${cleanVId},email.eq.${cleanVId}`)
+        .order('created_at', { ascending: false });
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      vendorList = data || [];
     } else {
       const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        query = query.or(`user_id.eq.${user.id},email.eq.${user.email}`);
+        const { data, error } = await adminClient
+          .from('vendors')
+          .select('*')
+          .or(`user_id.eq.${user.id},email.eq.${user.email}`)
+          .order('created_at', { ascending: false });
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        vendorList = data || [];
       } else {
         return NextResponse.json({ success: false, error: 'No active vendor session' }, { status: 401 });
       }
     }
 
-    const { data: vendor, error } = await query.limit(1).maybeSingle();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    const vendor = (cleanVId ? vendorList.find(v => v.id === cleanVId) : null)
+      || vendorList.find(v => v.is_verified)
+      || vendorList[0]
+      || null;
 
     if (!vendor) {
       return NextResponse.json({ success: false, error: 'Vendor not found' }, { status: 404 });
@@ -175,25 +188,29 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Vendor ID required — please log in again.' }, { status: 400 });
       }
       // Look up vendor by user_id or email from the auth session
-      const { data: sessionVendor } = await adminClient
+      const { data: sVendors } = await adminClient
         .from('vendors')
-        .select('id')
+        .select('id, is_verified')
         .or(`user_id.eq.${user.id},email.eq.${user.email}`)
-        .limit(1)
-        .maybeSingle();
-      if (!sessionVendor?.id) {
+        .order('created_at', { ascending: false });
+      const best = (sVendors || []).find((v: any) => v.is_verified) || sVendors?.[0];
+      if (!best?.id) {
         return NextResponse.json({ error: 'No vendor account found for this session.' }, { status: 404 });
       }
-      vendorId = sessionVendor.id;
+      vendorId = best.id;
     }
 
     // Fetch existing vendor to check previous verified status and preserve fields on partial updates
-    const { data: existingVendor } = await adminClient
+    const { data: existingList } = await adminClient
       .from('vendors')
       .select('*')
       .or(`id.eq.${vendorId},email.eq.${vendorId}`)
-      .limit(1)
-      .maybeSingle();
+      .order('created_at', { ascending: false });
+
+    const existingVendor = (existingList || []).find((v: any) => v.id === vendorId)
+      || (existingList || []).find((v: any) => v.is_verified)
+      || existingList?.[0]
+      || null;
 
     const wasVerified = !!existingVendor?.is_verified;
 

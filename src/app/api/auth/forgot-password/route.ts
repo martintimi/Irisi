@@ -93,11 +93,13 @@ export async function POST(request: Request) {
 
       // Try finding in vendors first if role is vendor
       if (role === 'vendor') {
-        const { data: vMatch } = await adminClient
+        const { data: vMatches } = await adminClient
           .from('vendors')
-          .select('id, brand_name, email, phone')
+          .select('id, brand_name, email, phone, is_verified')
           .ilike('email', normalizedEmail)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
+
+        const vMatch = (vMatches || []).find((v: any) => v.is_verified) || vMatches?.[0];
 
         if (vMatch) {
           resolvedEmail = vMatch.email || normalizedEmail;
@@ -105,11 +107,13 @@ export async function POST(request: Request) {
           accountName = vMatch.brand_name || '';
         }
       } else if (role === 'shopper') {
-        const { data: pMatch } = await adminClient
+        const { data: pMatches } = await adminClient
           .from('profiles')
           .select('id, full_name, email, phone')
           .ilike('email', normalizedEmail)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
+
+        const pMatch = pMatches?.[0];
 
         if (pMatch) {
           resolvedEmail = pMatch.email || normalizedEmail;
@@ -118,22 +122,26 @@ export async function POST(request: Request) {
         }
       } else {
         // Unspecified role: check both
-        const { data: vMatch } = await adminClient
+        const { data: vMatches } = await adminClient
           .from('vendors')
-          .select('id, brand_name, email, phone')
+          .select('id, brand_name, email, phone, is_verified')
           .ilike('email', normalizedEmail)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
+
+        const vMatch = (vMatches || []).find((v: any) => v.is_verified) || vMatches?.[0];
 
         if (vMatch) {
           resolvedEmail = vMatch.email || normalizedEmail;
           resolvedPhone = vMatch.phone || '';
           accountName = vMatch.brand_name || '';
         } else {
-          const { data: pMatch } = await adminClient
+          const { data: pMatches } = await adminClient
             .from('profiles')
             .select('id, full_name, email, phone')
             .ilike('email', normalizedEmail)
-            .maybeSingle();
+            .order('created_at', { ascending: false });
+
+          const pMatch = pMatches?.[0];
 
           if (pMatch) {
             resolvedEmail = pMatch.email || normalizedEmail;
