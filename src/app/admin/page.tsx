@@ -21,6 +21,7 @@ import LuxuryLoader from '@/components/common/LuxuryLoader';
 import { getConciergeConfig, saveConciergeConfig, generateWhatsAppUrl, ConciergeConfig } from '@/lib/config/concierge';
 import AdminCategoriesManager from '@/components/admin/AdminCategoriesManager';
 import AdminProductEditModal from '@/components/admin/AdminProductEditModal';
+import AdminShopperEmailModal from '@/components/admin/AdminShopperEmailModal';
 import { getCategoryBySlug } from '@/lib/data/categories';
 import { matchesDepartment } from '@/lib/utils/categoryMatcher';
 import { supabase } from '@/lib/supabase/client';
@@ -197,6 +198,9 @@ export default function SuperAdminPage() {
   // Shopper Directory State
   const [shopperSearch, setShopperSearch] = useState('');
   const [selectedShopperModal, setSelectedShopperModal] = useState<any | null>(null);
+  const [isShopperMailModalOpen, setIsShopperMailModalOpen] = useState(false);
+  const [shopperMailMode, setShopperMailMode] = useState<'broadcast' | 'single'>('broadcast');
+  const [shopperMailTarget, setShopperMailTarget] = useState<any | null>(null);
 
   // Vendor Payouts & Settlement Modal State
   const [selectedVendorPayoutModal, setSelectedVendorPayoutModal] = useState<any | null>(null);
@@ -3435,15 +3439,30 @@ export default function SuperAdminPage() {
                   </p>
                 </div>
 
-                <div className="relative min-w-[260px]">
-                  <Search className="absolute left-3.5 top-3 h-4 w-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    value={shopperSearch}
-                    onChange={(e) => setShopperSearch(e.target.value)}
-                    placeholder="Search shopper name, email, phone..."
-                    className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
-                  />
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShopperMailTarget(null);
+                      setShopperMailMode('broadcast');
+                      setIsShopperMailModalOpen(true);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[var(--gold-accent)] via-amber-300 to-[var(--gold-accent)] text-black font-mono-luxury font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <Mail className="h-4 w-4 text-black" />
+                    <span>📢 Broadcast to All Shoppers</span>
+                  </button>
+
+                  <div className="relative min-w-[240px]">
+                    <Search className="absolute left-3.5 top-3 h-4 w-4 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      value={shopperSearch}
+                      onChange={(e) => setShopperSearch(e.target.value)}
+                      placeholder="Search shopper name, email, phone..."
+                      className="w-full pl-10 pr-4 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -3491,9 +3510,25 @@ export default function SuperAdminPage() {
                             <td className="py-3.5 text-[var(--gold-accent)] font-bold">{c.ordersCount}</td>
                             <td className="py-3.5 font-bold text-emerald-400">₦{c.totalSpend.toLocaleString()}</td>
                             <td className="py-3.5 text-right">
-                              <span className="px-3 py-1 rounded-full surface-card border border-[var(--border-subtle)] text-[10px] font-mono-luxury uppercase font-bold text-[var(--gold-accent)]">
-                                View Profile
-                              </span>
+                              <div className="inline-flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShopperMailTarget(c);
+                                    setShopperMailMode('single');
+                                    setIsShopperMailModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-[10px] font-mono-luxury uppercase font-bold text-amber-300 transition-all flex items-center gap-1 cursor-pointer"
+                                  title="Send direct email to this shopper"
+                                >
+                                  <Mail className="h-3 w-3" />
+                                  <span>Message</span>
+                                </button>
+                                <span className="px-3 py-1 rounded-full surface-card border border-[var(--border-subtle)] text-[10px] font-mono-luxury uppercase font-bold text-[var(--gold-accent)]">
+                                  View
+                                </span>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -4066,12 +4101,28 @@ export default function SuperAdminPage() {
                 </h3>
               </div>
 
-              <button
-                onClick={() => setSelectedShopperModal(null)}
-                className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-              >
-                <XCircle className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShopperMailTarget(selectedShopperModal);
+                    setShopperMailMode('single');
+                    setIsShopperMailModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-mono-luxury font-bold text-amber-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  title="Send custom email to this shopper"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                  <span>Send Direct Email</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedShopperModal(null)}
+                  className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* KPI Stats Grid */}
@@ -4538,6 +4589,18 @@ export default function SuperAdminPage() {
           </div>
         </div>
       )}
+
+      {/* SHOPPER LUXURY EMAIL & BROADCAST MODAL */}
+      <AdminShopperEmailModal
+        isOpen={isShopperMailModalOpen}
+        onClose={() => {
+          setIsShopperMailModalOpen(false);
+          setShopperMailTarget(null);
+        }}
+        initialMode={shopperMailMode}
+        targetShopper={shopperMailTarget}
+        totalShoppersCount={customersList.length}
+      />
 
     </div>
   );

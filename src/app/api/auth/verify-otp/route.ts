@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { sendShopperWelcomeEmail } from '@/lib/services/emailService';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -171,6 +172,16 @@ export async function POST(request: Request) {
       response.cookies.set('veyra_vendor_id', activeVendor.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
     } else if (profile) {
       response.cookies.set('veyra_shopper_id', verifiedUser.id, { path: '/', maxAge: 2592000, sameSite: 'lax' });
+    }
+
+    // 6. Dispatch fun Nigerian welcome onboarding email to new shopper in background
+    if (!activeVendor && (type === 'signup' || !profile?.id)) {
+      try {
+        sendShopperWelcomeEmail({
+          customerEmail: normalizedEmail,
+          customerName: verifiedUser.user_metadata?.full_name || profile?.full_name || 'Boss'
+        }).catch(e => console.warn('Shopper welcome email notice:', e?.message));
+      } catch (_) {}
     }
 
     return response;

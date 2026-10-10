@@ -55,9 +55,9 @@ function wrapEmailHtml(title: string, content: string): string {
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 24px; margin-top: 32px;">
                     <tr>
                       <td align="center">
-                        <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px;">Need Assistance? We Are Here For You</p>
+                        <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px;">Questions, Sizing or Delivery Help? We Dey For You</p>
                         <a href="https://wa.me/2349070332145" style="display: inline-block; background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); color: #e6c367; padding: 10px 20px; border-radius: 10px; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">
-                          💬 Chat with Concierge Support on WhatsApp &rarr;
+                          💬 Chat with Concierge on WhatsApp &rarr;
                         </a>
                       </td>
                     </tr>
@@ -96,11 +96,11 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
 
   const bodyContent = `
     <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🛍️ Order Confirmed</span>
+      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🛍️ Order Confirmed · Escrow Secured</span>
     </div>
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Thank You for Your Order, ${payload.customerName || 'Valued Client'}!</h2>
+    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">We Don Carry Your Matter for Head! 🙌</h2>
     <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Your order has been confirmed and payment received. <strong>${storeLabel}</strong> is already preparing your items for delivery:
+      Hello ${payload.customerName || 'Boss'}, thank you for shopping on ÌRÍSÍ! Your payment is confirmed and locked 100% safe in Escrow. <strong>${storeLabel}</strong> is already preparing your package. No shaking, your money is completely safe until you receive your order!
     </p>
 
     <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
@@ -135,7 +135,7 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
     </div>
   `;
 
-  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Order Confirmed (${payload.orderNumber})`, wrapEmailHtml('Order Confirmed', bodyContent));
+  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Order Confirmed & Escrow Secured (${payload.orderNumber})`, wrapEmailHtml('Order Confirmed', bodyContent));
 }
 
 export async function sendVendorNewOrderEmail(vendorEmail: string, payload: OrderEmailPayload) {
@@ -175,17 +175,17 @@ export async function sendDispatchNotificationEmail(payload: OrderEmailPayload) 
 
   const bodyContent = `
     <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #60a5fa; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🚚 Parcel Dispatched &amp; In Transit</span>
+      <span style="color: #60a5fa; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🚚 Your Drip is on the Road!</span>
     </div>
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Your Package is on the Way!</h2>
+    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Package Dispatched &amp; Moving! 🚀</h2>
     <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Hello ${payload.customerName || 'Valued Client'}, great news! <strong>${payload.vendorName || 'Your store'}</strong> has packaged and handed your order to the dispatch courier.
+      Hello ${payload.customerName || 'Boss'}, great news! <strong>${payload.vendorName || 'Your fashion designer'}</strong> has packaged and handed your order to the transporter. Your piece is on its way to you:
     </p>
 
     <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td style="color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Order Number</td>
+          <td style="color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Order Reference</td>
           <td align="right" style="color: #ffffff; font-weight: 700; font-family: monospace; font-size: 14px;">${payload.orderNumber}</td>
         </tr>
         ${payload.waybillNumber ? `
@@ -195,8 +195,10 @@ export async function sendDispatchNotificationEmail(payload: OrderEmailPayload) 
         </tr>` : ''}
         ${payload.driverPhone ? `
         <tr>
-          <td style="color: #9ca3af; font-size: 12px; padding-top: 8px;">Rider / Terminal Contact</td>
-          <td align="right" style="color: #ffffff; font-size: 13px; padding-top: 8px;">${payload.driverPhone}</td>
+          <td style="color: #9ca3af; font-size: 12px; padding-top: 8px;">Driver / Rider Contact</td>
+          <td align="right" style="color: #ffffff; font-size: 13px; padding-top: 8px;">
+            <a href="tel:${payload.driverPhone}" style="color: #e6c367; text-decoration: none; font-weight: 700;">${payload.driverPhone}</a>
+          </td>
         </tr>` : ''}
         <tr>
           <td style="color: #9ca3af; font-size: 12px; padding-top: 8px;">Destination</td>
@@ -205,14 +207,18 @@ export async function sendDispatchNotificationEmail(payload: OrderEmailPayload) 
       </table>
     </div>
 
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
+    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0 0 20px; text-align: center;">
+      Driver or dispatch rider will contact you once the parcel is arriving. You can track live below anytime!
+    </p>
+
+    <div style="text-align: center; margin-top: 24px; margin-bottom: 24px;">
       <a href="${trackUrl}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Track Delivery Live &rarr;
+        Track Live Status &rarr;
       </a>
     </div>
   `;
 
-  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Order Dispatched (${payload.orderNumber})`, wrapEmailHtml('Order Dispatched', bodyContent));
+  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Your Drip is on the Road! Dispatched (${payload.orderNumber})`, wrapEmailHtml('Order Dispatched', bodyContent));
 }
 
 export async function sendOrderPackedEmail(payload: OrderEmailPayload) {
@@ -224,11 +230,11 @@ export async function sendOrderPackedEmail(payload: OrderEmailPayload) {
 
   const bodyContent = `
     <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">📦 Parcel Packaged &amp; Quality Checked</span>
+      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">📦 Package Inspected &amp; Ready</span>
     </div>
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Your Order is Packaged and Ready!</h2>
+    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Your Package is Packed &amp; Looking Clean! ✨</h2>
     <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Hello ${payload.customerName || 'Valued Client'}, <strong>${payload.vendorName || 'Your store'}</strong> has finished packaging and quality-checking your order <strong>${payload.orderNumber}</strong>. The parcel is now awaiting courier pickup.
+      Hello ${payload.customerName || 'Boss'}, great news! <strong>${payload.vendorName || 'Your fashion designer'}</strong> has finished packing and quality-checking your order <strong>${payload.orderNumber}</strong>. The parcel is sealed and waiting for courier / motor park dispatch!
     </p>
 
     <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
@@ -238,7 +244,7 @@ export async function sendOrderPackedEmail(payload: OrderEmailPayload) {
     </div>
   `;
 
-  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Order Packaged (${payload.orderNumber})`, wrapEmailHtml('Order Packaged', bodyContent));
+  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Your Order is Packed & Ready (${payload.orderNumber})`, wrapEmailHtml('Order Packaged', bodyContent));
 }
 
 export async function sendOrderDeliveredCustomerEmail(payload: OrderEmailPayload) {
@@ -246,15 +252,15 @@ export async function sendOrderDeliveredCustomerEmail(payload: OrderEmailPayload
     return { success: false, error: 'No customer email provided' };
   }
 
-  const reviewUrl = `https://irisimi-nig.vercel.app/account?tab=orders`;
+  const reviewUrl = `https://irisimi-nig.vercel.app/profile?tab=orders`;
 
   const bodyContent = `
     <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #10b981; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">✅ Delivered &amp; Completed</span>
+      <span style="color: #10b981; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🎉 Delivered · Time to Check Your Drip</span>
     </div>
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Your Package Has Arrived!</h2>
+    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Your Package Has Landed! 🙌</h2>
     <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Hello ${payload.customerName || 'Valued Client'}, great news! Your order <strong>${payload.orderNumber}</strong> has been successfully delivered to your registered destination.
+      Hello ${payload.customerName || 'Boss'}, your order <strong>${payload.orderNumber}</strong> has arrived at your destination! Please open your package, check your pieces, and ensure you love the quality.
     </p>
 
     <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
@@ -271,17 +277,182 @@ export async function sendOrderDeliveredCustomerEmail(payload: OrderEmailPayload
     </div>
 
     <p style="color: #d1d5db; font-size: 13px; line-height: 1.6; margin: 0 0 24px;">
-      Please inspect your package to ensure you are 100% satisfied with the quality, fit, and items.
+      Once you confirm say the fit set, tap the button below to confirm receipt so the designer can receive their settlement, and leave a review for other shoppers!
     </p>
 
     <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
       <a href="${reviewUrl}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Confirm Receipt &amp; View Order Details &rarr;
+        Confirm Receipt &amp; Leave Review &rarr;
       </a>
     </div>
   `;
 
-  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Order Delivered (${payload.orderNumber})`, wrapEmailHtml('Order Delivered', bodyContent));
+  return sendLuxuryEmail(payload.customerEmail, `ÌRÍSÍ - Package Delivered! How Does It Fit? (${payload.orderNumber})`, wrapEmailHtml('Order Delivered', bodyContent));
+}
+
+/**
+ * 1. SHOPPER WELCOME ONBOARDING EMAIL
+ * Warm, fun, stylish Nigerian welcome highlighting verified brands & 100% Escrow protection
+ */
+export async function sendShopperWelcomeEmail(payload: {
+  customerEmail: string;
+  customerName?: string;
+}) {
+  const { customerEmail, customerName } = payload;
+  if (!customerEmail || !customerEmail.includes('@')) return { success: false, error: 'Invalid email' };
+
+  const displayName = customerName || 'Boss';
+  const bodyContent = `
+    <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
+      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🥂 Welcome to ÌRÍSÍ!</span>
+    </div>
+    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 700;">Oshey! Welcome to the Family, ${displayName} ✨</h2>
+    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+      You don reach the right plug! <strong>ÌRÍSÍ</strong> is where verified Nigerian fashion houses, custom bespoke tailors, luxury Senator sets, and hot accessories meet. Pure luxury, zero stress, and zero stories.
+    </p>
+
+    <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <strong style="color: #e6c367; font-size: 14px;">🛡️ 100% Escrow Protected (No Shaking)</strong><br>
+            <span style="color: #9ca3af; font-size: 12px; line-height: 1.4; display: block; margin-top: 4px;">
+              Your money is safe with us until your package reaches your hands and you confirm say the fit set!
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <strong style="color: #e6c367; font-size: 14px;">✂️ Direct From Verified Fashion Houses</strong><br>
+            <span style="color: #9ca3af; font-size: 12px; line-height: 1.4; display: block; margin-top: 4px;">
+              Buy directly from top fashion houses and designers across Lagos, Abuja, Ibadan, Port Harcourt, and nationwide.
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0;">
+            <strong style="color: #e6c367; font-size: 14px;">🚚 Doorstep Courier &amp; Interstate Motor Park Waybills</strong><br>
+            <span style="color: #9ca3af; font-size: 12px; line-height: 1.4; display: block; margin-top: 4px;">
+              Fast delivery whether doorstep courier or motor park bus waybill right to your city.
+            </span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 24px; text-align: center;">
+      Ready to upgrade your wardrobe with premium Nigerian pieces?
+    </p>
+
+    <div style="text-align: center; margin-bottom: 24px;">
+      <a href="https://irisimi-nig.vercel.app/shop" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+        Explore Fresh Drops &amp; Senator Fits &rarr;
+      </a>
+    </div>
+  `;
+
+  return sendLuxuryEmail(customerEmail, `Oshey! Welcome to ÌRÍSÍ ✨ Your Drip Starts Here`, wrapEmailHtml('Welcome to ÌRÍSÍ', bodyContent));
+}
+
+/**
+ * 2. NEW DROP NOTIFICATION EMAIL
+ * Triggered when a verified vendor releases a fresh product or collection drop
+ */
+export async function sendNewDropNotificationEmail(payload: {
+  customerEmail: string;
+  customerName?: string;
+  vendorName: string;
+  product: {
+    id: string;
+    name: string;
+    price: number;
+    imageUrl?: string;
+    category?: string;
+  };
+}) {
+  const { customerEmail, customerName, vendorName, product } = payload;
+  if (!customerEmail || !customerEmail.includes('@')) return { success: false, error: 'Invalid email' };
+
+  const productUrl = `https://irisimi-nig.vercel.app/shop/${product.id}`;
+  const bodyContent = `
+    <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
+      <span style="color: #f87171; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🔥 HOT NEW DROP ALERT</span>
+    </div>
+    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 12px; font-weight: 700;">${vendorName} Just Dropped Fresh Heat!</h2>
+    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+      Hello ${customerName || 'Boss'}, oya come see this one! <strong>${vendorName}</strong> just added a brand new piece to their collection on ÌRÍSÍ. Check am out before limited sizes finish:
+    </p>
+
+    <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 18px; margin-bottom: 24px; text-align: center;">
+      ${product.imageUrl ? `
+        <img src="${product.imageUrl}" alt="${product.name}" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 14px; margin-bottom: 16px;" />
+      ` : ''}
+      <h3 style="color: #ffffff; font-size: 18px; margin: 0 0 6px; font-weight: 700;">${product.name}</h3>
+      <p style="color: #9ca3af; font-size: 12px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: 1px;">Brand: ${vendorName} • 100% Escrow Protected</p>
+      <div style="color: #e6c367; font-size: 22px; font-weight: 800; font-family: monospace;">₦${Number(product.price || 0).toLocaleString()}</div>
+    </div>
+
+    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0 0 24px; text-align: center;">
+      You know say hot styles no dey last for shelf. Grab yours now while sizes still complete!
+    </p>
+
+    <div style="text-align: center; margin-bottom: 24px;">
+      <a href="${productUrl}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+        Check Am Out / Shop Drop &rarr;
+      </a>
+    </div>
+  `;
+
+  return sendLuxuryEmail(customerEmail, `Hot New Drop Alert! 🔥 ${vendorName} Just Added Fresh Heat on ÌRÍSÍ`, wrapEmailHtml('New Drop Alert', bodyContent));
+}
+
+/**
+ * 3. CUSTOM ADMIN SHOPPER EMAIL (1-on-1 or Broadcast)
+ * Complete flexibility for Admin with luxury ÌRÍSÍ styling & WhatsApp Concierge
+ */
+export async function sendCustomShopperEmail(payload: {
+  recipientEmail: string;
+  recipientName?: string;
+  subject: string;
+  headline: string;
+  badgeText?: string;
+  bodyText: string;
+  buttonLabel?: string;
+  buttonUrl?: string;
+}) {
+  const { recipientEmail, recipientName, subject, headline, badgeText, bodyText, buttonLabel, buttonUrl } = payload;
+  if (!recipientEmail || !recipientEmail.includes('@')) return { success: false, error: 'Invalid recipient email' };
+
+  // Convert plain text newlines into formatted paragraphs
+  const paragraphs = bodyText
+    .split('\n\n')
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => `<p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0 0 16px;">${p.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+  const bodyContent = `
+    <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
+      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">
+        ${badgeText || '👑 VIP SHOPPER DISPATCH'}
+      </span>
+    </div>
+    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 16px; font-weight: 700;">${headline}</h2>
+    
+    <div style="margin-bottom: 24px;">
+      ${paragraphs}
+    </div>
+
+    ${buttonLabel && buttonUrl ? `
+      <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
+        <a href="${buttonUrl}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+          ${buttonLabel} &rarr;
+        </a>
+      </div>
+    ` : ''}
+  `;
+
+  return sendLuxuryEmail(recipientEmail, subject, wrapEmailHtml(headline, bodyContent));
 }
 
 export async function sendDeliverySettledEmail(vendorEmail: string, payload: OrderEmailPayload) {
