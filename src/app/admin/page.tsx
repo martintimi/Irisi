@@ -56,6 +56,7 @@ const adminSectionToTab = {
   approvals: 'approvals',
   finance: 'finance',
   customers: 'customers',
+  communications: 'communications',
   concierge: 'concierge',
 } as const;
 
@@ -1184,6 +1185,13 @@ export default function SuperAdminPage() {
       label: 'Shoppers Directory',
       icon: Users,
       badge: `${customersList.length}`
+    },
+    {
+      id: 'communications',
+      label: 'Shopper Mails & Broadcast',
+      icon: Mail,
+      badge: 'Live',
+      badgeColor: 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30'
     },
     {
       id: 'concierge',
@@ -3476,9 +3484,7 @@ export default function SuperAdminPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setShopperMailTarget(null);
-                      setShopperMailMode('broadcast');
-                      setIsShopperMailModalOpen(true);
+                      router.push('/admin/communications?mode=broadcast');
                     }}
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[var(--gold-accent)] via-amber-300 to-[var(--gold-accent)] text-black font-mono-luxury font-bold text-xs uppercase tracking-wider shadow-md hover:brightness-105 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap"
                   >
@@ -3555,9 +3561,7 @@ export default function SuperAdminPage() {
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShopperMailTarget(c);
-                                    setShopperMailMode('single');
-                                    setIsShopperMailModalOpen(true);
+                                    router.push(`/admin/communications?mode=single&email=${encodeURIComponent(c.email || '')}&name=${encodeURIComponent(c.name || '')}`);
                                   }}
                                   className="px-2.5 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-[10px] font-mono-luxury uppercase font-bold text-amber-300 transition-all flex items-center gap-1 cursor-pointer"
                                   title="Send direct email to this shopper"
@@ -4145,9 +4149,9 @@ export default function SuperAdminPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setShopperMailTarget(selectedShopperModal);
-                    setShopperMailMode('single');
-                    setIsShopperMailModalOpen(true);
+                    const em = encodeURIComponent(selectedShopperModal?.email || '');
+                    const nm = encodeURIComponent(selectedShopperModal?.name || '');
+                    router.push(`/admin/communications?mode=single&email=${em}&name=${nm}`);
                   }}
                   className="px-3.5 py-1.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-mono-luxury font-bold text-amber-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                   title="Send custom email to this shopper"
