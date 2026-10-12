@@ -152,19 +152,30 @@ export default function AdminShopperEmailModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn">
-      <div className="w-full max-w-5xl surface-card rounded-3xl border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div 
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-3 sm:p-6 flex min-h-full items-center justify-center animate-fadeIn"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        className="w-full max-w-5xl surface-card rounded-3xl border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col my-auto"
+        style={{ maxHeight: 'calc(100vh - 48px)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* MODAL HEADER */}
-        <div className="p-5 sm:p-6 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] flex items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Mail className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[var(--text-primary)]">
+                <h3 className="font-editorial text-lg sm:text-2xl font-bold text-[var(--text-primary)]">
                   Shopper Communications & Luxury Broadcasts
                 </h3>
                 <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold">
@@ -179,14 +190,14 @@ export default function AdminShopperEmailModal({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-all cursor-pointer"
+            className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-all cursor-pointer shrink-0"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* MODAL BODY */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        {/* MODAL BODY - FULL NATURAL OVERFLOW SCROLL */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
           
           {/* Status Message Banner */}
           {statusMessage && (
@@ -487,7 +498,7 @@ export default function AdminShopperEmailModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="p-4 sm:p-5 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)] flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)] flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
