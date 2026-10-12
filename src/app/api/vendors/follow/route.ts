@@ -60,9 +60,9 @@ export async function POST(request: Request) {
       isFollowing = true;
     }
 
-    // Try optional sync to Supabase table if it exists
-    try {
-      if (shopperKey && shopperKey.includes('@')) {
+    // Robust persistence: first try vendor_followers table, fallback to notifications table
+    if (shopperKey && shopperKey.includes('@')) {
+      try {
         if (isFollowing) {
           await adminClient.from('vendor_followers').upsert({
             vendor_id: vendorKey,
@@ -74,9 +74,39 @@ export async function POST(request: Request) {
             .eq('vendor_id', vendorKey)
             .eq('shopper_email', shopperKey);
         }
-      }
-    } catch (_) {
-      // Table may not exist yet in Supabase, in-memory registry guarantees uptime
+      } catch (_) {}
+
+      // Guaranteed persistent store in notifications table
+      try {
+        const titleKey = `FOLLOW:${vendorKey}`;
+        if (isFollowing) {
+          // Check if already stored to prevent duplicate rows
+          const { data: existing } = await adminClient
+            .from('notifications')
+            .select('id')
+            .eq('type', 'vendor_follow')
+            .eq('title', titleKey)
+            .eq('message', shopperKey)
+            .limit(1);
+
+          if (!existing || existing.length === 0) {
+            await adminClient.from('notifications').insert({
+              title: titleKey,
+              message: shopperKey,
+              type: 'vendor_follow',
+              read: false,
+              action_url: `https://irisimi-nig.vercel.app/brand/${encodeURIComponent(vendorKey)}`,
+            });
+          }
+        } else {
+          await adminClient
+            .from('notifications')
+            .delete()
+            .eq('type', 'vendor_follow')
+            .eq('title', titleKey)
+            .eq('message', shopperKey);
+        }
+      } catch (_) {}
     }
 
     return NextResponse.json({
@@ -103,6 +133,25 @@ export async function GET(request: Request) {
     }
 
     const followersSet = followerRegistry.get(vendorKey) || new Set<string>();
+
+    // Load persisted followers from DB
+    try {
+      const titleKey = `FOLLOW:${vendorKey}`;
+      const { data: notes } = await adminClient
+        .from('notifications')
+        .select('message')
+        .eq('type', 'vendor_follow')
+        .eq('title', titleKey);
+
+      (notes || []).forEach((n: any) => {
+        const em = (n.message || '').toLowerCase().trim();
+        if (em && em.includes('@')) {
+          followersSet.add(em);
+        }
+      });
+      followerRegistry.set(vendorKey, followersSet);
+    } catch (_) {}
+
     const isFollowing = Boolean(shopperEmail && followersSet.has(shopperEmail));
 
     return NextResponse.json({

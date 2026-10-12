@@ -823,17 +823,35 @@ export async function POST(request: Request) {
         const vKey = (vendorName || body.vendorName || (typeof resolvedVendorId === 'string' ? resolvedVendorId : '') || '').toLowerCase().trim();
         if (!vKey) return;
 
-        // Query genuine followers from Supabase
-        const { data: dbFollowers } = await supabase
-          .from('vendor_followers')
-          .select('shopper_email')
-          .eq('vendor_id', vKey);
-
+        // Query genuine followers from Supabase: vendor_followers table + notifications persistent store
         const followerEmails = new Set<string>();
-        (dbFollowers || []).forEach((f: any) => {
-          const em = (f.shopper_email || '').toLowerCase().trim();
-          if (em && em.includes('@')) followerEmails.add(em);
-        });
+
+        try {
+          const { data: dbFollowers } = await supabase
+            .from('vendor_followers')
+            .select('shopper_email')
+            .eq('vendor_id', vKey);
+
+          (dbFollowers || []).forEach((f: any) => {
+            const em = (f.shopper_email || '').toLowerCase().trim();
+            if (em && em.includes('@')) followerEmails.add(em);
+          });
+        } catch (_) {}
+
+        // Fallback to notifications store
+        try {
+          const titleKey = `FOLLOW:${vKey}`;
+          const { data: noteFollowers } = await supabase
+            .from('notifications')
+            .select('message')
+            .eq('type', 'vendor_follow')
+            .eq('title', titleKey);
+
+          (noteFollowers || []).forEach((n: any) => {
+            const em = (n.message || '').toLowerCase().trim();
+            if (em && em.includes('@')) followerEmails.add(em);
+          });
+        } catch (_) {}
 
         if (followerEmails.size === 0) return;
 

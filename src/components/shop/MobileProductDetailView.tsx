@@ -8,7 +8,7 @@ import { useStore } from '@/lib/store/useStore';
 import {
   ArrowLeft, ArrowRight, Bookmark, Heart, Share2, Sparkles, ShieldCheck, MapPin,
   Clock, Truck, ShoppingBag, Zap, Star, Check, CheckCircle2, Ruler,
-  ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn,
+  ChevronDown, ChevronUp, Store, RotateCcw, X, ZoomIn, Plus,
   Video, Volume2, VolumeX, MessageCircle, User, Layers,
   Play, Pause, Loader2
 } from 'lucide-react';
@@ -71,6 +71,8 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
     toggleVaultItem,
     isInVault,
     userAuth,
+    followedVendors,
+    toggleFollowVendor,
   } = useStore();
 
   const isSaved = isInVault(product?.id);
@@ -810,17 +812,54 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
             </div>
           </Link>
 
-          {reviewsData && reviewsData.count > 0 && reviewsData.averageRating > 0 ? (
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="font-bold text-[var(--text-primary)]">{reviewsData.averageRating.toFixed(1)}</span>
-              <span className="text-[var(--text-muted)]">({reviewsData.count})</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury">
-              <span className="text-[var(--gold-accent)] font-bold">Verified Drop</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                const vKey = (product.vendorId || product.vendorName || '').toLowerCase().trim();
+                toggleFollowVendor(vKey);
+                try {
+                  const isNowFollowed = !(followedVendors || []).includes(vKey);
+                  await fetch('/api/vendors/follow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      vendorSlug: product.vendorName,
+                      vendorId: product.vendorId,
+                      shopperEmail: userAuth?.email,
+                      action: isNowFollowed ? 'follow' : 'unfollow',
+                    })
+                  });
+                } catch (_) {}
+              }}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-mono-luxury uppercase font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
+                (followedVendors || []).includes((product.vendorId || product.vendorName || '').toLowerCase().trim())
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}
+              title={(followedVendors || []).includes((product.vendorId || product.vendorName || '').toLowerCase().trim()) ? 'Following this brand' : 'Follow this brand for fresh drops'}
+            >
+              {(followedVendors || []).includes((product.vendorId || product.vendorName || '').toLowerCase().trim()) ? (
+                <>
+                  <Check className="h-3 w-3 stroke-[3]" />
+                  <span>Following</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3 w-3 stroke-[3]" />
+                  <span>Follow</span>
+                </>
+              )}
+            </button>
+
+            {reviewsData && reviewsData.count > 0 && reviewsData.averageRating > 0 ? (
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                <span className="font-bold text-[var(--text-primary)]">{reviewsData.averageRating.toFixed(1)}</span>
+                <span className="text-[var(--text-muted)]">({reviewsData.count})</span>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Title & Price */}

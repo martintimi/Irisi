@@ -39,6 +39,18 @@ export async function POST(request: Request) {
         entry.converted = true;
         abandonedCartRegistry.delete(emailKey);
       }
+
+      // Clear from DB store
+      try {
+        if (emailKey) {
+          await adminClient
+            .from('notifications')
+            .delete()
+            .eq('type', 'abandoned_cart')
+            .eq('title', `CART:${emailKey}`);
+        }
+      } catch (_) {}
+
       return NextResponse.json({ success: true, message: 'Cart cleared from abandoned registry' });
     }
 
@@ -49,7 +61,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, message: 'Invalid cart details to record' }, { status: 400 });
       }
 
-      abandonedCartRegistry.set(emailKey, {
+      const cartRecord: TrackedAbandonedCart = {
         customerEmail: emailKey,
         customerName: customerName || 'Valued Shopper',
         customerPhone: customerPhone || '',
@@ -68,7 +80,28 @@ export async function POST(request: Request) {
         lastActiveAt: Date.now(),
         reminderSent: false,
         converted: false,
-      });
+      };
+
+      abandonedCartRegistry.set(emailKey, cartRecord);
+
+      // Persist to Supabase notifications table
+      try {
+        const titleKey = `CART:${emailKey}`;
+        // Remove existing row for this customer to avoid stale copies
+        await adminClient
+          .from('notifications')
+          .delete()
+          .eq('type', 'abandoned_cart')
+          .eq('title', titleKey);
+
+        await adminClient.from('notifications').insert({
+          title: titleKey,
+          message: JSON.stringify(cartRecord),
+          type: 'abandoned_cart',
+          read: false,
+          action_url: 'https://irisimi-nig.vercel.app/checkout',
+        });
+      } catch (_) {}
 
       return NextResponse.json({
         success: true,
@@ -81,26 +114,52 @@ export async function POST(request: Request) {
     if (action === 'recover') {
       const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
       const now = Date.now();
-      const eligibleCarts: TrackedAbandonedCart[] = [];
+      const eligibleMap = new Map<string, { cart: TrackedAbandonedCart; dbId?: string }>();
 
-      // Check in-memory registry
+      // A. Load from in-memory registry
       for (const cart of abandonedCartRegistry.values()) {
         const isOldEnough = force || (now - cart.lastActiveAt >= TWO_HOURS_MS);
         if (!cart.converted && !cart.reminderSent && isOldEnough) {
-          eligibleCarts.push(cart);
+          eligibleMap.set(cart.customerEmail.toLowerCase().trim(), { cart });
         }
       }
 
-      // If in-memory is empty, also discover past abandoned checkouts from orders with pending/unpaid status if available
-      if (eligibleCarts.length === 0 && force && customerEmail) {
-        const directCart = abandonedCartRegistry.get(customerEmail.toLowerCase().trim());
-        if (directCart) eligibleCarts.push(directCart);
+      // B. Load from persistent Supabase database
+      try {
+        const { data: dbCarts } = await adminClient
+          .from('notifications')
+          .select('id, title, message, read, created_at')
+          .eq('type', 'abandoned_cart');
+
+        (dbCarts || []).forEach((row: any) => {
+          if (row.read) return; // reminder already sent
+          try {
+            const parsed = JSON.parse(row.message) as TrackedAbandonedCart;
+            const em = (parsed.customerEmail || row.title?.replace('CART:', '') || '').toLowerCase().trim();
+            if (em && em.includes('@') && !eligibleMap.has(em)) {
+              const lastActive = parsed.lastActiveAt || new Date(row.created_at).getTime();
+              const isOldEnough = force || (now - lastActive >= TWO_HOURS_MS);
+              if (isOldEnough && !parsed.reminderSent && !parsed.converted) {
+                eligibleMap.set(em, { cart: parsed, dbId: row.id });
+              }
+            }
+          } catch (_) {}
+        });
+      } catch (_) {}
+
+      // If specific customer email requested
+      if (customerEmail && eligibleMap.size === 0) {
+        const directEmail = customerEmail.toLowerCase().trim();
+        const directCart = abandonedCartRegistry.get(directEmail);
+        if (directCart) {
+          eligibleMap.set(directEmail, { cart: directCart });
+        }
       }
 
       let recoveredCount = 0;
       const results: any[] = [];
 
-      for (const cart of eligibleCarts) {
+      for (const [em, { cart, dbId }] of eligibleMap.entries()) {
         try {
           const res = await sendAbandonedCartEmail({
             customerEmail: cart.customerEmail,
@@ -114,6 +173,20 @@ export async function POST(request: Request) {
             cart.reminderSent = true;
             recoveredCount++;
             results.push({ email: cart.customerEmail, status: 'sent' });
+
+            // Mark as sent in DB
+            if (dbId) {
+              await adminClient
+                .from('notifications')
+                .update({ read: true })
+                .eq('id', dbId);
+            } else {
+              await adminClient
+                .from('notifications')
+                .update({ read: true })
+                .eq('type', 'abandoned_cart')
+                .eq('title', `CART:${em}`);
+            }
           } else {
             results.push({ email: cart.customerEmail, status: 'failed', error: res.error });
           }
@@ -129,7 +202,7 @@ export async function POST(request: Request) {
         success: true,
         recoveredCount,
         results,
-        remainingActiveCarts: abandonedCartRegistry.size,
+        remainingActiveCarts: eligibleMap.size,
       });
     }
 
