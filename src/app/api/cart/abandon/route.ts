@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendAbandonedCartEmail, AbandonedCartItem } from '@/lib/services/emailService';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
           message: JSON.stringify(cartRecord),
           type: 'abandoned_cart',
           read: false,
-          action_url: 'https://irisimi-nig.vercel.app/checkout',
+          action_url: `${getBaseUrl()}/checkout`,
         });
       } catch (_) {}
 
@@ -166,7 +167,7 @@ export async function POST(request: Request) {
             customerName: cart.customerName,
             items: cart.items,
             totalAmount: cart.totalAmount,
-            checkoutUrl: 'https://irisimi-nig.vercel.app/checkout',
+            checkoutUrl: `${getBaseUrl()}/checkout`,
           });
 
           if (res.success) {

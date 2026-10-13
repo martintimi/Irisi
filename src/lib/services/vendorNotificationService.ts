@@ -2,6 +2,7 @@
 import nodemailer from 'nodemailer';
 import tls from 'tls';
 import dns from 'dns';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export interface VendorContact {
   id: string;
@@ -33,7 +34,7 @@ export interface UnsoldItemReport {
   imageUrl?: string;
 }
 
-const BRAND_LOGO_URL = 'https://irisimi-nig.vercel.app/images/logo/irisi-icon.png';
+const BRAND_LOGO_URL = `${getBaseUrl()}/images/logo/irisi-icon.png`;
 const CONCIERGE_WHATSAPP_URL = 'https://wa.me/2349070332145';
 
 /**
@@ -346,7 +347,7 @@ export async function sendVendorNewOrderNotification(params: {
 }) {
   const { vendor, orderNumber, customerName, deliveryCity, deliveryState, deliveryMethod, items, totalPayout, portalUrl } = params;
   const isPark = deliveryMethod === 'park_pickup';
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/orders?tab=pending';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/orders?tab=pending`;
 
   const itemsHtml = items.map((it) => `
     <tr>
@@ -425,7 +426,7 @@ export async function sendVendorSettlementNotification(params: {
   const { vendor, orderNumber, payoutAmount, bankName, accountNumber, customerName, portalUrl } = params;
   const maskedAcc = accountNumber && accountNumber.length >= 4 ? `••••${accountNumber.slice(-4)}` : 'registered account';
   const resolvedBank = bankName || vendor.bankName || 'Bank Account';
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/settlements';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settlements`;
 
   const bodyContent = `
     <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -465,7 +466,7 @@ export async function sendVendorWeeklyWishesNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
   const bodyContent = `
     <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Wishing You a High-Sales &amp; Profitable Week, ${vendor.brandName}! ✨</h2>
@@ -509,7 +510,7 @@ export async function sendVendorInactiveCheckInNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, daysInactive = 7, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/publish';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/publish`;
 
   const bodyContent = `
     <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Checking In on You &amp; ${vendor.brandName} 🤝</h2>
@@ -562,7 +563,7 @@ export async function sendVendorMonthlyDigestNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, monthName, year, totalEarnings, totalOrdersCompleted, soldItems, unsoldItems, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/publish';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/publish`;
 
   const soldItemsRows = soldItems.length > 0 ? soldItems.map(it => `
     <tr>
@@ -660,7 +661,7 @@ export async function sendVendorAccountApprovedNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
   const bodyContent = `
     <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -705,7 +706,7 @@ export async function sendVendorAccountRejectedNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, rejectionReason, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/settings';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settings`;
 
   const bodyContent = `
     <div style="background-color: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -752,7 +753,7 @@ export async function sendVendorUnfulfilledOrderReminder(params: {
   portalUrl?: string;
 }) {
   const { vendor, orderNumber, customerName, hoursPending = 24, items, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/orders?tab=pending';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/orders?tab=pending`;
 
   const itemsList = items.map((it) => `• ${it.productName} (Size: ${it.size} • Qty: ${it.quantity})`).join('<br>');
 
@@ -797,7 +798,7 @@ export async function sendVendorMissingBankDetailsReminder(params: {
   portalUrl?: string;
 }) {
   const { vendor, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/settings';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settings`;
 
   const bodyContent = `
     <div style="background-color: rgba(230, 195, 103, 0.12); border: 1px solid rgba(230, 195, 103, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -844,7 +845,7 @@ export async function sendVendorLowStockReminder(params: {
 }) {
   const { vendor, productName, currentStock, size, portalUrl } = params;
   const isOutOfStock = currentStock <= 0;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal/products';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/products`;
 
   const bodyContent = `
     <div style="background-color: ${isOutOfStock ? 'rgba(244, 63, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; border: 1px solid ${isOutOfStock ? 'rgba(244, 63, 94, 0.4)' : 'rgba(245, 158, 11, 0.4)'}; border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -893,7 +894,7 @@ export async function sendVendorWeekendRushReminder(params: {
   portalUrl?: string;
 }) {
   const { vendor, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
   const bodyContent = `
     <div style="background-color: rgba(230, 195, 103, 0.12); border: 1px solid rgba(230, 195, 103, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -993,7 +994,7 @@ export async function sendVendorAccountReinstatedNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, portalUrl } = params;
-  const portalLink = portalUrl || 'https://irisimi-nig.vercel.app/vendor-portal';
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
   const bodyContent = `
     <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">

@@ -385,7 +385,7 @@ export default function AdminCommunicationsPage() {
                   type="url"
                   value={buttonUrl}
                   onChange={(e) => setButtonUrl(e.target.value)}
-                  placeholder="https://irisimi-nig.vercel.app/shop"
+                  placeholder="https://irisimi.ng/shop"
                   className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
                 />
               </div>

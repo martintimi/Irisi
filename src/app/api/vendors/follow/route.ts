@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
               message: shopperKey,
               type: 'vendor_follow',
               read: false,
-              action_url: `https://irisimi-nig.vercel.app/brand/${encodeURIComponent(vendorKey)}`,
+              action_url: `${getBaseUrl()}/brand/${encodeURIComponent(vendorKey)}`,
             });
           }
         } else {

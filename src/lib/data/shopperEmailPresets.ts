@@ -1,3 +1,5 @@
+import { getBaseUrl } from '@/lib/utils/url';
+
 // Fun, stylish Nigerian presets for Admin Shopper Communications
 
 export interface ShopperEmailPreset {
@@ -24,7 +26,7 @@ Whether you have an owambe, an evening dinner, or relaxed Sunday vibes, every pi
 
 No stress, no stories. Step into your best look today!`,
     buttonLabel: 'Shop Weekend Drip Now',
-    buttonUrl: 'https://irisimi-nig.vercel.app/shop',
+    buttonUrl: `${getBaseUrl()}/shop`,
   },
   {
     id: 'new_month',
@@ -38,7 +40,7 @@ To celebrate with you, our verified fashion houses have dropped exclusive new mo
 
 Thank you for being part of our luxury family!`,
     buttonLabel: 'Explore New Month Collections',
-    buttonUrl: 'https://irisimi-nig.vercel.app/shop',
+    buttonUrl: `${getBaseUrl()}/shop`,
   },
   {
     id: 'apology_bonus',
@@ -66,7 +68,7 @@ These pieces are crafted in limited quantities with premium authentic fabrics. O
 
 Step into your best look with zero stress. Remember, every purchase is 100% secured by ÌRÍSÍ Escrow until you receive and approve it.`,
     buttonLabel: 'Claim Your VIP Fit',
-    buttonUrl: 'https://irisimi-nig.vercel.app/shop',
+    buttonUrl: `${getBaseUrl()}/shop`,
   },
   {
     id: 'custom_blank',
@@ -76,6 +78,6 @@ Step into your best look with zero stress. Remember, every purchase is 100% secu
     headline: 'A Special Message For You from ÌRÍSÍ',
     bodyText: 'Type your custom message here...',
     buttonLabel: 'Visit ÌRÍSÍ Marketplace',
-    buttonUrl: 'https://irisimi-nig.vercel.app/shop',
+    buttonUrl: `${getBaseUrl()}/shop`,
   }
 ];

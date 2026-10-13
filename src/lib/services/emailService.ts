@@ -4,6 +4,7 @@ import {
   sendVendorNewOrderNotification,
   sendVendorSettlementNotification
 } from '@/lib/services/vendorNotificationService';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export interface OrderEmailPayload {
   orderNumber: string;
@@ -44,7 +45,7 @@ function wrapEmailHtml(title: string, content: string): string {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.22); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.65);">
               <tr>
                 <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="https://irisimi-nig.vercel.app/images/logo/irisi-icon.png" alt="ÌRÍSÍ Logo" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.35);" />
+                  <img src="${getBaseUrl()}/images/logo/irisi-icon.png" alt="ÌRÍSÍ Logo" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.35);" />
                   <h1 style="color: #e6c367; font-size: 24px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
                   <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion & Commerce</p>
                 </td>
@@ -90,7 +91,7 @@ export async function sendOrderConfirmationEmail(payload: OrderEmailPayload) {
     </tr>
   `).join('');
 
-  const trackUrl = `https://irisimi-nig.vercel.app/track-order?orderNumber=${encodeURIComponent(payload.orderNumber)}`;
+  const trackUrl = `${getBaseUrl()}/track-order?orderNumber=${encodeURIComponent(payload.orderNumber)}`;
   const brandNames = Array.from(new Set((payload.items || []).map(it => it.vendorName).filter(Boolean)));
   const storeLabel = brandNames.length === 1 ? brandNames[0] : (brandNames.length > 1 ? brandNames.join(', ') : (payload.vendorName || 'The store'));
 
@@ -171,7 +172,7 @@ export async function sendDispatchNotificationEmail(payload: OrderEmailPayload) 
     return { success: false, error: 'No customer email provided' };
   }
 
-  const trackUrl = `https://irisimi-nig.vercel.app/track-order?orderNumber=${encodeURIComponent(payload.orderNumber)}`;
+  const trackUrl = `${getBaseUrl()}/track-order?orderNumber=${encodeURIComponent(payload.orderNumber)}`;
 
   const bodyContent = `
     <div style="background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -226,7 +227,7 @@ export async function sendOrderPackedEmail(payload: OrderEmailPayload) {
     return { success: false, error: 'No customer email provided' };
   }
 
-  const trackUrl = `https://irisimi-nig.vercel.app/track-order?orderNumber=${encodeURIComponent(payload.orderNumber)}`;
+  const trackUrl = `${getBaseUrl()}/track-order?orderNumber=${encodeURIComponent(payload.orderNumber)}`;
 
   const bodyContent = `
     <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -252,7 +253,7 @@ export async function sendOrderDeliveredCustomerEmail(payload: OrderEmailPayload
     return { success: false, error: 'No customer email provided' };
   }
 
-  const reviewUrl = `https://irisimi-nig.vercel.app/profile?tab=orders`;
+  const reviewUrl = `${getBaseUrl()}/profile?tab=orders`;
 
   const bodyContent = `
     <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
@@ -345,7 +346,7 @@ export async function sendShopperWelcomeEmail(payload: {
     </p>
 
     <div style="text-align: center; margin-bottom: 24px;">
-      <a href="https://irisimi-nig.vercel.app/shop" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
+      <a href="${getBaseUrl()}/shop" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
         Explore Collections &amp; Fresh Drops &rarr;
       </a>
     </div>
@@ -373,7 +374,7 @@ export async function sendNewDropNotificationEmail(payload: {
   const { customerEmail, customerName, vendorName, product } = payload;
   if (!customerEmail || !customerEmail.includes('@')) return { success: false, error: 'Invalid email' };
 
-  const productUrl = `https://irisimi-nig.vercel.app/shop/${product.id}`;
+  const productUrl = `${getBaseUrl()}/shop/${product.id}`;
   const bodyContent = `
     <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
       <span style="color: #f87171; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🔥 FRESH COLLECTION DROP</span>
@@ -502,7 +503,7 @@ function buildRecoveryEmailHtml(payload: PasswordResetEmailPayload): string {
               <!-- Luxury Brand Header -->
               <tr>
                 <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="https://irisimi-nig.vercel.app/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
+                  <img src="${getBaseUrl()}/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
                   <h1 style="color: #e6c367; font-size: 26px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
                   <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion & Commerce</p>
                 </td>
@@ -614,7 +615,7 @@ function buildSignupVerificationEmailHtml(payload: SignupVerificationEmailPayloa
               <!-- Luxury Brand Header -->
               <tr>
                 <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="https://irisimi-nig.vercel.app/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
+                  <img src="${getBaseUrl()}/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
                   <h1 style="color: #e6c367; font-size: 26px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
                   <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion &amp; Commerce</p>
                 </td>
@@ -723,7 +724,7 @@ export async function sendAbandonedCartEmail(payload: AbandonedCartPayload) {
   }
 
   const displayName = customerName || 'there';
-  const checkoutUrl = payload.checkoutUrl || 'https://irisimi-nig.vercel.app/checkout';
+  const checkoutUrl = payload.checkoutUrl || `${getBaseUrl()}/checkout`;
 
   // Check if cart contains accessories (bags, watches, sunglasses, jewelry, belts, etc.)
   const hasAccessories = items.some(it => {
