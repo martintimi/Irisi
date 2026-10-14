@@ -106,39 +106,50 @@ export default function WhatsAppConciergeWidget() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // 1. Simple, Everyday English Customer Issues
-  const customerTopics = [
-    {
-      id: 'debit',
-      title: 'Money deducted but no order showing',
-      icon: CreditCard,
-      template: 'Hello Ìrísí, my account was debited for payment, but my order is not showing on the app. Please help me confirm it.'
-    },
-    {
-      id: 'wrong_fit',
-      title: 'Wrong size or cloth arrived damaged',
-      icon: ShieldAlert,
-      template: 'Hello Ìrísí, my clothes arrived but the size does not fit / item is damaged. Please hold the escrow payment so we can arrange an exchange or return.'
-    },
-    {
-      id: 'delayed',
-      title: 'Order is delayed / vendor has not sent it',
-      icon: Clock,
-      template: 'Hello Ìrísí, my order is delayed and the designer has not dispatched it yet. Can you please check on this for me?'
-    },
-    {
-      id: 'rush',
-      title: 'I need urgent / rush delivery for an event',
-      icon: Truck,
-      template: `Hello Ìrísí, I have an upcoming event and I need this delivered urgently${bodyProfile?.state ? ` to ${bodyProfile.state}` : ''}. How fast can it get to me?`
-    },
-    {
-      id: 'custom',
-      title: 'Type my own question',
-      icon: Edit3,
-      template: ''
-    }
-  ];
+  const isLaunchPage = pathname === '/coming-soon' || pathname === '/launch' || pathname.startsWith('/coming-soon');
+
+  // 1. Simple, Everyday English Customer Issues (On launch page, only show custom message)
+  const customerTopics = isLaunchPage
+    ? [
+        {
+          id: 'custom',
+          title: 'Type my own message',
+          icon: Edit3,
+          template: '',
+        },
+      ]
+    : [
+        {
+          id: 'debit',
+          title: 'Money deducted but no order showing',
+          icon: CreditCard,
+          template: 'Hello Ìrísí, my account was debited for payment, but my order is not showing on the app. Please help me confirm it.'
+        },
+        {
+          id: 'wrong_fit',
+          title: 'Wrong size or cloth arrived damaged',
+          icon: ShieldAlert,
+          template: 'Hello Ìrísí, my clothes arrived but the size does not fit / item is damaged. Please hold the escrow payment so we can arrange an exchange or return.'
+        },
+        {
+          id: 'delayed',
+          title: 'Order is delayed / vendor has not sent it',
+          icon: Clock,
+          template: 'Hello Ìrísí, my order is delayed and the designer has not dispatched it yet. Can you please check on this for me?'
+        },
+        {
+          id: 'rush',
+          title: 'I need urgent / rush delivery for an event',
+          icon: Truck,
+          template: `Hello Ìrísí, I have an upcoming event and I need this delivered urgently${bodyProfile?.state ? ` to ${bodyProfile.state}` : ''}. How fast can it get to me?`
+        },
+        {
+          id: 'custom',
+          title: 'Type my own question',
+          icon: Edit3,
+          template: ''
+        }
+      ];
 
   // 2. Simple, Everyday English Vendor Issues
   const brandName = vendorProfile?.brandName || 'My Brand';
@@ -176,15 +187,17 @@ export default function WhatsAppConciergeWidget() {
   ];
 
   const activeTopics = isVendorMode ? vendorTopics : customerTopics;
-  const [selectedTopicId, setSelectedTopicId] = useState(activeTopics[0].id);
-  const [customMessage, setCustomMessage] = useState(activeTopics[0].template);
+  const [selectedTopicId, setSelectedTopicId] = useState(activeTopics[0]?.id || 'custom');
+  const [customMessage, setCustomMessage] = useState(activeTopics[0]?.template || '');
 
-  // Sync default topic when switching between customer and vendor portal
+  // Sync default topic when switching between customer and vendor portal or navigating to/from launch page
   useEffect(() => {
     const defaultTopic = isVendorMode ? vendorTopics[0] : customerTopics[0];
-    setSelectedTopicId(defaultTopic.id);
-    setCustomMessage(defaultTopic.template);
-  }, [isVendorMode]);
+    if (defaultTopic) {
+      setSelectedTopicId(defaultTopic.id);
+      setCustomMessage(defaultTopic.template);
+    }
+  }, [isVendorMode, isLaunchPage]);
 
   const handleSelectTopic = (topic: typeof customerTopics[0]) => {
     setSelectedTopicId(topic.id);
@@ -194,8 +207,10 @@ export default function WhatsAppConciergeWidget() {
   const handleOpenWhatsApp = () => {
     const selected = activeTopics.find(t => t.id === selectedTopicId);
     const title = selected ? selected.title : 'Support';
-    const textToSend = customMessage.trim() || title;
-    const finalMsg = `*${title.toUpperCase()}*\n\n${textToSend}`;
+    const textToSend = customMessage.trim();
+    const finalMsg = isLaunchPage
+      ? (textToSend || 'Hello Ìrísí team, I would like to inquire about the launch.')
+      : `*${title.toUpperCase()}*\n\n${textToSend || title}`;
     const url = generateWhatsAppUrl(config.whatsappNumber, finalMsg);
     window.open(url, '_blank', 'noopener,noreferrer');
     setIsOpen(false);
@@ -303,7 +318,7 @@ export default function WhatsAppConciergeWidget() {
 
           {/* Desktop Only Text Label */}
           <span className="font-mono-luxury text-xs uppercase font-bold tracking-wider hidden md:inline-block">
-            {isVendorMode ? 'Vendor Support' : 'Ìrísí Support'}
+            {isVendorMode ? 'Vendor Support' : isLaunchPage ? 'Ìrísí Concierge' : 'Ìrísí Support'}
           </span>
 
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--gold-accent)] hidden md:inline-block" />
@@ -337,11 +352,11 @@ export default function WhatsAppConciergeWidget() {
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
                     <h3 className="font-editorial text-lg sm:text-xl font-bold tracking-wide">
-                      {isVendorMode ? 'Vendor Help Desk' : 'Ìrísí Customer Support'}
+                      {isVendorMode ? 'Vendor Help Desk' : isLaunchPage ? 'Ìrísí Concierge' : 'Ìrísí Customer Support'}
                     </h3>
                   </div>
                   <p className="text-[11px] sm:text-xs font-mono-luxury text-emerald-100">
-                    Chat with us on WhatsApp · We typically reply in minutes
+                    {isLaunchPage ? 'Chat with our pre-launch team on WhatsApp' : 'Chat with us on WhatsApp · We typically reply in minutes'}
                   </p>
                 </div>
 

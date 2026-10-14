@@ -200,3 +200,23 @@ button:active, a:active {
 .animate-progress {
   animation: progressAnimation linear forwards;
 }
+
+/* Living Liquid Gold Flow for Haute Couture Headlines */
+.liquid-gold-text {
+  background: linear-gradient(110deg, #9E7724 0%, #C69B2F 25%, #B88E28 50%, #D4AF37 75%, #8F691C 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: liquidGoldSheen 6s ease-in-out infinite alternate;
+}
+
+@keyframes liquidGoldSheen {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
