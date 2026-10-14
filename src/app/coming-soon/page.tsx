@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import AntigravityParticleCanvas from '@/components/common/AntigravityParticleCanvas';
 import {
   ArrowRight,
   CheckCircle2,
-  Volume2,
-  VolumeX,
   ShieldCheck,
   Lock,
   Unlock,
@@ -19,80 +18,62 @@ import {
   Layers,
   Sparkles,
   Award,
-  Play,
-  Pause,
 } from 'lucide-react';
 
-// Cinematic Filmstrip Runway Frames
-const MOVIE_FRAMES = [
+// The 3 Premier Fashion Disciplines for the 3D Fanning Deck
+const HERO_CARDS = [
   {
     id: 'native',
-    discipline: 'BESPOKE NATIVE & AGBADA',
-    title: 'Ceremonial Majesty',
+    title: 'Agbada Architecture',
+    subtitle: 'Heritage Couture',
     image: '/images/editorial/nigerian_male_couture.jpg',
     tag: 'SOVEREIGN NATIVE',
+    badge: '4 Brands Confirmed',
+    accent: '#d4af37',
   },
   {
-    id: 'streetwear-male',
-    discipline: 'NEO-NIGERIAN STREETWEAR',
-    title: 'Mainland Sub-Culture',
+    id: 'streetwear',
+    title: 'Neo-Lagos Streetwear',
+    subtitle: 'Underground Luxury',
     image: '/images/editorial/modern_male_streetwear.jpg',
-    tag: 'RAW STREETWEAR',
+    tag: 'LAGOS SUB-CULTURE',
+    badge: '6 Brands Confirmed',
+    accent: '#0a0a0a',
   },
   {
-    id: 'evening',
-    discipline: 'AVANT-GARDE EVENINGWEAR',
-    title: 'Gala & Red Carpet Silks',
+    id: 'eveningwear',
+    title: 'Avant-Garde Silks',
+    subtitle: 'High-Society Atelier',
     image: '/images/editorial/nigerian_female_couture.jpg',
-    tag: 'HIGH-SOCIETY ATELIER',
-  },
-  {
-    id: 'streetwear-female',
-    discipline: 'CONTEMPORARY READY-TO-WEAR',
-    title: 'Modern Silhouette',
-    image: '/images/editorial/modern_female_streetwear.jpg',
-    tag: 'AVANT-GARDE FITS',
-  },
-  {
-    id: 'senator',
-    discipline: 'PRECISION SENATOR TAILORING',
-    title: 'Architectural Cuts',
-    image: '/images/editorial/male_senator.jpg',
-    tag: 'CLASSIC LUXURY',
-  },
-  {
-    id: 'female-model',
-    discipline: 'HIGH-FASHION RUNWAY',
-    title: 'Artisanal Identity',
-    image: '/images/editorial/nigerian_female_model.jpg',
-    tag: 'EDITORIAL ARCHIVE',
+    tag: 'CONTEMPORARY LUXE',
+    badge: '3 Brands Confirmed',
+    accent: '#8b5cf6',
   },
 ];
 
 export default function ComingSoonPage() {
-  // ── Cinematic Movie Reel Index ─────────────────────────────────────────
-  const [activeFrameIndex, setActiveFrameIndex] = useState(0);
-  const [isPlayingReel, setIsPlayingReel] = useState(true);
-
-  useEffect(() => {
-    if (!isPlayingReel) return;
-    const interval = setInterval(() => {
-      setActiveFrameIndex((prev) => (prev + 1) % MOVIE_FRAMES.length);
-    }, 1800);
-    return () => clearInterval(interval);
-  }, [isPlayingReel]);
-
-  // ── Waitlist State ─────────────────────────────────────────────────────
+  // ── States ─────────────────────────────────────────────────────────────
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [waitlistError, setWaitlistError] = useState('');
   const [passNumber, setPassNumber] = useState('00742');
 
-  // ── Vendor Application Modal ───────────────────────────────────────────
+  // Kinetic Headline Word Highlight State (0: THE, 1: COMPLETE, 2: NIGERIAN, 3: FIT.)
+  const [activeWordIndex, setActiveWordIndex] = useState(0);
+  const [hoveredWordIndex, setHoveredWordIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const wordTimer = setInterval(() => {
+      setActiveWordIndex((prev) => (prev + 1) % 4);
+    }, 1800);
+    return () => clearInterval(wordTimer);
+  }, []);
+
+  // Vendor Application Modal
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [vendorForm, setVendorForm] = useState({
     brandName: '',
-    socialOrLink: '',
+    instagramHandle: '',
     category: 'Streetwear & Ready-to-Wear',
     priceRange: '₦30,000 – ₦80,000',
     founderPhone: '',
@@ -102,31 +83,40 @@ export default function ComingSoonPage() {
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
 
-  // ── Founder Unlock Modal ───────────────────────────────────────────────
+  // Founder Secret Unlock Modal
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [unlockStatus, setUnlockStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
-  // ── 3D Merch Mouse Tilt ────────────────────────────────────────────────
+  // 3D Merch Mouse Tilt State
   const [merchTilt, setMerchTilt] = useState({ x: 0, y: 0 });
 
-  // ── Ambient Sound Synthesizer (Auto-plays on first interaction) ────────
+  // ── Ambient Polyphonic Audio Engine ────────────────────────────────────
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const audioStartedRef = useRef(false);
+  const audioIntervalRef = useRef<any>(null);
 
-  const startAudio = () => {
-    if (audioStartedRef.current) return;
+  const toggleAudio = () => {
+    if (isPlayingAudio) {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
+      setIsPlayingAudio(false);
+      return;
+    }
+
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtx();
       audioCtxRef.current = ctx;
 
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.035, ctx.currentTime);
+      masterGain.gain.setValueAtTime(0.04, ctx.currentTime);
       masterGain.connect(ctx.destination);
 
-      // Warm Fashion Runway Chords (Dmaj9 -> Bm9 -> Gmaj7 -> A9)
+      // Warm Fashion Lounge Chords (Dmaj9 -> Bm9 -> Gmaj7 -> A9)
       const chords = [
         [146.83, 220.0, 277.18, 329.63],
         [123.47, 185.0, 220.0, 293.66],
@@ -148,7 +138,7 @@ export default function ComingSoonPage() {
           osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
           gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.018, ctx.currentTime + 1.2);
+          gain.gain.exponentialRampToValueAtTime(0.02, ctx.currentTime + 1.2);
           gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.6);
 
           osc.connect(gain);
@@ -160,65 +150,46 @@ export default function ComingSoonPage() {
       };
 
       playChord();
-      setInterval(playChord, 4600);
-      audioStartedRef.current = true;
+      audioIntervalRef.current = setInterval(playChord, 4600);
       setIsPlayingAudio(true);
-    } catch {}
-  };
-
-  const toggleMute = () => {
-    if (!audioCtxRef.current) {
-      startAudio();
-      return;
-    }
-    if (audioCtxRef.current.state === 'running') {
-      audioCtxRef.current.suspend();
-      setIsPlayingAudio(false);
-    } else {
-      audioCtxRef.current.resume();
-      setIsPlayingAudio(true);
+    } catch (e) {
+      console.warn('Audio not allowed', e);
     }
   };
 
-  // Auto-start ambient sound on first user gesture anywhere
-  useEffect(() => {
-    const handleFirstGesture = () => {
-      startAudio();
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('scroll', handleFirstGesture);
-      window.removeEventListener('keydown', handleFirstGesture);
-    };
-
-    window.addEventListener('click', handleFirstGesture);
-    window.addEventListener('scroll', handleFirstGesture);
-    window.addEventListener('keydown', handleFirstGesture);
-
-    return () => {
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('scroll', handleFirstGesture);
-      window.removeEventListener('keydown', handleFirstGesture);
-    };
-  }, []);
-
-  // ── Scroll Physics Setup ───────────────────────────────────────────────
+  // ── Scroll Physics (Revolut-Style Dynamic Background Morph) ─────────────
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end'],
   });
 
+  // Smooth springs for scroll transitions
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 90, damping: 20 });
 
-  // Dynamic Background Morph from Crisp Luminous Ivory (#FAF9F6) to Onyx (#080A0D)
+  // Dynamically morph background from Crisp Porcelain (#FAF9F6) to Deep Onyx Slate (#0A0C10)
   const bgColor = useTransform(
     smoothProgress,
     [0, 0.35, 0.7, 1],
-    ['#FAF9F6', '#12141A', '#0A0C10', '#060709']
+    ['#FAF9F6', '#14161B', '#0A0C10', '#060709']
   );
 
-  // Hero Reel Scale & Fade on Scroll
-  const heroReelScale = useTransform(smoothProgress, [0, 0.2], [1, 0.95]);
-  const heroReelY = useTransform(smoothProgress, [0, 0.2], [0, 50]);
+  // Dynamic text color transition
+  const textColor = useTransform(
+    smoothProgress,
+    [0, 0.25],
+    ['#0A0B0D', '#FFFFFF']
+  );
+
+  // Card deck fanning translations based on scroll
+  const card1X = useTransform(smoothProgress, [0, 0.25], [-120, -280]);
+  const card1Rotate = useTransform(smoothProgress, [0, 0.25], [-12, -6]);
+
+  const card2Y = useTransform(smoothProgress, [0, 0.25], [0, -30]);
+  const card2Scale = useTransform(smoothProgress, [0, 0.25], [1.02, 1.08]);
+
+  const card3X = useTransform(smoothProgress, [0, 0.25], [120, 280]);
+  const card3Rotate = useTransform(smoothProgress, [0, 0.25], [12, 6]);
 
   // ── Waitlist Submit ────────────────────────────────────────────────────
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
@@ -262,15 +233,7 @@ export default function ComingSoonPage() {
       const res = await fetch('/api/vendor-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brandName: vendorForm.brandName,
-          instagramHandle: vendorForm.socialOrLink,
-          category: vendorForm.category,
-          priceRange: vendorForm.priceRange,
-          founderPhone: vendorForm.founderPhone,
-          founderEmail: vendorForm.founderEmail,
-          lookbookUrl: vendorForm.lookbookUrl,
-        }),
+        body: JSON.stringify(vendorForm),
       });
 
       const data = await res.json();
@@ -305,72 +268,125 @@ export default function ComingSoonPage() {
     }
   };
 
-  const currentFrame = MOVIE_FRAMES[activeFrameIndex];
-
   return (
     <motion.div
       ref={containerRef}
       style={{ backgroundColor: bgColor }}
-      className="min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-300 relative overflow-x-hidden text-zinc-900"
+      className="min-h-screen font-sans selection:bg-[#0A0B0D] selection:text-white transition-colors duration-300 relative overflow-x-hidden"
     >
-      {/* ── MINIMAL CLEAN HEADER (Edge-to-Edge Luxury) ───────────────────── */}
-      <header className="fixed top-0 inset-x-0 z-50 px-6 sm:px-12 py-5 flex items-center justify-between backdrop-blur-md bg-white/70 dark:bg-black/70 border-b border-black/5 dark:border-white/10 transition-colors">
-        {/* Official Brand Identity */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg overflow-hidden border border-black/10 dark:border-white/20 bg-black flex items-center justify-center">
-            <Image
-              src="/images/logo/irisi-icon.png"
-              alt="ÌRÍSÍ Emblem"
-              width={32}
-              height={32}
-              className="w-full h-full object-cover"
-              priority
-            />
+      {/* ── FLOATING PILL DOCK (Revolut Style) ───────────────────────────── */}
+      <header className="fixed top-6 inset-x-0 z-50 max-w-5xl mx-auto px-4 pointer-events-none">
+        <div className="pointer-events-auto flex items-center justify-between px-5 py-3 rounded-full bg-white/80 dark:bg-black/80 border border-black/10 dark:border-white/15 backdrop-blur-xl shadow-xl shadow-black/5">
+          {/* Logo & Brand Wordmark */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-black/10 dark:border-white/20 bg-black flex items-center justify-center">
+              <Image
+                src="/images/logo/irisi-icon.png"
+                alt="ÌRÍSÍ Emblem"
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+                priority
+              />
+            </div>
+            <span className="font-bold text-base tracking-[0.2em] text-zinc-950 dark:text-white">
+              ÌRÍSÍ
+            </span>
+            <span className="hidden sm:inline-block text-[9px] uppercase tracking-widest font-mono text-zinc-500">
+              LAGOS · RUNWAY
+            </span>
           </div>
-          <span className="font-black text-lg tracking-[0.22em] text-zinc-950 dark:text-white">
-            Ì R Í S Í
-          </span>
-          <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-[#B89035]" />
-          <span className="hidden sm:inline-block text-[9px] uppercase tracking-widest font-mono text-zinc-500 dark:text-zinc-400">
-            SOVEREIGN RUNWAY
-          </span>
-        </div>
 
-        {/* Clean Action Button */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsVendorModalOpen(true)}
-            className="px-4 py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 transition-all"
-          >
-            Apply As a Vendor or Brand
-          </button>
+          {/* Action Capsule */}
+          <div className="flex items-center gap-3">
+            {/* Brand Application CTA */}
+            <button
+              onClick={() => setIsVendorModalOpen(true)}
+              className="px-4 py-1.5 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all"
+            >
+              Apply As Brand
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* ── HERO SECTION: RAPID CINEMATIC LOOKBOOK MOVIE REEL ─────────────── */}
-      <section className="relative pt-28 sm:pt-36 pb-16 px-4 sm:px-8 max-w-6xl mx-auto text-center">
-        {/* Coming Soon Status Tag */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-[10px] font-mono font-bold tracking-[0.25em] uppercase text-zinc-700 dark:text-zinc-300 mb-6">
-          <span className="w-2 h-2 rounded-full bg-[#B89035] animate-ping" />
-          <span>OFFICIAL PRE-LAUNCH · DROPPING 2026</span>
+      {/* ── SECTION 1: LUMINOUS REVOLUT HERO ─────────────────────────────── */}
+      <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 pt-32 pb-16 z-10 max-w-6xl mx-auto overflow-hidden">
+        {/* Antigravity Interactive Particle Canvas */}
+        <AntigravityParticleCanvas />
+
+        {/* Status Pill */}
+        <div className="relative z-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.05] text-[10px] font-mono font-bold tracking-[0.25em] uppercase text-zinc-700 dark:text-zinc-300 mb-6">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#B89035] animate-ping" />
+          <span>DEBUT RUNWAY · FOUNDING MEMBERS ONLY</span>
         </div>
 
-        {/* Crisp Headline */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-[-0.03em] leading-[1.05] text-zinc-950 dark:text-white max-w-4xl mx-auto mb-4">
-          SOMETHING UNPRECEDENTED <br />
-          <span className="text-[#B89035]">IS COMING TO NIGERIAN FASHION.</span>
-        </h1>
+        {/* Stadium-Scale Kinetic Headline with Word Inversion Highlights */}
+        <div className="relative z-10 flex flex-col items-center justify-center mb-8 max-w-5xl select-none">
+          {/* Line 1: THE COMPLETE */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-[-0.04em] leading-[1.05]">
+            <span
+              onMouseEnter={() => setHoveredWordIndex(0)}
+              onMouseLeave={() => setHoveredWordIndex(null)}
+              className={`transition-all duration-300 cursor-pointer ${
+                (hoveredWordIndex !== null ? hoveredWordIndex === 0 : activeWordIndex === 0)
+                  ? 'bg-zinc-950 text-white px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
+                  : 'text-zinc-950 dark:text-white px-2 py-0.5'
+              }`}
+            >
+              THE
+            </span>
+            <span
+              onMouseEnter={() => setHoveredWordIndex(1)}
+              onMouseLeave={() => setHoveredWordIndex(null)}
+              className={`transition-all duration-300 cursor-pointer ${
+                (hoveredWordIndex !== null ? hoveredWordIndex === 1 : activeWordIndex === 1)
+                  ? 'bg-zinc-950 text-white px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
+                  : 'text-zinc-950 dark:text-white px-2 py-0.5'
+              }`}
+            >
+              COMPLETE
+            </span>
+          </div>
 
-        <p className="text-zinc-600 dark:text-zinc-300 text-sm sm:text-base font-normal max-w-xl mx-auto leading-relaxed mb-8">
-          The sovereign marketplace bringing together premier native fashion houses, bespoke tailors,
-          and underground streetwear creators on one high-performance digital runway.
+          {/* Line 2: NIGERIAN FIT. */}
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-[-0.04em] leading-[1.05] mt-1 sm:mt-3">
+            <span
+              onMouseEnter={() => setHoveredWordIndex(2)}
+              onMouseLeave={() => setHoveredWordIndex(null)}
+              className={`transition-all duration-300 cursor-pointer ${
+                (hoveredWordIndex !== null ? hoveredWordIndex === 2 : activeWordIndex === 2)
+                  ? 'bg-zinc-950 text-[#B89035] px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
+                  : 'text-[#B89035] px-2 py-0.5'
+              }`}
+            >
+              NIGERIAN
+            </span>
+            <span
+              onMouseEnter={() => setHoveredWordIndex(3)}
+              onMouseLeave={() => setHoveredWordIndex(null)}
+              className={`transition-all duration-300 cursor-pointer ${
+                (hoveredWordIndex !== null ? hoveredWordIndex === 3 : activeWordIndex === 3)
+                  ? 'bg-zinc-950 text-white px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
+                  : 'text-[#B89035] px-2 py-0.5'
+              }`}
+            >
+              FIT.
+            </span>
+          </div>
+        </div>
+
+        <p className="text-zinc-600 dark:text-zinc-300 text-base sm:text-xl font-normal max-w-2xl mx-auto leading-relaxed mb-10">
+          Uniting Nigeria’s most sovereign fashion houses, native ateliers, and luxury streetwear creators
+          on a single high-performance digital runway.
         </p>
 
-        {/* Priority Pass Email Input */}
-        <div className="w-full max-w-md mx-auto mb-12" id="waitlist">
+        {/* Priority Waitlist Input Box */}
+        <div className="w-full max-w-md mx-auto mb-16" id="waitlist">
           {waitlistStatus === 'success' ? (
-            <div className="p-6 rounded-2xl border border-[#B89035]/40 bg-white dark:bg-zinc-900 shadow-xl text-left">
-              <div className="flex items-center justify-between mb-3">
+            /* Digital VIP Member Card */
+            <div className="p-6 rounded-2xl border border-[#B89035]/40 bg-white dark:bg-zinc-900 shadow-2xl text-left">
+              <div className="flex items-center justify-between mb-4">
                 <span className="text-[10px] font-mono tracking-widest text-[#B89035] font-bold">
                   SOVEREIGN PASS #{passNumber}
                 </span>
@@ -379,7 +395,7 @@ export default function ComingSoonPage() {
               <h3 className="text-base font-bold text-zinc-950 dark:text-white mb-1">
                 Priority Access Confirmed!
               </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
                 Invitation sent to <strong className="text-zinc-950 dark:text-white">{waitlistEmail}</strong>. Includes ₦5,000 launch credit.
               </p>
               <a
@@ -393,14 +409,14 @@ export default function ComingSoonPage() {
               </a>
             </div>
           ) : (
-            <form onSubmit={handleWaitlistSubmit} className="flex flex-col gap-2">
-              <div className="relative flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-2xl border border-black/15 dark:border-white/20 bg-white dark:bg-zinc-900 shadow-xl focus-within:border-zinc-950 dark:focus-within:border-white transition-all">
+            <form onSubmit={handleWaitlistSubmit} className="flex flex-col gap-2.5">
+              <div className="relative flex flex-col sm:flex-row items-center gap-2 p-1.5 rounded-2xl border border-black/15 dark:border-white/20 bg-white dark:bg-zinc-900 shadow-xl focus-within:border-zinc-900 dark:focus-within:border-white transition-all">
                 <input
                   type="email"
                   required
                   value={waitlistEmail}
                   onChange={(e) => setWaitlistEmail(e.target.value)}
-                  placeholder="Enter email for founding priority access"
+                  placeholder="Enter email for priority pass"
                   className="w-full bg-transparent px-4 py-3 text-sm text-zinc-950 dark:text-white placeholder-zinc-400 focus:outline-none font-medium"
                 />
                 <button
@@ -423,93 +439,104 @@ export default function ComingSoonPage() {
               )}
               <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono px-2">
                 <span>⚡ 740+ Insiders in Queue</span>
-                <span className="text-[#B89035] font-semibold">₦5,000 Opening Voucher</span>
+                <span className="text-[#B89035] font-semibold">₦5,000 Launch Voucher</span>
               </div>
             </form>
           )}
         </div>
 
-        {/* ── CINEMATIC 24FPS MOVIE FILMSTRIP REEL ─────────────────────────── */}
-        <motion.div
-          style={{ scale: heroReelScale, y: heroReelY }}
-          className="relative max-w-4xl mx-auto h-[460px] sm:h-[540px] rounded-3xl overflow-hidden border-2 border-black/10 dark:border-white/20 bg-black shadow-2xl group"
-        >
-          {/* Animated Movie Frame */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentFrame.id}
-              initial={{ opacity: 0, scale: 1.04 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-0 z-0"
-            >
-              <Image
-                src={currentFrame.image}
-                alt={currentFrame.title}
-                fill
-                priority
-                className="object-cover object-top brightness-[0.75] contrast-[1.05]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Film Viewfinder HUD Overlays */}
-          <div className="absolute top-5 inset-x-6 z-20 flex items-center justify-between text-white font-mono text-xs">
-            <div className="flex items-center gap-2 bg-black/60 px-3 py-1 rounded-full border border-white/20 backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              <span className="tracking-widest">RUNWAY TEASER · 24 FPS</span>
-            </div>
-            <button
-              onClick={() => setIsPlayingReel(!isPlayingReel)}
-              className="bg-black/60 px-3 py-1 rounded-full border border-white/20 backdrop-blur-md flex items-center gap-1.5 text-[11px] hover:bg-black/80 transition-colors"
-            >
-              {isPlayingReel ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-              <span>{isPlayingReel ? 'AUTO PLAY' : 'PAUSED'}</span>
-            </button>
-          </div>
-
-          {/* Bottom Movie Captions & Discipline Indicator */}
-          <div className="absolute bottom-6 inset-x-6 z-20 flex flex-col sm:flex-row sm:items-end justify-between gap-4 text-left text-white">
-            <div>
-              <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-[#B89035] block mb-1">
-                {currentFrame.discipline}
+        {/* ── REVOLUT-STYLE 3D FANNING CARD DECK ────────────────────────── */}
+        <div className="relative w-full max-w-4xl h-[400px] sm:h-[460px] flex items-center justify-center mt-4">
+          {/* Card 1: Native Couture (Left Tilt) */}
+          <motion.div
+            style={{ x: card1X, rotate: card1Rotate }}
+            className="absolute w-[260px] sm:w-[300px] h-[360px] sm:h-[420px] rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-white dark:bg-zinc-900 shadow-2xl p-5 flex flex-col justify-between"
+          >
+            <Image
+              src={HERO_CARDS[0].image}
+              alt={HERO_CARDS[0].title}
+              fill
+              className="object-cover brightness-[0.7]"
+            />
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase bg-black/70 text-white">
+                {HERO_CARDS[0].tag}
               </span>
-              <h3 className="text-2xl sm:text-4xl font-black leading-tight tracking-tight">
-                {currentFrame.title}
-              </h3>
+              <span className="text-[10px] font-mono text-[#d4af37] bg-black/60 px-2 py-0.5 rounded">
+                01
+              </span>
             </div>
+            <div className="relative z-10 text-left text-white">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#d4af37] block mb-0.5">
+                {HERO_CARDS[0].subtitle}
+              </span>
+              <h3 className="text-xl font-bold leading-tight">{HERO_CARDS[0].title}</h3>
+            </div>
+          </motion.div>
 
-            {/* Frame Scrubber Pills */}
-            <div className="flex items-center gap-1.5 bg-black/60 p-1.5 rounded-full border border-white/15 backdrop-blur-md">
-              {MOVIE_FRAMES.map((f, idx) => (
-                <button
-                  key={f.id}
-                  onClick={() => {
-                    setActiveFrameIndex(idx);
-                    setIsPlayingReel(false);
-                  }}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    activeFrameIndex === idx
-                      ? 'w-6 bg-[#B89035]'
-                      : 'bg-white/40 hover:bg-white/70'
-                  }`}
-                  title={f.discipline}
-                />
-              ))}
+          {/* Card 2: Neo-Lagos Streetwear (Center Elevated) */}
+          <motion.div
+            style={{ y: card2Y, scale: card2Scale }}
+            className="absolute w-[280px] sm:w-[320px] h-[380px] sm:h-[440px] rounded-3xl overflow-hidden border-2 border-black/20 dark:border-white/30 bg-black shadow-2xl p-6 flex flex-col justify-between z-20"
+          >
+            <Image
+              src={HERO_CARDS[1].image}
+              alt={HERO_CARDS[1].title}
+              fill
+              className="object-cover brightness-[0.75]"
+            />
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="px-3 py-1 rounded-full text-[9px] font-mono font-bold uppercase bg-white text-black">
+                {HERO_CARDS[1].tag}
+              </span>
+              <span className="text-[10px] font-mono text-white bg-black/70 px-2 py-0.5 rounded">
+                02
+              </span>
             </div>
-          </div>
-        </motion.div>
+            <div className="relative z-10 text-left text-white">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-300 block mb-0.5">
+                {HERO_CARDS[1].subtitle}
+              </span>
+              <h3 className="text-2xl font-black leading-tight">{HERO_CARDS[1].title}</h3>
+            </div>
+          </motion.div>
+
+          {/* Card 3: Avant-Garde Silks (Right Tilt) */}
+          <motion.div
+            style={{ x: card3X, rotate: card3Rotate }}
+            className="absolute w-[260px] sm:w-[300px] h-[360px] sm:h-[420px] rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-white dark:bg-zinc-900 shadow-2xl p-5 flex flex-col justify-between"
+          >
+            <Image
+              src={HERO_CARDS[2].image}
+              alt={HERO_CARDS[2].title}
+              fill
+              className="object-cover brightness-[0.7]"
+            />
+            <div className="relative z-10 flex items-center justify-between">
+              <span className="px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase bg-black/70 text-white">
+                {HERO_CARDS[2].tag}
+              </span>
+              <span className="text-[10px] font-mono text-[#8b5cf6] bg-black/60 px-2 py-0.5 rounded">
+                03
+              </span>
+            </div>
+            <div className="relative z-10 text-left text-white">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#8b5cf6] block mb-0.5">
+                {HERO_CARDS[2].subtitle}
+              </span>
+              <h3 className="text-xl font-bold leading-tight">{HERO_CARDS[2].title}</h3>
+            </div>
+          </motion.div>
+        </div>
 
         <div className="mt-8 text-[11px] font-mono tracking-widest text-zinc-400 uppercase">
-          ↓ SCROLL DOWN TO INSPECT THE FOUNDING PIECE
+          ↓ SCROLL DOWN TO EXPLORE THE RUNWAY
         </div>
       </section>
 
-      {/* ── SECTION 2: THE FOUNDING GARMENT 3D INSPECTION ────────────────── */}
-      <section className="relative z-10 py-24 px-4 sm:px-8 max-w-6xl mx-auto">
-        <div className="rounded-3xl border border-white/15 bg-black text-white p-8 sm:p-14 shadow-2xl">
+      {/* ── SECTION 2: THE FOUNDING TEE SPOTLIGHT (Revolut Product Card) ─── */}
+      <section className="relative z-10 py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+        <div className="rounded-3xl border border-white/15 bg-black/80 text-white p-8 sm:p-14 shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             {/* 3D Product Interactive Card */}
             <div
@@ -545,18 +572,20 @@ export default function ComingSoonPage() {
               </div>
             </div>
 
-            {/* Technical Specifications */}
+            {/* Technical Specs & Reservation */}
             <div className="lg:col-span-5 flex flex-col justify-center">
               <span className="text-[10px] font-mono font-bold tracking-[0.3em] uppercase text-[#B89035] block mb-2">
                 IN-HOUSE ATELIER DROP 001
               </span>
               <h2 className="text-3xl sm:text-5xl font-black leading-tight mb-4">
                 THE FOUNDING TEE: <br />
-                <span className="text-[#B89035]">THE COMPLETE NIGERIAN FIT</span>
+                <span className="text-[#B89035]">
+                  THE COMPLETE NIGERIAN FIT
+                </span>
               </h2>
 
               <p className="text-zinc-300 text-sm leading-relaxed mb-6 font-light">
-                Constructed from 300 GSM Heavyweight French Terry cotton.
+                Constructed in Lagos from 300 GSM Heavyweight French Terry cotton.
                 Featuring a dropped-shoulder boxy cut and hand-distressed sovereign back insignia.
               </p>
 
@@ -591,9 +620,9 @@ export default function ComingSoonPage() {
         </div>
       </section>
 
-      {/* ── SECTION 3: VENDOR ONBOARDING GATEWAY ─────────────────────────── */}
-      <section className="relative z-10 py-24 px-4 sm:px-8 max-w-6xl mx-auto text-white">
-        <div className="text-center max-w-2xl mx-auto mb-14">
+      {/* ── SECTION 3: DESIGNER ONBOARDING (Revolut B2B Architecture) ─────── */}
+      <section className="relative z-10 py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-14 text-white">
           <span className="text-[10px] font-mono font-bold tracking-[0.3em] uppercase text-[#B89035] block mb-2">
             FOUNDING MERCHANT INVITATION
           </span>
@@ -601,7 +630,7 @@ export default function ComingSoonPage() {
             ARE YOU SHAPING NIGERIAN STYLE?
           </h2>
           <p className="text-zinc-400 text-sm leading-relaxed">
-            Eliminate message clutter, unverified transfer slips, and manual logistics.
+            Eliminate chaotic Instagram DMs, fake bank transfer screenshots, and manual waybills.
             Partner with ÌRÍSÍ as a Founding Fashion House.
           </p>
         </div>
@@ -612,12 +641,12 @@ export default function ComingSoonPage() {
             {
               icon: ShieldCheck,
               title: 'Automated Escrow',
-              desc: 'Direct card and bank settlement upon fulfillment. Zero chargeback risks.',
+              desc: 'Paystack card, USSD, and transfer settlements. Zero chargeback risks.',
             },
             {
               icon: Zap,
-              title: 'Integrated Logistics',
-              desc: 'Automated waybills with seamless doorstep pickups and nationwide tracking.',
+              title: 'Nationwide Logistics',
+              desc: 'Automated waybills with doorstep pickups in Lagos, Abuja, and worldwide.',
             },
             {
               icon: Layers,
@@ -632,7 +661,7 @@ export default function ComingSoonPage() {
           ].map((item, i) => (
             <div
               key={i}
-              className="p-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md flex flex-col justify-between"
+              className="p-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md flex flex-col justify-between text-white"
             >
               <div>
                 <item.icon className="w-6 h-6 text-[#B89035] mb-4" />
@@ -652,7 +681,7 @@ export default function ComingSoonPage() {
             className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white text-black font-bold text-sm uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl"
           >
             <Store className="w-4 h-4" />
-            <span>Apply As a Vendor or Brand</span>
+            <span>Apply As A Founding Fashion House</span>
           </button>
         </div>
       </section>
@@ -660,7 +689,7 @@ export default function ComingSoonPage() {
       {/* ── FOOTER & FOUNDER KEY ─────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-white/10 py-8 px-6 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-mono">
         <div>
-          © 2026 ÌRÍSÍ TECHNOLOGIES LTD · NIGERIA. ALL RIGHTS RESERVED.
+          © 2026 ÌRÍSÍ TECHNOLOGIES LTD · LAGOS, NIGERIA. ALL RIGHTS RESERVED.
         </div>
         <div className="flex items-center gap-4">
           <a
@@ -675,7 +704,7 @@ export default function ComingSoonPage() {
             onClick={() => setIsVendorModalOpen(true)}
             className="hover:text-white transition-colors"
           >
-            VENDOR ADMISSION
+            MERCHANT ADMISSION
           </button>
           <button
             onClick={() => setIsUnlockModalOpen(true)}
@@ -687,19 +716,6 @@ export default function ComingSoonPage() {
           </button>
         </div>
       </footer>
-
-      {/* ── FLOATING AUDIO MUTE TOGGLE (Bottom Left Corner) ──────────────── */}
-      <button
-        onClick={toggleMute}
-        className="fixed bottom-5 left-5 z-40 p-2.5 rounded-full bg-black/80 border border-white/20 text-white shadow-xl hover:scale-110 active:scale-95 transition-all"
-        title="Toggle Ambient Audio"
-      >
-        {isPlayingAudio ? (
-          <Volume2 className="w-4 h-4 text-[#B89035] animate-pulse" />
-        ) : (
-          <VolumeX className="w-4 h-4 text-zinc-400" />
-        )}
-      </button>
 
       {/* ── MODAL 1: FOUNDER UNLOCK PASSCODE ─────────────────────────────── */}
       {isUnlockModalOpen && (
@@ -765,7 +781,7 @@ export default function ComingSoonPage() {
                 <h3 className="text-2xl font-bold mb-2">Application Received!</h3>
                 <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md mx-auto">
                   {vendorMessage ||
-                    'Thank you. Our curatorial council will review your portfolio and reach out via WhatsApp within 48 hours.'}
+                    'Thank you. Our curatorial council will review your catalog and reach out via WhatsApp within 48 hours.'}
                 </p>
                 <button
                   onClick={() => setIsVendorModalOpen(false)}
@@ -779,9 +795,9 @@ export default function ComingSoonPage() {
                 <span className="text-[10px] font-mono font-bold tracking-[0.25em] text-[#B89035] uppercase block mb-1">
                   EXCLUSIVE ONBOARDING
                 </span>
-                <h3 className="text-2xl font-black mb-1">Apply As a Vendor or Brand</h3>
+                <h3 className="text-2xl font-black mb-1">Apply As A Founding Brand</h3>
                 <p className="text-xs text-zinc-400 mb-6 font-light">
-                  Tell us about your brand. We are onboarding founding designers for our debut runway.
+                  Tell us about your brand. We are onboarding 25 founding designers for Drop 001.
                 </p>
 
                 <form onSubmit={handleVendorSubmit} className="space-y-4">
@@ -795,20 +811,20 @@ export default function ComingSoonPage() {
                         required
                         value={vendorForm.brandName}
                         onChange={(e) => setVendorForm({ ...vendorForm, brandName: e.target.value })}
-                        placeholder="e.g. Atelier Crown"
+                        placeholder="e.g. Lagos Atelier"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
                       />
                     </div>
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Brand Social or Link *
+                        Instagram Handle *
                       </label>
                       <input
                         type="text"
                         required
-                        value={vendorForm.socialOrLink}
-                        onChange={(e) => setVendorForm({ ...vendorForm, socialOrLink: e.target.value })}
-                        placeholder="@brand or website link"
+                        value={vendorForm.instagramHandle}
+                        onChange={(e) => setVendorForm({ ...vendorForm, instagramHandle: e.target.value })}
+                        placeholder="@yourbrand"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
                       />
                     </div>
@@ -817,7 +833,7 @@ export default function ComingSoonPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Fashion Discipline
+                        Discipline
                       </label>
                       <select
                         value={vendorForm.category}
@@ -833,7 +849,7 @@ export default function ComingSoonPage() {
                     </div>
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Average Price Bracket
+                        Price Bracket
                       </label>
                       <select
                         value={vendorForm.priceRange}
