@@ -81,11 +81,12 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     }
   }, [pathname]);
 
-  // Standalone portals (Auth, Vendor Portal, and Super Admin)
+  // Standalone portals (Auth, Vendor Portal, Super Admin, and Coming Soon Teaser)
   const isStandalonePage =
     pathname.startsWith('/auth') ||
     pathname.startsWith('/vendor') ||
-    pathname.startsWith('/admin');
+    pathname.startsWith('/admin') ||
+    pathname === '/coming-soon';
 
   return (
     <SmoothScrollProvider>
