@@ -6,7 +6,7 @@
 export const BRAND_CONFIG = {
   name: 'Ìrísí',
   nameAscii: 'Irisi',
-  legalName: 'Ìrísí Technologies Ltd.',
+  legalName: 'Ìrísí',
   tagline: 'Nigerian Luxury Marketplace. Escrow Secured.',
   subTagline: 'Appearance & Presence · Modern Nigerian Luxury',
   country: 'Nigeria',
