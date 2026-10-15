@@ -7,20 +7,34 @@ import AntigravityDotField from '@/components/landing/AntigravityDotField';
 import {
   ArrowRight,
   CheckCircle2,
-  Volume2,
-  VolumeX,
   ShieldCheck,
   Lock,
   Unlock,
   Store,
   Send,
-  Loader2,
   X,
   Zap,
   Layers,
   Sparkles,
   Award,
+  Plus,
+  Trash2,
 } from 'lucide-react';
+import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
+
+// Available Social Media Platforms for Founding Brand Onboarding
+const SOCIAL_PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', placeholder: '@yourbrand or profile link' },
+  { id: 'tiktok', label: 'TikTok', placeholder: '@yourbrand or profile link' },
+  { id: 'x', label: 'X (Twitter)', placeholder: '@yourbrand or profile link' },
+  { id: 'facebook', label: 'Facebook', placeholder: 'facebook.com/yourbrand or profile link' },
+  { id: 'threads', label: 'Threads', placeholder: '@yourbrand or profile link' },
+  { id: 'youtube', label: 'YouTube', placeholder: '@channel or channel URL' },
+  { id: 'pinterest', label: 'Pinterest', placeholder: '@yourbrand or profile link' },
+  { id: 'whatsapp_catalog', label: 'WhatsApp Catalog', placeholder: 'wa.me/... or phone number' },
+  { id: 'website', label: 'Website / Portfolio', placeholder: 'https://yourbrand.com' },
+  { id: 'other', label: 'Other Channel', placeholder: 'Handle or profile link' },
+];
 
 // Dynamic App Features for the rotating subtitle (Fade In / Fade Out)
 const APP_FEATURES = [
@@ -200,6 +214,30 @@ const DEPARTMENT_CARD_TRACKS = [
   },
 ];
 
+// Official Apparel Preview Images (Tee colorways, lookbook model, and lifestyle grid)
+const MERCH_PREVIEW_IMAGES = [
+  {
+    id: 'merch-model',
+    src: '/images/merch/irisi-tee-lookbook-model.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Lookbook Model',
+  },
+  {
+    id: 'merch-white',
+    src: '/images/merch/irisi-merch-tee.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Bone White Edition',
+  },
+  {
+    id: 'merch-lifestyle',
+    src: '/images/merch/irisi-tee-lifestyle-grid.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Lifestyle & Packaging',
+  },
+  {
+    id: 'merch-black',
+    src: '/images/merch/irisi-merch-tee-black.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Onyx Black Edition',
+  },
+];
+
 export default function ComingSoonPage() {
   // ── States ─────────────────────────────────────────────────────────────
   const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -241,98 +279,223 @@ export default function ComingSoonPage() {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [vendorForm, setVendorForm] = useState({
     brandName: '',
-    instagramHandle: '',
-    category: 'Streetwear & Ready-to-Wear',
-    priceRange: '₦30,000 – ₦80,000',
+    socialLinks: [{ platform: 'instagram', handle: '' }],
+    specialty: 'streetwear',
     founderPhone: '',
     founderEmail: '',
+    state: 'Lagos',
+    city: '',
     lookbookUrl: '',
   });
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
+
+  // Merch Priority Reservation Modal
+  const [isMerchModalOpen, setIsMerchModalOpen] = useState(false);
+  const [merchForm, setMerchForm] = useState({
+    email: '',
+    phone: '',
+    colorway: 'black' as 'black' | 'white',
+    size: 'L',
+  });
+  const [merchStatus, setMerchStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [merchMessage, setMerchMessage] = useState('');
 
   // Founder Secret Unlock Modal
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [unlockStatus, setUnlockStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
-  // 3D Merch Mouse Tilt State & Colorway Switcher
-  const [merchTilt, setMerchTilt] = useState({ x: 0, y: 0 });
-  const [selectedMerchColor, setSelectedMerchColor] = useState<'black' | 'white'>('black');
+  // Official Apparel Preview Slideshow (Cycles every 4s with smooth stacked dissolve)
+  const [merchImageIndex, setMerchImageIndex] = useState(0);
 
-  // Auto-cycle Merch Tee Colorway (Black <-> White every 3.8s) so visitors see both editions
   useEffect(() => {
     const timer = setInterval(() => {
-      setSelectedMerchColor((prev) => (prev === 'black' ? 'white' : 'black'));
-    }, 3800);
+      setMerchImageIndex((prev) => (prev + 1) % MERCH_PREVIEW_IMAGES.length);
+    }, 4000);
     return () => clearInterval(timer);
   }, []);
 
-  // ── Ambient Polyphonic Audio Engine ────────────────────────────────────
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  // ── Ambient Polyphonic Luxury Soundscape (Auto-Plays on Coming Soon Page) ──
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioIntervalRef = useRef<any>(null);
+  const sparkleIntervalRef = useRef<any>(null);
+  const isStartedRef = useRef(false);
 
-  const toggleAudio = () => {
-    if (isPlayingAudio) {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-        audioCtxRef.current = null;
-      }
-      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
-      setIsPlayingAudio(false);
-      return;
-    }
+  const startAudio = () => {
+    if (isStartedRef.current && audioCtxRef.current?.state === 'running') return;
 
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioCtx();
+      const ctx = audioCtxRef.current || new AudioCtx();
       audioCtxRef.current = ctx;
 
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      if (isStartedRef.current) return;
+      isStartedRef.current = true;
+
+      // Studio Mastering Compressor Bus (Smooth glue, warmth, and loudness)
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-18, ctx.currentTime);
+      compressor.knee.setValueAtTime(10, ctx.currentTime);
+      compressor.ratio.setValueAtTime(3.5, ctx.currentTime);
+      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      compressor.release.setValueAtTime(0.25, ctx.currentTime);
+
+      // Audible, Warm Master Gain (Rich, clear, comfortable volume)
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.04, ctx.currentTime);
+      masterGain.gain.setValueAtTime(0.22, ctx.currentTime);
+
+      compressor.connect(masterGain);
       masterGain.connect(ctx.destination);
 
-      // Warm Fashion Lounge Chords (Dmaj9 -> Bm9 -> Gmaj7 -> A9)
+      // Analog Warm Low-Pass Filter
+      const warmFilter = ctx.createBiquadFilter();
+      warmFilter.type = 'lowpass';
+      warmFilter.frequency.setValueAtTime(1150, ctx.currentTime);
+      warmFilter.Q.setValueAtTime(1.1, ctx.currentTime);
+      warmFilter.connect(compressor);
+
+      // Ambient Stereo Delay Simulator
+      const delay = ctx.createDelay();
+      delay.delayTime.setValueAtTime(0.38, ctx.currentTime);
+      const delayFeedback = ctx.createGain();
+      delayFeedback.gain.setValueAtTime(0.25, ctx.currentTime);
+      const delayFilter = ctx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.setValueAtTime(900, ctx.currentTime);
+
+      delay.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(delay);
+      delayFilter.connect(compressor);
+
+      // Deep, Relaxing Afro-Lounge Luxury Chord Progression
       const chords = [
-        [146.83, 220.0, 277.18, 329.63],
-        [123.47, 185.0, 220.0, 293.66],
-        [98.0, 146.83, 196.0, 246.94],
-        [110.0, 164.81, 220.0, 277.18],
+        { bass: 73.42, notes: [185.00, 220.00, 277.18, 329.63, 440.00] }, // Dmaj9 (Warm gold runway)
+        { bass: 61.74, notes: [146.83, 185.00, 220.00, 277.18, 369.99] }, // Bm9 (Deep soulful lounge)
+        { bass: 49.00, notes: [146.83, 185.00, 220.00, 246.94, 293.66] }, // Gmaj9 (Serene African breeze)
+        { bass: 55.00, notes: [164.81, 196.00, 246.94, 293.66, 329.63] }, // A9sus4 (Royal elevation)
       ];
       let step = 0;
 
       const playChord = () => {
-        if (ctx.state === 'suspended') ctx.resume();
-        const chord = chords[step % chords.length];
+        if (!ctx || ctx.state === 'closed') return;
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+        const now = ctx.currentTime;
+        const currentChord = chords[step % chords.length];
         step++;
 
-        chord.forEach((freq) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+        // 1. Warm Sub-Bass Note (Gives deep, grounded relaxing vibration)
+        const bassOsc = ctx.createOscillator();
+        const bassGain = ctx.createGain();
+        bassOsc.type = 'sine';
+        bassOsc.frequency.setValueAtTime(currentChord.bass, now);
 
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        bassGain.gain.setValueAtTime(0.0001, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.32, now + 0.6);
+        bassGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
 
-          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.02, ctx.currentTime + 1.2);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.6);
+        bassOsc.connect(bassGain);
+        bassGain.connect(compressor);
+        bassOsc.start(now);
+        bassOsc.stop(now + 4.9);
 
-          osc.connect(gain);
-          gain.connect(masterGain);
+        // 2. Polyphonic Detuned Chord Voices (Lush Analog Chorus)
+        currentChord.notes.forEach((freq, nIdx) => {
+          const oscA = ctx.createOscillator();
+          const oscB = ctx.createOscillator();
+          const voiceGain = ctx.createGain();
 
-          osc.start();
-          osc.stop(ctx.currentTime + 4.8);
+          oscA.type = 'triangle';
+          oscA.frequency.setValueAtTime(freq, now);
+          oscA.detune.setValueAtTime(4, now);
+
+          oscB.type = 'sine';
+          oscB.frequency.setValueAtTime(freq, now);
+          oscB.detune.setValueAtTime(-4, now);
+
+          // Smooth swell envelope
+          voiceGain.gain.setValueAtTime(0.0001, now);
+          voiceGain.gain.exponentialRampToValueAtTime(0.09, now + 1.2);
+          voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.7);
+
+          oscA.connect(voiceGain);
+          oscB.connect(voiceGain);
+          voiceGain.connect(warmFilter);
+          if (nIdx % 2 === 0) voiceGain.connect(delay);
+
+          oscA.start(now);
+          oscB.start(now);
+          oscA.stop(now + 4.8);
+          oscB.stop(now + 4.8);
         });
       };
 
+      // 3. Starlight Kalimba / High Rhodes Sparkles
+      const sparkles = [293.66, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99];
+      const playSparkle = () => {
+        if (!ctx || ctx.state === 'closed') return;
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+        const now = ctx.currentTime;
+        const note = sparkles[Math.floor(Math.random() * sparkles.length)];
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+
+        osc.connect(gain);
+        gain.connect(warmFilter);
+        gain.connect(delay);
+
+        osc.start(now);
+        osc.stop(now + 2.3);
+      };
+
       playChord();
-      audioIntervalRef.current = setInterval(playChord, 4600);
-      setIsPlayingAudio(true);
+      audioIntervalRef.current = setInterval(playChord, 4800);
+      sparkleIntervalRef.current = setInterval(playSparkle, 2200);
     } catch (e) {
-      console.warn('Audio not allowed', e);
+      console.warn('Audio auto-play error', e);
     }
   };
+
+  useEffect(() => {
+    // Attempt playback immediately on load
+    startAudio();
+
+    // In case browser autoplay policy temporarily suspends it, unlock on first interaction
+    const unlockEvents = ['click', 'touchstart', 'scroll', 'pointerdown', 'keydown'];
+    const handleFirstGesture = () => {
+      startAudio();
+      unlockEvents.forEach((evt) => window.removeEventListener(evt, handleFirstGesture));
+    };
+
+    unlockEvents.forEach((evt) => {
+      window.addEventListener(evt, handleFirstGesture, { passive: true, once: true });
+    });
+
+    return () => {
+      unlockEvents.forEach((evt) => window.removeEventListener(evt, handleFirstGesture));
+      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
+      if (sparkleIntervalRef.current) clearInterval(sparkleIntervalRef.current);
+      if (audioCtxRef.current) {
+        try {
+          audioCtxRef.current.close().catch(() => {});
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   // ── Scroll Physics (Revolut-Style Dynamic Background Morph) ─────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -414,6 +577,20 @@ export default function ComingSoonPage() {
       return;
     }
 
+    const activeSocialLinks = vendorForm.socialLinks.filter(
+      (s) => s.handle && s.handle.trim().length > 0
+    );
+    if (activeSocialLinks.length === 0) {
+      setVendorMessage('Please provide at least one social media channel handle or link.');
+      setVendorStatus('error');
+      return;
+    }
+
+    const primaryInstagram =
+      activeSocialLinks.find((s) => s.platform === 'instagram')?.handle ||
+      activeSocialLinks[0]?.handle ||
+      '';
+
     setVendorStatus('loading');
     setVendorMessage('');
 
@@ -421,7 +598,11 @@ export default function ComingSoonPage() {
       const res = await fetch('/api/vendor-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vendorForm),
+        body: JSON.stringify({
+          ...vendorForm,
+          instagramHandle: primaryInstagram,
+          socialLinks: activeSocialLinks,
+        }),
       });
 
       const data = await res.json();
@@ -432,6 +613,36 @@ export default function ComingSoonPage() {
     } catch (err: any) {
       setVendorStatus('error');
       setVendorMessage(err.message || 'Submission error. Try again.');
+    }
+  };
+
+  // ── Merch Priority Reservation Submit ──────────────────────────────────
+  const handleMerchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!merchForm.email || !merchForm.phone) {
+      setMerchMessage('Please provide your email and WhatsApp number.');
+      setMerchStatus('error');
+      return;
+    }
+
+    setMerchStatus('loading');
+    setMerchMessage('');
+
+    try {
+      const res = await fetch('/api/merch-waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merchForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reserve merch.');
+
+      setMerchStatus('success');
+      setMerchMessage(data.message || 'Priority allocation reserved successfully.');
+    } catch (err: any) {
+      setMerchStatus('error');
+      setMerchMessage(err.message || 'Submission error. Try again.');
     }
   };
 
@@ -485,7 +696,7 @@ export default function ComingSoonPage() {
           {/* Action Button */}
           <button
             onClick={() => setIsVendorModalOpen(true)}
-            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0"
+            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
           >
             Apply As Brand
           </button>
@@ -577,7 +788,7 @@ export default function ComingSoonPage() {
                 Priority Access Confirmed!
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
-                Invitation sent to <strong className="text-zinc-950 dark:text-white font-medium">{waitlistEmail}</strong>. Includes ₦5,000 launch credit.
+                Invitation sent to <strong className="text-zinc-950 dark:text-white font-medium">{waitlistEmail}</strong>. Founding priority access secured for Drop 001.
               </p>
               <a
                 href="https://www.tiktok.com/@irisiming"
@@ -603,10 +814,13 @@ export default function ComingSoonPage() {
                 <button
                   type="submit"
                   disabled={waitlistStatus === 'loading'}
-                  className="w-full sm:w-auto shrink-0 px-6 py-3 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"
+                  className="w-full sm:w-auto shrink-0 px-6 py-3 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-60"
                 >
                   {waitlistStatus === 'loading' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <>
+                      <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                      <span>Securing VIP Pass...</span>
+                    </>
                   ) : (
                     <>
                       <span>Get VIP Pass</span>
@@ -620,7 +834,7 @@ export default function ComingSoonPage() {
               )}
               <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono px-2">
                 <span>⚡ 740+ Insiders in Queue</span>
-                <span className="text-[#B89035] font-medium">₦5,000 Launch Voucher</span>
+                <span className="text-[#B89035] font-medium">Drop 001 Priority Access</span>
               </div>
             </form>
           )}
@@ -643,33 +857,35 @@ export default function ComingSoonPage() {
                 style={{ x: card1X, rotate: card1Rotate }}
                 className="absolute w-[190px] sm:w-[330px] md:w-[370px] lg:w-[390px] h-[290px] sm:h-[460px] md:h-[510px] lg:h-[540px] rounded-2xl sm:rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-zinc-950 shadow-2xl select-none"
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentNative.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none"
-                  >
-                    <Image
-                      src={currentNative.image}
-                      alt={currentNative.name}
-                      fill
-                      sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
-                      className="object-cover brightness-[0.78]"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
+                {nativeTrack.categories.map((cat, idx) => {
+                  const isActive = idx === (cardCategoryIndex % nativeTrack.categories.length);
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      initial={false}
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none pointer-events-none"
+                    >
+                      <Image
+                        src={cat.image}
+                        alt={cat.name}
+                        fill
+                        sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
+                        className="object-cover brightness-[0.78]"
+                        priority={idx === 0}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
 
-                    {/* Just the image and the text telling the category */}
-                    <div className="relative z-10 text-left text-white">
-                      <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
-                        {currentNative.name}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      {/* Just the image and the text telling the category */}
+                      <div className="relative z-10 text-left text-white">
+                        <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
 
               {/* Card 2: Nigerian Streetwear & Drops (Center Card - Elevated On Scroll) */}
@@ -677,33 +893,35 @@ export default function ComingSoonPage() {
                 style={{ y: card2Y, scale: card2Scale }}
                 className="absolute w-[210px] sm:w-[350px] md:w-[390px] lg:w-[410px] h-[315px] sm:h-[480px] md:h-[530px] lg:h-[560px] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-black/20 dark:border-white/30 bg-zinc-950 shadow-2xl z-20 select-none"
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentStreet.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-8 select-none"
-                  >
-                    <Image
-                      src={currentStreet.image}
-                      alt={currentStreet.name}
-                      fill
-                      sizes="(max-width: 640px) 210px, (max-width: 1024px) 390px, 410px"
-                      className="object-cover brightness-[0.8]"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10 pointer-events-none" />
+                {streetTrack.categories.map((cat, idx) => {
+                  const isActive = idx === (cardCategoryIndex % streetTrack.categories.length);
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      initial={false}
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 flex flex-col justify-end p-4 sm:p-8 select-none pointer-events-none"
+                    >
+                      <Image
+                        src={cat.image}
+                        alt={cat.name}
+                        fill
+                        sizes="(max-width: 640px) 210px, (max-width: 1024px) 390px, 410px"
+                        className="object-cover brightness-[0.8]"
+                        priority={idx === 0}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10 pointer-events-none" />
 
-                    {/* Just the image and the text telling the category */}
-                    <div className="relative z-10 text-left text-white">
-                      <h3 className="font-editorial text-xl sm:text-3xl font-normal leading-tight drop-shadow-md">
-                        {currentStreet.name}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      {/* Just the image and the text telling the category */}
+                      <div className="relative z-10 text-left text-white">
+                        <h3 className="font-editorial text-xl sm:text-3xl font-normal leading-tight drop-shadow-md">
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
 
               {/* Card 3: Footwear, Bags & Accessories (Right Fanned Card - Expands On Scroll) */}
@@ -711,33 +929,35 @@ export default function ComingSoonPage() {
                 style={{ x: card3X, rotate: card3Rotate }}
                 className="absolute w-[190px] sm:w-[330px] md:w-[370px] lg:w-[390px] h-[290px] sm:h-[460px] md:h-[510px] lg:h-[540px] rounded-2xl sm:rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-zinc-950 shadow-2xl select-none"
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentWomen.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none"
-                  >
-                    <Image
-                      src={currentWomen.image}
-                      alt={currentWomen.name}
-                      fill
-                      sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
-                      className="object-cover brightness-[0.78]"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
+                {womenTrack.categories.map((cat, idx) => {
+                  const isActive = idx === (cardCategoryIndex % womenTrack.categories.length);
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      initial={false}
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none pointer-events-none"
+                    >
+                      <Image
+                        src={cat.image}
+                        alt={cat.name}
+                        fill
+                        sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
+                        className="object-cover brightness-[0.78]"
+                        priority={idx === 0}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
 
-                    {/* Just the image and the text telling the category */}
-                    <div className="relative z-10 text-left text-white">
-                      <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
-                        {currentWomen.name}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      {/* Just the image and the text telling the category */}
+                      <div className="relative z-10 text-left text-white">
+                        <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             </div>
           );
@@ -751,82 +971,31 @@ export default function ComingSoonPage() {
       {/* ── SECTION 2: OFFICIAL COMPANY MERCH SPOTLIGHT ─────────────────── */}
       <section className="relative z-10 py-16 sm:py-24 px-1.5 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto">
         <div className="rounded-2xl sm:rounded-3xl border border-white/15 bg-black/80 text-white p-3 sm:p-14 shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-center">
-            {/* 3D Product Interactive Card with Black & White Colorway Switcher */}
-            <div
-              className="lg:col-span-7 relative w-full h-[450px] sm:h-[510px] rounded-xl sm:rounded-2xl border border-white/15 bg-zinc-950 flex items-center justify-center p-2 sm:p-6 cursor-crosshair group overflow-hidden"
-              onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = (e.clientX - rect.left) / rect.width - 0.5;
-                const y = (e.clientY - rect.top) / rect.height - 0.5;
-                setMerchTilt({ x: x * 16, y: y * -16 });
-              }}
-              onMouseLeave={() => setMerchTilt({ x: 0, y: 0 })}
-              style={{ perspective: '1000px' }}
-            >
-              <AnimatePresence mode="wait">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-12 items-center">
+            {/* Official Apparel Preview Card (All Images Fit Box 100%, No Hover Effects, Seamless Dissolve) */}
+            <div className="lg:col-span-6 relative w-full h-[500px] sm:h-[580px] lg:h-[620px] rounded-2xl sm:rounded-3xl border border-white/15 bg-zinc-950 overflow-hidden shadow-2xl">
+              {MERCH_PREVIEW_IMAGES.map((img, idx) => (
                 <motion.div
-                  key={selectedMerchColor}
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.35, ease: 'easeInOut' }}
-                  className="relative w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
-                  style={{
-                    transform: `rotateX(${merchTilt.y}deg) rotateY(${merchTilt.x}deg)`,
-                  }}
+                  key={img.id}
+                  initial={false}
+                  animate={{ opacity: idx === merchImageIndex ? 1 : 0 }}
+                  transition={{ duration: 1.4, ease: 'easeInOut' }}
+                  className="absolute inset-0 w-full h-full pointer-events-none"
                 >
                   <Image
-                    src={selectedMerchColor === 'black' ? '/images/merch/irisi-merch-tee-black.png' : '/images/merch/irisi-merch-tee.png'}
-                    alt={`ÌRÍSÍ Official Company Merch Tee - ${selectedMerchColor === 'black' ? 'Onyx Black' : 'Bone White'} Edition`}
+                    src={img.src}
+                    alt={img.alt}
                     fill
-                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
-                    priority
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 600px, 620px"
+                    className="object-cover object-center w-full h-full select-none"
+                    priority={idx === 0}
                   />
                 </motion.div>
-              </AnimatePresence>
-
-              {/* Top-Left Edition Tag (Hidden on mobile to eliminate overlap with colorway toggle) */}
-              <div className="hidden sm:flex absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white text-[10px] font-mono font-medium tracking-widest uppercase items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#B89035] animate-pulse" />
-                <span>OFFICIAL APPAREL · {selectedMerchColor === 'black' ? 'ONYX BLACK' : 'BONE WHITE'}</span>
-              </div>
-
-              {/* Colorway Switcher Buttons (Black / White) */}
-              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md border border-white/15 rounded-full p-1 z-20">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMerchColor('black')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                    selectedMerchColor === 'black'
-                      ? 'bg-zinc-800 text-white border border-white/30 shadow-sm'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-black border border-white/40 inline-block" />
-                  <span>Black</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMerchColor('white')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                    selectedMerchColor === 'white'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-white border border-black/20 inline-block" />
-                  <span>White</span>
-                </button>
-              </div>
-
-              <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 text-[8px] sm:text-[9px] font-mono text-zinc-400">
-                MOVE CURSOR TO TILT IN 3D · AUTO-CYCLES BLACK & WHITE EDITIONS
-              </div>
+              ))}
             </div>
 
             {/* Mature, Elevated Official Merch Editorial */}
-            <div className="lg:col-span-5 flex flex-col justify-center">
+            <div className="lg:col-span-6 flex flex-col justify-center">
               <span className="text-[10px] font-mono font-medium tracking-[0.3em] uppercase text-[#B89035] block mb-2">
                 OFFICIAL APPAREL PREVIEW
               </span>
@@ -864,13 +1033,14 @@ export default function ComingSoonPage() {
                 </div>
               </div>
 
-              <a
-                href="#waitlist"
-                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl"
+              <button
+                type="button"
+                onClick={() => setIsMerchModalOpen(true)}
+                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 active:scale-[0.99] transition-all shadow-xl cursor-pointer"
               >
-                <span>Join Priority Waitlist</span>
+                <span>Reserve Priority Allocation</span>
                 <ArrowRight className="w-4 h-4" />
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -974,6 +1144,7 @@ export default function ComingSoonPage() {
         </div>
       </footer>
 
+
       {/* ── MODAL 1: FOUNDER UNLOCK PASSCODE ─────────────────────────────── */}
       {isUnlockModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
@@ -1010,9 +1181,16 @@ export default function ComingSoonPage() {
               <button
                 type="submit"
                 disabled={unlockStatus === 'loading'}
-                className="w-full py-2.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all"
+                className="w-full py-2.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                {unlockStatus === 'loading' ? 'Verifying...' : 'Unlock Full Store'}
+                {unlockStatus === 'loading' ? (
+                  <>
+                    <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                    <span>Verifying Passcode...</span>
+                  </>
+                ) : (
+                  <span>Unlock Full Store</span>
+                )}
               </button>
             </form>
           </div>
@@ -1058,66 +1236,119 @@ export default function ComingSoonPage() {
                 </p>
 
                 <form onSubmit={handleVendorSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Brand Name *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={vendorForm.brandName}
-                        onChange={(e) => setVendorForm({ ...vendorForm, brandName: e.target.value })}
-                        placeholder="e.g. Veyra Atelier"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Instagram Handle *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={vendorForm.instagramHandle}
-                        onChange={(e) => setVendorForm({ ...vendorForm, instagramHandle: e.target.value })}
-                        placeholder="@yourbrand"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      />
-                    </div>
+                  {/* Department / Specialty */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      Store Specialty &amp; Department *
+                    </label>
+                    <select
+                      value={vendorForm.specialty}
+                      onChange={(e) => setVendorForm({ ...vendorForm, specialty: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
+                    >
+                      <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
+                      <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
+                      <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
+                      <option value="caps">Caps, Hats &amp; Headwear (Fila, Dad Caps, Beanies, Bucket Hats)</option>
+                      <option value="accessories">Jewelry, Watches &amp; Luxury Accessories (Chains, Watches, Bags, Belts)</option>
+                      <option value="multi_department">Multi-Department Boutique (All Fashion &amp; Accessories)</option>
+                    </select>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Discipline
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      Brand Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={vendorForm.brandName}
+                      onChange={(e) => setVendorForm({ ...vendorForm, brandName: e.target.value })}
+                      placeholder="e.g. Veyra Atelier"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                    />
+                  </div>
+
+                  {/* Multi-Social Media Channels with Dropdown Selector */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                        Social Media Channels *
                       </label>
-                      <select
-                        value={vendorForm.category}
-                        onChange={(e) => setVendorForm({ ...vendorForm, category: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVendorForm((prev) => ({
+                            ...prev,
+                            socialLinks: [
+                              ...prev.socialLinks,
+                              { platform: 'tiktok', handle: '' },
+                            ],
+                          }));
+                        }}
+                        className="text-[10px] font-mono text-[#B89035] hover:text-[#E6C367] flex items-center gap-1 transition-colors cursor-pointer"
                       >
-                        <option>Streetwear & Ready-to-Wear</option>
-                        <option>Agbada & Native Couture</option>
-                        <option>Avant-Garde & Eveningwear</option>
-                        <option>Footwear & Leather Goods</option>
-                        <option>Bags & Accessories</option>
-                      </select>
+                        <Plus className="w-3 h-3" />
+                        <span>Add Another Social</span>
+                      </button>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Price Bracket
-                      </label>
-                      <select
-                        value={vendorForm.priceRange}
-                        onChange={(e) => setVendorForm({ ...vendorForm, priceRange: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      >
-                        <option>₦20,000 – ₦50,000</option>
-                        <option>₦50,000 – ₦150,000</option>
-                        <option>₦150,000 – ₦350,000</option>
-                        <option>₦350,000+</option>
-                      </select>
+
+                    <div className="space-y-2">
+                      {vendorForm.socialLinks.map((item, index) => {
+                        const activePlatform =
+                          SOCIAL_PLATFORMS.find((p) => p.id === item.platform) || SOCIAL_PLATFORMS[0];
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            {/* Platform Selector Dropdown */}
+                            <select
+                              value={item.platform}
+                              onChange={(e) => {
+                                const newLinks = [...vendorForm.socialLinks];
+                                newLinks[index].platform = e.target.value;
+                                setVendorForm({ ...vendorForm, socialLinks: newLinks });
+                              }}
+                              className="w-32 sm:w-40 px-3 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer shrink-0"
+                            >
+                              {SOCIAL_PLATFORMS.map((plat) => (
+                                <option key={plat.id} value={plat.id}>
+                                  {plat.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            {/* Handle / Profile Link Input */}
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                required={index === 0}
+                                value={item.handle}
+                                onChange={(e) => {
+                                  const newLinks = [...vendorForm.socialLinks];
+                                  newLinks[index].handle = e.target.value;
+                                  setVendorForm({ ...vendorForm, socialLinks: newLinks });
+                                }}
+                                placeholder={activePlatform.placeholder}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white font-mono"
+                              />
+                            </div>
+
+                            {/* Remove button (when multiple) */}
+                            {vendorForm.socialLinks.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newLinks = vendorForm.socialLinks.filter((_, i) => i !== index);
+                                  setVendorForm({ ...vendorForm, socialLinks: newLinks });
+                                }}
+                                className="p-2.5 rounded-xl bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer shrink-0"
+                                title="Remove channel"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1131,28 +1362,63 @@ export default function ComingSoonPage() {
                         required
                         value={vendorForm.founderPhone}
                         onChange={(e) => setVendorForm({ ...vendorForm, founderPhone: e.target.value })}
-                        placeholder="080 1234 5678"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                        placeholder="08012*****"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white font-mono"
                       />
                     </div>
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Email Address *
+                        Business Email *
                       </label>
                       <input
                         type="email"
                         required
                         value={vendorForm.founderEmail}
                         onChange={(e) => setVendorForm({ ...vendorForm, founderEmail: e.target.value })}
-                        placeholder="founder@brand.com"
+                        placeholder="founder@brand.ng"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
                       />
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        State / Region *
+                      </label>
+                      <select
+                        value={vendorForm.state}
+                        onChange={(e) => setVendorForm({ ...vendorForm, state: e.target.value, city: '' })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-white cursor-pointer"
+                      >
+                        {NIGERIAN_STATES.map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        City / Area
+                      </label>
+                      <input
+                        type="text"
+                        list="vendor-cities-list"
+                        value={vendorForm.city}
+                        onChange={(e) => setVendorForm({ ...vendorForm, city: e.target.value })}
+                        placeholder={`e.g. ${vendorForm.state === 'Lagos' ? 'Ikeja / Lekki' : 'City or Town'}`}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white placeholder-zinc-500"
+                      />
+                      <datalist id="vendor-cities-list">
+                        {getCitiesForState(vendorForm.state).slice(0, 40).map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                      Lookbook Link (Drive, Web, or Dropbox)
+                      Lookbook Link (Drive, Web, or Dropbox) (Optional)
                     </label>
                     <input
                       type="url"
@@ -1167,18 +1433,171 @@ export default function ComingSoonPage() {
                     <p className="text-xs text-rose-400 font-medium">{vendorMessage}</p>
                   )}
 
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={vendorStatus === 'loading'}
+                        className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl cursor-pointer disabled:opacity-60"
+                      >
+                        {vendorStatus === 'loading' ? (
+                          <>
+                            <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                            <span>Submitting Application...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Submit Application</span>
+                            <Send className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
+      {isMerchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white">
+            <button
+              onClick={() => {
+                setIsMerchModalOpen(false);
+                setMerchStatus('idle');
+                setMerchMessage('');
+              }}
+              className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {merchStatus === 'success' ? (
+              <div className="text-center py-6">
+                <div className="w-14 h-14 rounded-full bg-[#B89035]/20 border border-[#B89035] flex items-center justify-center mx-auto mb-4 text-[#B89035]">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <h3 className="font-editorial text-2xl font-normal mb-2">Priority Allocation Reserved!</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-6 leading-relaxed">
+                  Your reservation for the <strong className="text-white">{merchForm.colorway === 'white' ? 'Bone White' : 'Onyx Black'}</strong> tee in size <strong className="text-white">{merchForm.size}</strong> is secured for Drop 001. We will alert your WhatsApp 1 hour before the public release with your private checkout link.
+                </p>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-left text-xs space-y-2 mb-6">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Guaranteed Allocation</span>
+                    <span className="text-emerald-400 font-medium">2-Hour Hold on Launch Day</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Archival Packaging</span>
+                    <span className="text-white font-medium">Serialized Dustbag &amp; Authenticity Card</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>WhatsApp VIP Alert Line</span>
+                    <span className="text-[#B89035] font-mono">{merchForm.phone}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMerchModalOpen(false);
+                    setMerchStatus('idle');
+                  }}
+                  className="px-8 py-3 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div>
+                <span className="text-[10px] font-mono font-medium tracking-[0.25em] text-[#B89035] uppercase block mb-1">
+                  OFFICIAL ARCHIVE · DROP 001
+                </span>
+                <h3 className="font-editorial text-2xl sm:text-3xl font-normal mb-1">Reserve Your Heavyweight Tee</h3>
+                <p className="text-xs text-zinc-400 mb-6 font-light leading-relaxed">
+                  320 GSM custom-milled combed cotton with drop-shoulder silhouette. Reserve your preferred size &amp; colorway today to guarantee your piece before public release.
+                </p>
+
+                <form onSubmit={handleMerchSubmit} className="space-y-4">
+                  {/* Colorway & Size Selector */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Colorway
+                      </label>
+                      <select
+                        value={merchForm.colorway}
+                        onChange={(e) => setMerchForm({ ...merchForm, colorway: e.target.value as any })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
+                      >
+                        <option value="black">Onyx Black</option>
+                        <option value="white">Bone White</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Size
+                      </label>
+                      <select
+                        value={merchForm.size}
+                        onChange={(e) => setMerchForm({ ...merchForm, size: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
+                      >
+                        <option value="S">Small (S)</option>
+                        <option value="M">Medium (M)</option>
+                        <option value="L">Large (L)</option>
+                        <option value="XL">Extra Large (XL)</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={merchForm.email}
+                      onChange={(e) => setMerchForm({ ...merchForm, email: e.target.value })}
+                      placeholder="shopper@email.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      WhatsApp Number (For Early Drop Ping) *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={merchForm.phone}
+                      onChange={(e) => setMerchForm({ ...merchForm, phone: e.target.value })}
+                      placeholder="08012*****"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white font-mono"
+                    />
+                  </div>
+
+                  {merchMessage && (
+                    <p className="text-xs text-rose-400 font-medium">{merchMessage}</p>
+                  )}
+
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={vendorStatus === 'loading'}
-                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl"
+                      disabled={merchStatus === 'loading'}
+                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl cursor-pointer disabled:opacity-60"
                     >
-                      {vendorStatus === 'loading' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                      {merchStatus === 'loading' ? (
+                        <>
+                          <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                          <span>Locking Allocation...</span>
+                        </>
                       ) : (
                         <>
-                          <span>Submit Application</span>
-                          <Send className="w-3.5 h-3.5" />
+                          <span>Lock Allocation (No Payment Now)</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </>
                       )}
                     </button>

@@ -22,6 +22,7 @@ import { getConciergeConfig, saveConciergeConfig, generateWhatsAppUrl, Concierge
 import AdminCategoriesManager from '@/components/admin/AdminCategoriesManager';
 import AdminProductEditModal from '@/components/admin/AdminProductEditModal';
 import AdminShopperEmailModal from '@/components/admin/AdminShopperEmailModal';
+import AdminPrelaunchManager from '@/components/admin/AdminPrelaunchManager';
 import { getCategoryBySlug } from '@/lib/data/categories';
 import { matchesDepartment } from '@/lib/utils/categoryMatcher';
 import { supabase } from '@/lib/supabase/client';
@@ -58,6 +59,7 @@ const adminSectionToTab = {
   customers: 'customers',
   communications: 'communications',
   concierge: 'concierge',
+  prelaunch: 'prelaunch',
 } as const;
 
 type AdminTab = (typeof adminSectionToTab)[keyof typeof adminSectionToTab];
@@ -1174,6 +1176,13 @@ export default function SuperAdminPage() {
       icon: ShieldCheck,
       badge: pendingCount > 0 ? `${pendingCount} Pending` : null,
       badgeColor: 'bg-amber-500 text-black font-bold'
+    },
+    {
+      id: 'prelaunch',
+      label: 'Pre-Launch & Waitlist',
+      icon: Sparkles,
+      badge: 'Drop 001',
+      badgeColor: 'bg-[var(--gold-accent)] text-black font-bold'
     },
     {
       id: 'finance',
@@ -3873,6 +3882,13 @@ export default function SuperAdminPage() {
               </div>
 
             </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 8: PRE-LAUNCH & WAITLIST INTELLIGENCE HUB             */}
+          {/* ======================================================== */}
+          {activeTab === 'prelaunch' && (
+            <AdminPrelaunchManager />
           )}
 
         </main>
