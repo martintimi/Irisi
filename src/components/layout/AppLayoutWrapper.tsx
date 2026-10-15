@@ -110,13 +110,18 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
         <Footer />
       )}
 
-      <SplitCartDrawer />
-      <WardrobeVaultDrawer />
-      <BodyTwinWizard />
+      {!isStandalonePage && (
+        <>
+          <SplitCartDrawer />
+          <WardrobeVaultDrawer />
+          <BodyTwinWizard />
+          {/* Floating Glassmorphic Mobile Bottom Dock (Strictly Mobile) */}
+          <MobileBottomNav />
+        </>
+      )}
+
       {/* WhatsApp VIP Concierge & Style Advisor */}
       <WhatsAppConciergeWidget />
-      {/* Floating Glassmorphic Mobile Bottom Dock (Strictly Mobile) */}
-      <MobileBottomNav />
 
       {/* Ambient Netflix-Style Idle Lookbook Screensaver (Commented out temporarily - will add back later) */}
       {/* <AmbientScreenSaver /> */}

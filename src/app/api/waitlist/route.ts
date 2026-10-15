@@ -53,7 +53,7 @@ export async function POST(request: Request) {
           <span style="background: #e6c367; color: #08090a; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; padding: 4px 12px; border-radius: 999px; text-transform: uppercase;">Pass #${formattedPass}</span>
           <h2 style="color: #ffffff; font-size: 20px; margin: 12px 0 8px;">Welcome to the Priority Roster</h2>
           <p style="color: #a1a1aa; font-size: 13px; line-height: 1.6; margin: 0;">
-            Your email has secured founding access. When the runway opens, your registered email unlocks a <strong>1-hour early shopping window</strong> and a <strong>₦5,000 launch gift voucher</strong>.
+            Your email has secured founding access. When the runway opens, your registered email unlocks an <strong>exclusive early shopping window</strong> on opening day.
           </p>
         </div>
         <p style="text-align: center; font-size: 11px; color: #71717a; margin: 0;">Lagos · Abuja · London · Worldwide</p>

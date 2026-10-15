@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import AntigravityParticleCanvas from '@/components/common/AntigravityParticleCanvas';
+import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
+import AntigravityDotField from '@/components/landing/AntigravityDotField';
 import {
   ArrowRight,
   CheckCircle2,
+  Volume2,
+  VolumeX,
   ShieldCheck,
   Lock,
   Unlock,
@@ -20,34 +22,181 @@ import {
   Award,
 } from 'lucide-react';
 
-// The 3 Premier Fashion Disciplines for the 3D Fanning Deck
-const HERO_CARDS = [
+// Dynamic App Features for the rotating subtitle (Fade In / Fade Out)
+const APP_FEATURES = [
+  'Shop directly from top verified Nigerian fashion brands and designers in one app.',
+  'Order bespoke native fits, Agbada, and tailored 2-pieces crafted to your exact body measurements.',
+  'Nationwide doorstep delivery across Nigeria, plus reliable worldwide shipping for the diaspora.',
+  'Secure escrow payments with buyer protection — pay safely with zero fraud or failed orders.',
+  'Exclusive streetwear drops, limited capsule collections, and ready-to-wear pieces released daily.',
+];
+
+// Department Category Tracks for the 3 Fanning Cards (Every category image + text telling the category)
+const DEPARTMENT_CARD_TRACKS = [
+  // Card 1: Native & Cultural Wear (Left Card)
   {
-    id: 'native',
-    title: 'Agbada Architecture',
-    subtitle: 'Heritage Couture',
-    image: '/images/editorial/nigerian_male_couture.jpg',
-    tag: 'SOVEREIGN NATIVE',
-    badge: '4 Brands Confirmed',
-    accent: '#d4af37',
+    department: 'NATIVE BESPOKE',
+    categories: [
+      {
+        id: 'senator',
+        name: 'Senator & Kaftan Sets',
+        image: '/images/uploaded/senatorformen.jpeg',
+      },
+      {
+        id: 'agbada',
+        name: 'Grand Agbada 3-Piece',
+        image: '/images/uploaded/agbadaformen.jpeg',
+      },
+      {
+        id: 'boubou',
+        name: 'Boubou & Kaftans',
+        image: '/images/editorial/nigerian_female_couture.jpg',
+      },
+      {
+        id: 'jalabiya',
+        name: 'Jalabiya & Robes',
+        image: '/images/uploaded/jalabmen.jpeg',
+      },
+      {
+        id: 'lace-ankara',
+        name: 'Lace & Ankara Sets',
+        image: '/images/editorial/nigerian_female_model.jpg',
+      },
+      {
+        id: 'fila',
+        name: 'Aso-Oke Fila & Caps',
+        image: '/images/products/Cap1.png',
+      },
+      {
+        id: 'abaya',
+        name: 'Abaya & Modest Kimonos',
+        image: '/images/editorial/female_dress.jpg',
+      },
+      {
+        id: 'executive-senator',
+        name: 'Executive Senator Fits',
+        image: '/images/editorial/male_senator.jpg',
+      },
+    ],
   },
+
+  // Card 2: Nigerian Streetwear & Contemporary Drops (Center Elevated Card)
   {
-    id: 'streetwear',
-    title: 'Neo-Lagos Streetwear',
-    subtitle: 'Underground Luxury',
-    image: '/images/editorial/modern_male_streetwear.jpg',
-    tag: 'LAGOS SUB-CULTURE',
-    badge: '6 Brands Confirmed',
-    accent: '#0a0a0a',
+    department: 'STREET CULTURE',
+    categories: [
+      {
+        id: 'hoodies',
+        name: 'Hoodies & Sweatshirts',
+        image: '/images/uploaded/prod-1788316482065-1-489.jpg',
+      },
+      {
+        id: 'tshirts',
+        name: 'T-Shirts & Graphic Tees',
+        image: '/images/uploaded/t-shirtsandgraphic.jpeg',
+      },
+      {
+        id: 'jeans',
+        name: 'Baggy Jeans & Denim',
+        image: '/images/products/BaggyJean.jpg',
+      },
+      {
+        id: 'women-tops',
+        name: 'Tops & Corsets',
+        image: '/images/uploaded/Streetwear&topsWomen.jpeg',
+      },
+      {
+        id: 'cargo',
+        name: 'Utility Cargo Sets',
+        image: '/images/uploaded/pantsandcargo.jpeg',
+      },
+      {
+        id: 'coord',
+        name: 'Two-Piece Matching Sets',
+        image: '/images/categories/women_coord.jpg',
+      },
+      {
+        id: 'jackets',
+        name: 'Jackets & Street Outerwear',
+        image: '/images/editorial/modern_male_streetwear.jpg',
+      },
+      {
+        id: 'polos',
+        name: 'Polos & Casual Shirts',
+        image: '/images/uploaded/poloandshirt.jpeg',
+      },
+      {
+        id: 'dresses',
+        name: 'Dresses & Evening Gowns',
+        image: '/images/categories/dressesforwomen.jpeg',
+      },
+      {
+        id: 'skirts',
+        name: 'Skirts & Mini Skirts',
+        image: '/images/categories/skirtandminishirts.jpeg',
+      },
+      {
+        id: 'loungewear',
+        name: 'Loungewear & Sleepwear',
+        image: '/images/products/women_loungewear_luxury.jpg',
+      },
+    ],
   },
+
+  // Card 3: Footwear, Bags & Accessories (Right Card)
   {
-    id: 'eveningwear',
-    title: 'Avant-Garde Silks',
-    subtitle: 'High-Society Atelier',
-    image: '/images/editorial/nigerian_female_couture.jpg',
-    tag: 'CONTEMPORARY LUXE',
-    badge: '3 Brands Confirmed',
-    accent: '#8b5cf6',
+    department: 'FOOTWEAR & ACCESSORIES',
+    categories: [
+      {
+        id: 'slides',
+        name: 'Slides, Palms & Slippers',
+        image: '/images/uploaded/sides_palm.jpeg',
+      },
+      {
+        id: 'shoes',
+        name: 'Sneakers & Casual Shoes',
+        image: '/images/uploaded/shoefootwareformen.jpeg',
+      },
+      {
+        id: 'heels',
+        name: 'Designer Heels & Pumps',
+        image: '/images/categories/women_heels.jpg',
+      },
+      {
+        id: 'crocs',
+        name: 'Crocs & Foam Clogs',
+        image: '/images/uploaded/crocsformen.jpeg',
+      },
+      {
+        id: 'women-bags',
+        name: 'Handbags & Leather Totes',
+        image: '/images/uploaded/LeaderbagsWomen.jpeg',
+      },
+      {
+        id: 'men-bags',
+        name: 'Backpacks & Travel Bags',
+        image: '/images/uploaded/leaderBags.jpeg',
+      },
+      {
+        id: 'jewelry',
+        name: 'Cuban Chains & Jewelry',
+        image: '/images/uploaded/WomenJewelry.jpeg',
+      },
+      {
+        id: 'watches',
+        name: 'Luxury Watches',
+        image: '/images/uploaded/luxerywatches.jpeg',
+      },
+      {
+        id: 'sunglasses',
+        name: 'Sunglasses & Eyewear',
+        image: '/images/uploaded/sunglassesandeyewear.jpeg',
+      },
+      {
+        id: 'caps',
+        name: 'Caps, Hats & Beanies',
+        image: '/images/uploaded/capshatbeanies.jpeg',
+      },
+    ],
   },
 ];
 
@@ -58,15 +207,34 @@ export default function ComingSoonPage() {
   const [waitlistError, setWaitlistError] = useState('');
   const [passNumber, setPassNumber] = useState('00742');
 
-  // Kinetic Headline Word Highlight State (0: THE, 1: COMPLETE, 2: NIGERIAN, 3: FIT.)
-  const [activeWordIndex, setActiveWordIndex] = useState(0);
-  const [hoveredWordIndex, setHoveredWordIndex] = useState<number | null>(null);
+  // Dynamic App Feature Ticker (Changes every 3.8s with fade in / fade out)
+  const [featureIndex, setFeatureIndex] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFeatureIndex((prev) => (prev + 1) % APP_FEATURES.length);
+    }, 3800);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Dynamic Category Carousel for the 3 Department Cards (Changes every 3.0s with crossfade)
+  const [cardCategoryIndex, setCardCategoryIndex] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCardCategoryIndex((prev) => prev + 1);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Screen width tracking for responsive layout
+  const [screenWidth, setScreenWidth] = useState<number>(1200);
 
   useEffect(() => {
-    const wordTimer = setInterval(() => {
-      setActiveWordIndex((prev) => (prev + 1) % 4);
-    }, 1800);
-    return () => clearInterval(wordTimer);
+    if (typeof window !== 'undefined') {
+      setScreenWidth(window.innerWidth);
+      const handleResize = () => setScreenWidth(window.innerWidth);
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   // Vendor Application Modal
@@ -88,8 +256,17 @@ export default function ComingSoonPage() {
   const [passcode, setPasscode] = useState('');
   const [unlockStatus, setUnlockStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
-  // 3D Merch Mouse Tilt State
+  // 3D Merch Mouse Tilt State & Colorway Switcher
   const [merchTilt, setMerchTilt] = useState({ x: 0, y: 0 });
+  const [selectedMerchColor, setSelectedMerchColor] = useState<'black' | 'white'>('black');
+
+  // Auto-cycle Merch Tee Colorway (Black <-> White every 3.8s) so visitors see both editions
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSelectedMerchColor((prev) => (prev === 'black' ? 'white' : 'black'));
+    }, 3800);
+    return () => clearInterval(timer);
+  }, []);
 
   // ── Ambient Polyphonic Audio Engine ────────────────────────────────────
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -181,15 +358,26 @@ export default function ComingSoonPage() {
     ['#0A0B0D', '#FFFFFF']
   );
 
-  // Card deck fanning translations based on scroll
-  const card1X = useTransform(smoothProgress, [0, 0.25], [-120, -280]);
-  const card1Rotate = useTransform(smoothProgress, [0, 0.25], [-12, -6]);
+  // Card deck fanning translations based on scroll physics (Revolut-style expansion)
+  const isMobile = screenWidth < 640;
+  const isTablet = screenWidth >= 640 && screenWidth < 1024;
 
-  const card2Y = useTransform(smoothProgress, [0, 0.25], [0, -30]);
-  const card2Scale = useTransform(smoothProgress, [0, 0.25], [1.02, 1.08]);
+  const card1X = useTransform(
+    smoothProgress,
+    [0, 0.25],
+    isMobile ? [-65, -125] : isTablet ? [-110, -220] : [-135, -310]
+  );
+  const card1Rotate = useTransform(smoothProgress, [0, 0.25], [-11, -5]);
 
-  const card3X = useTransform(smoothProgress, [0, 0.25], [120, 280]);
-  const card3Rotate = useTransform(smoothProgress, [0, 0.25], [12, 6]);
+  const card2Y = useTransform(smoothProgress, [0, 0.25], [0, -28]);
+  const card2Scale = useTransform(smoothProgress, [0, 0.25], isMobile ? [1.01, 1.05] : [1.02, 1.08]);
+
+  const card3X = useTransform(
+    smoothProgress,
+    [0, 0.25],
+    isMobile ? [65, 125] : isTablet ? [110, 220] : [135, 310]
+  );
+  const card3Rotate = useTransform(smoothProgress, [0, 0.25], [11, 5]);
 
   // ── Waitlist Submit ────────────────────────────────────────────────────
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
@@ -274,112 +462,105 @@ export default function ComingSoonPage() {
       style={{ backgroundColor: bgColor }}
       className="min-h-screen font-sans selection:bg-[#0A0B0D] selection:text-white transition-colors duration-300 relative overflow-x-hidden"
     >
-      {/* ── FLOATING PILL DOCK (Revolut Style) ───────────────────────────── */}
-      <header className="fixed top-6 inset-x-0 z-50 max-w-5xl mx-auto px-4 pointer-events-none">
-        <div className="pointer-events-auto flex items-center justify-between px-5 py-3 rounded-full bg-white/80 dark:bg-black/80 border border-black/10 dark:border-white/15 backdrop-blur-xl shadow-xl shadow-black/5">
+      {/* ── FLOATING NAVIGATION ────────────────────────────────────────── */}
+      <header className="fixed top-3 sm:top-6 inset-x-0 z-50 max-w-7xl mx-auto px-3 sm:px-8 pointer-events-none">
+        <div className="pointer-events-auto flex items-center justify-between px-3.5 sm:px-6 py-2 sm:py-3.5 rounded-full bg-white/90 dark:bg-black/90 border border-black/10 dark:border-white/15 backdrop-blur-xl shadow-lg shadow-black/5">
           {/* Logo & Brand Wordmark */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-black/10 dark:border-white/20 bg-black flex items-center justify-center">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden border border-black/15 dark:border-white/20 bg-black flex items-center justify-center shadow-sm shrink-0">
               <Image
                 src="/images/logo/irisi-icon.png"
                 alt="ÌRÍSÍ Emblem"
-                width={32}
-                height={32}
+                width={44}
+                height={44}
                 className="w-full h-full object-cover"
                 priority
               />
             </div>
-            <span className="font-bold text-base tracking-[0.2em] text-zinc-950 dark:text-white">
+            <span className="font-editorial text-xl sm:text-3xl tracking-[0.25em] font-normal uppercase text-zinc-950 dark:text-white select-none">
               ÌRÍSÍ
-            </span>
-            <span className="hidden sm:inline-block text-[9px] uppercase tracking-widest font-mono text-zinc-500">
-              LAGOS · RUNWAY
             </span>
           </div>
 
-          {/* Action Capsule */}
-          <div className="flex items-center gap-3">
-            {/* Brand Application CTA */}
-            <button
-              onClick={() => setIsVendorModalOpen(true)}
-              className="px-4 py-1.5 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all"
-            >
-              Apply As Brand
-            </button>
-          </div>
+          {/* Action Button */}
+          <button
+            onClick={() => setIsVendorModalOpen(true)}
+            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0"
+          >
+            Apply As Brand
+          </button>
         </div>
       </header>
 
+      {/* ── INTERACTIVE ANTIGRAVITY CELESTIAL DOT FIELD ───────────────────── */}
+      <div className="absolute top-0 inset-x-0 h-[115vh] overflow-hidden pointer-events-none z-0">
+        <AntigravityDotField />
+      </div>
+
       {/* ── SECTION 1: LUMINOUS REVOLUT HERO ─────────────────────────────── */}
-      <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 pt-32 pb-16 z-10 max-w-6xl mx-auto overflow-hidden">
-        {/* Antigravity Interactive Particle Canvas */}
-        <AntigravityParticleCanvas />
-
-        {/* Status Pill */}
-        <div className="relative z-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.03] dark:bg-white/[0.05] text-[10px] font-mono font-bold tracking-[0.25em] uppercase text-zinc-700 dark:text-zinc-300 mb-6">
+      <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center px-4 pt-28 sm:pt-32 pb-16 z-10 w-full max-w-7xl mx-auto sm:px-8 lg:px-12">
+        {/* Simple, Clean Early Access Pill (Fits on mobile without wrapping) */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] text-[10px] font-mono font-medium tracking-[0.16em] uppercase text-zinc-700 dark:text-zinc-300 mb-6 z-10">
           <span className="w-1.5 h-1.5 rounded-full bg-[#B89035] animate-ping" />
-          <span>DEBUT RUNWAY · FOUNDING MEMBERS ONLY</span>
+          <span>COMING SOON · EARLY ACCESS PASS</span>
         </div>
 
-        {/* Stadium-Scale Kinetic Headline with Word Inversion Highlights */}
-        <div className="relative z-10 flex flex-col items-center justify-center mb-8 max-w-5xl select-none">
-          {/* Line 1: THE COMPLETE */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-[-0.04em] leading-[1.05]">
-            <span
-              onMouseEnter={() => setHoveredWordIndex(0)}
-              onMouseLeave={() => setHoveredWordIndex(null)}
-              className={`transition-all duration-300 cursor-pointer ${
-                (hoveredWordIndex !== null ? hoveredWordIndex === 0 : activeWordIndex === 0)
-                  ? 'bg-zinc-950 text-white px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
-                  : 'text-zinc-950 dark:text-white px-2 py-0.5'
-              }`}
-            >
-              THE
+        {/* Stadium-Scale Editorial Headline (Zero Bold, Matching Platform) */}
+        <div className="relative group mb-6 max-w-5xl z-10">
+          <motion.h1
+            style={{ color: textColor }}
+            className="font-editorial text-4xl sm:text-6xl md:text-7xl lg:text-[5.25rem] font-normal tracking-tight leading-[1.08] select-none"
+          >
+            {/* Line 1: THE COMPLETE with refined spring hover */}
+            <span className="inline-flex flex-wrap justify-center gap-x-3 sm:gap-x-5">
+              <motion.span
+                className="inline-block cursor-default"
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+              >
+                THE
+              </motion.span>
+              <motion.span
+                className="inline-block cursor-default"
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+              >
+                COMPLETE
+              </motion.span>
             </span>
-            <span
-              onMouseEnter={() => setHoveredWordIndex(1)}
-              onMouseLeave={() => setHoveredWordIndex(null)}
-              className={`transition-all duration-300 cursor-pointer ${
-                (hoveredWordIndex !== null ? hoveredWordIndex === 1 : activeWordIndex === 1)
-                  ? 'bg-zinc-950 text-white px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
-                  : 'text-zinc-950 dark:text-white px-2 py-0.5'
-              }`}
-            >
-              COMPLETE
-            </span>
-          </div>
+            <br />
 
-          {/* Line 2: NIGERIAN FIT. */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-[-0.04em] leading-[1.05] mt-1 sm:mt-3">
-            <span
-              onMouseEnter={() => setHoveredWordIndex(2)}
-              onMouseLeave={() => setHoveredWordIndex(null)}
-              className={`transition-all duration-300 cursor-pointer ${
-                (hoveredWordIndex !== null ? hoveredWordIndex === 2 : activeWordIndex === 2)
-                  ? 'bg-zinc-950 text-[#B89035] px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
-                  : 'text-[#B89035] px-2 py-0.5'
-              }`}
-            >
-              NIGERIAN
+            {/* Line 2: NIGERIAN FIT. in graceful editorial italic gold */}
+            <span className="relative inline-block mt-1 sm:mt-2">
+              <motion.span
+                className="inline-block italic font-normal text-[#B89035] dark:text-[#E6C367] cursor-default"
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+              >
+                NIGERIAN FIT.
+              </motion.span>
+
+              {/* Minimalist luxury gold hairline */}
+              <span className="block mt-2 sm:mt-2.5 mx-auto w-24 sm:w-36 h-[1.5px] rounded-full bg-gradient-to-r from-transparent via-[#D4AF37]/70 to-transparent" />
             </span>
-            <span
-              onMouseEnter={() => setHoveredWordIndex(3)}
-              onMouseLeave={() => setHoveredWordIndex(null)}
-              className={`transition-all duration-300 cursor-pointer ${
-                (hoveredWordIndex !== null ? hoveredWordIndex === 3 : activeWordIndex === 3)
-                  ? 'bg-zinc-950 text-white px-3 sm:px-6 py-0.5 sm:py-1 rounded-xl sm:rounded-2xl shadow-2xl scale-[1.03]'
-                  : 'text-[#B89035] px-2 py-0.5'
-              }`}
-            >
-              FIT.
-            </span>
-          </div>
+          </motion.h1>
         </div>
 
-        <p className="text-zinc-600 dark:text-zinc-300 text-base sm:text-xl font-normal max-w-2xl mx-auto leading-relaxed mb-10">
-          Uniting Nigeria’s most sovereign fashion houses, native ateliers, and luxury streetwear creators
-          on a single high-performance digital runway.
-        </p>
+        {/* Dynamic App Feature Subtitle with Smooth Fade In / Fade Out */}
+        <div className="w-full max-w-3xl mx-auto min-h-[58px] sm:min-h-[48px] flex items-center justify-center mb-8 px-4 z-10">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={featureIndex}
+              initial={{ opacity: 0, y: 7 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -7 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+              className="text-zinc-600 dark:text-zinc-300 text-sm sm:text-base md:text-lg font-normal leading-relaxed text-center"
+            >
+              {APP_FEATURES[featureIndex]}
+            </motion.p>
+          </AnimatePresence>
+        </div>
 
         {/* Priority Waitlist Input Box */}
         <div className="w-full max-w-md mx-auto mb-16" id="waitlist">
@@ -387,22 +568,22 @@ export default function ComingSoonPage() {
             /* Digital VIP Member Card */
             <div className="p-6 rounded-2xl border border-[#B89035]/40 bg-white dark:bg-zinc-900 shadow-2xl text-left">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-mono tracking-widest text-[#B89035] font-bold">
+                <span className="text-[10px] font-mono tracking-widest text-[#B89035] font-medium">
                   SOVEREIGN PASS #{passNumber}
                 </span>
                 <Award className="w-5 h-5 text-[#B89035]" />
               </div>
-              <h3 className="text-base font-bold text-zinc-950 dark:text-white mb-1">
+              <h3 className="font-editorial text-2xl font-normal text-zinc-950 dark:text-white mb-1">
                 Priority Access Confirmed!
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
-                Invitation sent to <strong className="text-zinc-950 dark:text-white">{waitlistEmail}</strong>. Includes ₦5,000 launch credit.
+                Invitation sent to <strong className="text-zinc-950 dark:text-white font-medium">{waitlistEmail}</strong>. Includes ₦5,000 launch credit.
               </p>
               <a
                 href="https://www.tiktok.com/@irisiming"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-bold text-[#B89035] inline-flex items-center gap-1.5 hover:underline"
+                className="text-xs font-medium text-[#B89035] inline-flex items-center gap-1.5 hover:underline"
               >
                 <span>Follow Previews on TikTok</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -417,12 +598,12 @@ export default function ComingSoonPage() {
                   value={waitlistEmail}
                   onChange={(e) => setWaitlistEmail(e.target.value)}
                   placeholder="Enter email for priority pass"
-                  className="w-full bg-transparent px-4 py-3 text-sm text-zinc-950 dark:text-white placeholder-zinc-400 focus:outline-none font-medium"
+                  className="w-full bg-transparent px-4 py-3 text-sm text-zinc-950 dark:text-white placeholder-zinc-400 focus:outline-none font-normal"
                 />
                 <button
                   type="submit"
                   disabled={waitlistStatus === 'loading'}
-                  className="w-full sm:w-auto shrink-0 px-6 py-3 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"
+                  className="w-full sm:w-auto shrink-0 px-6 py-3 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"
                 >
                   {waitlistStatus === 'loading' ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -439,108 +620,141 @@ export default function ComingSoonPage() {
               )}
               <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono px-2">
                 <span>⚡ 740+ Insiders in Queue</span>
-                <span className="text-[#B89035] font-semibold">₦5,000 Launch Voucher</span>
+                <span className="text-[#B89035] font-medium">₦5,000 Launch Voucher</span>
               </div>
             </form>
           )}
         </div>
 
-        {/* ── REVOLUT-STYLE 3D FANNING CARD DECK ────────────────────────── */}
-        <div className="relative w-full max-w-4xl h-[400px] sm:h-[460px] flex items-center justify-center mt-4">
-          {/* Card 1: Native Couture (Left Tilt) */}
-          <motion.div
-            style={{ x: card1X, rotate: card1Rotate }}
-            className="absolute w-[260px] sm:w-[300px] h-[360px] sm:h-[420px] rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-white dark:bg-zinc-900 shadow-2xl p-5 flex flex-col justify-between"
-          >
-            <Image
-              src={HERO_CARDS[0].image}
-              alt={HERO_CARDS[0].title}
-              fill
-              className="object-cover brightness-[0.7]"
-            />
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase bg-black/70 text-white">
-                {HERO_CARDS[0].tag}
-              </span>
-              <span className="text-[10px] font-mono text-[#d4af37] bg-black/60 px-2 py-0.5 rounded">
-                01
-              </span>
-            </div>
-            <div className="relative z-10 text-left text-white">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#d4af37] block mb-0.5">
-                {HERO_CARDS[0].subtitle}
-              </span>
-              <h3 className="text-xl font-bold leading-tight">{HERO_CARDS[0].title}</h3>
-            </div>
-          </motion.div>
+        {/* ── 3D FANNING DEPARTMENT CATEGORY CAROUSEL ─────────────────── */}
+        {(() => {
+          const nativeTrack = DEPARTMENT_CARD_TRACKS[0];
+          const streetTrack = DEPARTMENT_CARD_TRACKS[1];
+          const womenTrack = DEPARTMENT_CARD_TRACKS[2];
 
-          {/* Card 2: Neo-Lagos Streetwear (Center Elevated) */}
-          <motion.div
-            style={{ y: card2Y, scale: card2Scale }}
-            className="absolute w-[280px] sm:w-[320px] h-[380px] sm:h-[440px] rounded-3xl overflow-hidden border-2 border-black/20 dark:border-white/30 bg-black shadow-2xl p-6 flex flex-col justify-between z-20"
-          >
-            <Image
-              src={HERO_CARDS[1].image}
-              alt={HERO_CARDS[1].title}
-              fill
-              className="object-cover brightness-[0.75]"
-            />
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="px-3 py-1 rounded-full text-[9px] font-mono font-bold uppercase bg-white text-black">
-                {HERO_CARDS[1].tag}
-              </span>
-              <span className="text-[10px] font-mono text-white bg-black/70 px-2 py-0.5 rounded">
-                02
-              </span>
-            </div>
-            <div className="relative z-10 text-left text-white">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-300 block mb-0.5">
-                {HERO_CARDS[1].subtitle}
-              </span>
-              <h3 className="text-2xl font-black leading-tight">{HERO_CARDS[1].title}</h3>
-            </div>
-          </motion.div>
+          const currentNative = nativeTrack.categories[cardCategoryIndex % nativeTrack.categories.length];
+          const currentStreet = streetTrack.categories[cardCategoryIndex % streetTrack.categories.length];
+          const currentWomen = womenTrack.categories[cardCategoryIndex % womenTrack.categories.length];
 
-          {/* Card 3: Avant-Garde Silks (Right Tilt) */}
-          <motion.div
-            style={{ x: card3X, rotate: card3Rotate }}
-            className="absolute w-[260px] sm:w-[300px] h-[360px] sm:h-[420px] rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-white dark:bg-zinc-900 shadow-2xl p-5 flex flex-col justify-between"
-          >
-            <Image
-              src={HERO_CARDS[2].image}
-              alt={HERO_CARDS[2].title}
-              fill
-              className="object-cover brightness-[0.7]"
-            />
-            <div className="relative z-10 flex items-center justify-between">
-              <span className="px-2.5 py-1 rounded-full text-[9px] font-mono font-bold uppercase bg-black/70 text-white">
-                {HERO_CARDS[2].tag}
-              </span>
-              <span className="text-[10px] font-mono text-[#8b5cf6] bg-black/60 px-2 py-0.5 rounded">
-                03
-              </span>
+          return (
+            <div className="relative w-full max-w-6xl h-[360px] sm:h-[510px] md:h-[560px] lg:h-[590px] flex items-center justify-center mt-6 mb-2">
+              {/* Card 1: Native & Cultural Wear (Left Fanned Card - Expands On Scroll) */}
+              <motion.div
+                style={{ x: card1X, rotate: card1Rotate }}
+                className="absolute w-[190px] sm:w-[330px] md:w-[370px] lg:w-[390px] h-[290px] sm:h-[460px] md:h-[510px] lg:h-[540px] rounded-2xl sm:rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-zinc-950 shadow-2xl select-none"
+              >
+                <AnimatePresence mode="popLayout">
+                  <motion.div
+                    key={currentNative.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none"
+                  >
+                    <Image
+                      src={currentNative.image}
+                      alt={currentNative.name}
+                      fill
+                      sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
+                      className="object-cover brightness-[0.78]"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
+
+                    {/* Just the image and the text telling the category */}
+                    <div className="relative z-10 text-left text-white">
+                      <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
+                        {currentNative.name}
+                      </h3>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Card 2: Nigerian Streetwear & Drops (Center Card - Elevated On Scroll) */}
+              <motion.div
+                style={{ y: card2Y, scale: card2Scale }}
+                className="absolute w-[210px] sm:w-[350px] md:w-[390px] lg:w-[410px] h-[315px] sm:h-[480px] md:h-[530px] lg:h-[560px] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-black/20 dark:border-white/30 bg-zinc-950 shadow-2xl z-20 select-none"
+              >
+                <AnimatePresence mode="popLayout">
+                  <motion.div
+                    key={currentStreet.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-8 select-none"
+                  >
+                    <Image
+                      src={currentStreet.image}
+                      alt={currentStreet.name}
+                      fill
+                      sizes="(max-width: 640px) 210px, (max-width: 1024px) 390px, 410px"
+                      className="object-cover brightness-[0.8]"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10 pointer-events-none" />
+
+                    {/* Just the image and the text telling the category */}
+                    <div className="relative z-10 text-left text-white">
+                      <h3 className="font-editorial text-xl sm:text-3xl font-normal leading-tight drop-shadow-md">
+                        {currentStreet.name}
+                      </h3>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </motion.div>
+
+              {/* Card 3: Footwear, Bags & Accessories (Right Fanned Card - Expands On Scroll) */}
+              <motion.div
+                style={{ x: card3X, rotate: card3Rotate }}
+                className="absolute w-[190px] sm:w-[330px] md:w-[370px] lg:w-[390px] h-[290px] sm:h-[460px] md:h-[510px] lg:h-[540px] rounded-2xl sm:rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-zinc-950 shadow-2xl select-none"
+              >
+                <AnimatePresence mode="popLayout">
+                  <motion.div
+                    key={currentWomen.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none"
+                  >
+                    <Image
+                      src={currentWomen.image}
+                      alt={currentWomen.name}
+                      fill
+                      sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
+                      className="object-cover brightness-[0.78]"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
+
+                    {/* Just the image and the text telling the category */}
+                    <div className="relative z-10 text-left text-white">
+                      <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
+                        {currentWomen.name}
+                      </h3>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </motion.div>
             </div>
-            <div className="relative z-10 text-left text-white">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#8b5cf6] block mb-0.5">
-                {HERO_CARDS[2].subtitle}
-              </span>
-              <h3 className="text-xl font-bold leading-tight">{HERO_CARDS[2].title}</h3>
-            </div>
-          </motion.div>
-        </div>
+          );
+        })()}
 
         <div className="mt-8 text-[11px] font-mono tracking-widest text-zinc-400 uppercase">
           ↓ SCROLL DOWN TO EXPLORE THE RUNWAY
         </div>
       </section>
 
-      {/* ── SECTION 2: THE FOUNDING TEE SPOTLIGHT (Revolut Product Card) ─── */}
-      <section className="relative z-10 py-24 px-4 sm:px-6 max-w-6xl mx-auto">
-        <div className="rounded-3xl border border-white/15 bg-black/80 text-white p-8 sm:p-14 shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            {/* 3D Product Interactive Card */}
+      {/* ── SECTION 2: OFFICIAL COMPANY MERCH SPOTLIGHT ─────────────────── */}
+      <section className="relative z-10 py-16 sm:py-24 px-1.5 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto">
+        <div className="rounded-2xl sm:rounded-3xl border border-white/15 bg-black/80 text-white p-3 sm:p-14 shadow-2xl">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-center">
+            {/* 3D Product Interactive Card with Black & White Colorway Switcher */}
             <div
-              className="lg:col-span-7 relative h-[420px] sm:h-[500px] rounded-2xl border border-white/15 bg-zinc-950 flex items-center justify-center p-6 cursor-crosshair group overflow-hidden"
+              className="lg:col-span-7 relative w-full h-[450px] sm:h-[510px] rounded-xl sm:rounded-2xl border border-white/15 bg-zinc-950 flex items-center justify-center p-2 sm:p-6 cursor-crosshair group overflow-hidden"
               onMouseMove={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / rect.width - 0.5;
@@ -550,69 +764,111 @@ export default function ComingSoonPage() {
               onMouseLeave={() => setMerchTilt({ x: 0, y: 0 })}
               style={{ perspective: '1000px' }}
             >
-              <div
-                className="relative w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
-                style={{
-                  transform: `rotateX(${merchTilt.y}deg) rotateY(${merchTilt.x}deg)`,
-                }}
-              >
-                <Image
-                  src="/images/merch/irisi-merch-tee.png"
-                  alt="ÌRÍSÍ The Complete Nigerian Fit Tee"
-                  fill
-                  className="object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
-                />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={selectedMerchColor}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.35, ease: 'easeInOut' }}
+                  className="relative w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
+                  style={{
+                    transform: `rotateX(${merchTilt.y}deg) rotateY(${merchTilt.x}deg)`,
+                  }}
+                >
+                  <Image
+                    src={selectedMerchColor === 'black' ? '/images/merch/irisi-merch-tee-black.png' : '/images/merch/irisi-merch-tee.png'}
+                    alt={`ÌRÍSÍ Official Company Merch Tee - ${selectedMerchColor === 'black' ? 'Onyx Black' : 'Bone White'} Edition`}
+                    fill
+                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
+                    priority
+                  />
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Top-Left Edition Tag (Hidden on mobile to eliminate overlap with colorway toggle) */}
+              <div className="hidden sm:flex absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white text-[10px] font-mono font-medium tracking-widest uppercase items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#B89035] animate-pulse" />
+                <span>OFFICIAL APPAREL · {selectedMerchColor === 'black' ? 'ONYX BLACK' : 'BONE WHITE'}</span>
               </div>
 
-              <div className="absolute top-4 left-4 px-3 py-1 rounded-full bg-white text-black text-[10px] font-mono font-bold tracking-widest uppercase">
-                ITEM 001 · FOUNDING GARMENT
+              {/* Colorway Switcher Buttons (Black / White) */}
+              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md border border-white/15 rounded-full p-1 z-20">
+                <button
+                  type="button"
+                  onClick={() => setSelectedMerchColor('black')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                    selectedMerchColor === 'black'
+                      ? 'bg-zinc-800 text-white border border-white/30 shadow-sm'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-black border border-white/40 inline-block" />
+                  <span>Black</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMerchColor('white')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
+                    selectedMerchColor === 'white'
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full bg-white border border-black/20 inline-block" />
+                  <span>White</span>
+                </button>
               </div>
-              <div className="absolute bottom-4 left-4 text-[9px] font-mono text-zinc-400">
-                MOVE CURSOR TO TILT IN 3D
+
+              <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 text-[8px] sm:text-[9px] font-mono text-zinc-400">
+                MOVE CURSOR TO TILT IN 3D · AUTO-CYCLES BLACK & WHITE EDITIONS
               </div>
             </div>
 
-            {/* Technical Specs & Reservation */}
+            {/* Mature, Elevated Official Merch Editorial */}
             <div className="lg:col-span-5 flex flex-col justify-center">
-              <span className="text-[10px] font-mono font-bold tracking-[0.3em] uppercase text-[#B89035] block mb-2">
-                IN-HOUSE ATELIER DROP 001
+              <span className="text-[10px] font-mono font-medium tracking-[0.3em] uppercase text-[#B89035] block mb-2">
+                OFFICIAL APPAREL PREVIEW
               </span>
-              <h2 className="text-3xl sm:text-5xl font-black leading-tight mb-4">
-                THE FOUNDING TEE: <br />
-                <span className="text-[#B89035]">
-                  THE COMPLETE NIGERIAN FIT
+              <h2 className="font-editorial text-3xl sm:text-5xl font-normal leading-tight mb-4 tracking-tight">
+                The Ìrísí Signature Tee: <br />
+                <span className="italic text-[#B89035] dark:text-[#E6C367]">
+                  First Look
                 </span>
               </h2>
 
-              <p className="text-zinc-300 text-sm leading-relaxed mb-6 font-light">
-                Constructed in Lagos from 300 GSM Heavyweight French Terry cotton.
-                Featuring a dropped-shoulder boxy cut and hand-distressed sovereign back insignia.
+              <p className="text-zinc-300 text-sm sm:text-base leading-relaxed mb-4 font-light">
+                Alongside collections from Nigeria’s premier fashion houses, ÌRÍSÍ will present our own official label merchandise.
+              </p>
+
+              <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed mb-6 font-light">
+                Currently in development, this preview introduces the silhouette and graphic identity. Release timing and private allocations will be shared first with members on the priority waitlist.
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-8 text-xs">
                 <div className="p-3.5 rounded-xl border border-white/10 bg-white/5">
-                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">TEXTILE</span>
-                  <span className="font-bold text-white">300 GSM French Terry</span>
+                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">LABEL</span>
+                  <span className="font-medium text-white">ÌRÍSÍ Official</span>
                 </div>
                 <div className="p-3.5 rounded-xl border border-white/10 bg-white/5">
-                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">SILHOUETTE</span>
-                  <span className="font-bold text-white">Lagos Boxy Cut</span>
+                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">PALETTE</span>
+                  <span className="font-medium text-white">Onyx Black & Bone White</span>
                 </div>
                 <div className="p-3.5 rounded-xl border border-white/10 bg-white/5">
-                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">PRINT</span>
-                  <span className="font-bold text-white">Distressed Sovereign Ink</span>
+                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">PHASE</span>
+                  <span className="font-medium text-[#B89035]">In Development</span>
                 </div>
                 <div className="p-3.5 rounded-xl border border-white/10 bg-white/5">
-                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">ALLOCATION</span>
-                  <span className="font-bold text-[#B89035]">100 Units Only</span>
+                  <span className="text-[9px] font-mono text-zinc-400 block mb-0.5">ACCESS</span>
+                  <span className="font-medium text-white">Priority Waitlist First</span>
                 </div>
               </div>
 
               <a
                 href="#waitlist"
-                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl"
+                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl"
               >
-                <span>Reserve On Waitlist</span>
+                <span>Join Priority Waitlist</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
             </div>
@@ -621,13 +877,13 @@ export default function ComingSoonPage() {
       </section>
 
       {/* ── SECTION 3: DESIGNER ONBOARDING (Revolut B2B Architecture) ─────── */}
-      <section className="relative z-10 py-24 px-4 sm:px-6 max-w-6xl mx-auto">
+      <section className="relative z-10 py-24 px-4 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-14 text-white">
-          <span className="text-[10px] font-mono font-bold tracking-[0.3em] uppercase text-[#B89035] block mb-2">
+          <span className="text-[10px] font-mono font-medium tracking-[0.3em] uppercase text-[#B89035] block mb-2">
             FOUNDING MERCHANT INVITATION
           </span>
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tight mb-4">
-            ARE YOU SHAPING NIGERIAN STYLE?
+          <h2 className="font-editorial text-3xl sm:text-5xl font-normal tracking-tight mb-4">
+            Are You Shaping Nigerian Style?
           </h2>
           <p className="text-zinc-400 text-sm leading-relaxed">
             Eliminate chaotic Instagram DMs, fake bank transfer screenshots, and manual waybills.
@@ -646,7 +902,7 @@ export default function ComingSoonPage() {
             {
               icon: Zap,
               title: 'Nationwide Logistics',
-              desc: 'Automated waybills with doorstep pickups in Lagos, Abuja, and worldwide.',
+              desc: 'Automated waybills with doorstep pickups across Nigeria and worldwide shipping.',
             },
             {
               icon: Layers,
@@ -665,7 +921,7 @@ export default function ComingSoonPage() {
             >
               <div>
                 <item.icon className="w-6 h-6 text-[#B89035] mb-4" />
-                <h3 className="font-bold text-base mb-2">{item.title}</h3>
+                <h3 className="font-editorial text-xl sm:text-2xl font-normal mb-2">{item.title}</h3>
                 <p className="text-xs text-zinc-400 leading-relaxed font-light">{item.desc}</p>
               </div>
               <span className="text-[9px] font-mono text-zinc-500 mt-6 block uppercase tracking-wider">
@@ -675,21 +931,22 @@ export default function ComingSoonPage() {
           ))}
         </div>
 
-        <div className="text-center">
+        <div className="text-center flex justify-center">
           <button
             onClick={() => setIsVendorModalOpen(true)}
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white text-black font-bold text-sm uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-8 sm:py-4 rounded-xl bg-white text-black font-medium text-xs sm:text-sm uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl w-auto max-w-fit mx-auto"
           >
-            <Store className="w-4 h-4" />
-            <span>Apply As A Founding Fashion House</span>
+            <Store className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Apply As A Founding Fashion House</span>
+            <span className="sm:hidden">Apply As Founder</span>
           </button>
         </div>
       </section>
 
       {/* ── FOOTER & FOUNDER KEY ─────────────────────────────────────────── */}
-      <footer className="relative z-10 border-t border-white/10 py-8 px-6 max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-mono">
+      <footer className="relative z-10 border-t border-white/10 py-8 px-6 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-mono">
         <div>
-          © 2026 ÌRÍSÍ TECHNOLOGIES LTD · LAGOS, NIGERIA. ALL RIGHTS RESERVED.
+          © 2026 ÌRÍSÍ TECHNOLOGIES LTD. ALL RIGHTS RESERVED.
         </div>
         <div className="flex items-center gap-4">
           <a
@@ -732,7 +989,7 @@ export default function ComingSoonPage() {
               <Unlock className="w-5 h-5" />
             </div>
 
-            <h3 className="text-lg font-bold mb-1">Founder Preview Unlock</h3>
+            <h3 className="font-editorial text-2xl font-normal mb-1">Founder Preview Unlock</h3>
             <p className="text-xs text-zinc-400 mb-4 font-light">
               Enter passcode to bypass coming-soon mode and inspect the full store.
             </p>
@@ -753,7 +1010,7 @@ export default function ComingSoonPage() {
               <button
                 type="submit"
                 disabled={unlockStatus === 'loading'}
-                className="w-full py-2.5 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all"
+                className="w-full py-2.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all"
               >
                 {unlockStatus === 'loading' ? 'Verifying...' : 'Unlock Full Store'}
               </button>
@@ -778,24 +1035,24 @@ export default function ComingSoonPage() {
                 <div className="w-14 h-14 rounded-full bg-[#B89035] text-black flex items-center justify-center mx-auto mb-4">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-bold mb-2">Application Received!</h3>
+                <h3 className="font-editorial text-3xl font-normal mb-2">Application Received!</h3>
                 <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md mx-auto">
                   {vendorMessage ||
                     'Thank you. Our curatorial council will review your catalog and reach out via WhatsApp within 48 hours.'}
                 </p>
                 <button
                   onClick={() => setIsVendorModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs tracking-wider"
+                  className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs tracking-wider"
                 >
                   Close Window
                 </button>
               </div>
             ) : (
               <div>
-                <span className="text-[10px] font-mono font-bold tracking-[0.25em] text-[#B89035] uppercase block mb-1">
+                <span className="text-[10px] font-mono font-medium tracking-[0.25em] text-[#B89035] uppercase block mb-1">
                   EXCLUSIVE ONBOARDING
                 </span>
-                <h3 className="text-2xl font-black mb-1">Apply As A Founding Brand</h3>
+                <h3 className="font-editorial text-2xl sm:text-3xl font-normal mb-1">Apply As A Founding Brand</h3>
                 <p className="text-xs text-zinc-400 mb-6 font-light">
                   Tell us about your brand. We are onboarding 25 founding designers for Drop 001.
                 </p>
@@ -811,7 +1068,7 @@ export default function ComingSoonPage() {
                         required
                         value={vendorForm.brandName}
                         onChange={(e) => setVendorForm({ ...vendorForm, brandName: e.target.value })}
-                        placeholder="e.g. Lagos Atelier"
+                        placeholder="e.g. Veyra Atelier"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
                       />
                     </div>
@@ -914,7 +1171,7 @@ export default function ComingSoonPage() {
                     <button
                       type="submit"
                       disabled={vendorStatus === 'loading'}
-                      className="w-full py-3.5 rounded-xl bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl"
+                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl"
                     >
                       {vendorStatus === 'loading' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

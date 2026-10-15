@@ -18,11 +18,12 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       brandName,
+      specialty,
       instagramHandle,
-      category,
-      priceRange,
       founderPhone,
       founderEmail,
+      state,
+      city,
       lookbookUrl,
     } = body;
 
@@ -35,11 +36,11 @@ export async function POST(request: Request) {
 
     const applicationData = {
       brandName: brandName.trim(),
+      specialty: specialty || 'streetwear',
       instagramHandle: (instagramHandle || '').replace('@', '').trim(),
-      category: category || 'Streetwear & Ready-to-Wear',
-      priceRange: priceRange || '₦30,000 – ₦80,000',
       founderPhone: founderPhone.trim(),
       founderEmail: founderEmail.toLowerCase().trim(),
+      location: [city, state].filter(Boolean).join(', ') || 'Nigeria',
       lookbookUrl: (lookbookUrl || '').trim(),
       submittedAt: new Date().toISOString(),
     };
@@ -70,9 +71,9 @@ export async function POST(request: Request) {
       <div style="background-color: #0b0c0e; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 32px 20px; max-width: 600px; margin: 0 auto; border-radius: 14px; border: 1px solid rgba(230,195,103,0.3);">
         <h2 style="color: #e6c367; margin-top: 0; font-size: 20px; text-transform: uppercase;">✨ New Brand Application: ${applicationData.brandName}</h2>
         <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 20px; font-size: 13px; line-height: 1.8;">
-          <p style="margin: 0 0 8px;"><strong>Brand Name:</strong> <span style="color: #ffffff; font-size: 15px;">${applicationData.brandName}</span></p>
-          <p style="margin: 0 0 8px;"><strong>Discipline:</strong> <span style="color: #e6c367;">${applicationData.category}</span></p>
-          <p style="margin: 0 0 8px;"><strong>Price Range:</strong> ${applicationData.priceRange}</p>
+          <p style="margin: 0 0 8px;"><strong>Brand / Store:</strong> <span style="color: #ffffff; font-size: 15px;">${applicationData.brandName}</span></p>
+          <p style="margin: 0 0 8px;"><strong>Department:</strong> <span style="color: #e6c367;">${applicationData.specialty}</span></p>
+          <p style="margin: 0 0 8px;"><strong>Location:</strong> ${applicationData.location}</p>
           <p style="margin: 0 0 8px;"><strong>WhatsApp:</strong> <a href="${waLink}" style="color: #22c55e; font-weight: bold;">${applicationData.founderPhone} (Tap to Chat)</a></p>
           <p style="margin: 0 0 8px;"><strong>Email:</strong> ${applicationData.founderEmail}</p>
           ${igLink ? `<p style="margin: 0 0 8px;"><strong>Instagram:</strong> <a href="${igLink}" style="color: #38bdf8;">@${applicationData.instagramHandle}</a></p>` : ''}
