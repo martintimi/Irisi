@@ -317,10 +317,13 @@ export default function ComingSoonPage() {
   }, []);
 
   // ── Ambient Polyphonic Luxury Soundscape (Auto-Plays on Coming Soon Page) ──
+  // ── Ambient Polyphonic Luxury Soundscape (Auto-Plays on Coming Soon Page) ──
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioIntervalRef = useRef<any>(null);
   const sparkleIntervalRef = useRef<any>(null);
   const isStartedRef = useRef(false);
+  const playChordRef = useRef<(() => void) | null>(null);
+  const lastChordTimeRef = useRef(0);
 
   const startAudio = () => {
     if (isStartedRef.current && audioCtxRef.current?.state === 'running') return;
@@ -347,7 +350,7 @@ export default function ComingSoonPage() {
 
       // Audible, Warm Master Gain (Rich, clear, comfortable volume)
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.22, ctx.currentTime);
+      masterGain.gain.setValueAtTime(0.28, ctx.currentTime);
 
       compressor.connect(masterGain);
       masterGain.connect(ctx.destination);
@@ -355,7 +358,7 @@ export default function ComingSoonPage() {
       // Analog Warm Low-Pass Filter
       const warmFilter = ctx.createBiquadFilter();
       warmFilter.type = 'lowpass';
-      warmFilter.frequency.setValueAtTime(1150, ctx.currentTime);
+      warmFilter.frequency.setValueAtTime(1200, ctx.currentTime);
       warmFilter.Q.setValueAtTime(1.1, ctx.currentTime);
       warmFilter.connect(compressor);
 
@@ -384,9 +387,15 @@ export default function ComingSoonPage() {
 
       const playChord = () => {
         if (!ctx || ctx.state === 'closed') return;
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+          return;
+        }
 
         const now = ctx.currentTime;
+        if (now - lastChordTimeRef.current < 2.0 && lastChordTimeRef.current > 0) return;
+        lastChordTimeRef.current = now;
+
         const currentChord = chords[step % chords.length];
         step++;
 
@@ -397,7 +406,7 @@ export default function ComingSoonPage() {
         bassOsc.frequency.setValueAtTime(currentChord.bass, now);
 
         bassGain.gain.setValueAtTime(0.0001, now);
-        bassGain.gain.exponentialRampToValueAtTime(0.32, now + 0.6);
+        bassGain.gain.exponentialRampToValueAtTime(0.35, now + 0.6);
         bassGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
 
         bassOsc.connect(bassGain);
@@ -421,7 +430,7 @@ export default function ComingSoonPage() {
 
           // Smooth swell envelope
           voiceGain.gain.setValueAtTime(0.0001, now);
-          voiceGain.gain.exponentialRampToValueAtTime(0.09, now + 1.2);
+          voiceGain.gain.exponentialRampToValueAtTime(0.10, now + 1.2);
           voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.7);
 
           oscA.connect(voiceGain);
@@ -436,11 +445,12 @@ export default function ComingSoonPage() {
         });
       };
 
+      playChordRef.current = playChord;
+
       // 3. Starlight Kalimba / High Rhodes Sparkles
       const sparkles = [293.66, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99];
       const playSparkle = () => {
-        if (!ctx || ctx.state === 'closed') return;
-        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        if (!ctx || ctx.state === 'closed' || ctx.state === 'suspended') return;
 
         const now = ctx.currentTime;
         const note = sparkles[Math.floor(Math.random() * sparkles.length)];
@@ -451,7 +461,7 @@ export default function ComingSoonPage() {
         osc.frequency.setValueAtTime(note, now);
 
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.14, now + 0.04);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
 
         osc.connect(gain);
@@ -470,23 +480,70 @@ export default function ComingSoonPage() {
     }
   };
 
+  const ensureAudio = () => {
+    startAudio();
+    const ctx = audioCtxRef.current;
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        try {
+          const buffer = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.connect(ctx.destination);
+          src.start(0);
+        } catch (e) {}
+
+        if (playChordRef.current) {
+          playChordRef.current();
+        }
+      }).catch(() => {});
+    }
+  };
+
   useEffect(() => {
-    // Attempt playback immediately on load
+    // 1. Immediate mount attempt (runs immediately if browser policy permits)
     startAudio();
 
-    // In case browser autoplay policy temporarily suspends it, unlock on first interaction
-    const unlockEvents = ['click', 'touchstart', 'scroll', 'pointerdown', 'keydown'];
-    const handleFirstGesture = () => {
-      startAudio();
-      unlockEvents.forEach((evt) => window.removeEventListener(evt, handleFirstGesture));
+    // 2. Omni-interaction listeners (Touch, Scroll, Swipe, Tap, Drag, Click, Key, Wheel)
+    const interactionEvents = [
+      'touchstart',
+      'touchmove',
+      'touchend',
+      'pointerdown',
+      'pointermove',
+      'pointerup',
+      'mousedown',
+      'mouseup',
+      'click',
+      'keydown',
+      'wheel',
+      'scroll',
+    ];
+
+    const handleInteraction = () => {
+      ensureAudio();
     };
 
-    unlockEvents.forEach((evt) => {
-      window.addEventListener(evt, handleFirstGesture, { passive: true, once: true });
+    interactionEvents.forEach((evt) => {
+      window.addEventListener(evt, handleInteraction, { passive: true });
+      document.addEventListener(evt, handleInteraction, { passive: true });
     });
 
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        ensureAudio();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleInteraction);
+
     return () => {
-      unlockEvents.forEach((evt) => window.removeEventListener(evt, handleFirstGesture));
+      interactionEvents.forEach((evt) => {
+        window.removeEventListener(evt, handleInteraction);
+        document.removeEventListener(evt, handleInteraction);
+      });
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleInteraction);
       if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
       if (sparkleIntervalRef.current) clearInterval(sparkleIntervalRef.current);
       if (audioCtxRef.current) {
@@ -671,6 +728,11 @@ export default function ComingSoonPage() {
     <motion.div
       ref={containerRef}
       style={{ backgroundColor: bgColor }}
+      onTouchStart={ensureAudio}
+      onTouchMove={ensureAudio}
+      onPointerDown={ensureAudio}
+      onWheel={ensureAudio}
+      onClick={ensureAudio}
       className="min-h-screen font-sans selection:bg-[#0A0B0D] selection:text-white transition-colors duration-300 relative overflow-x-hidden"
     >
       {/* ── FLOATING NAVIGATION ────────────────────────────────────────── */}
