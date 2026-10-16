@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         </div>
       `;
 
-      await sendLuxuryEmail(email, `✨ Ì R Í S Í · Founding Brand Invitation (${brandName || 'Designer'})`, emailHtml, {
+      const emailRes = await sendLuxuryEmail(email, `✨ Ì R Í S Í · Founding Brand Invitation (${brandName || 'Designer'})`, emailHtml, {
         fromName: 'ÌRÍSÍ Brand Curation',
       });
 
@@ -129,7 +129,13 @@ export async function POST(request: Request) {
         await adminClient.from('notifications').update({ read: true }).eq('id', id);
       }
 
-      return NextResponse.json({ success: true, message: `Invitation sent to ${email}` });
+      return NextResponse.json({
+        success: true,
+        message: `Invitation dispatched to ${email}`,
+        portalUrl,
+        provider: emailRes.provider,
+        emailDelivered: emailRes.success,
+      });
     }
 
     if (action === 'mark_read') {

@@ -19,6 +19,8 @@ import {
   Send,
   Search,
   Filter,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface VendorApp {
@@ -75,6 +77,7 @@ export default function AdminPrelaunchManager() {
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -115,7 +118,7 @@ export default function AdminPrelaunchManager() {
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error || 'Failed to dispatch invitation');
 
-      setActionMessage(`✨ Invitation email successfully sent to ${vendor.brandName} (${vendor.founderEmail})`);
+      setActionMessage(`✨ Invitation email dispatched to ${vendor.brandName} (${vendor.founderEmail}). Check Spam/Promotions tab if not in inbox.`);
       // Update local state to marked as read
       if (data) {
         setData({
@@ -431,9 +434,11 @@ export default function AdminPrelaunchManager() {
                       );
                     })
                     .map((vendor) => {
+                      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://irisimi.ng';
+                      const portalUrl = `${origin}/vendor-portal/auth?mode=register&specialty=${encodeURIComponent(vendor.specialty || 'streetwear')}`;
                       const waNumber = cleanPhone(vendor.founderPhone);
                       const waText = encodeURIComponent(
-                        `Hello ${vendor.brandName}! Thank you for applying as an ÌRÍSÍ Founding Designer for Drop 001. We would love to discuss your collection!`
+                        `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your brand application and approved your fashion house for Launch Drop 001. Complete your vendor onboarding here: ${portalUrl}`
                       );
                       const waLink = `https://wa.me/${waNumber}?text=${waText}`;
 
@@ -551,6 +556,29 @@ export default function AdminPrelaunchManager() {
 
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(portalUrl);
+                                  setCopiedId(vendor.id);
+                                  setTimeout(() => setCopiedId(null), 2500);
+                                }}
+                                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-mono text-[10px] border border-white/10 transition-all flex items-center gap-1 cursor-pointer"
+                                title="Copy Direct Onboarding Link"
+                              >
+                                {copiedId === vendor.id ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-400" />
+                                    <span className="text-emerald-400">Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3 text-zinc-400" />
+                                    <span>Copy Link</span>
+                                  </>
+                                )}
+                              </button>
+
                               <a
                                 href={waLink}
                                 target="_blank"
