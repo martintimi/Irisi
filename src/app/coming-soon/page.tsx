@@ -7,8 +7,6 @@ import AntigravityDotField from '@/components/landing/AntigravityDotField';
 import {
   ArrowRight,
   CheckCircle2,
-  Volume2,
-  VolumeX,
   ShieldCheck,
   Lock,
   Unlock,
@@ -318,40 +316,26 @@ export default function ComingSoonPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // ── Ambient Polyphonic Luxury Soundscape (Warm Afro-Lounge & Fashion Runway) ──
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  // ── Ambient Polyphonic Luxury Soundscape (Auto-Plays on Coming Soon Page) ──
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioIntervalRef = useRef<any>(null);
   const sparkleIntervalRef = useRef<any>(null);
+  const isStartedRef = useRef(false);
 
-  const stopAudio = () => {
-    if (audioIntervalRef.current) {
-      clearInterval(audioIntervalRef.current);
-      audioIntervalRef.current = null;
-    }
-    if (sparkleIntervalRef.current) {
-      clearInterval(sparkleIntervalRef.current);
-      sparkleIntervalRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      try {
-        audioCtxRef.current.close().catch(() => {});
-      } catch (e) {}
-      audioCtxRef.current = null;
-    }
-    setIsPlayingAudio(false);
-  };
-
-  const toggleAudio = () => {
-    if (isPlayingAudio) {
-      stopAudio();
-      return;
-    }
+  const startAudio = () => {
+    if (isStartedRef.current && audioCtxRef.current?.state === 'running') return;
 
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioCtx();
+      const ctx = audioCtxRef.current || new AudioCtx();
       audioCtxRef.current = ctx;
+
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      if (isStartedRef.current) return;
+      isStartedRef.current = true;
 
       // Studio Mastering Compressor Bus (Smooth glue, warmth, and loudness)
       const compressor = ctx.createDynamicsCompressor();
@@ -400,7 +384,7 @@ export default function ComingSoonPage() {
 
       const playChord = () => {
         if (!ctx || ctx.state === 'closed') return;
-        if (ctx.state === 'suspended') ctx.resume();
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
         const now = ctx.currentTime;
         const currentChord = chords[step % chords.length];
@@ -456,7 +440,7 @@ export default function ComingSoonPage() {
       const sparkles = [293.66, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99];
       const playSparkle = () => {
         if (!ctx || ctx.state === 'closed') return;
-        if (ctx.state === 'suspended') ctx.resume();
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
         const now = ctx.currentTime;
         const note = sparkles[Math.floor(Math.random() * sparkles.length)];
@@ -481,12 +465,37 @@ export default function ComingSoonPage() {
       playChord();
       audioIntervalRef.current = setInterval(playChord, 4800);
       sparkleIntervalRef.current = setInterval(playSparkle, 2200);
-
-      setIsPlayingAudio(true);
     } catch (e) {
-      console.warn('Audio playback error', e);
+      console.warn('Audio auto-play error', e);
     }
   };
+
+  useEffect(() => {
+    // Attempt playback immediately on load
+    startAudio();
+
+    // In case browser autoplay policy temporarily suspends it, unlock on first interaction
+    const unlockEvents = ['click', 'touchstart', 'scroll', 'pointerdown', 'keydown'];
+    const handleFirstGesture = () => {
+      startAudio();
+      unlockEvents.forEach((evt) => window.removeEventListener(evt, handleFirstGesture));
+    };
+
+    unlockEvents.forEach((evt) => {
+      window.addEventListener(evt, handleFirstGesture, { passive: true, once: true });
+    });
+
+    return () => {
+      unlockEvents.forEach((evt) => window.removeEventListener(evt, handleFirstGesture));
+      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
+      if (sparkleIntervalRef.current) clearInterval(sparkleIntervalRef.current);
+      if (audioCtxRef.current) {
+        try {
+          audioCtxRef.current.close().catch(() => {});
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   // ── Scroll Physics (Revolut-Style Dynamic Background Morph) ─────────────
   const containerRef = useRef<HTMLDivElement>(null);
@@ -684,39 +693,13 @@ export default function ComingSoonPage() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Ambient Lounge Soundscape Toggle */}
-            <button
-              type="button"
-              onClick={toggleAudio}
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/10 transition-all text-zinc-900 dark:text-white cursor-pointer select-none"
-              title={isPlayingAudio ? 'Mute Fashion Lounge Sound' : 'Play Fashion Lounge Sound'}
-            >
-              {isPlayingAudio ? (
-                <>
-                  <Volume2 className="w-3.5 h-3.5 text-[#B89035] animate-pulse shrink-0" />
-                  <span className="text-[10px] font-mono tracking-widest text-[#B89035] uppercase font-medium">
-                    SOUND ON
-                  </span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                  <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase font-medium">
-                    SOUND
-                  </span>
-                </>
-              )}
-            </button>
-
-            {/* Action Button */}
-            <button
-              onClick={() => setIsVendorModalOpen(true)}
-              className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
-            >
-              Apply As Brand
-            </button>
-          </div>
+          {/* Action Button */}
+          <button
+            onClick={() => setIsVendorModalOpen(true)}
+            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+          >
+            Apply As Brand
+          </button>
         </div>
       </header>
 
@@ -1161,34 +1144,6 @@ export default function ComingSoonPage() {
         </div>
       </footer>
 
-      {/* ── FLOATING AMBIENT AUDIO CONTROLLER (Bottom Left) ──────────────── */}
-      <button
-        type="button"
-        onClick={toggleAudio}
-        className="fixed bottom-5 left-5 z-40 flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-zinc-950/90 hover:bg-black border border-white/20 text-white shadow-2xl backdrop-blur-md transition-all cursor-pointer hover:scale-105 active:scale-95 select-none"
-        title="Toggle Ambient Lounge Sound"
-      >
-        {isPlayingAudio ? (
-          <>
-            <div className="flex items-center gap-0.5 h-3">
-              <span className="w-0.5 h-3 bg-[#B89035] rounded-full animate-pulse" />
-              <span className="w-0.5 h-2 bg-[#B89035] rounded-full animate-pulse delay-75" />
-              <span className="w-0.5 h-3.5 bg-[#B89035] rounded-full animate-pulse delay-150" />
-            </div>
-            <Volume2 className="w-3.5 h-3.5 text-[#B89035]" />
-            <span className="text-[10px] font-mono text-[#B89035] tracking-widest uppercase font-medium">
-              LOUNGE ON
-            </span>
-          </>
-        ) : (
-          <>
-            <VolumeX className="w-3.5 h-3.5 text-zinc-400" />
-            <span className="text-[10px] font-mono text-zinc-400 tracking-widest uppercase font-medium">
-              AMBIENT SOUND
-            </span>
-          </>
-        )}
-      </button>
 
       {/* ── MODAL 1: FOUNDER UNLOCK PASSCODE ─────────────────────────────── */}
       {isUnlockModalOpen && (
