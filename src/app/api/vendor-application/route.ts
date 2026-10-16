@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       brandName,
       specialty,
       instagramHandle,
+      socialLinks,
       founderPhone,
       founderEmail,
       state,
@@ -34,10 +35,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const cleanedSocialLinks: Array<{ platform: string; handle: string }> = Array.isArray(socialLinks)
+      ? socialLinks
+          .map((s: any) => ({
+            platform: String(s?.platform || 'other').toLowerCase().trim(),
+            handle: String(s?.handle || '').trim(),
+          }))
+          .filter((s: any) => s.handle.length > 0)
+      : [];
+
+    const effectiveIg =
+      (instagramHandle || '').replace('@', '').trim() ||
+      (cleanedSocialLinks.find((s) => s.platform === 'instagram')?.handle || '').replace('@', '').trim() ||
+      (cleanedSocialLinks[0]?.handle || '').replace('@', '').trim();
+
     const applicationData = {
       brandName: brandName.trim(),
       specialty: specialty || 'streetwear',
-      instagramHandle: (instagramHandle || '').replace('@', '').trim(),
+      instagramHandle: effectiveIg,
+      socialLinks: cleanedSocialLinks,
       founderPhone: founderPhone.trim(),
       founderEmail: founderEmail.toLowerCase().trim(),
       location: [city, state].filter(Boolean).join(', ') || 'Nigeria',
@@ -63,6 +79,46 @@ export async function POST(request: Request) {
       ? `https://wa.me/234${cleanPhone.slice(1)}`
       : `https://wa.me/${cleanPhone}`;
 
+    const formatSocialUrl = (platform: string, handle: string) => {
+      const cleanHandle = handle.replace(/^@/, '');
+      if (handle.startsWith('http://') || handle.startsWith('https://')) return handle;
+      switch (platform) {
+        case 'instagram':
+          return `https://instagram.com/${cleanHandle}`;
+        case 'tiktok':
+          return `https://tiktok.com/@${cleanHandle}`;
+        case 'x':
+          return `https://x.com/${cleanHandle}`;
+        case 'facebook':
+          return `https://facebook.com/${cleanHandle}`;
+        case 'threads':
+          return `https://threads.net/@${cleanHandle}`;
+        case 'youtube':
+          return `https://youtube.com/@${cleanHandle}`;
+        case 'pinterest':
+          return `https://pinterest.com/${cleanHandle}`;
+        case 'whatsapp_catalog':
+          return `https://wa.me/${handle.replace(/\D/g, '')}`;
+        default:
+          return `https://${cleanHandle}`;
+      }
+    };
+
+    const getPlatformLabel = (platform: string) => {
+      const map: Record<string, string> = {
+        instagram: 'Instagram',
+        tiktok: 'TikTok',
+        x: 'X (Twitter)',
+        facebook: 'Facebook',
+        threads: 'Threads',
+        youtube: 'YouTube',
+        pinterest: 'Pinterest',
+        whatsapp_catalog: 'WhatsApp Catalog',
+        website: 'Website',
+      };
+      return map[platform] || platform.toUpperCase();
+    };
+
     const igLink = applicationData.instagramHandle
       ? `https://instagram.com/${applicationData.instagramHandle}`
       : null;
@@ -76,7 +132,25 @@ export async function POST(request: Request) {
           <p style="margin: 0 0 8px;"><strong>Location:</strong> ${applicationData.location}</p>
           <p style="margin: 0 0 8px;"><strong>WhatsApp:</strong> <a href="${waLink}" style="color: #22c55e; font-weight: bold;">${applicationData.founderPhone} (Tap to Chat)</a></p>
           <p style="margin: 0 0 8px;"><strong>Email:</strong> ${applicationData.founderEmail}</p>
-          ${igLink ? `<p style="margin: 0 0 8px;"><strong>Instagram:</strong> <a href="${igLink}" style="color: #38bdf8;">@${applicationData.instagramHandle}</a></p>` : ''}
+          ${
+            cleanedSocialLinks.length > 0
+              ? `<div style="margin: 0 0 8px;"><strong>Social Media Channels:</strong>
+                  <ul style="margin: 4px 0 0; padding-left: 18px;">
+                    ${cleanedSocialLinks
+                      .map(
+                        (s) =>
+                          `<li style="margin-bottom: 3px;">
+                            <span style="color: #e6c367;">${getPlatformLabel(s.platform)}:</span>
+                            <a href="${formatSocialUrl(s.platform, s.handle)}" target="_blank" rel="noreferrer" style="color: #38bdf8; text-decoration: underline; margin-left: 4px;">${s.handle}</a>
+                          </li>`
+                      )
+                      .join('')}
+                  </ul>
+                </div>`
+              : igLink
+              ? `<p style="margin: 0 0 8px;"><strong>Instagram:</strong> <a href="${igLink}" style="color: #38bdf8;">@${applicationData.instagramHandle}</a></p>`
+              : ''
+          }
           ${applicationData.lookbookUrl ? `<p style="margin: 0;"><strong>Catalog:</strong> <a href="${applicationData.lookbookUrl}" style="color: #e6c367;">${applicationData.lookbookUrl}</a></p>` : ''}
         </div>
         <div style="margin-top: 20px; text-align: center;">

@@ -19,8 +19,24 @@ import {
   Layers,
   Sparkles,
   Award,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
+
+// Available Social Media Platforms for Founding Brand Onboarding
+const SOCIAL_PLATFORMS = [
+  { id: 'instagram', label: 'Instagram', placeholder: '@yourbrand or profile link' },
+  { id: 'tiktok', label: 'TikTok', placeholder: '@yourbrand or profile link' },
+  { id: 'x', label: 'X (Twitter)', placeholder: '@yourbrand or profile link' },
+  { id: 'facebook', label: 'Facebook', placeholder: 'facebook.com/yourbrand or profile link' },
+  { id: 'threads', label: 'Threads', placeholder: '@yourbrand or profile link' },
+  { id: 'youtube', label: 'YouTube', placeholder: '@channel or channel URL' },
+  { id: 'pinterest', label: 'Pinterest', placeholder: '@yourbrand or profile link' },
+  { id: 'whatsapp_catalog', label: 'WhatsApp Catalog', placeholder: 'wa.me/... or phone number' },
+  { id: 'website', label: 'Website / Portfolio', placeholder: 'https://yourbrand.com' },
+  { id: 'other', label: 'Other Channel', placeholder: 'Handle or profile link' },
+];
 
 // Dynamic App Features for the rotating subtitle (Fade In / Fade Out)
 const APP_FEATURES = [
@@ -265,7 +281,7 @@ export default function ComingSoonPage() {
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [vendorForm, setVendorForm] = useState({
     brandName: '',
-    instagramHandle: '',
+    socialLinks: [{ platform: 'instagram', handle: '' }],
     specialty: 'streetwear',
     founderPhone: '',
     founderEmail: '',
@@ -449,6 +465,20 @@ export default function ComingSoonPage() {
       return;
     }
 
+    const activeSocialLinks = vendorForm.socialLinks.filter(
+      (s) => s.handle && s.handle.trim().length > 0
+    );
+    if (activeSocialLinks.length === 0) {
+      setVendorMessage('Please provide at least one social media channel handle or link.');
+      setVendorStatus('error');
+      return;
+    }
+
+    const primaryInstagram =
+      activeSocialLinks.find((s) => s.platform === 'instagram')?.handle ||
+      activeSocialLinks[0]?.handle ||
+      '';
+
     setVendorStatus('loading');
     setVendorMessage('');
 
@@ -456,7 +486,11 @@ export default function ComingSoonPage() {
       const res = await fetch('/api/vendor-application', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vendorForm),
+        body: JSON.stringify({
+          ...vendorForm,
+          instagramHandle: primaryInstagram,
+          socialLinks: activeSocialLinks,
+        }),
       });
 
       const data = await res.json();
@@ -1124,32 +1158,100 @@ export default function ComingSoonPage() {
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Brand Name *
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      Brand Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={vendorForm.brandName}
+                      onChange={(e) => setVendorForm({ ...vendorForm, brandName: e.target.value })}
+                      placeholder="e.g. Veyra Atelier"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                    />
+                  </div>
+
+                  {/* Multi-Social Media Channels with Dropdown Selector */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                        Social Media Channels *
                       </label>
-                      <input
-                        type="text"
-                        required
-                        value={vendorForm.brandName}
-                        onChange={(e) => setVendorForm({ ...vendorForm, brandName: e.target.value })}
-                        placeholder="e.g. Veyra Atelier"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVendorForm((prev) => ({
+                            ...prev,
+                            socialLinks: [
+                              ...prev.socialLinks,
+                              { platform: 'tiktok', handle: '' },
+                            ],
+                          }));
+                        }}
+                        className="text-[10px] font-mono text-[#B89035] hover:text-[#E6C367] flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add Another Social</span>
+                      </button>
                     </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Instagram Handle *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={vendorForm.instagramHandle}
-                        onChange={(e) => setVendorForm({ ...vendorForm, instagramHandle: e.target.value })}
-                        placeholder="@yourbrand"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      />
+
+                    <div className="space-y-2">
+                      {vendorForm.socialLinks.map((item, index) => {
+                        const activePlatform =
+                          SOCIAL_PLATFORMS.find((p) => p.id === item.platform) || SOCIAL_PLATFORMS[0];
+                        return (
+                          <div key={index} className="flex items-center gap-2">
+                            {/* Platform Selector Dropdown */}
+                            <select
+                              value={item.platform}
+                              onChange={(e) => {
+                                const newLinks = [...vendorForm.socialLinks];
+                                newLinks[index].platform = e.target.value;
+                                setVendorForm({ ...vendorForm, socialLinks: newLinks });
+                              }}
+                              className="w-32 sm:w-40 px-3 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer shrink-0"
+                            >
+                              {SOCIAL_PLATFORMS.map((plat) => (
+                                <option key={plat.id} value={plat.id}>
+                                  {plat.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            {/* Handle / Profile Link Input */}
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                required={index === 0}
+                                value={item.handle}
+                                onChange={(e) => {
+                                  const newLinks = [...vendorForm.socialLinks];
+                                  newLinks[index].handle = e.target.value;
+                                  setVendorForm({ ...vendorForm, socialLinks: newLinks });
+                                }}
+                                placeholder={activePlatform.placeholder}
+                                className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white font-mono"
+                              />
+                            </div>
+
+                            {/* Remove button (when multiple) */}
+                            {vendorForm.socialLinks.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newLinks = vendorForm.socialLinks.filter((_, i) => i !== index);
+                                  setVendorForm({ ...vendorForm, socialLinks: newLinks });
+                                }}
+                                className="p-2.5 rounded-xl bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 transition-colors cursor-pointer shrink-0"
+                                title="Remove channel"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

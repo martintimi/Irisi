@@ -28,6 +28,7 @@ interface VendorApp {
   brandName: string;
   specialty: string;
   instagramHandle: string;
+  socialLinks?: Array<{ platform: string; handle: string }>;
   founderPhone: string;
   founderEmail: string;
   location: string;
@@ -445,7 +446,42 @@ export default function AdminPrelaunchManager() {
                             <span className="text-[11px] text-[var(--gold-accent)] font-mono block">
                               {vendor.specialty || 'streetwear'}
                             </span>
-                            {vendor.instagramHandle && (
+                            {vendor.socialLinks && vendor.socialLinks.length > 0 ? (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {vendor.socialLinks.map((s, sIdx) => {
+                                  const clean = s.handle.replace(/^@/, '');
+                                  const url = s.handle.startsWith('http')
+                                    ? s.handle
+                                    : s.platform === 'tiktok'
+                                    ? `https://tiktok.com/@${clean}`
+                                    : s.platform === 'x'
+                                    ? `https://x.com/${clean}`
+                                    : s.platform === 'facebook'
+                                    ? `https://facebook.com/${clean}`
+                                    : `https://instagram.com/${clean}`;
+                                  const prefix =
+                                    s.platform === 'instagram'
+                                      ? 'IG'
+                                      : s.platform === 'tiktok'
+                                      ? 'TT'
+                                      : s.platform === 'x'
+                                      ? 'X'
+                                      : s.platform.slice(0, 3).toUpperCase();
+                                  return (
+                                    <a
+                                      key={sIdx}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[9px] text-sky-400 hover:underline inline-flex items-center gap-0.5 font-mono bg-white/5 px-1.5 py-0.5 rounded border border-white/5"
+                                    >
+                                      <span className="text-[var(--gold-accent)] font-bold">{prefix}:</span>
+                                      <span>@{clean}</span>
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            ) : vendor.instagramHandle ? (
                               <a
                                 href={`https://instagram.com/${vendor.instagramHandle.replace('@', '')}`}
                                 target="_blank"
@@ -455,7 +491,7 @@ export default function AdminPrelaunchManager() {
                                 <span>@{vendor.instagramHandle.replace('@', '')}</span>
                                 <ExternalLink className="w-2.5 h-2.5" />
                               </a>
-                            )}
+                            ) : null}
                           </td>
 
                           <td className="py-3.5 px-4 font-mono text-[11px] text-[var(--text-secondary)]">
