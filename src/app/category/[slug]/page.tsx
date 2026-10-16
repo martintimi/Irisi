@@ -667,18 +667,6 @@ export default function DedicatedCategoryPage() {
                       </span>
                     </div>
 
-                    {/* Stock Pill at Bottom */}
-                    <div className="absolute bottom-4 left-4 right-4 p-2 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between z-10 shadow-md">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                        <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold uppercase tracking-wider">
-                          In Stock · Express
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono-luxury text-white font-bold bg-white/10 px-2 py-0.5 rounded-md border border-white/15">
-                        {(product.sizes || ['S', 'M', 'L']).slice(0, 3).join(' · ')}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Product Info */}

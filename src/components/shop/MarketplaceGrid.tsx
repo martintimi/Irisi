@@ -843,70 +843,48 @@ export default function MarketplaceGrid() {
                       <span>Quick View</span>
                     </span>
                   </div>
-
-                  {/* Stock & Sizes Pill */}
-                  <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between z-10 shadow-md">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-400" />
-                      <span className="text-[9px] sm:text-[11px] font-mono-luxury text-emerald-400 font-bold uppercase tracking-wider">
-                        {product.category === 'accessories' || product.category === 'footwear' ? 'In Stock' : 'In Stock · RTW'}
-                      </span>
-                    </div>
-
-                    {product.category !== 'footwear' && (
-                      <span className="text-[9px] sm:text-[11px] font-mono-luxury text-white font-bold bg-white/10 px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border border-white/15">
-                        {product.category === 'accessories'
-                          ? 'One Size'
-                          : (product.sizes || ['S', 'M', 'L']).slice(0, 3).join(' · ') + ((product.sizes || []).length > 3 ? '+' : '')}
-                      </span>
-                    )}
-                  </div>
                 </div>
 
                 {/* Product Info */}
-                <div className="p-4 sm:p-6 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4">
-                  <div>
-                    {/* Atelier & Details Link */}
-                    <div className="flex items-center justify-between gap-2 pb-1">
-                      <span className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider truncate">
-                        {product.vendorName}
-                      </span>
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4">
+                    <div>
+                      {/* Atelier & Details Link */}
+                      <div className="flex items-center justify-between gap-2 pb-1">
+                        <span className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider truncate">
+                          {product.vendorName}
+                        </span>
 
-                      <Link
-                        href={`/shop/${product.id}`}
-                        className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--text-muted)] hover:text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 shrink-0 transition-colors"
-                      >
-                        <span>Details</span>
-                        <ArrowRight className="h-3 w-3" />
+                        <Link
+                          href={`/shop/${product.id}`}
+                          className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--text-muted)] hover:text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 shrink-0 transition-colors"
+                        >
+                          <span>Details</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </Link>
+                      </div>
+
+                      {/* Title */}
+                      <Link href={`/shop/${product.id}`} className="hover:text-[var(--gold-accent)] transition-colors block">
+                        <h3 className="font-editorial text-sm sm:text-2xl font-bold text-[var(--text-primary)] leading-snug line-clamp-1">
+                          {product.name}
+                        </h3>
                       </Link>
-                    </div>
 
-                    {/* Title */}
-                    <Link href={`/shop/${product.id}`} className="hover:text-[var(--gold-accent)] transition-colors block">
-                      <h3 className="font-editorial text-sm sm:text-2xl font-bold text-[var(--text-primary)] leading-snug line-clamp-1">
-                        {product.name}
-                      </h3>
-                    </Link>
-
-                    {/* Prominent Eye-Catching Gold Price & Stock Status */}
-                    <div className="flex items-baseline gap-2 pt-1.5">
-                      <span className="font-editorial text-lg sm:text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)] drop-shadow-sm">
-                        ₦{product.price.toLocaleString()}
-                      </span>
-                      {product.stockQuantity === 0 ? (
-                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-rose-500 font-bold uppercase">
-                          Sold Out
+                      {/* Prominent Eye-Catching Gold Price & Stock Status */}
+                      <div className="flex items-baseline gap-2 pt-1.5">
+                        <span className="font-editorial text-lg sm:text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)] drop-shadow-sm">
+                          ₦{product.price.toLocaleString()}
                         </span>
-                      ) : (product.stockQuantity !== undefined && product.stockQuantity <= 3) ? (
-                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-amber-500 font-bold uppercase animate-pulse">
-                          Only {product.stockQuantity} Left
-                        </span>
-                      ) : (
-                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-emerald-500 font-bold">
-                          In Stock
-                        </span>
-                      )}
-                    </div>
+                        {product.stockQuantity === 0 ? (
+                          <span className="text-[9px] sm:text-[11px] font-mono-luxury text-rose-500 font-bold uppercase">
+                            Sold Out
+                          </span>
+                        ) : (product.stockQuantity !== undefined && product.stockQuantity <= 3) ? (
+                          <span className="text-[9px] sm:text-[11px] font-mono-luxury text-amber-500 font-bold uppercase animate-pulse">
+                            Only {product.stockQuantity} Left
+                          </span>
+                        ) : null}
+                      </div>
 
                     {/* Store Origin Location */}
                     <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono-luxury text-[var(--text-secondary)] pt-1">
