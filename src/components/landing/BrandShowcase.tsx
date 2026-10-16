@@ -11,11 +11,16 @@ interface DynamicVendor {
   location: string;
   desc: string;
   productCount: number;
+  rating?: string;
+  tag?: string;
 }
+
+const DISPLAY_LIMIT = 6;
 
 export default function BrandShowcase() {
   const [vendors, setVendors] = useState<DynamicVendor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,6 +42,8 @@ export default function BrandShowcase() {
   }, []);
 
   if (!isLoading && vendors.length === 0) return null;
+
+  const displayedVendors = showAll ? vendors : vendors.slice(0, DISPLAY_LIMIT);
 
   return (
     <section className="py-20 border-b border-[var(--border-subtle)]">
@@ -73,7 +80,7 @@ export default function BrandShowcase() {
               <div key={n} className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] animate-pulse h-48" />
             ))
           ) : (
-            vendors.map((vendor) => {
+            displayedVendors.map((vendor) => {
               const initials = (vendor.name || 'V')
                 .split(' ')
                 .map((w: string) => w[0])
@@ -106,7 +113,7 @@ export default function BrandShowcase() {
 
                       <div className="flex items-center gap-1 text-xs font-mono-luxury text-[var(--text-primary)]">
                         <Star className="h-3.5 w-3.5 fill-current text-[var(--gold-accent)]" />
-                        <span>99.4%</span>
+                        <span>{vendor.rating || '5.0'}</span>
                       </div>
                     </div>
 
@@ -133,6 +140,25 @@ export default function BrandShowcase() {
             })
           )}
         </div>
+
+        {/* View All Designers Action */}
+        {!isLoading && vendors.length > DISPLAY_LIMIT && (
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="px-6 py-3 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:bg-[var(--gold-accent)]/10 hover:border-[var(--gold-accent)]/40 text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] transition-all flex items-center gap-2 cursor-pointer font-bold shadow-sm"
+            >
+              <span>{showAll ? 'Show Fewer Brands' : `View All ${vendors.length} Verified Brands`}</span>
+            </button>
+            <Link
+              href="/vendors"
+              className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] hover:underline flex items-center gap-1.5 font-bold"
+            >
+              <span>Full Brand Directory</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
 
       </div>
     </section>

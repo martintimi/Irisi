@@ -349,87 +349,39 @@ export default function MarketplaceGrid() {
     <div className="space-y-6 sm:space-y-8 animate-fadeIn">
       
       {/* ======================================================== */}
-      {/* 1. UNIFIED WELCOME CARD WITH EMBEDDED BRAND FILTERS */}
+      {/* 1. MINIMAL LUXURY CATALOG HEADER */}
       {/* ======================================================== */}
-      <div className="relative rounded-2xl sm:rounded-3xl surface-card p-5 sm:p-10 overflow-hidden shadow-xl border border-[var(--border-subtle)]">
-        
-        {/* Subtle Ambient Glow */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--gold-subtle)]/25 rounded-full blur-3xl pointer-events-none" />
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
+        <div>
+          <h1 className="font-editorial text-3xl sm:text-4xl text-[var(--text-primary)] font-normal tracking-tight">
+            {selectedGender === 'male' ? "Men's Collection" : "Women's Collection"}
+          </h1>
+          <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-1 uppercase tracking-wider">
+            Curated Boutiques &amp; Independent Designers
+          </p>
+        </div>
 
-        <div className="relative space-y-5 sm:space-y-6">
-          
-          <div className="space-y-2 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--gold-accent)] text-[10px] sm:text-xs font-mono-luxury uppercase tracking-widest font-bold">
-              <Sparkles className="h-3 w-3" />
-              <span>NIGERIAN APPAREL CATALOG</span>
-            </div>
-
-            <h1 className="font-editorial text-2xl sm:text-5xl text-[var(--text-primary)] leading-tight font-normal">
-              Curated Fashion, Footwear & Accessories
-            </h1>
-
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl">
-              Curated Nigerian boutiques, ready-to-wear fashion, handcrafted footwear, luxury bags, fine jewelry, and streetwear drops with nationwide escrow delivery.
-            </p>
-          </div>
-
-          {/* Action Row: Virtual Dressing Room + Integrated Brand Filter Pills */}
-          <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            
-            {/* Left Button: Explore Categories Directory */}
-            <Link
-              href="/categories"
-              className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase tracking-widest text-xs font-bold hover:opacity-90 transition-all shadow-md shrink-0"
-            >
-              <Sparkles className="h-4 w-4 text-[var(--gold-accent)]" />
-              <span>Explore All Categories</span>
-            </Link>
-          </div>
-
+        <div className="flex items-center gap-3 text-xs font-mono-luxury text-[var(--text-muted)]">
+          <span className="font-medium text-[var(--text-secondary)]">{filteredProducts.length} Pieces</span>
+          <span>•</span>
+          <Link
+            href="/categories"
+            className="hover:text-[var(--gold-accent)] transition-colors underline-offset-4 hover:underline"
+          >
+            Category Directory →
+          </Link>
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 2. DEDICATED LUXURY SEARCH BAR */}
+      {/* 2. STREAMLINED UTILITY & FILTER TOOLBAR */}
       {/* ======================================================== */}
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="relative flex items-center">
-          <Search className="absolute left-[22px] top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            placeholder="Search products, brands, luxury drops..."
-            className="w-full pl-[50px] pr-12 py-3.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 focus:border-[var(--gold-accent)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] shadow-xs focus:outline-none transition-all"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-              className="absolute right-4.5 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--badge-bg)] transition-colors cursor-pointer"
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ======================================================== */}
-      {/* 3. REFINED CONTROLS & FILTER TOOLBAR */}
-      {/* ======================================================== */}
-      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl surface-card border border-[var(--border-subtle)] shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] shadow-xs">
         
-        {/* Left Side: Gender + Origin Switchers */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        {/* Left Side: Gender Switcher + Integrated Search */}
+        <div className="flex items-center gap-3 flex-1 min-w-[280px]">
           {/* Gender Switcher */}
-          <div className="flex items-center p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-xs">
+          <div className="flex items-center p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-xs shrink-0">
             <button
               type="button"
               onClick={() => handleGenderChange('male')}
@@ -454,56 +406,37 @@ export default function MarketplaceGrid() {
             </button>
           </div>
 
-          {/* Origin Switcher */}
-          <div className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury uppercase shadow-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedOriginType('all');
+          {/* Integrated Search Input */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
-                selectedOriginType === 'all'
-                  ? 'bg-[var(--badge-bg)] text-[var(--text-primary)] font-bold'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              All Types
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedOriginType('handmade_designer');
-                setCurrentPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
-                selectedOriginType === 'handmade_designer'
-                  ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] font-bold border border-[var(--gold-accent)]/20'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              <Scissors className="h-3 w-3" />
-              <span>Handmade</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedOriginType('ready_made_boutique');
-                setCurrentPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
-                selectedOriginType === 'ready_made_boutique'
-                  ? 'bg-[var(--badge-bg)] text-[var(--text-primary)] font-bold'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-            >
-              Ready-Made
-            </button>
+              placeholder="Search pieces, brands..."
+              className="w-full pl-9 pr-8 py-1.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 focus:border-[var(--gold-accent)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-all font-mono-luxury"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                title="Clear search"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Right Side: Quick Sort, Quick Price, Refine Modal Trigger, and Grid Density */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        {/* Right Side: Quick Sort, Refine Modal Trigger, and Grid Density */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Quick Sort Select */}
           <div className="relative">
             <select
@@ -514,29 +447,10 @@ export default function MarketplaceGrid() {
               }}
               className="appearance-none pl-3.5 pr-8 py-2 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury font-bold text-[var(--text-primary)] cursor-pointer focus:outline-none transition-all shadow-xs"
             >
-              <option value="featured">Sort: Featured Drops</option>
-              <option value="newest">Sort: Newest Arrivals</option>
+              <option value="featured">Sort: Featured</option>
+              <option value="newest">Sort: Newest</option>
               <option value="price-asc">Sort: Price Low to High</option>
               <option value="price-desc">Sort: Price High to Low</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)] pointer-events-none" />
-          </div>
-
-          {/* Quick Price Select */}
-          <div className="relative">
-            <select
-              value={priceRange}
-              onChange={(e) => {
-                setPriceRange(e.target.value as any);
-                setCurrentPage(1);
-              }}
-              className="appearance-none pl-3.5 pr-8 py-2 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-xs font-mono-luxury font-bold text-[var(--text-primary)] cursor-pointer focus:outline-none transition-all shadow-xs"
-            >
-              <option value="all">Price: All</option>
-              <option value="under25k">Under ₦25k</option>
-              <option value="25k-50k">₦25k - ₦50k</option>
-              <option value="50k-100k">₦50k - ₦100k</option>
-              <option value="over100k">Over ₦100k</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)] pointer-events-none" />
           </div>
@@ -552,7 +466,7 @@ export default function MarketplaceGrid() {
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Refine</span>
+            <span>Filters</span>
             {activeFiltersCount > 0 && (
               <span className="h-4.5 w-4.5 px-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center text-[10px] font-extrabold">
                 {activeFiltersCount}
@@ -658,9 +572,9 @@ export default function MarketplaceGrid() {
       )}
 
       {/* ======================================================== */}
-      {/* 3. CATEGORY PILL SELECTOR & PIECES SUMMARY */}
+      {/* 3. CATEGORY PILL SELECTOR */}
       {/* ======================================================== */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {categories.map((cat) => {
             const isSelected =
@@ -672,9 +586,9 @@ export default function MarketplaceGrid() {
               <button
                 key={cat.id}
                 onClick={() => handleCategoryItemClick(cat)}
-                className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
+                    ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
                     : 'surface-card text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)]'
                 }`}
               >
@@ -684,10 +598,11 @@ export default function MarketplaceGrid() {
           })}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono-luxury px-1">
-          <span>{filteredProducts.length} {filteredProducts.length === 1 ? 'curated piece' : 'curated pieces'} found</span>
-          {totalPages > 1 && <span>Page {currentPage} of {totalPages}</span>}
-        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-end text-[11px] text-[var(--text-muted)] font-mono-luxury px-1">
+            <span>Page {currentPage} of {totalPages}</span>
+          </div>
+        )}
       </div>
 
       {/* ======================================================== */}
@@ -743,7 +658,6 @@ export default function MarketplaceGrid() {
         <div className={gridCols === 3 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6"}>
           {paginatedProducts.map((product) => {
             const isWorn = Boolean(product.category && (activeOutfit as any)[product.category]?.id === product.id);
-            const fitResult = calculateFitMatch(bodyProfile, product);
             const productImagesList: string[] = Array.isArray(product.images)
               ? product.images.map((img: any) => typeof img === 'string' ? img : img?.url).filter(Boolean)
               : (product.imageUrl ? [product.imageUrl] : []);
@@ -843,116 +757,52 @@ export default function MarketplaceGrid() {
                       <span>Quick View</span>
                     </span>
                   </div>
-
-                  {/* Stock & Sizes Pill */}
-                  <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center justify-between z-10 shadow-md">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-400" />
-                      <span className="text-[9px] sm:text-[11px] font-mono-luxury text-emerald-400 font-bold uppercase tracking-wider">
-                        {product.category === 'accessories' || product.category === 'footwear' ? 'In Stock' : 'In Stock · RTW'}
-                      </span>
-                    </div>
-
-                    {product.category !== 'footwear' && (
-                      <span className="text-[9px] sm:text-[11px] font-mono-luxury text-white font-bold bg-white/10 px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border border-white/15">
-                        {product.category === 'accessories'
-                          ? 'One Size'
-                          : (product.sizes || ['S', 'M', 'L']).slice(0, 3).join(' · ') + ((product.sizes || []).length > 3 ? '+' : '')}
-                      </span>
-                    )}
-                  </div>
                 </div>
 
                 {/* Product Info */}
-                <div className="p-4 sm:p-6 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4">
-                  <div>
-                    {/* Atelier & Details Link */}
-                    <div className="flex items-center justify-between gap-2 pb-1">
-                      <span className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider truncate">
-                        {product.vendorName}
-                      </span>
-
-                      <Link
-                        href={`/shop/${product.id}`}
-                        className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--text-muted)] hover:text-[var(--gold-accent)] font-bold inline-flex items-center gap-1 shrink-0 transition-colors"
-                      >
-                        <span>Details</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    </div>
+                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                  <div className="space-y-1">
+                    {/* Atelier / Vendor Name */}
+                    <p className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider truncate">
+                      {product.vendorName}
+                    </p>
 
                     {/* Title */}
                     <Link href={`/shop/${product.id}`} className="hover:text-[var(--gold-accent)] transition-colors block">
-                      <h3 className="font-editorial text-sm sm:text-2xl font-bold text-[var(--text-primary)] leading-snug line-clamp-1">
+                      <h3 className="font-editorial text-base sm:text-lg font-bold text-[var(--text-primary)] leading-snug line-clamp-1">
                         {product.name}
                       </h3>
                     </Link>
 
                     {/* Prominent Eye-Catching Gold Price & Stock Status */}
-                    <div className="flex items-baseline gap-2 pt-1.5">
-                      <span className="font-editorial text-lg sm:text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)] drop-shadow-sm">
+                    <div className="flex items-baseline gap-2 pt-0.5">
+                      <span className="font-editorial text-lg sm:text-xl font-bold text-amber-600 dark:text-[var(--gold-accent)] drop-shadow-sm">
                         ₦{product.price.toLocaleString()}
                       </span>
                       {product.stockQuantity === 0 ? (
-                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-rose-500 font-bold uppercase">
+                        <span className="text-[9px] sm:text-[10px] font-mono-luxury text-rose-500 font-bold uppercase">
                           Sold Out
                         </span>
                       ) : (product.stockQuantity !== undefined && product.stockQuantity <= 3) ? (
-                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-amber-500 font-bold uppercase animate-pulse">
+                        <span className="text-[9px] sm:text-[10px] font-mono-luxury text-amber-500 font-bold uppercase animate-pulse">
                           Only {product.stockQuantity} Left
                         </span>
-                      ) : (
-                        <span className="text-[9px] sm:text-[11px] font-mono-luxury text-emerald-500 font-bold">
-                          In Stock
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Store Origin Location */}
-                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono-luxury text-[var(--text-secondary)] pt-1">
-                      <MapPin className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
-                      <span className="truncate">{product.vendorCity ? `Ships from ${product.vendorCity}${product.vendorState ? `, ${product.vendorState}` : ''}` : 'Ships from verified vendor'}</span>
+                      ) : null}
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="pt-2.5 sm:pt-3 border-t border-[var(--border-subtle)]">
-                    {/* Desktop: 2-column grid with Style Look and Add to Bag */}
-                    <div className="hidden md:grid md:grid-cols-2 gap-2">
-                      <Link
-                        href={`/shop/${product.id}`}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap transition-all bg-[var(--bg-primary)] text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] cursor-pointer"
-                        title="View Garment"
-                      >
-                        <Eye className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
-                        <span className="truncate">View</span>
-                      </Link>
-
-                      <button
-                        onClick={() => product.stockQuantity === 0 ? null : setQuickLookProduct(product)}
-                        disabled={product.stockQuantity === 0}
-                        className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider font-semibold whitespace-nowrap border transition-all ${
-                          product.stockQuantity === 0
-                            ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 opacity-60 cursor-not-allowed'
-                            : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:text-[var(--gold-accent)] cursor-pointer'
-                        }`}
-                      >
-                        <ShoppingBag className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{product.stockQuantity === 0 ? 'Sold Out' : 'Add to Bag'}</span>
-                      </button>
-                    </div>
-
-                    {/* Mobile: Clean single Add to Bag button (Zero Style Look on mobile) */}
+                  {/* Clean Single Action Button */}
+                  <div className="pt-2 border-t border-[var(--border-subtle)]">
                     <button
-                      onClick={() => product.stockQuantity === 0 ? null : addToCart(product, fitResult.recommendedSize, product.colors?.[0], 1)}
+                      onClick={() => product.stockQuantity === 0 ? null : setQuickLookProduct(product)}
                       disabled={product.stockQuantity === 0}
-                      className={`md:hidden w-full flex items-center justify-center gap-1.5 py-2 px-2 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider font-bold whitespace-nowrap border transition-all ${
+                      className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-full text-xs font-mono-luxury uppercase tracking-wider font-bold whitespace-nowrap border transition-all cursor-pointer ${
                         product.stockQuantity === 0
                           ? 'border-rose-500/30 bg-rose-500/10 text-rose-400 opacity-60 cursor-not-allowed'
-                          : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-primary)] active:scale-95 cursor-pointer'
+                          : 'bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)] hover:text-[var(--gold-accent)] active:scale-[0.99]'
                       }`}
                     >
-                      <ShoppingBag className="h-3 w-3 shrink-0" />
+                      <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
                       <span>{product.stockQuantity === 0 ? 'Sold Out' : 'Add to Bag'}</span>
                     </button>
                   </div>
