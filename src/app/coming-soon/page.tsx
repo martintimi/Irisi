@@ -253,6 +253,17 @@ export default function ComingSoonPage() {
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
 
+  // Merch Priority Reservation Modal
+  const [isMerchModalOpen, setIsMerchModalOpen] = useState(false);
+  const [merchForm, setMerchForm] = useState({
+    email: '',
+    phone: '',
+    colorway: 'black' as 'black' | 'white',
+    size: 'L',
+  });
+  const [merchStatus, setMerchStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [merchMessage, setMerchMessage] = useState('');
+
   // Founder Secret Unlock Modal
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [passcode, setPasscode] = useState('');
@@ -434,6 +445,36 @@ export default function ComingSoonPage() {
     } catch (err: any) {
       setVendorStatus('error');
       setVendorMessage(err.message || 'Submission error. Try again.');
+    }
+  };
+
+  // ── Merch Priority Reservation Submit ──────────────────────────────────
+  const handleMerchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!merchForm.email || !merchForm.phone) {
+      setMerchMessage('Please provide your email and WhatsApp number.');
+      setMerchStatus('error');
+      return;
+    }
+
+    setMerchStatus('loading');
+    setMerchMessage('');
+
+    try {
+      const res = await fetch('/api/merch-waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merchForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reserve merch.');
+
+      setMerchStatus('success');
+      setMerchMessage(data.message || 'Priority allocation reserved successfully.');
+    } catch (err: any) {
+      setMerchStatus('error');
+      setMerchMessage(err.message || 'Submission error. Try again.');
     }
   };
 
@@ -869,18 +910,12 @@ export default function ComingSoonPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const el = document.getElementById('waitlist');
-                  if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    const input = el.querySelector('input');
-                    if (input) {
-                      setTimeout(() => input.focus(), 450);
-                    }
-                  }
+                  setMerchForm((prev) => ({ ...prev, colorway: selectedMerchColor }));
+                  setIsMerchModalOpen(true);
                 }}
                 className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 active:scale-[0.99] transition-all shadow-xl cursor-pointer"
               >
-                <span>Join Priority Waitlist</span>
+                <span>Reserve Priority Allocation</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -1211,6 +1246,153 @@ export default function ComingSoonPage() {
                         <>
                           <span>Submit Application</span>
                           <Send className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
+      {isMerchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white">
+            <button
+              onClick={() => {
+                setIsMerchModalOpen(false);
+                setMerchStatus('idle');
+                setMerchMessage('');
+              }}
+              className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {merchStatus === 'success' ? (
+              <div className="text-center py-6">
+                <div className="w-14 h-14 rounded-full bg-[#B89035]/20 border border-[#B89035] flex items-center justify-center mx-auto mb-4 text-[#B89035]">
+                  <CheckCircle2 className="w-7 h-7" />
+                </div>
+                <h3 className="font-editorial text-2xl font-normal mb-2">Priority Allocation Reserved!</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-6 leading-relaxed">
+                  Your reservation for the <strong className="text-white">{merchForm.colorway === 'white' ? 'Bone White' : 'Onyx Black'}</strong> tee in size <strong className="text-white">{merchForm.size}</strong> is secured for Drop 001. We will alert your WhatsApp 1 hour before the public release with your private checkout link.
+                </p>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-left text-xs space-y-2 mb-6">
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Guaranteed Allocation</span>
+                    <span className="text-emerald-400 font-medium">2-Hour Hold on Launch Day</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Archival Packaging</span>
+                    <span className="text-white font-medium">Serialized Dustbag &amp; Authenticity Card</span>
+                  </div>
+                  <div className="flex justify-between text-zinc-400">
+                    <span>WhatsApp VIP Alert Line</span>
+                    <span className="text-[#B89035] font-mono">{merchForm.phone}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMerchModalOpen(false);
+                    setMerchStatus('idle');
+                  }}
+                  className="px-8 py-3 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div>
+                <span className="text-[10px] font-mono font-medium tracking-[0.25em] text-[#B89035] uppercase block mb-1">
+                  OFFICIAL ARCHIVE · DROP 001
+                </span>
+                <h3 className="font-editorial text-2xl sm:text-3xl font-normal mb-1">Reserve Your Heavyweight Tee</h3>
+                <p className="text-xs text-zinc-400 mb-6 font-light leading-relaxed">
+                  320 GSM custom-milled combed cotton with drop-shoulder silhouette. Reserve your preferred size &amp; colorway today to guarantee your piece before public release.
+                </p>
+
+                <form onSubmit={handleMerchSubmit} className="space-y-4">
+                  {/* Colorway & Size Selector */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Colorway
+                      </label>
+                      <select
+                        value={merchForm.colorway}
+                        onChange={(e) => setMerchForm({ ...merchForm, colorway: e.target.value as any })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
+                      >
+                        <option value="black">Onyx Black</option>
+                        <option value="white">Bone White</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Size
+                      </label>
+                      <select
+                        value={merchForm.size}
+                        onChange={(e) => setMerchForm({ ...merchForm, size: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
+                      >
+                        <option value="S">Small (S)</option>
+                        <option value="M">Medium (M)</option>
+                        <option value="L">Large (L)</option>
+                        <option value="XL">Extra Large (XL)</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={merchForm.email}
+                      onChange={(e) => setMerchForm({ ...merchForm, email: e.target.value })}
+                      placeholder="shopper@email.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      WhatsApp Number (For Early Drop Ping) *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={merchForm.phone}
+                      onChange={(e) => setMerchForm({ ...merchForm, phone: e.target.value })}
+                      placeholder="08012*****"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white font-mono"
+                    />
+                  </div>
+
+                  {merchMessage && (
+                    <p className="text-xs text-rose-400 font-medium">{merchMessage}</p>
+                  )}
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={merchStatus === 'loading'}
+                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl cursor-pointer"
+                    >
+                      {merchStatus === 'loading' ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <span>Lock Allocation (No Payment Now)</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </>
                       )}
                     </button>
