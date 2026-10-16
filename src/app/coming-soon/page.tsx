@@ -217,26 +217,35 @@ const DEPARTMENT_CARD_TRACKS = [
 ];
 
 // Official Apparel Preview Images (Tee colorways, lookbook model, and lifestyle grid)
-const MERCH_PREVIEW_IMAGES = [
+const MERCH_PREVIEW_IMAGES: Array<{
+  id: string;
+  src: string;
+  alt: string;
+  fit: 'cover' | 'contain';
+}> = [
   {
     id: 'merch-model',
     src: '/images/merch/irisi-tee-lookbook-model.png',
     alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Lookbook Model',
+    fit: 'cover',
   },
   {
     id: 'merch-white',
     src: '/images/merch/irisi-merch-tee.png',
     alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Bone White Edition',
+    fit: 'contain',
   },
   {
     id: 'merch-lifestyle',
     src: '/images/merch/irisi-tee-lifestyle-grid.png',
     alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Lifestyle & Packaging',
+    fit: 'cover',
   },
   {
     id: 'merch-black',
     src: '/images/merch/irisi-merch-tee-black.png',
     alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Onyx Black Edition',
+    fit: 'contain',
   },
 ];
 
@@ -859,10 +868,10 @@ export default function ComingSoonPage() {
       {/* ── SECTION 2: OFFICIAL COMPANY MERCH SPOTLIGHT ─────────────────── */}
       <section className="relative z-10 py-16 sm:py-24 px-1.5 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto">
         <div className="rounded-2xl sm:rounded-3xl border border-white/15 bg-black/80 text-white p-3 sm:p-14 shadow-2xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-center">
-            {/* 3D Product Interactive Card (Clean, No Overlays, Seamless Stacked Dissolve) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-12 items-center">
+            {/* 3D Product Interactive Card (Clean, Full-Bleed Fitting, Seamless Stacked Dissolve) */}
             <div
-              className="lg:col-span-7 relative w-full h-[450px] sm:h-[510px] rounded-xl sm:rounded-2xl border border-white/15 bg-zinc-950 flex items-center justify-center p-2 sm:p-6 cursor-crosshair group overflow-hidden"
+              className="lg:col-span-6 relative w-full h-[500px] sm:h-[580px] lg:h-[620px] rounded-2xl sm:rounded-3xl border border-white/15 bg-zinc-950 flex items-center justify-center cursor-crosshair group overflow-hidden shadow-2xl"
               onMouseMove={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 const x = (e.clientX - rect.left) / rect.width - 0.5;
@@ -878,28 +887,36 @@ export default function ComingSoonPage() {
                   transform: `rotateX(${merchTilt.y}deg) rotateY(${merchTilt.x}deg)`,
                 }}
               >
-                {MERCH_PREVIEW_IMAGES.map((img, idx) => (
-                  <motion.div
-                    key={img.id}
-                    initial={false}
-                    animate={{ opacity: idx === merchImageIndex ? 1 : 0 }}
-                    transition={{ duration: 1.4, ease: 'easeInOut' }}
-                    className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
-                  >
-                    <Image
-                      src={img.src}
-                      alt={img.alt}
-                      fill
-                      className="object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
-                      priority={idx === 0}
-                    />
-                  </motion.div>
-                ))}
+                {MERCH_PREVIEW_IMAGES.map((img, idx) => {
+                  const isCover = img.fit === 'cover';
+                  return (
+                    <motion.div
+                      key={img.id}
+                      initial={false}
+                      animate={{ opacity: idx === merchImageIndex ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
+                    >
+                      <Image
+                        src={img.src}
+                        alt={img.alt}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 600px, 620px"
+                        className={
+                          isCover
+                            ? 'object-cover object-center w-full h-full group-hover:scale-105 transition-transform duration-700 select-none'
+                            : 'object-contain p-6 sm:p-12 w-full h-full group-hover:scale-105 transition-transform duration-700 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)] select-none'
+                        }
+                        priority={idx === 0}
+                      />
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Mature, Elevated Official Merch Editorial */}
-            <div className="lg:col-span-5 flex flex-col justify-center">
+            <div className="lg:col-span-6 flex flex-col justify-center">
               <span className="text-[10px] font-mono font-medium tracking-[0.3em] uppercase text-[#B89035] block mb-2">
                 OFFICIAL APPAREL PREVIEW
               </span>
