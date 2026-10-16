@@ -318,19 +318,33 @@ export default function ComingSoonPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // ── Ambient Polyphonic Audio Engine ────────────────────────────────────
+  // ── Ambient Polyphonic Luxury Soundscape (Warm Afro-Lounge & Fashion Runway) ──
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioIntervalRef = useRef<any>(null);
+  const sparkleIntervalRef = useRef<any>(null);
+
+  const stopAudio = () => {
+    if (audioIntervalRef.current) {
+      clearInterval(audioIntervalRef.current);
+      audioIntervalRef.current = null;
+    }
+    if (sparkleIntervalRef.current) {
+      clearInterval(sparkleIntervalRef.current);
+      sparkleIntervalRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      try {
+        audioCtxRef.current.close().catch(() => {});
+      } catch (e) {}
+      audioCtxRef.current = null;
+    }
+    setIsPlayingAudio(false);
+  };
 
   const toggleAudio = () => {
     if (isPlayingAudio) {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-        audioCtxRef.current = null;
-      }
-      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
-      setIsPlayingAudio(false);
+      stopAudio();
       return;
     }
 
@@ -339,48 +353,138 @@ export default function ComingSoonPage() {
       const ctx = new AudioCtx();
       audioCtxRef.current = ctx;
 
+      // Studio Mastering Compressor Bus (Smooth glue, warmth, and loudness)
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-18, ctx.currentTime);
+      compressor.knee.setValueAtTime(10, ctx.currentTime);
+      compressor.ratio.setValueAtTime(3.5, ctx.currentTime);
+      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      compressor.release.setValueAtTime(0.25, ctx.currentTime);
+
+      // Audible, Warm Master Gain (Rich, clear, comfortable volume)
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.04, ctx.currentTime);
+      masterGain.gain.setValueAtTime(0.22, ctx.currentTime);
+
+      compressor.connect(masterGain);
       masterGain.connect(ctx.destination);
 
-      // Warm Fashion Lounge Chords (Dmaj9 -> Bm9 -> Gmaj7 -> A9)
+      // Analog Warm Low-Pass Filter
+      const warmFilter = ctx.createBiquadFilter();
+      warmFilter.type = 'lowpass';
+      warmFilter.frequency.setValueAtTime(1150, ctx.currentTime);
+      warmFilter.Q.setValueAtTime(1.1, ctx.currentTime);
+      warmFilter.connect(compressor);
+
+      // Ambient Stereo Delay Simulator
+      const delay = ctx.createDelay();
+      delay.delayTime.setValueAtTime(0.38, ctx.currentTime);
+      const delayFeedback = ctx.createGain();
+      delayFeedback.gain.setValueAtTime(0.25, ctx.currentTime);
+      const delayFilter = ctx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.setValueAtTime(900, ctx.currentTime);
+
+      delay.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(delay);
+      delayFilter.connect(compressor);
+
+      // Deep, Relaxing Afro-Lounge Luxury Chord Progression
       const chords = [
-        [146.83, 220.0, 277.18, 329.63],
-        [123.47, 185.0, 220.0, 293.66],
-        [98.0, 146.83, 196.0, 246.94],
-        [110.0, 164.81, 220.0, 277.18],
+        { bass: 73.42, notes: [185.00, 220.00, 277.18, 329.63, 440.00] }, // Dmaj9 (Warm gold runway)
+        { bass: 61.74, notes: [146.83, 185.00, 220.00, 277.18, 369.99] }, // Bm9 (Deep soulful lounge)
+        { bass: 49.00, notes: [146.83, 185.00, 220.00, 246.94, 293.66] }, // Gmaj9 (Serene African breeze)
+        { bass: 55.00, notes: [164.81, 196.00, 246.94, 293.66, 329.63] }, // A9sus4 (Royal elevation)
       ];
       let step = 0;
 
       const playChord = () => {
+        if (!ctx || ctx.state === 'closed') return;
         if (ctx.state === 'suspended') ctx.resume();
-        const chord = chords[step % chords.length];
+
+        const now = ctx.currentTime;
+        const currentChord = chords[step % chords.length];
         step++;
 
-        chord.forEach((freq) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+        // 1. Warm Sub-Bass Note (Gives deep, grounded relaxing vibration)
+        const bassOsc = ctx.createOscillator();
+        const bassGain = ctx.createGain();
+        bassOsc.type = 'sine';
+        bassOsc.frequency.setValueAtTime(currentChord.bass, now);
 
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        bassGain.gain.setValueAtTime(0.0001, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.32, now + 0.6);
+        bassGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
 
-          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.02, ctx.currentTime + 1.2);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.6);
+        bassOsc.connect(bassGain);
+        bassGain.connect(compressor);
+        bassOsc.start(now);
+        bassOsc.stop(now + 4.9);
 
-          osc.connect(gain);
-          gain.connect(masterGain);
+        // 2. Polyphonic Detuned Chord Voices (Lush Analog Chorus)
+        currentChord.notes.forEach((freq, nIdx) => {
+          const oscA = ctx.createOscillator();
+          const oscB = ctx.createOscillator();
+          const voiceGain = ctx.createGain();
 
-          osc.start();
-          osc.stop(ctx.currentTime + 4.8);
+          oscA.type = 'triangle';
+          oscA.frequency.setValueAtTime(freq, now);
+          oscA.detune.setValueAtTime(4, now);
+
+          oscB.type = 'sine';
+          oscB.frequency.setValueAtTime(freq, now);
+          oscB.detune.setValueAtTime(-4, now);
+
+          // Smooth swell envelope
+          voiceGain.gain.setValueAtTime(0.0001, now);
+          voiceGain.gain.exponentialRampToValueAtTime(0.09, now + 1.2);
+          voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.7);
+
+          oscA.connect(voiceGain);
+          oscB.connect(voiceGain);
+          voiceGain.connect(warmFilter);
+          if (nIdx % 2 === 0) voiceGain.connect(delay);
+
+          oscA.start(now);
+          oscB.start(now);
+          oscA.stop(now + 4.8);
+          oscB.stop(now + 4.8);
         });
       };
 
+      // 3. Starlight Kalimba / High Rhodes Sparkles
+      const sparkles = [293.66, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99];
+      const playSparkle = () => {
+        if (!ctx || ctx.state === 'closed') return;
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const now = ctx.currentTime;
+        const note = sparkles[Math.floor(Math.random() * sparkles.length)];
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(note, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+
+        osc.connect(gain);
+        gain.connect(warmFilter);
+        gain.connect(delay);
+
+        osc.start(now);
+        osc.stop(now + 2.3);
+      };
+
       playChord();
-      audioIntervalRef.current = setInterval(playChord, 4600);
+      audioIntervalRef.current = setInterval(playChord, 4800);
+      sparkleIntervalRef.current = setInterval(playSparkle, 2200);
+
       setIsPlayingAudio(true);
     } catch (e) {
-      console.warn('Audio not allowed', e);
+      console.warn('Audio playback error', e);
     }
   };
 
@@ -580,13 +684,39 @@ export default function ComingSoonPage() {
             </span>
           </div>
 
-          {/* Action Button */}
-          <button
-            onClick={() => setIsVendorModalOpen(true)}
-            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0"
-          >
-            Apply As Brand
-          </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Ambient Lounge Soundscape Toggle */}
+            <button
+              type="button"
+              onClick={toggleAudio}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-black/10 dark:border-white/15 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/10 dark:hover:bg-white/10 transition-all text-zinc-900 dark:text-white cursor-pointer select-none"
+              title={isPlayingAudio ? 'Mute Fashion Lounge Sound' : 'Play Fashion Lounge Sound'}
+            >
+              {isPlayingAudio ? (
+                <>
+                  <Volume2 className="w-3.5 h-3.5 text-[#B89035] animate-pulse shrink-0" />
+                  <span className="text-[10px] font-mono tracking-widest text-[#B89035] uppercase font-medium">
+                    SOUND ON
+                  </span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                  <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase font-medium">
+                    SOUND
+                  </span>
+                </>
+              )}
+            </button>
+
+            {/* Action Button */}
+            <button
+              onClick={() => setIsVendorModalOpen(true)}
+              className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-[11px] sm:text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              Apply As Brand
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1030,6 +1160,35 @@ export default function ComingSoonPage() {
           </button>
         </div>
       </footer>
+
+      {/* ── FLOATING AMBIENT AUDIO CONTROLLER (Bottom Left) ──────────────── */}
+      <button
+        type="button"
+        onClick={toggleAudio}
+        className="fixed bottom-5 left-5 z-40 flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-zinc-950/90 hover:bg-black border border-white/20 text-white shadow-2xl backdrop-blur-md transition-all cursor-pointer hover:scale-105 active:scale-95 select-none"
+        title="Toggle Ambient Lounge Sound"
+      >
+        {isPlayingAudio ? (
+          <>
+            <div className="flex items-center gap-0.5 h-3">
+              <span className="w-0.5 h-3 bg-[#B89035] rounded-full animate-pulse" />
+              <span className="w-0.5 h-2 bg-[#B89035] rounded-full animate-pulse delay-75" />
+              <span className="w-0.5 h-3.5 bg-[#B89035] rounded-full animate-pulse delay-150" />
+            </div>
+            <Volume2 className="w-3.5 h-3.5 text-[#B89035]" />
+            <span className="text-[10px] font-mono text-[#B89035] tracking-widest uppercase font-medium">
+              LOUNGE ON
+            </span>
+          </>
+        ) : (
+          <>
+            <VolumeX className="w-3.5 h-3.5 text-zinc-400" />
+            <span className="text-[10px] font-mono text-zinc-400 tracking-widest uppercase font-medium">
+              AMBIENT SOUND
+            </span>
+          </>
+        )}
+      </button>
 
       {/* ── MODAL 1: FOUNDER UNLOCK PASSCODE ─────────────────────────────── */}
       {isUnlockModalOpen && (
