@@ -14,7 +14,6 @@ import {
   Unlock,
   Store,
   Send,
-  Loader2,
   X,
   Zap,
   Layers,
@@ -646,10 +645,13 @@ export default function ComingSoonPage() {
                 <button
                   type="submit"
                   disabled={waitlistStatus === 'loading'}
-                  className="w-full sm:w-auto shrink-0 px-6 py-3 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all"
+                  className="w-full sm:w-auto shrink-0 px-6 py-3 rounded-xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-60"
                 >
                   {waitlistStatus === 'loading' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <>
+                      <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                      <span>Securing VIP Pass...</span>
+                    </>
                   ) : (
                     <>
                       <span>Get VIP Pass</span>
@@ -1057,9 +1059,16 @@ export default function ComingSoonPage() {
               <button
                 type="submit"
                 disabled={unlockStatus === 'loading'}
-                className="w-full py-2.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all"
+                className="w-full py-2.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                {unlockStatus === 'loading' ? 'Verifying...' : 'Unlock Full Store'}
+                {unlockStatus === 'loading' ? (
+                  <>
+                    <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                    <span>Verifying Passcode...</span>
+                  </>
+                ) : (
+                  <span>Unlock Full Store</span>
+                )}
               </button>
             </form>
           </div>
@@ -1234,22 +1243,25 @@ export default function ComingSoonPage() {
                     <p className="text-xs text-rose-400 font-medium">{vendorMessage}</p>
                   )}
 
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={vendorStatus === 'loading'}
-                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl"
-                    >
-                      {vendorStatus === 'loading' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <span>Submit Application</span>
-                          <Send className="w-3.5 h-3.5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={vendorStatus === 'loading'}
+                        className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl cursor-pointer disabled:opacity-60"
+                      >
+                        {vendorStatus === 'loading' ? (
+                          <>
+                            <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                            <span>Submitting Application...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Submit Application</span>
+                            <Send className="w-3.5 h-3.5" />
+                          </>
+                        )}
+                      </button>
+                    </div>
                 </form>
               </div>
             )}
@@ -1385,10 +1397,13 @@ export default function ComingSoonPage() {
                     <button
                       type="submit"
                       disabled={merchStatus === 'loading'}
-                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl cursor-pointer"
+                      className="w-full py-3.5 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all shadow-xl cursor-pointer disabled:opacity-60"
                     >
                       {merchStatus === 'loading' ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <>
+                          <Sparkles className="w-4 h-4 animate-spin text-[#B89035]" />
+                          <span>Locking Allocation...</span>
+                        </>
                       ) : (
                         <>
                           <span>Lock Allocation (No Payment Now)</span>
