@@ -121,7 +121,7 @@ export default function Footer() {
 
         <div className="pt-10 mt-10 border-t border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono-luxury text-[var(--text-muted)]">
           <div>
-            © {new Date().getFullYear()} ÌRÍSÍ Technologies Ltd. All rights reserved.
+            © {new Date().getFullYear()} ÌRÍSÍ. All rights reserved.
           </div>
           <div className="mt-2 sm:mt-0">
             Appearance & Presence · Crafted for Nigerian Luxury

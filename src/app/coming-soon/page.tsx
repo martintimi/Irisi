@@ -1118,7 +1118,7 @@ export default function ComingSoonPage() {
             Are You Shaping Nigerian Style?
           </h2>
           <p className="text-zinc-400 text-sm leading-relaxed">
-            Elevate your brand with automated escrow settlements, seamless ordering, and verified nationwide logistics.
+            Give your clothing brand the home it deserves — with instant customer payments, verified delivery, and zero seller stress.
             Partner with ÌRÍSÍ as a Founding Fashion House.
           </p>
         </div>
@@ -1128,23 +1128,23 @@ export default function ComingSoonPage() {
           {[
             {
               icon: ShieldCheck,
-              title: 'Automated Escrow',
-              desc: 'Card, USSD, and instant bank transfer settlements with guaranteed zero chargeback protection.',
+              title: 'Secure Escrow Payments',
+              desc: 'Fast card and bank transfers held safely until delivery. Zero fake alert risk, with quick payouts straight to your bank.',
             },
             {
               icon: Zap,
-              title: 'Nationwide Logistics',
-              desc: 'Automated waybills with doorstep pickups across Nigeria and worldwide shipping.',
+              title: 'Nationwide Delivery',
+              desc: 'Doorstep pickups from your location, automated tracking, and reliable delivery to buyers across Nigeria.',
             },
             {
               icon: Layers,
-              title: 'Sovereign Atelier',
-              desc: 'Your brand receives an editorial luxury storefront, not a generic commodity grid.',
+              title: 'Dedicated Brand Storefront',
+              desc: 'Your brand gets its own sleek page with your bio, lookbook, and collection — not a crowded discount feed.',
             },
             {
               icon: Sparkles,
-              title: '0% Platform Fee',
-              desc: 'Founding merchant privilege: 0% marketplace commission for the first 25 approved brands.',
+              title: '0% Commission at Launch',
+              desc: 'Keep 100% of your earnings. Early founding brands pay zero marketplace fees for Launch Drop 001.',
             },
           ].map((item, i) => (
             <div
@@ -1178,7 +1178,7 @@ export default function ComingSoonPage() {
       {/* ── FOOTER & FOUNDER KEY ─────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-white/10 py-8 px-6 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 font-mono">
         <div>
-          © 2026 ÌRÍSÍ TECHNOLOGIES LTD. ALL RIGHTS RESERVED.
+          © 2026 ÌRÍSÍ. ALL RIGHTS RESERVED.
         </div>
         <div className="flex items-center gap-4">
           <a
