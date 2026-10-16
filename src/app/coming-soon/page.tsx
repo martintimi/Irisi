@@ -200,6 +200,30 @@ const DEPARTMENT_CARD_TRACKS = [
   },
 ];
 
+// Official Apparel Preview Images (Tee colorways, lookbook model, and lifestyle grid)
+const MERCH_PREVIEW_IMAGES = [
+  {
+    id: 'merch-model',
+    src: '/images/merch/irisi-tee-lookbook-model.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Lookbook Model',
+  },
+  {
+    id: 'merch-white',
+    src: '/images/merch/irisi-merch-tee.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Bone White Edition',
+  },
+  {
+    id: 'merch-lifestyle',
+    src: '/images/merch/irisi-tee-lifestyle-grid.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Lifestyle & Packaging',
+  },
+  {
+    id: 'merch-black',
+    src: '/images/merch/irisi-merch-tee-black.png',
+    alt: 'ÌRÍSÍ Sovereign Heavyweight Tee - Onyx Black Edition',
+  },
+];
+
 export default function ComingSoonPage() {
   // ── States ─────────────────────────────────────────────────────────────
   const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -268,15 +292,14 @@ export default function ComingSoonPage() {
   const [passcode, setPasscode] = useState('');
   const [unlockStatus, setUnlockStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
-  // 3D Merch Mouse Tilt State & Colorway Switcher
+  // 3D Merch Mouse Tilt State & Official Apparel Preview Slideshow (Cycles every 4s with smooth stacked dissolve)
   const [merchTilt, setMerchTilt] = useState({ x: 0, y: 0 });
-  const [selectedMerchColor, setSelectedMerchColor] = useState<'black' | 'white'>('black');
+  const [merchImageIndex, setMerchImageIndex] = useState(0);
 
-  // Auto-cycle Merch Tee Colorway (Black <-> White every 3.8s) so visitors see both editions
   useEffect(() => {
     const timer = setInterval(() => {
-      setSelectedMerchColor((prev) => (prev === 'black' ? 'white' : 'black'));
-    }, 3800);
+      setMerchImageIndex((prev) => (prev + 1) % MERCH_PREVIEW_IMAGES.length);
+    }, 4000);
     return () => clearInterval(timer);
   }, []);
 
@@ -688,33 +711,35 @@ export default function ComingSoonPage() {
                 style={{ x: card1X, rotate: card1Rotate }}
                 className="absolute w-[190px] sm:w-[330px] md:w-[370px] lg:w-[390px] h-[290px] sm:h-[460px] md:h-[510px] lg:h-[540px] rounded-2xl sm:rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-zinc-950 shadow-2xl select-none"
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentNative.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none"
-                  >
-                    <Image
-                      src={currentNative.image}
-                      alt={currentNative.name}
-                      fill
-                      sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
-                      className="object-cover brightness-[0.78]"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
+                {nativeTrack.categories.map((cat, idx) => {
+                  const isActive = idx === (cardCategoryIndex % nativeTrack.categories.length);
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      initial={false}
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none pointer-events-none"
+                    >
+                      <Image
+                        src={cat.image}
+                        alt={cat.name}
+                        fill
+                        sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
+                        className="object-cover brightness-[0.78]"
+                        priority={idx === 0}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
 
-                    {/* Just the image and the text telling the category */}
-                    <div className="relative z-10 text-left text-white">
-                      <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
-                        {currentNative.name}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      {/* Just the image and the text telling the category */}
+                      <div className="relative z-10 text-left text-white">
+                        <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
 
               {/* Card 2: Nigerian Streetwear & Drops (Center Card - Elevated On Scroll) */}
@@ -722,33 +747,35 @@ export default function ComingSoonPage() {
                 style={{ y: card2Y, scale: card2Scale }}
                 className="absolute w-[210px] sm:w-[350px] md:w-[390px] lg:w-[410px] h-[315px] sm:h-[480px] md:h-[530px] lg:h-[560px] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-black/20 dark:border-white/30 bg-zinc-950 shadow-2xl z-20 select-none"
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentStreet.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-8 select-none"
-                  >
-                    <Image
-                      src={currentStreet.image}
-                      alt={currentStreet.name}
-                      fill
-                      sizes="(max-width: 640px) 210px, (max-width: 1024px) 390px, 410px"
-                      className="object-cover brightness-[0.8]"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10 pointer-events-none" />
+                {streetTrack.categories.map((cat, idx) => {
+                  const isActive = idx === (cardCategoryIndex % streetTrack.categories.length);
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      initial={false}
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 flex flex-col justify-end p-4 sm:p-8 select-none pointer-events-none"
+                    >
+                      <Image
+                        src={cat.image}
+                        alt={cat.name}
+                        fill
+                        sizes="(max-width: 640px) 210px, (max-width: 1024px) 390px, 410px"
+                        className="object-cover brightness-[0.8]"
+                        priority={idx === 0}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-black/10 pointer-events-none" />
 
-                    {/* Just the image and the text telling the category */}
-                    <div className="relative z-10 text-left text-white">
-                      <h3 className="font-editorial text-xl sm:text-3xl font-normal leading-tight drop-shadow-md">
-                        {currentStreet.name}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      {/* Just the image and the text telling the category */}
+                      <div className="relative z-10 text-left text-white">
+                        <h3 className="font-editorial text-xl sm:text-3xl font-normal leading-tight drop-shadow-md">
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
 
               {/* Card 3: Footwear, Bags & Accessories (Right Fanned Card - Expands On Scroll) */}
@@ -756,33 +783,35 @@ export default function ComingSoonPage() {
                 style={{ x: card3X, rotate: card3Rotate }}
                 className="absolute w-[190px] sm:w-[330px] md:w-[370px] lg:w-[390px] h-[290px] sm:h-[460px] md:h-[510px] lg:h-[540px] rounded-2xl sm:rounded-3xl overflow-hidden border border-black/10 dark:border-white/20 bg-zinc-950 shadow-2xl select-none"
               >
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={currentWomen.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: 'easeInOut' }}
-                    className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none"
-                  >
-                    <Image
-                      src={currentWomen.image}
-                      alt={currentWomen.name}
-                      fill
-                      sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
-                      className="object-cover brightness-[0.78]"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
+                {womenTrack.categories.map((cat, idx) => {
+                  const isActive = idx === (cardCategoryIndex % womenTrack.categories.length);
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      initial={false}
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      transition={{ duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-0 flex flex-col justify-end p-4 sm:p-7 select-none pointer-events-none"
+                    >
+                      <Image
+                        src={cat.image}
+                        alt={cat.name}
+                        fill
+                        sizes="(max-width: 640px) 190px, (max-width: 1024px) 370px, 390px"
+                        className="object-cover brightness-[0.78]"
+                        priority={idx === 0}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-black/10 pointer-events-none" />
 
-                    {/* Just the image and the text telling the category */}
-                    <div className="relative z-10 text-left text-white">
-                      <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
-                        {currentWomen.name}
-                      </h3>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
+                      {/* Just the image and the text telling the category */}
+                      <div className="relative z-10 text-left text-white">
+                        <h3 className="font-editorial text-lg sm:text-3xl font-normal leading-tight drop-shadow-md">
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             </div>
           );
@@ -797,7 +826,7 @@ export default function ComingSoonPage() {
       <section className="relative z-10 py-16 sm:py-24 px-1.5 sm:px-8 lg:px-12 w-full max-w-7xl mx-auto">
         <div className="rounded-2xl sm:rounded-3xl border border-white/15 bg-black/80 text-white p-3 sm:p-14 shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 items-center">
-            {/* 3D Product Interactive Card with Black & White Colorway Switcher */}
+            {/* 3D Product Interactive Card (Clean, No Overlays, Seamless Stacked Dissolve) */}
             <div
               className="lg:col-span-7 relative w-full h-[450px] sm:h-[510px] rounded-xl sm:rounded-2xl border border-white/15 bg-zinc-950 flex items-center justify-center p-2 sm:p-6 cursor-crosshair group overflow-hidden"
               onMouseMove={(e) => {
@@ -809,64 +838,29 @@ export default function ComingSoonPage() {
               onMouseLeave={() => setMerchTilt({ x: 0, y: 0 })}
               style={{ perspective: '1000px' }}
             >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={selectedMerchColor}
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  transition={{ duration: 0.35, ease: 'easeInOut' }}
-                  className="relative w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
-                  style={{
-                    transform: `rotateX(${merchTilt.y}deg) rotateY(${merchTilt.x}deg)`,
-                  }}
-                >
-                  <Image
-                    src={selectedMerchColor === 'black' ? '/images/merch/irisi-merch-tee-black.png' : '/images/merch/irisi-merch-tee.png'}
-                    alt={`ÌRÍSÍ Official Company Merch Tee - ${selectedMerchColor === 'black' ? 'Onyx Black' : 'Bone White'} Edition`}
-                    fill
-                    className="object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
-                    priority
-                  />
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Top-Left Edition Tag (Hidden on mobile to eliminate overlap with colorway toggle) */}
-              <div className="hidden sm:flex absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white text-[10px] font-mono font-medium tracking-widest uppercase items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#B89035] animate-pulse" />
-                <span>OFFICIAL APPAREL · {selectedMerchColor === 'black' ? 'ONYX BLACK' : 'BONE WHITE'}</span>
-              </div>
-
-              {/* Colorway Switcher Buttons (Black / White) */}
-              <div className="absolute top-3 sm:top-4 right-3 sm:right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md border border-white/15 rounded-full p-1 z-20">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMerchColor('black')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                    selectedMerchColor === 'black'
-                      ? 'bg-zinc-800 text-white border border-white/30 shadow-sm'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-black border border-white/40 inline-block" />
-                  <span>Black</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMerchColor('white')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                    selectedMerchColor === 'white'
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  <span className="w-2.5 h-2.5 rounded-full bg-white border border-black/20 inline-block" />
-                  <span>White</span>
-                </button>
-              </div>
-
-              <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 text-[8px] sm:text-[9px] font-mono text-zinc-400">
-                MOVE CURSOR TO TILT IN 3D · AUTO-CYCLES BLACK & WHITE EDITIONS
+              <div
+                className="relative w-full h-full flex items-center justify-center transition-transform duration-200 ease-out"
+                style={{
+                  transform: `rotateX(${merchTilt.y}deg) rotateY(${merchTilt.x}deg)`,
+                }}
+              >
+                {MERCH_PREVIEW_IMAGES.map((img, idx) => (
+                  <motion.div
+                    key={img.id}
+                    initial={false}
+                    animate={{ opacity: idx === merchImageIndex ? 1 : 0 }}
+                    transition={{ duration: 1.4, ease: 'easeInOut' }}
+                    className="absolute inset-0 w-full h-full flex items-center justify-center pointer-events-none"
+                  >
+                    <Image
+                      src={img.src}
+                      alt={img.alt}
+                      fill
+                      className="object-contain p-2 group-hover:scale-105 transition-transform duration-500 drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
+                      priority={idx === 0}
+                    />
+                  </motion.div>
+                ))}
               </div>
             </div>
 
@@ -911,10 +905,7 @@ export default function ComingSoonPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setMerchForm((prev) => ({ ...prev, colorway: selectedMerchColor }));
-                  setIsMerchModalOpen(true);
-                }}
+                onClick={() => setIsMerchModalOpen(true)}
                 className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 active:scale-[0.99] transition-all shadow-xl cursor-pointer"
               >
                 <span>Reserve Priority Allocation</span>
