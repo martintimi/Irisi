@@ -21,6 +21,7 @@ import {
   Sparkles,
   Award,
 } from 'lucide-react';
+import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 
 // Dynamic App Features for the rotating subtitle (Fade In / Fade Out)
 const APP_FEATURES = [
@@ -242,10 +243,11 @@ export default function ComingSoonPage() {
   const [vendorForm, setVendorForm] = useState({
     brandName: '',
     instagramHandle: '',
-    category: 'Streetwear & Ready-to-Wear',
-    priceRange: '₦30,000 – ₦80,000',
+    specialty: 'streetwear',
     founderPhone: '',
     founderEmail: '',
+    state: 'Lagos',
+    city: '',
     lookbookUrl: '',
   });
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -577,7 +579,7 @@ export default function ComingSoonPage() {
                 Priority Access Confirmed!
               </h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
-                Invitation sent to <strong className="text-zinc-950 dark:text-white font-medium">{waitlistEmail}</strong>. Includes ₦5,000 launch credit.
+                Invitation sent to <strong className="text-zinc-950 dark:text-white font-medium">{waitlistEmail}</strong>. Founding priority access secured for Drop 001.
               </p>
               <a
                 href="https://www.tiktok.com/@irisiming"
@@ -620,7 +622,7 @@ export default function ComingSoonPage() {
               )}
               <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono px-2">
                 <span>⚡ 740+ Insiders in Queue</span>
-                <span className="text-[#B89035] font-medium">₦5,000 Launch Voucher</span>
+                <span className="text-[#B89035] font-medium">Drop 001 Priority Access</span>
               </div>
             </form>
           )}
@@ -864,13 +866,23 @@ export default function ComingSoonPage() {
                 </div>
               </div>
 
-              <a
-                href="#waitlist"
-                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 transition-all shadow-xl"
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('waitlist');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const input = el.querySelector('input');
+                    if (input) {
+                      setTimeout(() => input.focus(), 450);
+                    }
+                  }
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-xl bg-white text-black font-medium text-xs uppercase tracking-wider hover:bg-zinc-200 active:scale-[0.99] transition-all shadow-xl cursor-pointer"
               >
                 <span>Join Priority Waitlist</span>
                 <ArrowRight className="w-4 h-4" />
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -1058,6 +1070,25 @@ export default function ComingSoonPage() {
                 </p>
 
                 <form onSubmit={handleVendorSubmit} className="space-y-4">
+                  {/* Department / Specialty */}
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                      Store Specialty &amp; Department *
+                    </label>
+                    <select
+                      value={vendorForm.specialty}
+                      onChange={(e) => setVendorForm({ ...vendorForm, specialty: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
+                    >
+                      <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
+                      <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
+                      <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
+                      <option value="caps">Caps, Hats &amp; Headwear (Fila, Dad Caps, Beanies, Bucket Hats)</option>
+                      <option value="accessories">Jewelry, Watches &amp; Luxury Accessories (Chains, Watches, Bags, Belts)</option>
+                      <option value="multi_department">Multi-Department Boutique (All Fashion &amp; Accessories)</option>
+                    </select>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
@@ -1090,40 +1121,6 @@ export default function ComingSoonPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Discipline
-                      </label>
-                      <select
-                        value={vendorForm.category}
-                        onChange={(e) => setVendorForm({ ...vendorForm, category: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      >
-                        <option>Streetwear & Ready-to-Wear</option>
-                        <option>Agbada & Native Couture</option>
-                        <option>Avant-Garde & Eveningwear</option>
-                        <option>Footwear & Leather Goods</option>
-                        <option>Bags & Accessories</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Price Bracket
-                      </label>
-                      <select
-                        value={vendorForm.priceRange}
-                        onChange={(e) => setVendorForm({ ...vendorForm, priceRange: e.target.value })}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                      >
-                        <option>₦20,000 – ₦50,000</option>
-                        <option>₦50,000 – ₦150,000</option>
-                        <option>₦150,000 – ₦350,000</option>
-                        <option>₦350,000+</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
                         WhatsApp Number *
                       </label>
                       <input
@@ -1131,28 +1128,63 @@ export default function ComingSoonPage() {
                         required
                         value={vendorForm.founderPhone}
                         onChange={(e) => setVendorForm({ ...vendorForm, founderPhone: e.target.value })}
-                        placeholder="080 1234 5678"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
+                        placeholder="08012*****"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white font-mono"
                       />
                     </div>
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Email Address *
+                        Business Email *
                       </label>
                       <input
                         type="email"
                         required
                         value={vendorForm.founderEmail}
                         onChange={(e) => setVendorForm({ ...vendorForm, founderEmail: e.target.value })}
-                        placeholder="founder@brand.com"
+                        placeholder="founder@brand.ng"
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
                       />
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        State / Region *
+                      </label>
+                      <select
+                        value={vendorForm.state}
+                        onChange={(e) => setVendorForm({ ...vendorForm, state: e.target.value, city: '' })}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-white cursor-pointer"
+                      >
+                        {NIGERIAN_STATES.map((st) => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        City / Area
+                      </label>
+                      <input
+                        type="text"
+                        list="vendor-cities-list"
+                        value={vendorForm.city}
+                        onChange={(e) => setVendorForm({ ...vendorForm, city: e.target.value })}
+                        placeholder={`e.g. ${vendorForm.state === 'Lagos' ? 'Ikeja / Lekki' : 'City or Town'}`}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white placeholder-zinc-500"
+                      />
+                      <datalist id="vendor-cities-list">
+                        {getCitiesForState(vendorForm.state).slice(0, 40).map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                      Lookbook Link (Drive, Web, or Dropbox)
+                      Lookbook Link (Drive, Web, or Dropbox) (Optional)
                     </label>
                     <input
                       type="url"
