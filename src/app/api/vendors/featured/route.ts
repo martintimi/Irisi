@@ -149,7 +149,7 @@ export async function GET() {
         ? bioText.trim()
         : `Verified Nigerian merchant specializing in ${focus.toLowerCase()} crafted for immediate dispatch.`;
 
-      const rating = `5.0 ★ (${vendorProducts.length} ${vendorProducts.length === 1 ? 'Live Piece' : 'Live Pieces'})`;
+      const rating = v.rating ? Number(v.rating).toFixed(1) : '5.0';
 
       activeVendors.push({
         id: v.id,
