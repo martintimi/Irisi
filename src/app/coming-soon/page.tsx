@@ -1118,7 +1118,7 @@ export default function ComingSoonPage() {
             Are You Shaping Nigerian Style?
           </h2>
           <p className="text-zinc-400 text-sm leading-relaxed">
-            Eliminate chaotic Instagram DMs, fake bank transfer screenshots, and manual waybills.
+            Elevate your brand with automated escrow settlements, seamless ordering, and verified nationwide logistics.
             Partner with ÌRÍSÍ as a Founding Fashion House.
           </p>
         </div>
@@ -1129,7 +1129,7 @@ export default function ComingSoonPage() {
             {
               icon: ShieldCheck,
               title: 'Automated Escrow',
-              desc: 'Paystack card, USSD, and transfer settlements. Zero chargeback risks.',
+              desc: 'Card, USSD, and instant bank transfer settlements with guaranteed zero chargeback protection.',
             },
             {
               icon: Zap,

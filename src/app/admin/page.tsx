@@ -2132,7 +2132,7 @@ export default function SuperAdminPage() {
                     ₦{totalShippingFeesPool.toLocaleString()}
                   </div>
                   <div className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
-                    Collected via Paystack checkout
+                    Collected via secure checkout
                   </div>
                 </div>
 
