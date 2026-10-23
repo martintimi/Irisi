@@ -167,47 +167,7 @@ const defaultProfile: BodyProfile = {
 const initialOrders: Order[] = [];
 
 
-const initialStories: VendorStory[] = [
-  {
-    id: 'story-moji-1',
-    vendorId: 'moji-wears',
-    vendorName: 'Moji Wears',
-    vendorAvatar: '/images/no-product.svg',
-    mediaUrl: '/images/no-product.svg',
-    caption: 'Midnight Heavyweight TrapStar Drop ⚡ 480GSM Cotton in Stock now.',
-    taggedProductId: 'prod-1787616646574-370',
-    taggedProductName: 'Trap Star Street Hoodie',
-    taggedProductPrice: 33000,
-    taggedProductImage: '/images/no-product.svg',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'story-arike-1',
-    vendorId: 'arike-brand',
-    vendorName: 'Arike Brand',
-    vendorAvatar: '/images/products/BlackAgbada.jpg',
-    mediaUrl: '/images/products/BlackAgbada.jpg',
-    caption: 'Handcrafted Heritage Agbada with Obsidian Embroidery ✨ Limited drop.',
-    taggedProductId: 'prod-1787684395100-506',
-    taggedProductName: 'Black Agbada For Men',
-    taggedProductPrice: 67,
-    taggedProductImage: '/images/products/BlackAgbada.jpg',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'story-sartorial-1',
-    vendorId: 'sartorial-lagos',
-    vendorName: 'Sartorial Lagos',
-    vendorAvatar: '/images/products/BlackSenator.jpg',
-    mediaUrl: '/images/products/BlackSenator.jpg',
-    caption: 'Super 160s Wool Senator Kaftan with Geometric Placket. Ready to wear.',
-    taggedProductId: 'prod-1787718457711-343',
-    taggedProductName: 'Onyx Wool Senator Kaftan',
-    taggedProductPrice: 68000,
-    taggedProductImage: '/images/products/BlackSenator.jpg',
-    createdAt: new Date().toISOString()
-  }
-];
+const initialStories: VendorStory[] = [];
 
 const initialOutfit: ActiveOutfit = {};
 
