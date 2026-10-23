@@ -7,6 +7,7 @@ import { X, Check, ShoppingBag, ShieldCheck, Zap, Sparkles, Ruler } from 'lucide
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 interface QuickBuyDrawerProps {
   product: any | null;
@@ -16,6 +17,18 @@ interface QuickBuyDrawerProps {
 export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawerProps) {
   const router = useRouter();
   const { bodyProfile, addToCart, setIsCartOpen, userAuth } = useStore();
+
+  // Complete background scroll lock when drawer is active
+  useBodyScrollLock(!!product);
+
+  useEffect(() => {
+    if (!product) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [product, onClose]);
 
   if (!product) return null;
 
@@ -92,9 +105,19 @@ export default function MobileQuickBuyDrawer({ product, onClose }: QuickBuyDrawe
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center select-none animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center select-none animate-fadeIn overscroll-contain"
+      onClick={onClose}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+    >
       {/* Drawer Card */}
-      <div className="w-full max-w-md surface-card rounded-t-3xl border-t border-x border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-slideUp">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        className="w-full max-w-md surface-card rounded-t-3xl border-t border-x border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-slideUp max-h-[88dvh] overflow-y-auto overscroll-contain"
+      >
         
         {/* Drawer Header */}
         <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">

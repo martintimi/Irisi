@@ -21,6 +21,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 // Available Social Media Platforms for Founding Brand Onboarding
 const SOCIAL_PLATFORMS = [
@@ -305,6 +306,22 @@ export default function ComingSoonPage() {
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [unlockStatus, setUnlockStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  // Complete background scroll lock when any modal is active
+  useBodyScrollLock(isVendorModalOpen || isMerchModalOpen || isUnlockModalOpen);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsVendorModalOpen(false);
+        setIsMerchModalOpen(false);
+        setIsUnlockModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Official Apparel Preview Slideshow (Cycles every 4s with smooth stacked dissolve)
   const [merchImageIndex, setMerchImageIndex] = useState(0);
@@ -1209,8 +1226,18 @@ export default function ComingSoonPage() {
 
       {/* ── MODAL 1: FOUNDER UNLOCK PASSCODE ─────────────────────────────── */}
       {isUnlockModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="relative w-full max-w-sm bg-zinc-950 border border-white/20 rounded-2xl p-6 text-center text-white shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overscroll-contain animate-fadeIn"
+          onClick={() => setIsUnlockModalOpen(false)}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm bg-zinc-950 border border-white/20 rounded-2xl p-6 text-center text-white shadow-2xl max-h-[90dvh] overflow-y-auto overscroll-contain"
+          >
             <button
               onClick={() => setIsUnlockModalOpen(false)}
               className="absolute top-4 right-4 p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400"
@@ -1261,8 +1288,18 @@ export default function ComingSoonPage() {
 
       {/* ── MODAL 2: VENDOR APPLICATION MODAL ────────────────────────────── */}
       {isVendorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-          <div className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl my-8">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overscroll-contain animate-fadeIn"
+          onClick={() => setIsVendorModalOpen(false)}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl max-h-[88dvh] overflow-y-auto overscroll-contain"
+          >
             <button
               onClick={() => setIsVendorModalOpen(false)}
               className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
@@ -1523,8 +1560,22 @@ export default function ComingSoonPage() {
 
       {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
       {isMerchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overscroll-contain animate-fadeIn"
+          onClick={() => {
+            setIsMerchModalOpen(false);
+            setMerchStatus('idle');
+            setMerchMessage('');
+          }}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white max-h-[88dvh] overflow-y-auto overscroll-contain"
+          >
             <button
               onClick={() => {
                 setIsMerchModalOpen(false);

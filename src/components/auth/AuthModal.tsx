@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import { X, Sparkles, User, Store, Check, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { signUpCustomer, signInCustomer, signUpVendor, signInVendor } from '@/lib/services/auth';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 export default function AuthModal() {
   const {
@@ -30,6 +31,19 @@ export default function AuthModal() {
   const [heightCm, setHeightCm] = useState(178);
   const [weightKg, setWeightKg] = useState(74);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Complete background scroll lock when auth modal is open
+  useBodyScrollLock(isAuthModalOpen);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isAuthModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsAuthModalOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthModalOpen, setIsAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
@@ -118,11 +132,21 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn overscroll-contain"
+      onClick={() => setIsAuthModalOpen(false)}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] overscroll-contain"
+      >
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] shrink-0">
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-black/15 dark:border-white/15 shadow-sm">
               <Image
@@ -153,7 +177,7 @@ export default function AuthModal() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 border-b border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider">
+        <div className="grid grid-cols-2 border-b border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider shrink-0">
           <button
             onClick={() => setMode('signup')}
             className={`py-3 text-center transition-colors ${
@@ -173,7 +197,7 @@ export default function AuthModal() {
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 flex-1 min-h-0 overflow-y-auto overscroll-contain">
           
           {/* Account Type Selector (Shopper vs Vendor) */}
           <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">

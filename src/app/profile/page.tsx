@@ -17,6 +17,7 @@ import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
 import FaqHelpModal from '@/components/profile/FaqHelpModal';
 import RateAppModal from '@/components/profile/RateAppModal';
 import HelpImproveModal from '@/components/profile/HelpImproveModal';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -119,6 +120,9 @@ export default function ProfilePage() {
   const [ratingModalOrder, setRatingModalOrder] = useState<string | null>(null);
   const [starRating, setStarRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('World-class quality and authentic craftsmanship. Fits comfortably and delivered promptly.');
+
+  // Complete background scroll lock when rating modal is open
+  useBodyScrollLock(!!ratingModalOrder);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -957,8 +961,18 @@ export default function ProfilePage() {
       {/* 5-STAR RATING & REVIEW MODAL */}
       {/* ======================================================== */}
       {ratingModalOrder && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md surface-card p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-5 shadow-2xl animate-fadeIn">
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overscroll-contain animate-fadeIn"
+          onClick={() => setRatingModalOrder(null)}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="w-full max-w-md surface-card p-6 sm:p-8 rounded-3xl border border-[var(--border-subtle)] space-y-5 shadow-2xl animate-scaleUp max-h-[88dvh] overflow-y-auto overscroll-contain"
+          >
             <div className="text-center space-y-2">
               <div className="h-12 w-12 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center mx-auto">
                 <Star className="h-6 w-6 fill-current" />

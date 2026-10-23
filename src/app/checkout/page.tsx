@@ -15,6 +15,7 @@ import confetti from 'canvas-confetti';
 import MobileCheckoutView from '@/components/checkout/MobileCheckoutView';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import { estimateItemWeightKg, getMotorParksForState } from '@/lib/services/logistics';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -109,6 +110,22 @@ export default function CheckoutPage() {
   const [showPaystackSimModal, setShowPaystackSimModal] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<any>(null);
   const isTestMode = (process.env.NEXT_PUBLIC_PAYSTACK_KEY || '').startsWith('pk_test_') || !process.env.NEXT_PUBLIC_PAYSTACK_KEY;
+
+  // Complete background scroll lock when checkout modals are active
+  useBodyScrollLock(showPaymentModal || showPaystackSimModal);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    if (!showPaymentModal && !showPaystackSimModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowPaymentModal(false);
+        setShowPaystackSimModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPaymentModal, showPaystackSimModal]);
 
   // Group items by vendor
   const groupedItems = useMemo(() => {
@@ -1021,8 +1038,18 @@ export default function CheckoutPage() {
 
       {/* Interactive Escrow Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-6 shadow-2xl animate-scaleUp">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn overscroll-contain"
+          onClick={() => setShowPaymentModal(false)}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="w-full max-w-md p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-6 shadow-2xl animate-scaleUp max-h-[88dvh] overflow-y-auto overscroll-contain"
+          >
             
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
               <div className="flex items-center gap-2">
@@ -1131,8 +1158,18 @@ export default function CheckoutPage() {
 
       {/* PAYSTACK SANDBOX SIMULATOR MODAL */}
       {showPaystackSimModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
-          <div className="w-full max-w-sm surface-card rounded-3xl border border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-scaleUp text-center">
+        <div 
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn overscroll-contain"
+          onClick={() => setShowPaystackSimModal(false)}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            className="w-full max-w-sm surface-card rounded-3xl border border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-scaleUp text-center max-h-[90dvh] overflow-y-auto overscroll-contain"
+          >
             
             {/* Paystack Header */}
             <div className="space-y-1">

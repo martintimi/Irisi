@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { HelpCircle, X, Search, ChevronDown, MessageSquare, ShieldCheck, Sparkles, Phone, ExternalLink } from 'lucide-react';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 interface FaqHelpModalProps {
   isOpen: boolean;
@@ -83,13 +84,33 @@ export default function FaqHelpModal({ isOpen, onClose }: FaqHelpModalProps) {
     });
   }, [searchQuery, selectedCategory]);
 
+  // Complete background scroll lock when FAQ modal is active
+  useBodyScrollLock(isOpen);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn overscroll-contain"
+      onClick={onClose}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+    >
       <div
-        className="w-full max-w-2xl max-h-[85vh] surface-card border border-[var(--border-subtle)] rounded-3xl p-6 sm:p-8 flex flex-col shadow-2xl relative overflow-hidden"
+        className="w-full max-w-2xl max-h-[88dvh] surface-card border border-[var(--border-subtle)] rounded-3xl p-6 sm:p-8 flex flex-col shadow-2xl relative overflow-hidden overscroll-contain"
         onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button

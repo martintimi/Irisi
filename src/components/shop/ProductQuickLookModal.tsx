@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
 interface ProductQuickLookModalProps {
   product: Product | null;
@@ -37,6 +38,18 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
   const [quantity, setQuantity] = useState(1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [sizeGuideTab, setSizeGuideTab] = useState<'check_size' | 'size_guide'>('check_size');
+
+  // Lock background scroll when quick look modal is open
+  useBodyScrollLock(!!product);
+
+  useEffect(() => {
+    if (!product) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [product, onClose]);
 
   useEffect(() => {
     if (product) {
@@ -120,7 +133,12 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
     <>
       <AnimatePresence>
         {product && (
-          <div key={`quick-look-portal-${product.id}`} className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div 
+            key={`quick-look-portal-${product.id}`} 
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overscroll-contain"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             {/* Backdrop Fade */}
             <motion.div
               key="quick-look-backdrop"
@@ -135,12 +153,13 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
             {/* Modal Window with Scale & Fade Animation */}
             <motion.div
               key={`quick-look-window-${product.id}`}
-          initial={{ opacity: 0, scale: 0.94, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 15 }}
-          transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
-          className="relative w-full max-w-3xl rounded-3xl surface-card border border-[var(--border-subtle)] shadow-2xl overflow-hidden z-10 flex flex-col md:flex-row max-h-[90vh]"
-        >
+              initial={{ opacity: 0, scale: 0.94, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 15 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300, mass: 0.8 }}
+              onWheel={(e) => e.stopPropagation()}
+              className="relative w-full max-w-3xl rounded-3xl surface-card border border-[var(--border-subtle)] shadow-2xl overflow-hidden z-10 flex flex-col md:flex-row max-h-[90dvh] overscroll-contain"
+            >
           {/* Close Button */}
           <button
             onClick={onClose}
@@ -202,7 +221,10 @@ export default function ProductQuickLookModal({ product, onClose }: ProductQuick
           </div>
 
           {/* Right: Garment Editorial Dossier & Actions */}
-          <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto space-y-6">
+          <div 
+            onWheel={(e) => e.stopPropagation()}
+            className="w-full md:w-1/2 p-5 sm:p-8 flex flex-col justify-between overflow-y-auto space-y-6 overscroll-contain"
+          >
             <div className="space-y-4">
               {/* Atelier & Origin */}
               <div className="flex items-center justify-between gap-2">
