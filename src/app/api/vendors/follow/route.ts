@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getBaseUrl } from '@/lib/utils/url';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
-
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://npdaydpxzebxdmeevpvl.supabase.co';
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8');
-
-const adminClient = createClient(rawUrl, rawServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
 
 // Resilient memory cache of followers: vendorKey -> Set of shopperEmails
 // vendorKey is normalized vendorId or vendorSlug
@@ -22,6 +15,7 @@ followerRegistry.set('arike-brand', new Set(['leticialongatti78@gmail.com']));
 
 export async function POST(request: Request) {
   try {
+    const adminClient = createAdminClient();
     const body = await request.json();
     const { vendorSlug, vendorId, shopperEmail, action = 'toggle' } = body;
 
@@ -124,6 +118,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    const adminClient = createAdminClient();
     const { searchParams } = new URL(request.url);
     const vendorSlug = searchParams.get('vendorSlug') || searchParams.get('vendorId') || '';
     const shopperEmail = (searchParams.get('shopperEmail') || '').toLowerCase().trim();

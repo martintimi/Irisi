@@ -1227,16 +1227,13 @@ export default function ComingSoonPage() {
       {/* ── MODAL 1: FOUNDER UNLOCK PASSCODE ─────────────────────────────── */}
       {isUnlockModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md overscroll-contain animate-fadeIn"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-fadeIn touch-none"
           onClick={() => setIsUnlockModalOpen(false)}
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm bg-zinc-950 border border-white/20 rounded-2xl p-6 text-center text-white shadow-2xl max-h-[90dvh] overflow-y-auto overscroll-contain"
+            className="relative w-full max-w-sm bg-zinc-950 border border-white/20 rounded-2xl p-6 text-center text-white shadow-2xl max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <button
               onClick={() => setIsUnlockModalOpen(false)}
@@ -1261,7 +1258,7 @@ export default function ComingSoonPage() {
                 autoFocus
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Passcode (e.g. irisi2026)"
+                placeholder="Enter founder passcode"
                 className="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white text-center tracking-widest focus:outline-none focus:border-white"
               />
               {unlockStatus === 'error' && (
@@ -1289,16 +1286,13 @@ export default function ComingSoonPage() {
       {/* ── MODAL 2: VENDOR APPLICATION MODAL ────────────────────────────── */}
       {isVendorModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overscroll-contain animate-fadeIn"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn touch-none"
           onClick={() => setIsVendorModalOpen(false)}
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl max-h-[88dvh] overflow-y-auto overscroll-contain"
+            className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl max-h-[88dvh] overflow-y-auto overscroll-contain touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <button
               onClick={() => setIsVendorModalOpen(false)}
@@ -1561,20 +1555,17 @@ export default function ComingSoonPage() {
       {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
       {isMerchModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md overscroll-contain animate-fadeIn"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn touch-none"
           onClick={() => {
             setIsMerchModalOpen(false);
             setMerchStatus('idle');
             setMerchMessage('');
           }}
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            onWheel={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white max-h-[88dvh] overflow-y-auto overscroll-contain"
+            className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white max-h-[88dvh] overflow-y-auto overscroll-contain touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <button
               onClick={() => {

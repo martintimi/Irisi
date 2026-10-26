@@ -1,22 +1,16 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { sendCustomShopperEmail } from '@/lib/services/emailService';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
-
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://npdaydpxzebxdmeevpvl.supabase.co';
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8');
-
-const adminClient = createClient(rawUrl, rawServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
 
 import { SHOPPER_EMAIL_PRESETS } from '@/lib/data/shopperEmailPresets';
 export { SHOPPER_EMAIL_PRESETS };
 
 export async function GET(request: Request) {
   try {
+    const adminClient = createAdminClient();
     // Fetch unique shoppers from orders table
     const { data: dbOrders, error: ordersErr } = await adminClient
       .from('orders')
@@ -74,6 +68,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const adminClient = createAdminClient();
     const body = await request.json();
     const {
       type = 'single', // 'single' | 'broadcast'

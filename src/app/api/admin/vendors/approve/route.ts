@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import {
   sendVendorAccountApprovedNotification,
   sendVendorAccountRejectedNotification,
@@ -7,16 +7,6 @@ import {
   sendVendorAccountReinstatedNotification,
 } from '@/lib/services/vendorNotificationService';
 import { invalidateProductsCache } from '@/app/api/products/route';
-
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_URL = (!rawUrl || rawUrl.includes('bflddlhjlpdvceuypxkh'))
-  ? 'https://npdaydpxzebxdmeevpvl.supabase.co'
-  : rawUrl;
-
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_SERVICE_KEY = (!rawServiceKey || rawServiceKey.length < 20)
-  ? Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8')
-  : rawServiceKey;
 
 export async function POST(request: Request) {
   try {
@@ -27,9 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'vendorId and action are required' }, { status: 400 });
     }
 
-    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const adminClient = createAdminClient();
 
     // 1. Fetch current vendor using admin service role
     const { data: vendor, error: fetchErr } = await adminClient

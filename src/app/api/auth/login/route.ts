@@ -1,16 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
-
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_URL = (!rawUrl || rawUrl.includes('bflddlhjlpdvceuypxkh'))
-  ? 'https://npdaydpxzebxdmeevpvl.supabase.co'
-  : rawUrl;
-
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_SERVICE_KEY = (!rawServiceKey || rawServiceKey.length < 20)
-  ? Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8')
-  : rawServiceKey;
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: Request) {
   try {
@@ -24,9 +14,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createClient();
-    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const adminClient = createAdminClient();
 
     let resolvedEmail = normalizedEmail;
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import {
   sendVendorWeeklyWishesNotification,
   sendVendorInactiveCheckInNotification,
@@ -11,13 +11,6 @@ import {
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://npdaydpxzebxdmeevpvl.supabase.co';
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8');
-
-const adminClient = createClient(rawUrl, rawServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
 /**
  * Automated Cron Job for Vendor Communications
  * Can be scheduled via Vercel Cron, GitHub Actions, or cron-job.org
@@ -25,6 +18,7 @@ const adminClient = createClient(rawUrl, rawServiceKey, {
  */
 export async function GET(request: Request) {
   try {
+    const adminClient = createAdminClient();
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {

@@ -1,21 +1,13 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { sendLuxuryEmail } from '@/lib/services/vendorNotificationService';
 import { getBaseUrl } from '@/lib/utils/url';
 
 export const dynamic = 'force-dynamic';
 
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://npdaydpxzebxdmeevpvl.supabase.co';
-const rawServiceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8');
-
-const adminClient = createClient(rawUrl, rawServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
 export async function GET() {
   try {
+    const adminClient = createAdminClient();
     const { data: notifications, error } = await adminClient
       .from('notifications')
       .select('*')
@@ -86,6 +78,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const adminClient = createAdminClient();
     const body = await request.json();
     const { action, id, email, brandName, specialty } = body;
 

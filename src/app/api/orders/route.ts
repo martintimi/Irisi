@@ -2,18 +2,8 @@ import { sendOrderConfirmationEmail, sendDispatchNotificationEmail, sendOrderPac
 import { sendVendorNewOrderNotification, sendVendorSettlementNotification } from '@/lib/services/vendorNotificationService';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { computeVendorPackageMetrics, checkLocationServiceability, createShipbubbleShipment } from '@/lib/services/logistics';
-
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_URL = (!rawUrl || rawUrl.includes('bflddlhjlpdvceuypxkh'))
-  ? 'https://npdaydpxzebxdmeevpvl.supabase.co'
-  : rawUrl;
-
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_SERVICE_KEY = (!rawServiceKey || rawServiceKey.length < 20)
-  ? Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8')
-  : rawServiceKey;
 
 export async function GET(request: Request) {
   try {
@@ -191,9 +181,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const adminClient = createAdminClient();
     let supabase = adminClient;
     try {
       const client = await createClient();
@@ -505,9 +493,6 @@ export async function POST(request: Request) {
       }
 
       // 2. Fetch all registered vendors with adminClient to bypass RLS and guarantee email retrieval
-      const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false }
-      });
 
       const { data: allDbVendors, error: vendorFetchErr } = await adminClient
         .from('vendors')
@@ -714,9 +699,7 @@ export async function PATCH(request: Request) {
     const headerVendorId = request.headers.get('x-vendor-id');
     const targetVendorId = (vendorId || headerVendorId || '').toLowerCase().trim();
 
-    const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
+    const adminClient = createAdminClient();
     let supabase = adminClient;
     try {
       const client = await createClient();
@@ -958,9 +941,7 @@ export async function PATCH(request: Request) {
         // Vendor email: payment settlement released
         const vIdToNotify = targetVendorId || (allVendorIds.size === 1 ? Array.from(allVendorIds)[0] : '');
         if (vIdToNotify) {
-          const adminClient = createAdminClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-            auth: { autoRefreshToken: false, persistSession: false }
-          });
+          const adminClient = createAdminClient();
           const { data: vRecord } = await adminClient
             .from('vendors')
             .select('id, brand_name, designer_name, email, phone, bank_name, account_number')

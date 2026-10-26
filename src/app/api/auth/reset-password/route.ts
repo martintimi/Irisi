@@ -1,29 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerSupabase } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getSupabaseConfig } from '@/lib/supabase/config';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
-
-const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_URL = (!rawUrl || rawUrl.includes('bflddlhjlpdvceuypxkh'))
-  ? 'https://npdaydpxzebxdmeevpvl.supabase.co'
-  : rawUrl;
-
-const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-const SUPABASE_ANON_KEY = (!rawAnonKey || rawAnonKey.includes('I6AiJ9EP64cKcJhUt90eJQ'))
-  ? 'sb_publishable_17ggIm1HkeJY7CSpTA2XZA_H-2SHPRk'
-  : rawAnonKey;
-
-const rawServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_SERVICE_KEY = (!rawServiceKey || rawServiceKey.length < 20)
-  ? Buffer.from('c2Jfc2VjcmV0X0h5MGU3WUJoQzlndXE2bXZROURkZndfQXBkZGdtYm0=', 'base64').toString('utf-8')
-  : rawServiceKey;
-
-const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-const anonClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function getPhoneCandidates(rawPhone: string): string[] {
   const digits = rawPhone.replace(/\D/g, '');
@@ -53,6 +35,9 @@ function getPhoneCandidates(rawPhone: string): string[] {
 
 export async function POST(request: Request) {
   try {
+    const adminClient = createAdminClient();
+    const { url, anonKey } = getSupabaseConfig();
+    const anonClient = createClient(url, anonKey);
     const body = await request.json();
     const { identifier, token, newPassword } = body;
 
