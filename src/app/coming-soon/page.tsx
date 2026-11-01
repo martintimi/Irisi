@@ -1511,19 +1511,6 @@ export default function ComingSoonPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                      Lookbook Link (Drive, Web, or Dropbox) (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={vendorForm.lookbookUrl}
-                      onChange={(e) => setVendorForm({ ...vendorForm, lookbookUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-white"
-                    />
-                  </div>
-
                   {vendorMessage && (
                     <p className="text-xs text-rose-400 font-medium">{vendorMessage}</p>
                   )}
