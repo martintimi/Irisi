@@ -263,6 +263,61 @@ const CATEGORY_MAP: Record<string, CategoryConfig> = {
     title: 'DRESSES & GOWNS',
     subtitle: 'Silk boubous, two-piece sets & evening gowns',
     filterFn: (p: any) => matchesSpecificCategory(p, 'dresses')
+  },
+  perfume: {
+    title: 'PERFUMES & SCENTS',
+    subtitle: 'Designer colognes, Arabian Ouds & fragrance oils',
+    filterFn: (p: any) => matchesDepartment(p, 'perfume') || matchesCategoryFilter(p, 'perfume')
+  },
+  perfumes: {
+    title: 'PERFUMES & COLOGNES',
+    subtitle: 'Eau de Parfum, designer scents & body mists',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'perfumes')
+  },
+  'women-perfumes': {
+    title: 'PERFUMES & FRAGRANCES',
+    subtitle: 'Eau de Parfum, floral scents & body mists',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-perfumes')
+  },
+  oud: {
+    title: 'ARABIAN OUD & ATTARS',
+    subtitle: 'Arabian oud blends, musk & long-lasting perfume oils',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'oud')
+  },
+  'women-oud': {
+    title: 'ARABIAN OUD & OILS',
+    subtitle: 'Arabian oil blends, musk & scent oils',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'women-oud')
+  },
+  wigs: {
+    title: 'HAIR & WIGS',
+    subtitle: 'Bone straight bundles, curly wigs, frontals & braided units',
+    filterFn: (p: any) => matchesDepartment(p, 'wigs') || matchesCategoryFilter(p, 'wigs')
+  },
+  'bone-straight': {
+    title: 'BONE STRAIGHT & RAW HAIR',
+    subtitle: 'Vietnamese & Cambodian raw bone straight bundles & wigs',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'bone-straight')
+  },
+  'curly-wigs': {
+    title: 'CURLY & DEEP WAVE WIGS',
+    subtitle: 'Water wave, deep curls & bouncy curly units',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'curly-wigs')
+  },
+  'braided-wigs': {
+    title: 'BRAIDED WIGS',
+    subtitle: 'Knotless braids, cornrows & braided lace units',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'braided-wigs')
+  },
+  frontals: {
+    title: 'FRONTALS & CLOSURES',
+    subtitle: 'HD invisible lace frontals & closures',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'frontals')
+  },
+  'bob-wigs': {
+    title: 'BOB & PIXIE WIGS',
+    subtitle: 'Blunt cut bobs, fringed bobs & short pixie wigs',
+    filterFn: (p: any) => matchesSpecificCategory(p, 'bob-wigs')
   }
 };
 
@@ -271,6 +326,8 @@ const ALL_CATEGORY_LINKS = [
   { slug: 'hoodies', label: 'Hoodies & Sweatshirts' },
   { slug: 'tshirts', label: 'T-Shirts & Tops' },
   { slug: 'footwear', label: 'Footwear & Slides' },
+  { slug: 'perfumes', label: 'Perfumes & Scents' },
+  { slug: 'wigs', label: 'Hair & Wigs' },
   { slug: 'jeans', label: 'Jeans & Denim' },
   { slug: 'backpacks', label: 'Bags & Backpacks' },
   { slug: 'accessories', label: 'Accessories' },

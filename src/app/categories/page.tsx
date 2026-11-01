@@ -39,12 +39,12 @@ function CategoriesExplorerContent() {
   const [selectedDept, setSelectedDept] = useState<'all' | DepartmentKey>(() => {
     if (typeof window === 'undefined') return 'all';
     const urlDept = searchParams.get('dept') as DepartmentKey | null;
-    if (urlDept && ['clothing', 'native', 'footwear', 'bags', 'accessories'].includes(urlDept)) {
+    if (urlDept && ['clothing', 'native', 'footwear', 'bags', 'accessories', 'perfume', 'wigs'].includes(urlDept)) {
       return urlDept;
     }
     try {
       const storedDept = sessionStorage.getItem('irisi_category_dept') as DepartmentKey | null;
-      if (storedDept && ['clothing', 'native', 'footwear', 'bags', 'accessories'].includes(storedDept)) {
+      if (storedDept && ['clothing', 'native', 'footwear', 'bags', 'accessories', 'perfume', 'wigs'].includes(storedDept)) {
         return storedDept;
       }
     } catch {}
@@ -58,7 +58,7 @@ function CategoriesExplorerContent() {
       setActiveGender(urlParam);
     }
     const urlDept = searchParams.get('dept') as DepartmentKey | null;
-    if (urlDept && ['clothing', 'native', 'footwear', 'bags', 'accessories'].includes(urlDept)) {
+    if (urlDept && ['clothing', 'native', 'footwear', 'bags', 'accessories', 'perfume', 'wigs'].includes(urlDept)) {
       setSelectedDept(urlDept);
     } else if (searchParams.has('dept') && searchParams.get('dept') === 'all') {
       setSelectedDept('all');

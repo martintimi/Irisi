@@ -46,7 +46,7 @@ export interface BodyProfile {
   preferredFit?: 'slim' | 'regular' | 'oversized';
 }
 
-export type DepartmentCategory = 'clothing' | 'native' | 'footwear' | 'bags' | 'accessories';
+export type DepartmentCategory = 'clothing' | 'native' | 'footwear' | 'bags' | 'accessories' | 'perfume' | 'wigs';
 export type GarmentCategory = DepartmentCategory | 'tops' | 'bottoms' | 'outerwear';
 export type ShopCategory = GarmentCategory | 'all';
 export type GarmentOriginType = 'handmade_designer' | 'ready_made_boutique';
@@ -116,6 +116,8 @@ export type VendorSpecialty =
   | 'caps'
   | 'jewelry'
   | 'accessories'
+  | 'perfume'
+  | 'wigs'
   | 'multi_department';
 
 export interface Vendor {
@@ -190,6 +192,8 @@ export function getVendorSpecialty(vendorOrProfile: any): VendorSpecialty {
   }
   if (!spec) return 'multi_department';
   const s = String(spec).toLowerCase().trim();
+  if (s === 'perfume' || s.includes('perfume') || s.includes('fragrance') || s.includes('scent') || s.includes('oud') || s.includes('cologne') || s.includes('attar')) return 'perfume';
+  if (s === 'wigs' || s === 'wig' || s.includes('wig') || s.includes('hair') || s.includes('frontal') || s.includes('closure') || s.includes('weave') || s.includes('bundle')) return 'wigs';
   if (s === 'caps' || s.includes('cap') || s.includes('hat') || s.includes('headwear') || s.includes('beanie')) return 'caps';
   if (s === 'native_tailoring' || s.includes('native') || s.includes('agbada') || s.includes('kaftan') || s.includes('senator')) return 'native_tailoring';
   if (s === 'streetwear' || s.includes('street')) return 'streetwear';
@@ -210,6 +214,22 @@ export interface VendorSpecialtyInfo {
 
 export function getVendorSpecialtyInfo(specialty: VendorSpecialty, isBoutique: boolean): VendorSpecialtyInfo {
   switch (specialty) {
+    case 'perfume':
+      return {
+        label: 'Perfumes & Fragrances',
+        badge: 'Perfume & Fragrance House',
+        publishLabel: 'Add Scent Drop',
+        ordersLabel: 'Orders',
+        storeProfileLabel: 'Store Profile',
+      };
+    case 'wigs':
+      return {
+        label: 'Hair & Wigs',
+        badge: 'Hair & Wigs Studio',
+        publishLabel: 'Add Hair Drop',
+        ordersLabel: 'Orders',
+        storeProfileLabel: 'Store Profile',
+      };
     case 'caps':
       return {
         label: 'Caps, Hats & Headwear',
@@ -284,6 +304,8 @@ export interface ActiveOutfit {
   footwear?: Product;
   bags?: Product;
   accessories?: Product;
+  perfume?: Product;
+  wigs?: Product;
   tops?: Product;
   bottoms?: Product;
   outerwear?: Product;

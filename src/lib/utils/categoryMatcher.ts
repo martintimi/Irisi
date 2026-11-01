@@ -64,6 +64,20 @@ function getRawCategoryDepartment(category: string): string | null {
     return 'native';
   }
 
+  // Perfume & Fragrances
+  if (c === 'perfume' || c === 'perfumes' || c.includes('fragrance') || c.includes('scent') ||
+      c.includes('oud') || c.includes('cologne') || c.includes('attar') || c.includes('edp') ||
+      c.includes('edt') || c.includes('body mist')) {
+    return 'perfume';
+  }
+
+  // Hair & Wigs
+  if (c === 'wigs' || c === 'wig' || c.includes('hair') || c.includes('frontal') ||
+      c.includes('closure') || c.includes('weave') || c.includes('bundle') ||
+      c.includes('bone straight') || c.includes('braided wig')) {
+    return 'wigs';
+  }
+
   // Footwear
   if (c === 'footwear' || c.includes('sneaker') || c.includes('slides') || c.includes('palms') ||
       c.includes('clog') || c.includes('croc') || c.includes('loafer') || c.includes('heel') ||
@@ -118,6 +132,16 @@ function getRawCategorySubSlug(category: string): string | null {
   if (c.includes('ankara') || c.includes('lace')) return 'ankara';
   if (c.includes('abaya')) return 'abayas';
   if (c.includes('fila')) return 'fila';
+
+  if (c === 'perfume' || c === 'perfumes' || c.includes('cologne') || c.includes('fragrance') || c.includes('body mist')) return 'perfumes';
+  if (c.includes('oud') || c.includes('attar')) return 'oud';
+
+  if (c.includes('bone_straight') || c.includes('bone straight') || c.includes('silky')) return 'bone-straight';
+  if (c.includes('curly') || c.includes('wave') || c.includes('curl')) return 'curly-wigs';
+  if (c.includes('braid') || c.includes('braided')) return 'braided-wigs';
+  if (c.includes('frontal') || c.includes('closure')) return 'frontals';
+  if (c.includes('bob') || c.includes('pixie')) return 'bob-wigs';
+  if (c === 'wigs' || c === 'wig' || c.includes('hair') || c.includes('bundle') || c.includes('weave')) return 'wigs';
 
   if (c === 'footwear') return 'footwear'; // generic footwear
   if (c.includes('sneaker')) return 'sneakers';
@@ -208,7 +232,7 @@ export function matchesCategoryFilter(p: ProductLike, cat: string): boolean {
   if (targetCat === 'clothing' || targetCat === 'apparel') {
     if (isNative) return false;
     // Trust raw DB category department if available
-    if (rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'accessories' || rawDept === 'native') return false;
+    if (rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'accessories' || rawDept === 'native' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     if (rawDept === 'clothing') return true;
     // Explicit canonical DB values
     if (category === 'clothing' || category === 'tops' || category === 'bottoms' || category === 'outerwear') return true;
@@ -219,7 +243,7 @@ export function matchesCategoryFilter(p: ProductLike, cat: string): boolean {
 
   if (targetCat === 'tops') {
     if (isNative) return false;
-    if (rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'accessories') return false;
+    if (rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'accessories' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     if (category === 'tops') return true;
     if (category === 'bottoms' || rawDept === 'footwear' || rawDept === 'bags') return false;
 
@@ -229,7 +253,7 @@ export function matchesCategoryFilter(p: ProductLike, cat: string): boolean {
 
   if (targetCat === 'outerwear') {
     if (isNative) return false;
-    if (rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'accessories') return false;
+    if (rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'accessories' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     if (category === 'outerwear') return true;
 
     const outerwearRegex = /\b(hoodie|hoodies|sweatshirt|sweatshirts|jacket|jackets|bomber|bombers|coat|coats|blazer|blazers|suit|suits|tuxedo|windbreaker|fleece|pullover)\b/i;
@@ -237,7 +261,7 @@ export function matchesCategoryFilter(p: ProductLike, cat: string): boolean {
   }
 
   if (targetCat === 'bottoms') {
-    if (rawDept === 'accessories' || rawDept === 'footwear' || rawDept === 'bags') return false;
+    if (rawDept === 'accessories' || rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     if (category === 'bottoms') return true;
 
     const bottomsRegex = /\b(jean|jeans|denim|trouser|trousers|pant|pants|cargo|cargos|jogger|joggers|sweatpant|sweatpants|skirt|skirts|biker|trunks|boxers|underwear)\b/i;
@@ -249,14 +273,14 @@ export function matchesCategoryFilter(p: ProductLike, cat: string): boolean {
 
   if (targetCat === 'footwear') {
     if (rawDept === 'footwear') return true;
-    if (rawDept === 'bags' || rawDept === 'clothing') return false;
+    if (rawDept === 'bags' || rawDept === 'clothing' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     const footwearRegex = /\b(slide|slides|palm|palms|slipper|slippers|sneaker|sneakers|shoe|shoes|loafer|loafers|mule|mules|heel|heels|pump|pumps|clog|clogs|croc|crocs|foam|sandals?|trainers?)\b/i;
     return hasWordMatch(name, footwearRegex) || hasWordMatch(subCategory, footwearRegex) || hasWordMatch(cleanTagsString, footwearRegex);
   }
 
   if (targetCat === 'bags') {
     if (rawDept === 'bags') return true;
-    if (rawDept === 'clothing' || rawDept === 'footwear') return false;
+    if (rawDept === 'clothing' || rawDept === 'footwear' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     const bagsRegex = /\b(bag|bags|backpack|backpacks|crossbody|handbag|handbags|tote|totes|clutch|clutches|duffel|duffels|luggage|chest bag|chest rig)\b/i;
     return hasWordMatch(name, bagsRegex) || hasWordMatch(subCategory, bagsRegex) || hasWordMatch(cleanTagsString, bagsRegex);
   }
@@ -267,9 +291,23 @@ export function matchesCategoryFilter(p: ProductLike, cat: string): boolean {
       if (hasWordMatch(name, bagRegex) || hasWordMatch(subCategory, bagRegex)) return false;
       return true;
     }
-    if (rawDept === 'bags' || rawDept === 'footwear' || rawDept === 'clothing') return false;
+    if (rawDept === 'bags' || rawDept === 'footwear' || rawDept === 'clothing' || rawDept === 'perfume' || rawDept === 'wigs') return false;
     const accessoriesRegex = /\b(jewelry|chain|chains|necklace|necklaces|ring|rings|earring|earrings|bracelet|bracelets|watch|watches|sunglasses|glasses|eyewear|shades|cap|caps|hat|hats|beanie|beanies)\b/i;
     return hasWordMatch(name, accessoriesRegex) || hasWordMatch(subCategory, accessoriesRegex) || hasWordMatch(cleanTagsString, accessoriesRegex);
+  }
+
+  if (targetCat === 'perfume' || targetCat === 'fragrance' || targetCat === 'scents') {
+    if (rawDept === 'clothing' || rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'native' || rawDept === 'wigs') return false;
+    if (rawDept === 'perfume') return true;
+    const perfumeRegex = /\b(perfume|perfumes|fragrance|fragrances|cologne|colognes|oud|attar|eau de parfum|eau de toilette|edp|edt|scent|scents|body mist|perfume oil)\b/i;
+    return hasWordMatch(name, perfumeRegex) || hasWordMatch(subCategory, perfumeRegex) || hasWordMatch(cleanTagsString, perfumeRegex);
+  }
+
+  if (targetCat === 'wigs' || targetCat === 'wig' || targetCat === 'hair') {
+    if (rawDept === 'clothing' || rawDept === 'footwear' || rawDept === 'bags' || rawDept === 'native' || rawDept === 'perfume') return false;
+    if (rawDept === 'wigs') return true;
+    const wigRegex = /\b(wig|wigs|hair|frontal|frontals|closure|closures|weave|weaves|bundle|bundles|bone straight|human hair|braided wig|raw hair|pixie wig|bob wig)\b/i;
+    return hasWordMatch(name, wigRegex) || hasWordMatch(subCategory, wigRegex) || hasWordMatch(cleanTagsString, wigRegex);
   }
 
   return category === targetCat;
@@ -293,6 +331,7 @@ export function matchesSpecificCategory(p: ProductLike, specificCat: string): bo
 
   // Get the canonical sub-slug for the raw DB category
   const rawSubSlug = getRawCategorySubSlug(category);
+  const rawDept = getRawCategoryDepartment(category);
 
   // 1. BACKPACKS & TRAVEL BAGS
   if (sc === 'backpacks' || sc === 'men-backpacks' || sc === 'men_bags_backpacks') {
@@ -599,6 +638,63 @@ export function matchesSpecificCategory(p: ProductLike, specificCat: string): bo
   }
 
   // 35. GENERAL FOOTWEAR BUCKET (when slug is just 'footwear')
+  // 36. PERFUMES & COLOGNES
+  if (sc === 'perfumes' || sc === 'men-perfumes' || sc === 'women-perfumes' || sc === 'perfume') {
+    if (rawSubSlug === 'perfumes') return true;
+    if (rawDept === 'perfume') return true;
+    const pRegex = /\b(perfume|perfumes|cologne|colognes|eau de parfum|edp|edt|body mist|fragrance|fragrances)\b/i;
+    return hasWordMatch(name, pRegex) || hasWordMatch(subCategory, pRegex) || hasWordMatch(cleanTagsString, pRegex);
+  }
+
+  // 37. OUD & PERFUME OILS
+  if (sc === 'oud' || sc === 'men-oud' || sc === 'women-oud') {
+    if (rawSubSlug === 'oud') return true;
+    const oudRegex = /\b(oud|attar|perfume oil|oil blend|musk|incense)\b/i;
+    return hasWordMatch(name, oudRegex) || hasWordMatch(subCategory, oudRegex) || hasWordMatch(cleanTagsString, oudRegex);
+  }
+
+  // 38. BONE STRAIGHT & RAW VIRGIN HAIR
+  if (sc === 'bone-straight' || sc === 'women-bone-straight') {
+    if (rawSubSlug === 'bone-straight') return true;
+    const bsRegex = /\b(bone straight|silky straight|raw hair|vietnamese hair|cambodian hair)\b/i;
+    return hasWordMatch(name, bsRegex) || hasWordMatch(subCategory, bsRegex) || hasWordMatch(cleanTagsString, bsRegex);
+  }
+
+  // 39. CURLY & DEEP WAVE WIGS
+  if (sc === 'curly-wigs' || sc === 'women-curly-wigs') {
+    if (rawSubSlug === 'curly-wigs') return true;
+    const curlRegex = /\b(curly|deep wave|water wave|kinky curly|bouncy curl|jerry curl)\b/i;
+    return hasWordMatch(name, curlRegex) || hasWordMatch(subCategory, curlRegex) || hasWordMatch(cleanTagsString, curlRegex);
+  }
+
+  // 40. BRAIDED WIGS
+  if (sc === 'braided-wigs' || sc === 'women-braided-wigs') {
+    if (rawSubSlug === 'braided-wigs') return true;
+    const braidRegex = /\b(braided wig|braid wig|knotless braid|cornrow wig|micro braid)\b/i;
+    return hasWordMatch(name, braidRegex) || hasWordMatch(subCategory, braidRegex) || hasWordMatch(cleanTagsString, braidRegex);
+  }
+
+  // 41. FRONTALS & CLOSURES
+  if (sc === 'frontals' || sc === 'women-frontals') {
+    if (rawSubSlug === 'frontals') return true;
+    const frontRegex = /\b(frontal|frontals|closure|closures|hd lace|swiss lace|13x4|13x6|4x4|5x5)\b/i;
+    return hasWordMatch(name, frontRegex) || hasWordMatch(subCategory, frontRegex) || hasWordMatch(cleanTagsString, frontRegex);
+  }
+
+  // 42. BOB & PIXIE WIGS
+  if (sc === 'bob-wigs' || sc === 'women-bob-wigs') {
+    if (rawSubSlug === 'bob-wigs') return true;
+    const bobRegex = /\b(bob wig|pixie wig|blunt bob|fringe bob|short wig)\b/i;
+    return hasWordMatch(name, bobRegex) || hasWordMatch(subCategory, bobRegex) || hasWordMatch(cleanTagsString, bobRegex);
+  }
+
+  // 43. GENERAL WIGS BUCKET
+  if (sc === 'wigs' || sc === 'women-wigs') {
+    if (rawDept === 'wigs') return true;
+    const wigRegex = /\b(wig|wigs|bundle|bundles|weave|weaves|human hair)\b/i;
+    return hasWordMatch(name, wigRegex) || hasWordMatch(subCategory, wigRegex) || hasWordMatch(cleanTagsString, wigRegex);
+  }
+
   if (sc === 'footwear') {
     return getRawCategoryDepartment(category) === 'footwear' ||
       hasWordMatch(name, /\b(sneaker|sneakers|slide|slides|clog|clogs|shoe|shoes|trainer|trainers|loafer|loafers|heel|heels|slipper|slippers|sandals?|palm|palms)\b/i) ||
@@ -634,6 +730,14 @@ export function matchesDepartment(p: ProductLike, dept: string): boolean {
 
   if (targetDept === 'bags') {
     return matchesCategoryFilter(p, 'bags');
+  }
+
+  if (targetDept === 'perfume') {
+    return matchesCategoryFilter(p, 'perfume');
+  }
+
+  if (targetDept === 'wigs') {
+    return matchesCategoryFilter(p, 'wigs');
   }
 
   if (targetDept === 'accessories') {

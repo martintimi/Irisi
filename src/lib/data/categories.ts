@@ -1,4 +1,4 @@
-export type DepartmentKey = 'clothing' | 'native' | 'footwear' | 'bags' | 'accessories';
+export type DepartmentKey = 'clothing' | 'native' | 'footwear' | 'bags' | 'accessories' | 'perfume' | 'wigs';
 export type GenderKey = 'men' | 'women' | 'unisex';
 
 export interface CategoryItem {
@@ -26,6 +26,8 @@ export const DEPARTMENTS: DepartmentConfig[] = [
   { key: 'footwear', label: 'Shoes & Footwear', description: 'Slides, slippers, sneakers, clogs & dress shoes' },
   { key: 'bags', label: 'Bags', description: 'Crossbody bags, backpacks, handbags & clutches' },
   { key: 'accessories', label: 'Accessories & Jewelry', description: 'Watches, sunglasses, chains & traditional caps' },
+  { key: 'perfume', label: 'Perfumes & Scents', description: 'Designer perfumes, Arabian ouds, body mists & oil scents' },
+  { key: 'wigs', label: 'Hair & Wigs', description: 'Bone straight hair, curly wigs, frontals, closures & braided units' },
 ];
 
 export const INITIAL_CATEGORIES: CategoryItem[] = [
@@ -239,6 +241,27 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     subtitle: 'Baseball caps, trucker hats & beanies',
   },
 
+  // Perfumes & Scents (Men)
+  {
+    id: 'men-perfumes',
+    name: 'Perfumes & Colognes',
+    slug: 'perfumes',
+    gender: 'men',
+    department: 'perfume',
+    imageUrl: 'https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Designer colognes, Eau de Parfum & fresh scents',
+    isPopular: true,
+  },
+  {
+    id: 'men-oud',
+    name: 'Arabian Oud & Attars',
+    slug: 'oud',
+    gender: 'men',
+    department: 'perfume',
+    imageUrl: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Rich Arabian oud, musk & oil perfumes',
+  },
+
   // ──────────────────────────────────────────
   // 2. WOMEN'S CATEGORIES
   // ──────────────────────────────────────────
@@ -436,6 +459,76 @@ export const INITIAL_CATEGORIES: CategoryItem[] = [
     subtitle: 'Cat-eye frames, dark shades & sun wear',
   },
 
+  // Perfumes & Scents (Women)
+  {
+    id: 'women-perfumes',
+    name: 'Perfumes & Fragrances',
+    slug: 'women-perfumes',
+    gender: 'women',
+    department: 'perfume',
+    imageUrl: 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Eau de Parfum, floral scents & body mists',
+    isPopular: true,
+  },
+  {
+    id: 'women-oud',
+    name: 'Arabian Oud & Perfume Oils',
+    slug: 'women-oud',
+    gender: 'women',
+    department: 'perfume',
+    imageUrl: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Arabian oil blends, musk & long-lasting scents',
+  },
+
+  // Hair & Wigs (Women)
+  {
+    id: 'women-bone-straight',
+    name: 'Bone Straight & Raw Hair',
+    slug: 'bone-straight',
+    gender: 'women',
+    department: 'wigs',
+    imageUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Vietnamese & Cambodian bone straight bundles & wigs',
+    isPopular: true,
+  },
+  {
+    id: 'women-curly-wigs',
+    name: 'Curly & Deep Wave Wigs',
+    slug: 'curly-wigs',
+    gender: 'women',
+    department: 'wigs',
+    imageUrl: 'https://images.unsplash.com/photo-1562004760-aceed7bb0fe3?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Water wave, deep curls & bouncy curly units',
+    isPopular: true,
+  },
+  {
+    id: 'women-braided-wigs',
+    name: 'Braided Wigs',
+    slug: 'braided-wigs',
+    gender: 'women',
+    department: 'wigs',
+    imageUrl: 'https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Knotless braids, cornrows & braided lace wigs',
+  },
+  {
+    id: 'women-frontals',
+    name: 'Frontals & Closures',
+    slug: 'frontals',
+    gender: 'women',
+    department: 'wigs',
+    imageUrl: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'HD invisible lace frontals & closures',
+  },
+  {
+    id: 'women-bob-wigs',
+    name: 'Bob & Pixie Wigs',
+    slug: 'bob-wigs',
+    gender: 'women',
+    department: 'wigs',
+    imageUrl: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=800&q=80',
+    subtitle: 'Blunt cut bobs, fringed bobs & short pixie wigs',
+  },
+
 ];
 
 // Helper: Get categories for specific gender
@@ -453,6 +546,8 @@ export function getCategoriesGroupedByDepartment(gender: GenderKey = 'men'): Rec
     footwear: [],
     bags: [],
     accessories: [],
+    perfume: [],
+    wigs: [],
   };
 
   items.forEach((item) => {

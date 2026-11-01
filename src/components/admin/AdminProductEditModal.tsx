@@ -220,6 +220,18 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     );
   };
 
+  const isPerfumeCategory = (cat?: string, name?: string) => {
+    const c = String(cat || '').toLowerCase();
+    const n = String(name || '').toLowerCase();
+    return c === 'perfume' || c === 'perfumes' || c === 'oud' || c.includes('perfume') || c.includes('fragrance') || c.includes('scent') || c.includes('oud') || n.includes('perfume') || n.includes('fragrance') || n.includes('scent') || n.includes('oud');
+  };
+
+  const isWigCategory = (cat?: string, name?: string) => {
+    const c = String(cat || '').toLowerCase();
+    const n = String(name || '').toLowerCase();
+    return c === 'wigs' || c === 'bone-straight' || c === 'curly-wigs' || c === 'braided-wigs' || c === 'frontals' || c === 'bob-wigs' || c.includes('wig') || c.includes('hair') || n.includes('wig') || n.includes('hair') || n.includes('bone straight') || n.includes('frontal');
+  };
+
   const isAccessoryCategory = (cat?: string, name?: string) => {
     const c = String(cat || '').toLowerCase();
     const n = String(name || '').toLowerCase();
@@ -268,6 +280,19 @@ export default function AdminProductEditModal({ product, onClose, onSaved }: Pro
     // Smart default sizes based on product category & title
     const prodCat = product.category || product.subCategory || '';
     const prodName = product.name || '';
+    if (isPerfumeCategory(prodCat, prodName)) {
+      return [
+        { size: '50ml', color: 'Standard', stock_quantity: 10 },
+        { size: '100ml', color: 'Standard', stock_quantity: 10 },
+      ];
+    }
+    if (isWigCategory(prodCat, prodName)) {
+      return [
+        { size: '18"', color: 'Standard', stock_quantity: 5 },
+        { size: '22"', color: 'Standard', stock_quantity: 5 },
+        { size: '26"', color: 'Standard', stock_quantity: 5 },
+      ];
+    }
     if (isAccessoryCategory(prodCat, prodName)) {
       return [{ size: 'One Size', color: 'Standard', stock_quantity: 20 }];
     }

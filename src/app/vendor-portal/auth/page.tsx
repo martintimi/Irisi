@@ -146,6 +146,18 @@ function VendorAuthPageContent() {
           specialty: 'caps',
           vendorType: 'boutique_seller'
         }));
+      } else if (lower.includes('perfume') || lower.includes('fragrance') || lower.includes('scent') || lower.includes('oud')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'perfume',
+          vendorType: 'boutique_seller'
+        }));
+      } else if (lower.includes('wig') || lower.includes('hair') || lower.includes('frontal') || lower.includes('closure')) {
+        setRegForm((prev) => ({
+          ...prev,
+          specialty: 'wigs',
+          vendorType: 'boutique_seller'
+        }));
       } else if (lower.includes('access') || lower.includes('jewel')) {
         setRegForm((prev) => ({
           ...prev,
@@ -168,6 +180,22 @@ function VendorAuthPageContent() {
 
   const getSpecialtyLabels = (spec: VendorSpecialty) => {
     switch (spec) {
+      case 'perfume':
+        return {
+          brandLabel: 'Perfume / Fragrance Brand Name',
+          brandPlaceholder: 'e.g. Scents by Aisha, Maison Oud, Scent Room',
+          addressLabel: 'Store / Dispatch Hub Address',
+          addressPlaceholder: 'e.g. Shop 5, Admiralty Way, Lekki Phase 1',
+          btnText: 'Register Fragrance Brand & Receive Code',
+        };
+      case 'wigs':
+        return {
+          brandLabel: 'Hair Studio / Wig Brand Name',
+          brandPlaceholder: 'e.g. Royal Hair Studio, Belle Wigs, Raw Hair Co.',
+          addressLabel: 'Hair Studio / Store Address',
+          addressPlaceholder: 'e.g. 18 Allen Avenue, Ikeja',
+          btnText: 'Register Hair Studio & Receive Code',
+        };
       case 'accessories':
       case 'jewelry':
         return {
@@ -1334,6 +1362,8 @@ function VendorAuthPageContent() {
                 >
                   <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
                   <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
+                  <option value="perfume">Perfumes &amp; Fragrances (Arabian Ouds, EDP, Body Mists, Scent Oils)</option>
+                  <option value="wigs">Hair &amp; Wigs (Bone Straight, Curly Wigs, Frontals, Closures, Braided Wigs)</option>
                   <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
                   <option value="caps">Caps, Hats &amp; Headwear (Fila, Dad Caps, Beanies, Bucket Hats)</option>
                   <option value="accessories">Jewelry, Watches &amp; Luxury Accessories (Chains, Watches, Bags, Belts)</option>

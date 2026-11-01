@@ -31,6 +31,8 @@ const categoryMeta: Record<string, { label: string; desc: string }> = {
   footwear: { label: 'Footwear & Shoes', desc: 'Handcrafted leather shoes, slides, mules, and sneakers' },
   bottoms: { label: 'Trousers & Denim', desc: 'Baggy denim, cargo pants, and boutique trousers' },
   accessories: { label: 'Bags & Jewelry', desc: 'Luxury totes, Cuban links, rings, and leather bags' },
+  perfume: { label: 'Perfumes & Scents', desc: 'Arabian Ouds, Eau de Parfum, Designer Colognes & Fragrance Oils' },
+  wigs: { label: 'Hair & Wigs', desc: 'Raw Bone Straight, Deep Wave Curls, Frontals & Closures' },
 };
 
 export default function MobileShopView() {
@@ -200,6 +202,8 @@ export default function MobileShopView() {
     { id: 'chains', label: 'Chains & Jewelry', type: 'sub' },
     { id: 'watches', label: 'Watches', type: 'sub' },
     { id: 'caps', label: 'Caps & Hats', type: 'sub' },
+    { id: 'perfumes', label: 'Perfumes & Colognes', type: 'sub' },
+    { id: 'oud', label: 'Arabian Oud & Attars', type: 'sub' },
   ];
 
   const WOMEN_REALTIME_CATEGORIES: { id: string; label: string; type: 'cat' | 'sub' }[] = [
@@ -218,6 +222,13 @@ export default function MobileShopView() {
     { id: 'handbags', label: 'Handbags & Totes', type: 'sub' },
     { id: 'clutches', label: 'Clutches & Minis', type: 'sub' },
     { id: 'jewelry', label: 'Jewelry & Watches', type: 'sub' },
+    { id: 'women-perfumes', label: 'Perfumes & Fragrances', type: 'sub' },
+    { id: 'women-oud', label: 'Arabian Oud & Oils', type: 'sub' },
+    { id: 'bone-straight', label: 'Bone Straight Hair', type: 'sub' },
+    { id: 'curly-wigs', label: 'Curly & Wave Wigs', type: 'sub' },
+    { id: 'braided-wigs', label: 'Braided Wigs', type: 'sub' },
+    { id: 'frontals', label: 'Frontals & Closures', type: 'sub' },
+    { id: 'bob-wigs', label: 'Bob & Pixie Wigs', type: 'sub' },
   ];
 
   const categories = genderFilter === 'female' ? WOMEN_REALTIME_CATEGORIES : MEN_REALTIME_CATEGORIES;

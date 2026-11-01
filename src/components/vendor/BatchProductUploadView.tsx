@@ -51,9 +51,19 @@ interface BatchProductUploadViewProps {
   onSwitchToSingle?: () => void;
 }
 
-type DropMode = 'apparel' | 'footwear' | 'jewelry';
+type DropMode = 'apparel' | 'footwear' | 'jewelry' | 'perfume' | 'wigs';
 
 const ALL_CATEGORY_OPTIONS = [
+  // Perfumes & Scents
+  { id: 'men_perfumes', label: 'Perfumes & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'male' as GenderTarget, group: 'perfume' },
+  { id: 'women_perfumes', label: 'Women Perfumes & Scents (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_oud', label: 'Arabian Oud & Oils (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  // Hair & Wigs
+  { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
+  { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
+  { id: 'women_braided_wigs', label: 'Braided Wigs & Units (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
+  { id: 'women_frontals', label: 'Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
+  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'wigs' },
   // Clothing / Apparel
   { id: 'streetwear_hoodie', label: 'Hoodies & Sweatshirts (clothing)', generalCat: 'clothing' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
   { id: 'unisex_tees', label: 'Graphic Tees & Shirts (clothing)', generalCat: 'clothing' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
@@ -96,6 +106,8 @@ const POPULAR_SWATCHES = [
 
 const APPAREL_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 const FOOTWEAR_SIZES = ['39', '40', '41', '42', '43', '44', '45', '46'];
+const PERFUME_SIZES = ['30ml', '50ml', '100ml', '200ml', 'One Size'];
+const WIG_SIZES = ['10"', '12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"', 'One Size'];
 
 function cleanFileNameToTitle(fileName: string): string {
   const withoutExt = fileName.replace(/\.[^/.]+$/, '');
@@ -125,6 +137,8 @@ export default function BatchProductUploadView({
 
   // Initial Drop Mode based on store profile
   const initialDropMode: DropMode = 
+    vendorSpecialty === 'perfume' ? 'perfume' :
+    vendorSpecialty === 'wigs' ? 'wigs' :
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' ? 'jewelry' :
     vendorSpecialty === 'footwear' ? 'footwear' : 'apparel';
 
@@ -150,6 +164,8 @@ export default function BatchProductUploadView({
   // Filter Categories by Active Drop Mode
   const availableCategories = ALL_CATEGORY_OPTIONS.filter(c => {
     if (isBoutique && (c.group === 'native' || c.generalCat === 'native')) return false;
+    if (dropMode === 'perfume') return c.group === 'perfume' || c.generalCat === 'perfume';
+    if (dropMode === 'wigs') return c.group === 'wigs' || c.generalCat === 'wigs';
     if (dropMode === 'jewelry') return c.group === 'jewelry' || c.group === 'accessories' || c.group === 'bags';
     if (dropMode === 'footwear') return c.group === 'footwear';
     if (dropMode === 'apparel') return c.group === 'apparel' || (!isBoutique && c.group === 'native');
@@ -162,6 +178,8 @@ export default function BatchProductUploadView({
   const [bulkQuantity, setBulkQuantity] = useState('15');
   const [bulkCategory, setBulkCategory] = useState(availableCategories[0]?.id || 'unisex_slides_palms');
   const [bulkSizes, setBulkSizes] = useState<string[]>(
+    dropMode === 'perfume' ? ['50ml', '100ml'] :
+    dropMode === 'wigs' ? ['18"', '22"', '26"'] :
     dropMode === 'footwear' ? ['40', '41', '42', '43', '44'] :
     dropMode === 'jewelry' ? ['One Size'] : ['M', 'L', 'XL']
   );
@@ -173,7 +191,11 @@ export default function BatchProductUploadView({
     if (modeCats.length > 0) {
       setBulkCategory(modeCats[0].id);
     }
-    if (mode === 'footwear') {
+    if (mode === 'perfume') {
+      setBulkSizes(['50ml', '100ml']);
+    } else if (mode === 'wigs') {
+      setBulkSizes(['18"', '22"', '26"']);
+    } else if (mode === 'footwear') {
       setBulkSizes(['40', '41', '42', '43', '44']);
     } else if (mode === 'jewelry') {
       setBulkSizes(['One Size']);
@@ -199,7 +221,7 @@ export default function BatchProductUploadView({
       if (matchedCat.generalCat === 'accessories') {
         initSizeStock['One Size'] = defaultQty;
       } else {
-        const defaultSizes = bulkSizes.length > 0 ? [...bulkSizes] : (dropMode === 'footwear' ? ['40', '41', '42', '43', '44'] : ['M', 'L', 'XL']);
+        const defaultSizes = bulkSizes.length > 0 ? [...bulkSizes] : (dropMode === 'perfume' ? ['50ml', '100ml'] : dropMode === 'wigs' ? ['18"', '22"', '26"'] : dropMode === 'footwear' ? ['40', '41', '42', '43', '44'] : ['M', 'L', 'XL']);
         defaultSizes.forEach(sz => {
           initSizeStock[sz] = defaultQty;
         });
@@ -744,6 +766,32 @@ export default function BatchProductUploadView({
             <Sparkles className="h-3.5 w-3.5" />
             <span>Caps, Bags &amp; Accessories</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => handleSwitchDropMode('perfume')}
+            className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
+              dropMode === 'perfume'
+                ? 'bg-[var(--gold-accent)] text-black shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Perfumes &amp; Scents</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSwitchDropMode('wigs')}
+            className={`px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shrink-0 text-xs ${
+              dropMode === 'wigs'
+                ? 'bg-[var(--gold-accent)] text-black shadow-md'
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5" />
+            <span>Hair &amp; Wigs</span>
+          </button>
         </div>
       )}
 
@@ -884,10 +932,10 @@ export default function BatchProductUploadView({
                 {dropMode !== 'jewelry' && (
                   <div>
                     <label className="text-[10px] text-[var(--text-secondary)] uppercase font-bold block mb-1">
-                      {dropMode === 'footwear' ? 'EU Shoe Sizing (Tap to Toggle)' : 'Garment Sizes (Tap to Toggle)'}
+                      {dropMode === 'footwear' ? 'EU Shoe Sizing (Tap to Toggle)' : dropMode === 'perfume' ? 'Bottle Sizes (Tap to Toggle)' : dropMode === 'wigs' ? 'Hair Lengths (Tap to Toggle)' : 'Garment Sizes (Tap to Toggle)'}
                     </label>
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {(dropMode === 'footwear' ? FOOTWEAR_SIZES : APPAREL_SIZES).map(sz => {
+                      {(dropMode === 'footwear' ? FOOTWEAR_SIZES : dropMode === 'perfume' ? PERFUME_SIZES : dropMode === 'wigs' ? WIG_SIZES : APPAREL_SIZES).map(sz => {
                         const isSelected = bulkSizes.includes(sz);
                         return (
                           <button
@@ -942,7 +990,7 @@ export default function BatchProductUploadView({
             <div className="space-y-3">
               {items.map((item, index) => {
                 const totalItemStock = calculateTotalStock(item);
-                const sizeList = item.category === 'footwear' ? FOOTWEAR_SIZES : APPAREL_SIZES;
+                const sizeList = item.category === 'footwear' ? FOOTWEAR_SIZES : item.category === 'perfume' ? PERFUME_SIZES : item.category === 'wigs' ? WIG_SIZES : APPAREL_SIZES;
 
                 return (
                   <div
@@ -1186,7 +1234,7 @@ export default function BatchProductUploadView({
                     <div className="p-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-2">
                       <div className="flex items-center justify-between text-xs font-mono-luxury">
                         <span className="text-[10px] text-[var(--text-secondary)] uppercase font-bold">
-                          {item.category === 'accessories' ? 'Stock Units' : item.category === 'footwear' ? 'EU Sizes (Tap to toggle)' : 'Sizes (Tap to toggle)'}
+                          {item.category === 'accessories' ? 'Stock Units' : item.category === 'footwear' ? 'EU Sizes (Tap to toggle)' : item.category === 'perfume' ? 'Bottle Sizes (Tap to toggle)' : item.category === 'wigs' ? 'Lengths (Tap to toggle)' : 'Sizes (Tap to toggle)'}
                         </span>
                         <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                           {totalItemStock} in Stock

@@ -95,8 +95,67 @@ Return ONLY valid JSON matching this schema:
     // Helper regex matcher for whole words
     const hasWord = (word: string) => new RegExp(`\\b${word}\\b`, 'i').test(lower);
 
-    // 1. JEWELRY / CHAINS / NECKLACES / PENDANTS / RINGS / WATCHES / BANGLES / BRACELETS
+    // PERFUMES & FRAGRANCES
     if (
+      lower.includes('perfume') ||
+      lower.includes('fragrance') ||
+      lower.includes('oud') ||
+      lower.includes('cologne') ||
+      lower.includes('attar') ||
+      lower.includes('scent') ||
+      lower.includes('body mist') ||
+      lower.includes('eau de parfum') ||
+      lower.includes('edp') ||
+      cat.includes('perfume') ||
+      cat.includes('oud')
+    ) {
+      const isOud = lower.includes('oud') || lower.includes('attar') || lower.includes('oil');
+      if (isOud) {
+        description = `Rich oriental Arabian fragrance curated by ${brand}, crafted with notes of aged Cambodian agarwood, warm amber, and velvety musk. Delivers remarkable projection and long-lasting sillage that lasts all day.\n\n• Scent Profile: Cambodian Oud, Warm Amber & Spiced Musk\n• Longevity: 24+ Hours (Oil-Rich Formulation)`;
+        tags = ['ArabianOud', 'PerfumeOil', 'LongLastingScent', 'OudPerfume', 'LagosFragrance'];
+        suggestedPrice = 35000;
+      } else {
+        description = `Signature Eau de Parfum curated by ${brand} blending crisp citrus top notes with warm woody amber and subtle florals. Engineered for daily elegance and magnetic evening appeal.\n\n• Notes: Bergamot, Pink Pepper, Amberwood & Cedar\n• Concentration: Eau de Parfum (EDP) with 12-16 hour wear`;
+        tags = ['Perfume', 'EauDeParfum', 'Fragrance', 'SignatureScent', 'LagosScents'];
+        suggestedPrice = 30000;
+      }
+    }
+    // HAIR & WIGS
+    else if (
+      lower.includes('wig') ||
+      lower.includes('hair') ||
+      lower.includes('frontal') ||
+      lower.includes('closure') ||
+      lower.includes('bone straight') ||
+      lower.includes('curly wig') ||
+      lower.includes('braided wig') ||
+      cat.includes('wig') ||
+      cat.includes('hair')
+    ) {
+      const isBoneStraight = lower.includes('bone straight') || lower.includes('straight');
+      const isBraided = lower.includes('braid') || lower.includes('braided');
+      const isCurly = lower.includes('curly') || lower.includes('wave') || lower.includes('curl');
+
+      if (isBraided) {
+        description = `Neatly hand-crafted braided lace wig styled by ${brand} featuring natural baby hairs, lightweight breathable cap, and durable hand-tied synthetic braiding for effortless glam without salon hours.\n\n• Cap Construction: Full HD Lace / Frontal Base\n• Care: Hang on wig stand when not in use. Wash with warm water & mild shampoo.`;
+        tags = ['BraidedWig', 'KnotlessWig', 'LaceWig', 'ProtectiveStyle', 'LagosHair'];
+        suggestedPrice = 45000;
+      } else if (isCurly) {
+        description = `Lustrous raw human hair curly wig curated by ${brand} with full 200% density, pre-plucked hairline, and soft bouncy curls that hold their spring even in humid weather.\n\n• Hair Grade: 100% Raw Virgin Human Hair & Invisible HD Lace\n• Care: Detangle with wide-tooth comb. Define curls with leave-in conditioner and mousse.`;
+        tags = ['CurlyWig', 'DeepWave', 'HumanHairWig', 'HDLaceWig', 'LagosHairVendor'];
+        suggestedPrice = 75000;
+      } else if (isBoneStraight) {
+        description = `Authentic single-donor Vietnamese bone straight hair unit styled by ${brand}. Features natural silky sheen, tangle-free alignment from root to tip, and takes heat effortlessly.\n\n• Hair Grade: 100% Raw Vietnamese Bone Straight Human Hair\n• Care: Wash with sulfate-free shampoo. Apply lightweight argan serum and heat protectant.`;
+        tags = ['BoneStraight', 'VietnameseHair', 'RawHair', 'HumanHair', 'LagosWigVendor'];
+        suggestedPrice = 90000;
+      } else {
+        description = `Premium human hair wig unit crafted by ${brand} with natural pre-plucked hairline, transparent HD lace, and healthy full-body movement.\n\n• Material: 100% Virgin Human Hair & Swiss HD Lace\n• Care: Store on a wig stand. Wash gently with lukewarm water and moisture-rich conditioner.`;
+        tags = ['HumanHairWig', 'FrontalWig', 'WigVendor', 'VirginHair', 'LagosHair'];
+        suggestedPrice = 65000;
+      }
+    }
+    // 1. JEWELRY / CHAINS / NECKLACES / PENDANTS / RINGS / WATCHES / BANGLES / BRACELETS
+    else if (
       lower.includes('chain') ||
       lower.includes('necklace') ||
       lower.includes('neckless') ||

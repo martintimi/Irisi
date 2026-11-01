@@ -2842,7 +2842,15 @@ export default function SuperAdminPage() {
                                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-[#e6c367]/15 text-[#e6c367] border border-[#e6c367]/30 flex items-center gap-1">
                                     <span>✂️</span> Bespoke Native Tailoring Atelier
                                   </span>
-                                ) : vendor.specialty === 'footwear' ? (
+                                ) : vendor.specialty === 'perfume' ? (
+                                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 flex items-center gap-1">
+                                     <span>✨</span> Perfumes &amp; Fragrances
+                                   </span>
+                                 ) : vendor.specialty === 'wigs' ? (
+                                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                                     <span>💇‍♀️</span> Hair &amp; Wigs Studio
+                                   </span>
+                                 ) : vendor.specialty === 'footwear' ? (
                                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
                                     <span>👞</span> Footwear & Slides Studio
                                   </span>

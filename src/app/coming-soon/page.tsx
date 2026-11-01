@@ -1341,6 +1341,8 @@ export default function ComingSoonPage() {
                     >
                       <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
                       <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
+                      <option value="perfume">Perfumes &amp; Fragrances (Arabian Ouds, EDP, Body Mists, Scent Oils)</option>
+                      <option value="wigs">Hair &amp; Wigs (Bone Straight, Curly Wigs, Frontals, Closures, Braided Wigs)</option>
                       <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
                       <option value="caps">Caps, Hats &amp; Headwear (Fila, Dad Caps, Beanies, Bucket Hats)</option>
                       <option value="accessories">Jewelry, Watches &amp; Luxury Accessories (Chains, Watches, Bags, Belts)</option>

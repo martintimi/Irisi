@@ -50,6 +50,19 @@ export const ACCESSORY_CATEGORIES = [
   { id: 'caps', label: 'Caps, Hats & Beanies' },
 ];
 
+export const PERFUME_CATEGORIES = [
+  { id: 'perfumes', label: 'Perfumes & Colognes' },
+  { id: 'oud', label: 'Arabian Oud & Fragrance Oils' },
+];
+
+export const WIGS_CATEGORIES = [
+  { id: 'bone-straight', label: 'Bone Straight & Raw Hair' },
+  { id: 'curly-wigs', label: 'Curly & Deep Wave Wigs' },
+  { id: 'braided-wigs', label: 'Braided Wigs & Units' },
+  { id: 'frontals', label: 'Frontals & Closures' },
+  { id: 'bob-wigs', label: 'Bob & Pixie Wigs' },
+];
+
 export const NATIVE_CATEGORIES = [
   { id: 'senator', label: 'Senator & Kaftan Sets' },
   { id: 'agbada', label: 'Grand Agbada 3-Piece' },
@@ -62,6 +75,18 @@ export const NATIVE_CATEGORIES = [
 export function normalizeCategorySlug(rawCat?: string, rawSubcat?: string): string {
   const c = String(rawSubcat || rawCat || '').toLowerCase().trim();
   if (!c) return 'hoodies';
+
+  // Perfumes & Scents
+  if (c.includes('perfume') || c.includes('fragrance') || c.includes('cologne')) return 'perfumes';
+  if (c.includes('oud') || c.includes('attar')) return 'oud';
+
+  // Hair & Wigs
+  if (c.includes('bone_straight') || c.includes('bone straight')) return 'bone-straight';
+  if (c.includes('curly') || c.includes('wave')) return 'curly-wigs';
+  if (c.includes('braid')) return 'braided-wigs';
+  if (c.includes('frontal') || c.includes('closure')) return 'frontals';
+  if (c.includes('bob') || c.includes('pixie')) return 'bob-wigs';
+  if (c.includes('wig') || c.includes('hair') || c.includes('bundle')) return 'bone-straight';
 
   // Footwear
   if (c.includes('slide') || c.includes('palm') || c.includes('slipper')) return 'slides';
@@ -116,6 +141,8 @@ export function getDepartmentForSlug(slug: string): string {
   if (['backpacks', 'crossbody', 'handbags', 'clutches'].includes(slug)) return 'bags';
   if (['chains', 'watches', 'sunglasses', 'caps'].includes(slug)) return 'accessories';
   if (['senator', 'agbada', 'jalabiya', 'boubou', 'ankara', 'fila'].includes(slug)) return 'native';
+  if (['perfumes', 'oud', 'perfume'].includes(slug)) return 'perfume';
+  if (['wigs', 'bone-straight', 'curly-wigs', 'braided-wigs', 'frontals', 'bob-wigs', 'wig'].includes(slug)) return 'wigs';
   return 'clothing';
 }
 
@@ -1163,6 +1190,17 @@ try {
                           ]);
                         } else if ((newDept === 'accessories' || newDept === 'bags') && !variants.some(v => v.size === 'One Size')) {
                           setVariants([{ size: 'One Size', color: 'Standard', stock_quantity: 20 }]);
+                        } else if (newDept === 'perfume' && !variants.some(v => ['30ml', '50ml', '100ml', '200ml'].includes(v.size))) {
+                          setVariants([
+                            { size: '50ml', color: 'Standard', stock_quantity: 10 },
+                            { size: '100ml', color: 'Standard', stock_quantity: 10 },
+                          ]);
+                        } else if (newDept === 'wigs' && !variants.some(v => ['10"', '12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"'].includes(v.size))) {
+                          setVariants([
+                            { size: '18"', color: 'Standard', stock_quantity: 5 },
+                            { size: '22"', color: 'Standard', stock_quantity: 5 },
+                            { size: '26"', color: 'Standard', stock_quantity: 5 },
+                          ]);
                         } else if (newDept === 'clothing' && !variants.some(v => ['S', 'M', 'L', 'XL', 'XXL'].includes(v.size))) {
                           setVariants([
                             { size: 'S', color: 'Standard', stock_quantity: 10 },
@@ -1186,6 +1224,16 @@ try {
                       </optgroup>
                       <optgroup label="Bags & Luggage">
                         {BAGS_CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Perfumes & Scents">
+                        {PERFUME_CATEGORIES.map((c) => (
+                          <option key={c.id} value={c.id}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Hair & Wigs">
+                        {WIGS_CATEGORIES.map((c) => (
                           <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
                       </optgroup>
