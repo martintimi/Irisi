@@ -181,6 +181,27 @@ const allCategories: CategoryCardItem[] = [
     image: '/images/uploaded/sunglassesandeyewear.jpeg'
   },
 
+  {
+    id: 'men-perfumes',
+    slug: 'perfumes',
+    name: 'Perfumes & Colognes',
+    gender: 'men',
+    department: 'Perfumes & Fragrances',
+    badge: 'Designer Scent',
+    desc: 'Designer colognes, Eau de Parfum & long-lasting men\'s scents',
+    image: '/images/categories/men_perfumes.jpg'
+  },
+  {
+    id: 'men-oud',
+    slug: 'oud',
+    name: 'Arabian Oud & Attars',
+    gender: 'men',
+    department: 'Perfumes & Fragrances',
+    badge: 'Arabian Oud',
+    desc: 'Rich Arabian oud, musk & long-lasting perfume oils',
+    image: '/images/categories/men_oud.jpg'
+  },
+
   // ─── WOMEN'S CATEGORIES ─────────────────────────────────────────────────
   {
     id: 'women-dresses',
@@ -331,7 +352,77 @@ const allCategories: CategoryCardItem[] = [
     badge: 'Handcrafted',
     desc: 'Tailored lace styles, luxury Ankara cuts & event couture',
     image: '/images/editorial/nigerian_female_model.jpg'
-  }
+  },
+  {
+    id: 'women-perfumes',
+    slug: 'women-perfumes',
+    name: 'Perfumes & Fragrances',
+    gender: 'women',
+    department: 'Perfumes & Fragrances',
+    badge: 'Signature Scent',
+    desc: 'Eau de Parfum, floral notes & luxury body mists',
+    image: '/images/categories/women_perfumes.jpg'
+  },
+  {
+    id: 'women-oud',
+    slug: 'women-oud',
+    name: 'Arabian Oud & Perfume Oils',
+    gender: 'women',
+    department: 'Perfumes & Fragrances',
+    badge: 'Arabian Oud',
+    desc: 'Arabian oil blends, pure musk & concentrated scent oils',
+    image: '/images/categories/women_oud.jpg'
+  },
+  {
+    id: 'women-bone-straight',
+    slug: 'bone-straight',
+    name: 'Bone Straight & Raw Hair',
+    gender: 'women',
+    department: 'Hair & Wigs',
+    badge: 'Virgin Hair',
+    desc: 'Vietnamese & Cambodian raw bone straight bundles & wigs',
+    image: '/images/categories/bone_straight.jpg'
+  },
+  {
+    id: 'women-curly-wigs',
+    slug: 'curly-wigs',
+    name: 'Curly & Deep Wave Wigs',
+    gender: 'women',
+    department: 'Hair & Wigs',
+    badge: 'Deep Wave',
+    desc: 'Water wave, deep curls & bouncy 200% density curly units',
+    image: '/images/categories/curly_wigs.jpg'
+  },
+  {
+    id: 'women-braided-wigs',
+    slug: 'braided-wigs',
+    name: 'Braided Wigs',
+    gender: 'women',
+    department: 'Hair & Wigs',
+    badge: 'Protective Style',
+    desc: 'Knotless braids, cornrows & hand-tied braided lace wigs',
+    image: '/images/categories/braided_wigs.jpg'
+  },
+  {
+    id: 'women-frontals',
+    slug: 'frontals',
+    name: 'Frontals & Closures',
+    gender: 'women',
+    department: 'Hair & Wigs',
+    badge: 'HD Lace',
+    desc: 'Invisible HD lace frontals, closures & styling bundles',
+    image: '/images/categories/frontals_closures.jpg'
+  },
+  {
+    id: 'women-bob-wigs',
+    slug: 'bob-wigs',
+    name: 'Bob & Pixie Wigs',
+    gender: 'women',
+    department: 'Hair & Wigs',
+    badge: 'Short Glam',
+    desc: 'Blunt cut bobs, fringed bobs & sleek short pixie wigs',
+    image: '/images/categories/bob_wigs.jpg'
+  },
 ];
 
 export default function CategoryIndexPage() {
