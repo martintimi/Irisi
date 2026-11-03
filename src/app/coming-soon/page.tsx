@@ -291,7 +291,7 @@ export default function ComingSoonPage() {
     state: 'Lagos',
     city: '',
     lookbookUrl: '',
-    stockModel: 'in_stock',
+    stockModel: '',
     activePostUrl: '',
     workshopAddress: '',
     sampleMedia: [] as string[],
@@ -686,6 +686,12 @@ export default function ComingSoonPage() {
     e.preventDefault();
     if (!vendorForm.brandName || !vendorForm.founderPhone || !vendorForm.founderEmail) {
       setVendorMessage('Please provide brand name, phone, and email.');
+      setVendorStatus('error');
+      return;
+    }
+
+    if (!vendorForm.stockModel) {
+      setVendorMessage('Please select how you stock or make your items.');
       setVendorStatus('error');
       return;
     }
@@ -1325,14 +1331,14 @@ export default function ComingSoonPage() {
       {/* ── MODAL 2: VENDOR APPLICATION MODAL ────────────────────────────── */}
       {isVendorModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn touch-none"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md animate-fadeIn"
           onClick={() => setIsVendorModalOpen(false)}
         >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl max-h-[88dvh] overflow-y-auto overscroll-contain touch-pan-y"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          <div className="min-h-full flex items-center justify-center p-3 sm:p-6 py-10 sm:py-16 pointer-events-none">
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl my-auto pointer-events-auto"
+            >
             <button
               onClick={() => setIsVendorModalOpen(false)}
               className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
@@ -1375,11 +1381,19 @@ export default function ComingSoonPage() {
                     </label>
                     <select
                       value={vendorForm.specialty}
-                      onChange={(e) => setVendorForm({ ...vendorForm, specialty: e.target.value })}
+                      onChange={(e) => {
+                        const newSpecialty = e.target.value;
+                        const isNative = newSpecialty === 'native_tailoring';
+                        setVendorForm((prev) => ({
+                          ...prev,
+                          specialty: newSpecialty,
+                          stockModel: (!isNative && prev.stockModel === 'pre_order') ? '' : prev.stockModel,
+                        }));
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
                     >
                       <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
-                      <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
+                      <option value="native_tailoring">Bespoke Native Tailor &amp; Fashion Designer (Agbada, Kaftans, Senator — Made to Measure)</option>
                       <option value="perfume">Perfumes &amp; Fragrances (Arabian Ouds, EDP, Body Mists, Scent Oils)</option>
                       <option value="wigs">Hair &amp; Wigs (Bone Straight, Curly Wigs, Frontals, Closures, Braided Wigs)</option>
                       <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
@@ -1553,61 +1567,107 @@ export default function ComingSoonPage() {
                   
                   {/* Stocking & Production Model */}
                   <div className="space-y-2 pt-1">
-                    <label className="text-[10px] font-mono uppercase text-zinc-400 block">
-                      How Do You Stock Or Make Your Items? *
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setVendorForm({ ...vendorForm, stockModel: 'in_stock' })}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          vendorForm.stockModel === 'in_stock'
-                            ? 'bg-[#B89035]/15 border-[#E6C367] text-white shadow-sm'
-                            : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="text-xs font-bold flex items-center gap-1.5 text-[#E6C367]">
-                          <span>📦</span> Stock on Ground
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
-                          I have physical pieces ready in my shop/workshop to pack &amp; dispatch.
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setVendorForm({ ...vendorForm, stockModel: 'pre_order' })}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          vendorForm.stockModel === 'pre_order'
-                            ? 'bg-[#B89035]/15 border-[#E6C367] text-white shadow-sm'
-                            : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="text-xs font-bold flex items-center gap-1.5 text-amber-300">
-                          <span>✂️</span> Made to Order
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
-                          I produce or sew after receiving the customer's order &amp; measurements.
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setVendorForm({ ...vendorForm, stockModel: 'sourcing' })}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          vendorForm.stockModel === 'sourcing'
-                            ? 'bg-[#B89035]/15 border-[#E6C367] text-white shadow-sm'
-                            : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
-                        }`}
-                      >
-                        <div className="text-xs font-bold flex items-center gap-1.5 text-pink-300">
-                          <span>🤝</span> Sourcing / Middleman
-                        </div>
-                        <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
-                          I source from market/suppliers when an order is placed.
-                        </p>
-                      </button>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                        How Do You Stock Or Sell Your Items? *
+                      </label>
+                      {!vendorForm.stockModel && (
+                        <span className="text-[10px] text-amber-400/90 font-mono">Select 1 option</span>
+                      )}
                     </div>
+
+                    {vendorForm.specialty === 'native_tailoring' ? (
+                      /* Bespoke Native Tailors & Fashion Designers see Made to Order + Stock on Ground + Sourcing */
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'pre_order' })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'pre_order'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-amber-300">
+                            <span>✂️</span> Made to Order
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I produce or sew each piece after receiving the customer's order &amp; measurements.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'in_stock' })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'in_stock'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-[#E6C367]">
+                            <span>📦</span> Stock on Ground
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I have ready-made native outfits sewn and ready in my atelier to pack &amp; dispatch.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'sourcing' })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'sourcing'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-pink-300">
+                            <span>🤝</span> Sourcing / Middleman
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I source fabrics/materials or outsource from tailoring suppliers when ordered.
+                          </p>
+                        </button>
+                      </div>
+                    ) : (
+                      /* Footwear, Perfumes, Hair/Wigs, Bags, Jewelry, Boutique Streetwear only see Stock on Ground or Sourcing */
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'in_stock' })}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'in_stock'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-[#E6C367]">
+                            <span>📦</span> Stock on Ground
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I have physical items ready in my shop or studio to pack &amp; dispatch immediately.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'sourcing' })}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'sourcing'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-pink-300">
+                            <span>🤝</span> Sourcing / Middleman
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I source the item from the market or suppliers after receiving the order.
+                          </p>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Proof of Products & Active Video Link */}
@@ -1729,24 +1789,25 @@ export default function ComingSoonPage() {
               </div>
             )}
           </div>
+          </div>
         </div>
       )}
 
       {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
       {isMerchModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn touch-none"
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md animate-fadeIn"
           onClick={() => {
             setIsMerchModalOpen(false);
             setMerchStatus('idle');
             setMerchMessage('');
           }}
         >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white max-h-[88dvh] overflow-y-auto overscroll-contain touch-pan-y"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
+          <div className="min-h-full flex items-center justify-center p-3 sm:p-6 py-10 sm:py-16 pointer-events-none">
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white my-auto pointer-events-auto"
+            >
             <button
               onClick={() => {
                 setIsMerchModalOpen(false);
@@ -1889,6 +1950,7 @@ export default function ComingSoonPage() {
                 </form>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}

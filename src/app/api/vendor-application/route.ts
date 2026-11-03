@@ -31,6 +31,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!stockModel) {
+      return NextResponse.json(
+        { error: 'Please specify how you stock or sell your items.' },
+        { status: 400 }
+      );
+    }
+
     const cleanedSocialLinks: Array<{ platform: string; handle: string }> = Array.isArray(socialLinks)
       ? socialLinks
           .map((s: any) => ({
@@ -126,7 +133,12 @@ export async function POST(request: Request) {
       : null;
 
     const founderHtml = `
-      <div style="background-color: #0b0c0e; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 32px 20px; max-width: 600px; margin: 0 auto; border-radius: 14px; border: 1px solid rgba(230,195,103,0.3);">
+      <div style="background-color: #0b0c0e; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 36px 24px; max-width: 600px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.65);">
+        <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 20px;">
+          <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
+          <h1 style="margin: 0; font-size: 22px; letter-spacing: 0.25em; text-transform: uppercase; color: #e6c367;">Ì R Í S Í</h1>
+          <p style="margin: 4px 0 0; font-size: 10px; letter-spacing: 0.3em; color: #9ca3af; text-transform: uppercase;">Founder &amp; Curation Board Alert</p>
+        </div>
         <h2 style="color: #e6c367; margin-top: 0; font-size: 20px; text-transform: uppercase;">✨ New Brand Application: ${applicationData.brandName}</h2>
         <div style="background: rgba(255,255,255,0.04); border-radius: 10px; padding: 20px; font-size: 13px; line-height: 1.8;">
           <p style="margin: 0 0 8px;"><strong>Brand / Store:</strong> <span style="color: #ffffff; font-size: 15px;">${applicationData.brandName}</span></p>

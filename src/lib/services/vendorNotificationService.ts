@@ -34,7 +34,8 @@ export interface UnsoldItemReport {
   imageUrl?: string;
 }
 
-const BRAND_LOGO_URL = `${getBaseUrl()}/images/logo/irisi-icon.png`;
+export const BRAND_LOGO_URL = 'https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png';
+export const BRAND_WORDMARK_URL = 'https://res.cloudinary.com/dvnj8idde/image/upload/v1793703378/brand_assets/irisi_wordmark_logo.png';
 const CONCIERGE_WHATSAPP_URL = 'https://wa.me/2349070332145';
 
 /**
@@ -155,7 +156,11 @@ export async function sendLuxuryEmail(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>',
+          from: (() => {
+            const rawFrom = process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>';
+            const emailAddr = rawFrom.includes('<') ? rawFrom.replace(/^[^<]*<([^>]+)>.*$/, '$1').trim() : rawFrom.trim();
+            return options?.fromName ? `"${options.fromName}" <${emailAddr}>` : (rawFrom.includes('<') ? rawFrom : `ÌRÍSÍ <${emailAddr}>`);
+          })(),
           to,
           subject,
           text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
@@ -301,7 +306,7 @@ function wrapLuxuryTemplate(title: string, bodyContent: string): string {
               <!-- Brand Header with Official Logo -->
               <tr>
                 <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Logo" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.35);" />
+                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
                   <h1 style="color: #e6c367; font-size: 24px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
                   <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Merchant Partner Relations</p>
                 </td>

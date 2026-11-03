@@ -106,6 +106,7 @@ export async function POST(request: Request) {
       const emailHtml = `
         <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; max-width: 600px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3);">
           <div style="text-align: center; margin-bottom: 28px;">
+            <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
             <h1 style="margin: 0; font-size: 26px; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff;">Ì R Í S Í</h1>
             <p style="margin: 6px 0 0; font-size: 10px; letter-spacing: 0.35em; color: #e6c367; text-transform: uppercase;">Founding Designer Invitation · Drop 001</p>
           </div>

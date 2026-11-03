@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     const emailHtml = `
       <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; max-width: 580px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3);">
         <div style="text-align: center; margin-bottom: 28px;">
+          <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
           <h1 style="margin: 0; font-size: 24px; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff;">Ì R Í S Í</h1>
           <p style="margin: 6px 0 0; font-size: 10px; letter-spacing: 0.35em; color: #e6c367; text-transform: uppercase;">Official Archive · Drop 001</p>
         </div>
@@ -67,16 +68,30 @@ export async function POST(request: Request) {
     }).catch(() => {});
 
     // Notify founder
+    const merchAlertHtml = `
+      <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 36px 24px; max-width: 580px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.65);">
+        <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 20px;">
+          <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
+          <h1 style="margin: 0; font-size: 22px; letter-spacing: 0.25em; text-transform: uppercase; color: #e6c367;">Ì R Í S Í</h1>
+          <p style="margin: 4px 0 0; font-size: 10px; letter-spacing: 0.3em; color: #9ca3af; text-transform: uppercase;">Merch Allocation Desk</p>
+        </div>
+        <div style="background: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; text-align: center;">
+          <span style="color: #e6c367; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">👕 New Heavyweight Tee Allocation Hold</span>
+        </div>
+        <div style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 20px; font-size: 13px; line-height: 1.8;">
+          <p style="margin: 0 0 8px;"><strong>Colorway:</strong> <span style="color: #ffffff; font-weight: 700;">${reservationData.colorway}</span></p>
+          <p style="margin: 0 0 8px;"><strong>Size:</strong> <span style="color: #e6c367; font-weight: 700;">${reservationData.size}</span></p>
+          <p style="margin: 0 0 8px;"><strong>Email:</strong> <span style="color: #ffffff;">${reservationData.email}</span></p>
+          <p style="margin: 0 0 8px;"><strong>WhatsApp:</strong> <a href="https://wa.me/${reservationData.phone.replace(/\\D/g, '')}" style="color: #22c55e; font-weight: bold;">${reservationData.phone} (Tap to Chat)</a></p>
+          <p style="margin: 0;"><strong>Timestamp:</strong> ${new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })}</p>
+        </div>
+      </div>
+    `;
+
     sendLuxuryEmail(
       'martintimi2443@gmail.com',
       `👕 New Merch Reservation: ${reservationData.colorway} (${reservationData.size})`,
-      `<p>New Sovereign Tee reservation:</p>
-       <ul>
-         <li><strong>Color:</strong> ${reservationData.colorway}</li>
-         <li><strong>Size:</strong> ${reservationData.size}</li>
-         <li><strong>Email:</strong> ${reservationData.email}</li>
-         <li><strong>WhatsApp:</strong> ${reservationData.phone}</li>
-       </ul>`,
+      merchAlertHtml,
       { fromName: 'ÌRÍSÍ Merch Desk' }
     ).catch(() => {});
 
