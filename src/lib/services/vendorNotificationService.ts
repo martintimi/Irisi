@@ -144,7 +144,38 @@ export async function sendLuxuryEmail(
   html: string,
   options?: { fromName?: string }
 ): Promise<{ success: boolean; provider: string; error?: string }> {
-  // 1. Direct TLS Gmail SMTP (Fastest & 100% Reliable Delivery)
+  // 1. Resend API (Top Priority: Verified Domain Delivery with DKIM/SPF)
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey && !resendApiKey.startsWith('re_placeholder')) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>',
+          to,
+          subject,
+          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+          html,
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`[EMAIL DISPATCH] 🚀 Delivered via Resend (irisimi.ng) to ${to} (${subject})`);
+        return { success: true, provider: 'resend' };
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        console.warn(`[EMAIL DISPATCH] ⚠️ Resend response not ok for ${to}:`, errJson);
+      }
+    } catch (err: any) {
+      console.warn(`[EMAIL DISPATCH] ⚠️ Resend failed for ${to}:`, err.message);
+    }
+  }
+
+  // 2. Direct TLS Gmail SMTP (Fastest & 100% Reliable Delivery)
   const rawUser = process.env.GMAIL_USER || process.env.SMTP_USER;
   const rawPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD || process.env.SMTP_PASS;
 
@@ -244,33 +275,7 @@ export async function sendLuxuryEmail(
     }
   }
 
-  // 3. Resend API
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (resendApiKey) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'ÌRÍSÍ Merchant Relations <vendors@irisimi.ng>',
-          to,
-          subject,
-          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
-          html,
-        }),
-      });
 
-      if (response.ok) {
-        console.log(`[VENDOR NOTIFICATION] ✅ Sent via Resend to ${to} (${subject})`);
-        return { success: true, provider: 'resend' };
-      }
-    } catch (err: any) {
-      console.warn(`[VENDOR NOTIFICATION] ⚠️ Resend failed for ${to}:`, err.message);
-    }
-  }
 
   console.log(`[VENDOR NOTIFICATION] ℹ️ Email queued for ${to} (${subject}), but all email transport engines were exhausted.`);
   return { success: false, provider: 'none', error: 'All email transport engines failed or timed out' };
