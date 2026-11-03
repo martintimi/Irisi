@@ -81,7 +81,7 @@ export async function sendDirectGmailTls(opts: {
 
         if (state === 'INIT' && code === '220') {
           state = 'EHLO';
-          socket.write('EHLO irisi.ng\r\n');
+          socket.write('EHLO irisimi.ng\r\n');
         } else if (state === 'EHLO' && code === '250') {
           state = 'AUTH_LOGIN';
           socket.write('AUTH LOGIN\r\n');
@@ -102,7 +102,7 @@ export async function sendDirectGmailTls(opts: {
           socket.write('DATA\r\n');
         } else if (state === 'DATA' && code === '354') {
           state = 'SENDING_DATA';
-          const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@irisi.ng>`;
+          const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@irisimi.ng>`;
           const cleanSubject = `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`;
           const bodyPayload = (opts.html || opts.text || '').replace(/\r?\n\./g, '\r\n..');
           const senderName = opts.fromName || 'ÌRÍSÍ Marketplace';
@@ -181,6 +181,7 @@ export async function sendLuxuryEmail(
           from: `"${options?.fromName || 'ÌRÍSÍ Marketplace'}" <${gmailUser}>`,
           to,
           subject,
+          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
           html,
         });
 
@@ -203,7 +204,8 @@ export async function sendLuxuryEmail(
             from: `"${options?.fromName || 'ÌRÍSÍ Marketplace'}" <${gmailUser}>`,
             to,
             subject,
-            html,
+            text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+          html,
           });
 
           console.log(`[EMAIL DISPATCH] ✅ Sent via Nodemailer Gmail 587 to ${to} (${subject}) - ID: ${info587?.messageId || 'ok'}`);
@@ -253,9 +255,10 @@ export async function sendLuxuryEmail(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'ÌRÍSÍ Merchant Relations <vendors@irisi.ng>',
+          from: process.env.RESEND_FROM || 'ÌRÍSÍ Merchant Relations <vendors@irisimi.ng>',
           to,
           subject,
+          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
           html,
         }),
       });

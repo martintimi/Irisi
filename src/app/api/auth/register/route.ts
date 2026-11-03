@@ -30,6 +30,8 @@ export async function POST(request: Request) {
       bankName,
       accountNumber,
       accountName,
+      isPreApproved,
+      socialLinks: incomingSocialLinks,
     } = body;
 
     const normalizedEmail = (email || '').trim().toLowerCase();
@@ -72,13 +74,47 @@ export async function POST(request: Request) {
     }
 
     // 3. Generate account & 6-digit OTP code via Supabase Admin API
-    // This bypasses Supabase cloud's rate-limited mail service and allows us to dispatch directly via our Gmail SMTP!
     let userId = '';
     let otpCode = '';
     let actionLink = '';
     let authUser: any = null;
 
-    if (existingAuthUser) {
+    if (isPreApproved) {
+      // Pre-approved vendor invited by Admin — auto-confirm email directly
+      if (existingAuthUser) {
+        userId = existingAuthUser.id;
+        authUser = existingAuthUser;
+        if (password) {
+          await adminClient.auth.admin.updateUserById(userId, {
+            password,
+            email_confirm: true,
+            user_metadata: {
+              full_name: fullName || brandName || normalizedEmail.split('@')[0],
+              phone: cleanPhone,
+              user_type: userType,
+              is_verified: true,
+            }
+          }).catch(e => console.warn('Update pre-approved user notice:', e));
+        }
+      } else {
+        const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+          email: normalizedEmail,
+          password: password || 'IrisiVendor2026!',
+          email_confirm: true,
+          user_metadata: {
+            full_name: fullName || brandName || normalizedEmail.split('@')[0],
+            phone: cleanPhone,
+            user_type: userType,
+            is_verified: true,
+          }
+        });
+        if (createErr) {
+          return NextResponse.json({ error: createErr.message }, { status: 400 });
+        }
+        userId = created?.user?.id || '';
+        authUser = created?.user;
+      }
+    } else if (existingAuthUser) {
       userId = existingAuthUser.id;
       authUser = existingAuthUser;
       if (password) {
@@ -147,14 +183,17 @@ export async function POST(request: Request) {
       }
     });
 
-    // 5. Dispatch the verification email containing the 6-digit OTP via our verified Gmail SMTP
-    const emailResult = await sendSignupVerificationEmail({
-      recipientEmail: normalizedEmail,
-      recipientName: brandName || fullName || undefined,
-      otpCode,
-      actionLink,
-      userType,
-    });
+    // 5. Dispatch the verification email containing the 6-digit OTP (Skip if pre-approved)
+    let emailResult: any = { success: true };
+    if (!isPreApproved) {
+      emailResult = await sendSignupVerificationEmail({
+        recipientEmail: normalizedEmail,
+        recipientName: brandName || fullName || undefined,
+        otpCode,
+        actionLink,
+        userType,
+      });
+    }
     console.log(`[Register POST] 📨 Dispatched signup OTP email to ${normalizedEmail}:`, emailResult);
 
     // If direct SMTP failed, trigger Supabase native auth email fallback
@@ -178,21 +217,34 @@ export async function POST(request: Request) {
       const cleanBrand = (brandName || defaultPrefix).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const vendorId = cleanBrand || `vendor-${Date.now()}`;
       const finalSpecialty = specialty || vendorSpecialty || (vendorType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+      let preloadedSocials: any = {
+        instagram: '',
+        tiktok: '',
+        snapchat: '',
+        whatsapp: cleanPhone || ''
+      };
+
+      if (Array.isArray(incomingSocialLinks)) {
+        incomingSocialLinks.forEach((s: any) => {
+          if (s?.platform && s?.handle) {
+            preloadedSocials[s.platform] = s.handle;
+          }
+        });
+      } else if (incomingSocialLinks && typeof incomingSocialLinks === 'object') {
+        preloadedSocials = { ...preloadedSocials, ...incomingSocialLinks };
+      }
+
       const initialBioObj = {
         bio: '',
         specialty: finalSpecialty,
         vendorSpecialty: finalSpecialty,
         city: (body.city || '').trim(),
         state: (body.state || '').trim(),
-        socialLinks: {
-          instagram: '',
-          tiktok: '',
-          snapchat: '',
-          whatsapp: cleanPhone || ''
-        },
-        isProfileSaved: false,
-        approvalStatus: 'unsubmitted',
-        rejectionReason: ''
+        socialLinks: preloadedSocials,
+        isProfileSaved: isPreApproved ? true : false,
+        approvalStatus: isPreApproved ? 'approved' : 'unsubmitted',
+        rejectionReason: '',
+        preApprovedAt: isPreApproved ? new Date().toISOString() : undefined,
       };
 
       const { data: vendorData, error: vendorError } = await adminClient.from('vendors').upsert({
@@ -208,7 +260,7 @@ export async function POST(request: Request) {
         bank_name: (accountNumber && bankName) ? bankName.trim() : (bankName ? bankName.trim() : ''),
         account_number: (accountNumber && accountNumber.trim()) || '',
         account_name: (accountName && accountName.trim()) || '',
-        is_verified: false, // Remains UNVERIFIED until Admin approves
+        is_verified: isPreApproved ? true : false, // Instantly verified if pre-approved by Admin!
         bio: JSON.stringify(initialBioObj)
       }, { onConflict: 'id' }).select().single();
 
@@ -219,10 +271,27 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
+        directLogin: !!isPreApproved,
         user: authUser || { id: userId, email: normalizedEmail },
         userType: 'vendor',
-        vendorProfile: vendorData,
-        message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your email inbox to activate your store.`
+        vendor: vendorData,
+        vendorProfile: {
+          brandName: vendorData.brand_name,
+          designerName: vendorData.designer_name,
+          email: vendorData.email,
+          phone: vendorData.phone,
+          location: vendorData.location,
+          city: body.city || '',
+          state: body.state || '',
+          vendorType: vendorData.vendor_type,
+          specialty: finalSpecialty,
+          isProfileSaved: isPreApproved ? true : false,
+          approvalStatus: isPreApproved ? 'approved' : 'unsubmitted',
+          is_verified: isPreApproved ? true : false,
+        },
+        message: isPreApproved
+          ? 'Storefront activated and verified! Welcome to ÌRÍSÍ.'
+          : `A 6-digit verification code has been dispatched to ${normalizedEmail}. Please check your email inbox to activate your store.`
       });
     } else {
       // Shopper Profile

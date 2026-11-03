@@ -19,6 +19,10 @@ import {
   Award,
   Plus,
   Trash2,
+  Upload,
+  Camera,
+  Video,
+  Loader2,
 } from 'lucide-react';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
@@ -287,9 +291,14 @@ export default function ComingSoonPage() {
     state: 'Lagos',
     city: '',
     lookbookUrl: '',
+    stockModel: 'in_stock',
+    activePostUrl: '',
+    workshopAddress: '',
+    sampleMedia: [] as string[],
   });
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   // Merch Priority Reservation Modal
   const [isMerchModalOpen, setIsMerchModalOpen] = useState(false);
@@ -639,6 +648,36 @@ export default function ComingSoonPage() {
     } catch (err: any) {
       setWaitlistStatus('error');
       setWaitlistError(err.message || 'Error occurred. Please try again.');
+    }
+  };
+
+  const handleUploadSampleMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (vendorForm.sampleMedia.length + files.length > 4) {
+      setVendorMessage('You can upload up to 4 sample photos/videos maximum.');
+      return;
+    }
+    setIsUploadingMedia(true);
+    setVendorMessage('');
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.url) {
+          setVendorForm((prev) => ({
+            ...prev,
+            sampleMedia: [...prev.sampleMedia, data.url],
+          }));
+        }
+      }
+    } catch (err: any) {
+      setVendorMessage('Media upload failed. You can also paste an active post link below.');
+    } finally {
+      setIsUploadingMedia(false);
     }
   };
 
@@ -1508,6 +1547,158 @@ export default function ComingSoonPage() {
                           <option key={c} value={c} />
                         ))}
                       </datalist>
+                    </div>
+                  </div>
+
+                  
+                  {/* Stocking & Production Model */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                      How Do You Stock Or Make Your Items? *
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setVendorForm({ ...vendorForm, stockModel: 'in_stock' })}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          vendorForm.stockModel === 'in_stock'
+                            ? 'bg-[#B89035]/15 border-[#E6C367] text-white shadow-sm'
+                            : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center gap-1.5 text-[#E6C367]">
+                          <span>📦</span> Stock on Ground
+                        </div>
+                        <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                          I have physical pieces ready in my shop/workshop to pack &amp; dispatch.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setVendorForm({ ...vendorForm, stockModel: 'pre_order' })}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          vendorForm.stockModel === 'pre_order'
+                            ? 'bg-[#B89035]/15 border-[#E6C367] text-white shadow-sm'
+                            : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center gap-1.5 text-amber-300">
+                          <span>✂️</span> Made to Order
+                        </div>
+                        <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                          I produce or sew after receiving the customer's order &amp; measurements.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setVendorForm({ ...vendorForm, stockModel: 'sourcing' })}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          vendorForm.stockModel === 'sourcing'
+                            ? 'bg-[#B89035]/15 border-[#E6C367] text-white shadow-sm'
+                            : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="text-xs font-bold flex items-center gap-1.5 text-pink-300">
+                          <span>🤝</span> Sourcing / Middleman
+                        </div>
+                        <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                          I source from market/suppliers when an order is placed.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Proof of Products & Active Video Link */}
+                  <div className="space-y-3 pt-1 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-mono uppercase text-[#E6C367] font-bold block">
+                          Proof of Goods &amp; Visual Quality
+                        </label>
+                        <span className="text-[10px] text-zinc-400 font-mono">1 to 4 items</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 font-light mb-2">
+                        Upload 1-4 clear photos or a short video (under 15s) showing your real pieces in good lighting.
+                      </p>
+
+                      {/* Upload Box & Previews */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {vendorForm.sampleMedia.map((url, idx) => (
+                          <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/20 group">
+                            {url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm') ? (
+                              <video src={url} className="w-full h-full object-cover" />
+                            ) : (
+                              <img src={url} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVendorForm((prev) => ({
+                                  ...prev,
+                                  sampleMedia: prev.sampleMedia.filter((_, i) => i !== idx),
+                                }));
+                              }}
+                              className="absolute top-0.5 right-0.5 p-0.5 bg-black/80 hover:bg-rose-500 text-white rounded-full transition-colors cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {vendorForm.sampleMedia.length < 4 && (
+                          <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 hover:border-[#E6C367] bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-zinc-400 hover:text-white shrink-0">
+                            {isUploadingMedia ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-[#E6C367]" />
+                            ) : (
+                              <>
+                                <Upload className="w-4 h-4 text-[#E6C367]" />
+                                <span className="text-[9px] font-mono uppercase">Upload</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              multiple
+                              disabled={isUploadingMedia}
+                              onChange={handleUploadSampleMedia}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Direct Link to Active Reel / TikTok / Post */}
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Link to Recent Video / Reel / Post of Your Goods
+                      </label>
+                      <input
+                        type="url"
+                        value={vendorForm.activePostUrl}
+                        onChange={(e) => setVendorForm({ ...vendorForm, activePostUrl: e.target.value })}
+                        placeholder="e.g. https://instagram.com/reel/... or https://tiktok.com/@..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-white font-mono placeholder-zinc-500"
+                      />
+                      <span className="text-[10px] text-zinc-500 mt-1 block">
+                        Direct link showing your actual clothes, perfumes, hair, or shoes on hand.
+                      </span>
+                    </div>
+
+                    {/* Workshop or Physical Location (Optional) */}
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Workshop / Store Location (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={vendorForm.workshopAddress}
+                        onChange={(e) => setVendorForm({ ...vendorForm, workshopAddress: e.target.value })}
+                        placeholder="e.g. Shop 14, Balogun Market / Workshop in Ikeja / Home Studio"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-white placeholder-zinc-500"
+                      />
                     </div>
                   </div>
 

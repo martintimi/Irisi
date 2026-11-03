@@ -18,6 +18,10 @@ export async function POST(request: Request) {
       state,
       city,
       lookbookUrl,
+      stockModel,
+      activePostUrl,
+      workshopAddress,
+      sampleMedia,
     } = body;
 
     if (!brandName || !founderPhone || !founderEmail) {
@@ -49,7 +53,13 @@ export async function POST(request: Request) {
       founderPhone: founderPhone.trim(),
       founderEmail: founderEmail.toLowerCase().trim(),
       location: [city, state].filter(Boolean).join(', ') || 'Nigeria',
+      state: (state || '').trim(),
+      city: (city || '').trim(),
       lookbookUrl: (lookbookUrl || '').trim(),
+      stockModel: stockModel || 'in_stock',
+      activePostUrl: (activePostUrl || '').trim(),
+      workshopAddress: (workshopAddress || '').trim(),
+      sampleMedia: Array.isArray(sampleMedia) ? sampleMedia.filter((u: any) => typeof u === 'string' && u.startsWith('http')) : [],
       submittedAt: new Date().toISOString(),
     };
 
@@ -143,6 +153,17 @@ export async function POST(request: Request) {
               ? `<p style="margin: 0 0 8px;"><strong>Instagram:</strong> <a href="${igLink}" style="color: #38bdf8;">@${applicationData.instagramHandle}</a></p>`
               : ''
           }
+          <p style="margin: 0 0 8px;"><strong>Stock Model:</strong> <span style="color: ${applicationData.stockModel === 'in_stock' ? '#22c55e' : applicationData.stockModel === 'pre_order' ? '#e6c367' : '#ec4899'}; font-weight: 700;">${applicationData.stockModel === 'in_stock' ? '📦 Physical Stock on Ground' : applicationData.stockModel === 'pre_order' ? '✂️ Made to Order / Pre-Order' : '🤝 Sourcing / Middleman'}</span></p>
+          ${applicationData.workshopAddress ? `<p style="margin: 0 0 8px;"><strong>Workshop / Store Address:</strong> ${applicationData.workshopAddress}</p>` : ''}
+          ${applicationData.activePostUrl ? `<p style="margin: 0 0 8px;"><strong>Active Product Video / Post:</strong> <a href="${applicationData.activePostUrl}" target="_blank" style="color: #38bdf8; text-decoration: underline;">${applicationData.activePostUrl}</a></p>` : ''}
+          ${applicationData.sampleMedia && applicationData.sampleMedia.length > 0 ? `
+            <div style="margin: 12px 0 8px;">
+              <strong>Uploaded Sample Media (${applicationData.sampleMedia.length}):</strong>
+              <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
+                ${applicationData.sampleMedia.map((m: string) => `<a href="${m}" target="_blank"><img src="${m}" width="70" height="70" style="object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);" /></a>`).join('')}
+              </div>
+            </div>
+          ` : ''}
           ${applicationData.lookbookUrl ? `<p style="margin: 0;"><strong>Catalog:</strong> <a href="${applicationData.lookbookUrl}" style="color: #e6c367;">${applicationData.lookbookUrl}</a></p>` : ''}
         </div>
         <div style="margin-top: 20px; text-align: center;">

@@ -91,6 +91,10 @@ function VendorAuthPageContent() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [recoverySuccessMsg, setRecoverySuccessMsg] = useState('');
 
+  // Pre-approved claim flow state
+  const [isClaimFlow, setIsClaimFlow] = useState(false);
+  const [claimDetails, setClaimDetails] = useState<any>(null);
+
   // Register form state
   const [regForm, setRegForm] = useState({
     brandName: '',
@@ -114,8 +118,39 @@ function VendorAuthPageContent() {
   // Handle URL search params for direct vendor onboarding links
   useEffect(() => {
     if (!searchParams) return;
+    const claimParam = searchParams.get('claim');
     const modeParam = searchParams.get('mode') || searchParams.get('tab') || searchParams.get('action');
-    if (modeParam === 'register' || modeParam === 'signup' || modeParam === 'onboard') {
+
+    if (claimParam || modeParam === 'claim') {
+      let claimData: any = null;
+      if (claimParam) {
+        try {
+          const jsonStr = decodeURIComponent(escape(atob(claimParam.replace(/-/g, '+').replace(/_/g, '/'))));
+          claimData = JSON.parse(jsonStr);
+        } catch (e) {
+          console.warn('Could not decode claim token', e);
+        }
+      }
+
+      if (claimData) {
+        setIsClaimFlow(true);
+        setClaimDetails(claimData);
+        setAuthMode('register');
+        setRegForm((prev) => ({
+          ...prev,
+          brandName: claimData.brandName || prev.brandName,
+          designerName: claimData.designerName || claimData.brandName || prev.designerName,
+          email: claimData.email || prev.email,
+          phone: claimData.phone || prev.phone,
+          state: claimData.state || prev.state,
+          city: claimData.city || prev.city,
+          specialty: claimData.specialty || prev.specialty,
+          vendorType: claimData.specialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller',
+        }));
+      } else {
+        setAuthMode('register');
+      }
+    } else if (modeParam === 'register' || modeParam === 'signup' || modeParam === 'onboard') {
       setAuthMode('register');
     }
 
@@ -420,11 +455,29 @@ function VendorAuthPageContent() {
         bankName: regForm.accountNumber.trim() ? (regForm.bankName || '') : '',
         accountNumber: regForm.accountNumber.trim(),
         accountName: regForm.accountNumber.trim() ? regForm.accountName.trim() : '',
+        isPreApproved: isClaimFlow,
+        socialLinks: claimDetails?.socialLinks || [],
+        claimToken: searchParams?.get('claim') || '',
       });
 
       if (!res.success) {
         setErrorMessage(res.error || 'Vendor registration failed. Please check your details.');
         setIsSubmitting(false);
+        return;
+      }
+
+      // If pre-approved direct login (No double approval! Immediate access)
+      if (res.directLogin) {
+        confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.6 }
+        });
+        setIsVendorLoggedIn(true);
+        if (res.vendorProfile) {
+          setVendorProfile(res.vendorProfile);
+        }
+        router.push('/vendor-portal/products');
         return;
       }
 
@@ -870,6 +923,19 @@ function VendorAuthPageContent() {
               >
                 Register Store
               </button>
+            </div>
+          )}
+
+          {/* Pre-Approved Application Banner */}
+          {isClaimFlow && (
+            <div className="p-4 rounded-2xl bg-[#B89035]/15 border border-[#E6C367] text-[#E6C367] space-y-1.5 animate-fadeIn">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-[#E6C367]" />
+                <span>Application Approved · Fast-Track Onboarding</span>
+              </div>
+              <p className="text-xs text-white/90 leading-relaxed font-light">
+                Congratulations <strong>{regForm.brandName || 'Designer'}</strong>! The ÌRÍSÍ Curation Board has vetted and approved your merchant application. Your details are pre-loaded below. Simply create your password to immediately activate your storefront.
+              </p>
             </div>
           )}
 
@@ -1402,11 +1468,19 @@ function VendorAuthPageContent() {
                     <input
                       type="email"
                       required
+                      readOnly={isClaimFlow}
                       value={regForm.email}
                       onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
                       placeholder="contact@brand.ng"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                      className={`w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none ${
+                        isClaimFlow ? 'opacity-80 cursor-not-allowed bg-emerald-950/10 border-emerald-500/30' : ''
+                      }`}
                     />
+                    {isClaimFlow && (
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 mt-1 font-bold">
+                        <CheckCircle2 className="w-3 h-3" /> Pre-approved Business Email
+                      </span>
+                    )}
                   </div>
                   <EmailDomainSuggestions
                     email={regForm.email}
@@ -1692,7 +1766,7 @@ function VendorAuthPageContent() {
                   </>
                 ) : (
                   <>
-                    <span>{labels.btnText}</span>
+                    <span>{isClaimFlow ? 'Activate Verified Store & Open Atelier' : labels.btnText}</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

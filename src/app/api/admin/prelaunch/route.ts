@@ -87,7 +87,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Vendor email required' }, { status: 400 });
       }
 
-      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?mode=register&specialty=${encodeURIComponent(specialty || 'streetwear')}`;
+      const claimData = {
+        appId: id || '',
+        email: email.toLowerCase().trim(),
+        brandName: brandName || 'Designer',
+        phone: (body.phone || body.founderPhone || '').trim(),
+        state: (body.state || 'Lagos').trim(),
+        city: (body.city || '').trim(),
+        specialty: specialty || 'streetwear',
+        socialLinks: body.socialLinks || [],
+        stockModel: body.stockModel || 'in_stock',
+        isPreApproved: true,
+        approvedAt: new Date().toISOString(),
+      };
+
+      const claimToken = Buffer.from(JSON.stringify(claimData)).toString('base64url');
+      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?mode=claim&claim=${claimToken}`;
       const emailHtml = `
         <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; max-width: 600px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3);">
           <div style="text-align: center; margin-bottom: 28px;">

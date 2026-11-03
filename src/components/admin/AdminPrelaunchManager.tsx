@@ -34,7 +34,13 @@ interface VendorApp {
   founderPhone: string;
   founderEmail: string;
   location: string;
+  state?: string;
+  city?: string;
   lookbookUrl?: string;
+  stockModel?: string; // 'in_stock' | 'pre_order' | 'sourcing'
+  activePostUrl?: string;
+  workshopAddress?: string;
+  sampleMedia?: string[];
   submittedAt?: string;
 }
 
@@ -78,6 +84,7 @@ export default function AdminPrelaunchManager() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedMediaModal, setSelectedMediaModal] = useState<string | null>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -112,6 +119,11 @@ export default function AdminPrelaunchManager() {
           email: vendor.founderEmail,
           brandName: vendor.brandName,
           specialty: vendor.specialty,
+          phone: vendor.founderPhone,
+          state: vendor.state || (vendor.location && vendor.location.includes(',') ? vendor.location.split(',')[1]?.trim() : 'Lagos'),
+          city: vendor.city || (vendor.location ? vendor.location.split(',')[0]?.trim() : ''),
+          socialLinks: vendor.socialLinks || [],
+          stockModel: vendor.stockModel || 'in_stock',
         }),
       });
 
@@ -241,6 +253,31 @@ export default function AdminPrelaunchManager() {
           </button>
         </div>
       </div>
+
+      {/* Inspection Modal for Sample Photos / Videos */}
+      {selectedMediaModal && (
+        <div
+          onClick={() => setSelectedMediaModal(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-lg w-full bg-zinc-950 p-3 rounded-2xl border border-[var(--border-subtle)] shadow-2xl overflow-hidden cursor-default"
+          >
+            <button
+              onClick={() => setSelectedMediaModal(null)}
+              className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/70 hover:bg-rose-500 text-white transition-colors cursor-pointer"
+            >
+              ✕
+            </button>
+            {selectedMediaModal.endsWith('.mp4') || selectedMediaModal.endsWith('.mov') || selectedMediaModal.endsWith('.webm') ? (
+              <video src={selectedMediaModal} controls autoPlay className="w-full max-h-[70vh] rounded-xl object-contain bg-black" />
+            ) : (
+              <img src={selectedMediaModal} alt="Sample Proof" className="w-full max-h-[70vh] rounded-xl object-contain" />
+            )}
+          </div>
+        </div>
+      )}
 
       {actionMessage && (
         <div className="p-3.5 rounded-2xl bg-[var(--gold-accent)]/10 border border-[var(--gold-accent)]/30 text-xs font-mono text-[var(--gold-accent)] flex items-center justify-between">
@@ -435,7 +472,21 @@ export default function AdminPrelaunchManager() {
                     })
                     .map((vendor) => {
                       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://irisimi.ng';
-                      const portalUrl = `${origin}/vendor-portal/auth?mode=register&specialty=${encodeURIComponent(vendor.specialty || 'streetwear')}`;
+                      const claimData = {
+                        appId: vendor.id,
+                        email: (vendor.founderEmail || '').toLowerCase().trim(),
+                        brandName: vendor.brandName || 'Designer',
+                        phone: (vendor.founderPhone || '').trim(),
+                        state: vendor.state || (vendor.location && vendor.location.includes(',') ? vendor.location.split(',')[1]?.trim() : 'Lagos'),
+                        city: vendor.city || (vendor.location ? vendor.location.split(',')[0]?.trim() : ''),
+                        specialty: vendor.specialty || 'streetwear',
+                        socialLinks: vendor.socialLinks || [],
+                        stockModel: vendor.stockModel || 'in_stock',
+                        isPreApproved: true,
+                        approvedAt: new Date().toISOString(),
+                      };
+                      const claimToken = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(JSON.stringify(claimData)))) : '';
+                      const portalUrl = `${origin}/vendor-portal/auth?mode=claim&claim=${claimToken}`;
                       const waNumber = cleanPhone(vendor.founderPhone);
                       const waText = encodeURIComponent(
                         `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your brand application and approved your fashion house for Launch Drop 001. Complete your vendor onboarding here: ${portalUrl}`
@@ -451,6 +502,26 @@ export default function AdminPrelaunchManager() {
                             <span className="text-[11px] text-[var(--gold-accent)] font-mono block">
                               {vendor.specialty || 'streetwear'}
                             </span>
+                            {/* Stocking Model Tag */}
+                            <div className="mt-1">
+                              {vendor.stockModel === 'in_stock' ? (
+                                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 inline-flex items-center gap-1">
+                                  <span>📦</span> Physical Stock
+                                </span>
+                              ) : vendor.stockModel === 'pre_order' ? (
+                                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/25 inline-flex items-center gap-1">
+                                  <span>✂️</span> Made to Order
+                                </span>
+                              ) : vendor.stockModel === 'sourcing' ? (
+                                <span className="px-2 py-0.5 rounded-md text-[9px] font-mono font-bold bg-pink-500/15 text-pink-300 border border-pink-500/25 inline-flex items-center gap-1">
+                                  <span>🤝</span> Sourcing
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono text-zinc-400 bg-white/5 border border-white/5">
+                                  Standard
+                                </span>
+                              )}
+                            </div>
                             {vendor.socialLinks && vendor.socialLinks.length > 0 ? (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {vendor.socialLinks.map((s, sIdx) => {
@@ -522,20 +593,63 @@ export default function AdminPrelaunchManager() {
                             </a>
                           </td>
 
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 space-y-1.5">
+                            {/* Uploaded sample media thumbnails */}
+                            {vendor.sampleMedia && vendor.sampleMedia.length > 0 ? (
+                              <div className="flex items-center gap-1.5">
+                                {vendor.sampleMedia.map((m, mIdx) => (
+                                  <button
+                                    key={mIdx}
+                                    type="button"
+                                    onClick={() => setSelectedMediaModal(m)}
+                                    className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 hover:border-[var(--gold-accent)] transition-all cursor-pointer relative shrink-0"
+                                    title="Click to view sample"
+                                  >
+                                    {m.endsWith('.mp4') || m.endsWith('.mov') || m.endsWith('.webm') ? (
+                                      <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-[10px]">
+                                        🎬
+                                      </div>
+                                    ) : (
+                                      <img src={m} alt="" className="w-full h-full object-cover" />
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            {/* Direct Active Video / Reel Post */}
+                            {vendor.activePostUrl ? (
+                              <div>
+                                <a
+                                  href={vendor.activePostUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-sky-400 hover:underline inline-flex items-center gap-1 font-mono font-bold"
+                                >
+                                  <span>🎬 Active Post / Reel</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              </div>
+                            ) : null}
+
+                            {/* Catalog / Lookbook link */}
                             {vendor.lookbookUrl ? (
-                              <a
-                                href={vendor.lookbookUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2.5 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[11px] text-[var(--gold-accent)] hover:underline inline-flex items-center gap-1 font-mono"
-                              >
-                                <span>View Catalog</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="text-[11px] text-[var(--text-muted)] font-mono italic">
-                                Not provided
+                              <div>
+                                <a
+                                  href={vendor.lookbookUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2 py-0.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] text-[var(--gold-accent)] hover:underline inline-flex items-center gap-1 font-mono"
+                                >
+                                  <span>Catalog</span>
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                              </div>
+                            ) : null}
+
+                            {!vendor.sampleMedia?.length && !vendor.activePostUrl && !vendor.lookbookUrl && (
+                              <span className="text-[10px] text-[var(--text-muted)] font-mono italic">
+                                No samples attached
                               </span>
                             )}
                           </td>
