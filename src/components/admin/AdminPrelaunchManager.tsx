@@ -502,7 +502,7 @@ export default function AdminPrelaunchManager() {
                       const portalUrl = `${origin}/vendor-portal/auth?action=access&token=${magicToken}&email=${encodeURIComponent((vendor.founderEmail || '').toLowerCase().trim())}`;
                       const waNumber = cleanPhone(vendor.founderPhone);
                       const waText = encodeURIComponent(
-                        `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your application and officially approved your brand for Launch Drop 001!\n\nClick here to enter your store dashboard instantly:\n${portalUrl}${vendor.accessCode ? `\n\nYour 6-Digit VIP Access Code: ${vendor.accessCode}` : ''}`
+                        `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your application and officially approved your brand for Launch Drop 001!\n\nClick here to enter your store dashboard instantly:\n${portalUrl}${vendor.accessCode ? `\n\nYour 4-Digit VIP Access Code: ${vendor.accessCode}` : ''}`
                       );
                       const waLink = `https://wa.me/${waNumber}?text=${waText}`;
 
