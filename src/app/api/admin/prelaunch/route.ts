@@ -202,56 +202,77 @@ export async function POST(request: Request) {
         }).eq('id', id);
       }
 
-      // 7. Dispatch Official Luxury Approval Email
+      // 7. Dispatch Official Luxury Approval Email (Clean White Background & Clickable Copy Button)
+      const copyUrl = `${getBaseUrl()}/vendor-portal/auth?action=code&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}&autocopy=1`;
       const emailHtml = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <meta name="color-scheme" content="light dark">
-          <meta name="supported-color-schemes" content="light dark">
           <title>ÌRÍSÍ Merchant Approval</title>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #08090a; background-image: linear-gradient(#08090a, #08090a); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-          <div style="background-color: #08090a; background-image: linear-gradient(#08090a, #08090a); color: #f4ede3; padding: 40px 20px; max-width: 600px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3);">
-            <!-- Brand Logo Header -->
-            <div style="text-align: center; margin-bottom: 28px;">
-              <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
-              <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff;">ÌRÍSÍ</h1>
-              <p style="margin: 6px 0 0; font-size: 11px; color: #e6c367; text-transform: uppercase;">Official Merchant Admission · Drop 001</p>
-            </div>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; padding: 36px 16px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
+                  <!-- Brand Logo Header -->
+                  <tr>
+                    <td align="center" style="padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9; background: #ffffff;">
+                      <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+                      <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #111827; letter-spacing: -0.5px;">ÌRÍSÍ</h1>
+                      <p style="margin: 6px 0 0; font-size: 11px; color: #b89035; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Official Merchant Admission · Drop 001</p>
+                    </td>
+                  </tr>
 
-            <!-- Main Acceptance Card -->
-            <div style="background-color: #121316; background-image: linear-gradient(#121316, #121316); border: 1px solid rgba(230,195,103,0.25); border-radius: 14px; padding: 28px; margin-bottom: 24px;">
-              <div style="text-align: center; margin-bottom: 16px;">
-                <span style="background: #e6c367; color: #08090a; font-size: 10px; font-weight: 800; padding: 5px 16px; border-radius: 999px; text-transform: uppercase;">Application Approved</span>
-              </div>
-              <h2 style="color: #ffffff; font-size: 22px; margin: 0 0 12px; text-align: center;">Welcome to the Collective, ${cleanBrand} 🥂</h2>
-              <p style="color: #d1d5db; font-size: 13.5px; line-height: 1.7; margin: 0 0 24px; text-align: center;">
-                The ÌRÍSÍ Curation Board has reviewed your brand and officially approved your merchant store for <strong>Launch Drop 001</strong>. Your account is already verified — no secondary review required!
-              </p>
+                  <!-- Main Acceptance Content -->
+                  <tr>
+                    <td style="padding: 32px 32px 36px; background-color: #ffffff;">
+                      <div style="text-align: center; margin-bottom: 20px;">
+                        <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 11px; font-weight: 800; padding: 5px 16px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">Application Approved</span>
+                      </div>
+                      <h2 style="color: #111827; font-size: 22px; margin: 0 0 12px; text-align: center; font-weight: 700;">Welcome to the Collective, ${cleanBrand} 🥂</h2>
+                      <p style="color: #4b5563; font-size: 14px; line-height: 1.65; margin: 0 0 26px; text-align: center;">
+                        The ÌRÍSÍ team has reviewed your brand and officially approved your merchant store for <strong>Launch Drop 001</strong>. Your account is already verified — no secondary review required!
+                      </p>
 
-              <!-- 1-Click Instant Login Button -->
-              <div style="text-align: center; margin: 28px 0;">
-                <a href="${portalUrl}" style="background-color: #e6c367; color: #08090a; font-weight: 800; font-size: 13px; text-transform: uppercase; padding: 16px 36px; border-radius: 12px; text-decoration: none; display: inline-block;">
-                  Enter Your Store Now &rarr;
-                </a>
-                <span style="display: block; margin-top: 8px; font-size: 11px; color: #9ca3af;">1-Tap Secure Login (No password needed)</span>
-              </div>
+                      <!-- 1-Click Instant Login Button -->
+                      <div style="text-align: center; margin: 28px 0 32px;">
+                        <a href="${portalUrl}" style="background-color: #111827; color: #ffffff; font-weight: 700; font-size: 13.5px; text-transform: uppercase; padding: 16px 36px; border-radius: 12px; text-decoration: none; display: inline-block; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(17,24,39,0.18);">
+                          Enter Your Store Now &rarr;
+                        </a>
+                        <span style="display: block; margin-top: 8px; font-size: 11.5px; color: #6b7280;">1-Tap Secure Login (No password needed)</span>
+                      </div>
 
-              <!-- 4-Digit VIP Access Code Card -->
-              <div style="margin-top: 24px; padding: 20px; background-color: #0b0c0e; background-image: linear-gradient(#0b0c0e, #0b0c0e); border: 1.5px dashed rgba(230,195,103,0.5); border-radius: 12px; text-align: center;">
-                <span style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 1.5px; color: #9ca3af; display: block; margin-bottom: 8px;">Your 4-Digit Access Code</span>
-                <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 12px; color: #e6c367; display: block; margin: 6px 0;">${accessCode}</span>
-                <span style="font-size: 11px; color: #d1d5db; display: block; margin-top: 8px;">
-                  Copy this 4-digit code to sign in at the <a href="${getBaseUrl()}/vendor-portal/auth" style="color: #e6c367; text-decoration: underline;">Merchant Portal</a> anytime.
-                </span>
-              </div>
-            </div>
+                      <!-- 4-Digit VIP Access Code Card with Clickable Copy Button -->
+                      <div style="background-color: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 14px; padding: 22px 20px; text-align: center;">
+                        <span style="font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 700; display: block; margin-bottom: 6px;">Your 4-Digit Access Code</span>
+                        <div style="font-family: 'Courier New', Courier, monospace; font-size: 40px; font-weight: 900; letter-spacing: 12px; color: #111827; display: block; margin: 8px 0; user-select: all; -webkit-user-select: all;">${accessCode}</div>
+                        
+                        <!-- Clickable Copy Code Button -->
+                        <div style="margin-top: 14px;">
+                          <a href="${copyUrl}" target="_blank" style="display: inline-block; background-color: #111827; color: #ffffff; border: 1px solid #111827; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                            📋 Copy Code to Clipboard
+                          </a>
+                        </div>
+                        <span style="font-size: 11px; color: #64748b; display: block; margin-top: 8px;">
+                          Click above to copy code and enter your merchant workspace
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
 
-            <p style="text-align: center; font-size: 11px; color: #71717a; margin: 0;">ÌRÍSÍ Marketplace · Direct Merchant Atelier</p>
-          </div>
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" style="padding: 20px 24px; background-color: #f8fafc; border-top: 1px solid #f1f5f9;">
+                      <p style="margin: 0; font-size: 11px; color: #94a3b8; font-weight: 500;">ÌRÍSÍ Marketplace · Direct Merchant Atelier</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
         </html>
       `;

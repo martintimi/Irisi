@@ -41,50 +41,70 @@ export async function POST(request: Request) {
 
     // Send luxury confirmation email to customer
     const emailHtml = `
-      <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; max-width: 580px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3);">
-        <div style="text-align: center; margin-bottom: 28px;">
-          <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
-          <h1 style="margin: 0; font-size: 24px; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff;">Ì R Í S Í</h1>
-          <p style="margin: 6px 0 0; font-size: 10px; letter-spacing: 0.35em; color: #e6c367; text-transform: uppercase;">Official Archive · Drop 001</p>
-        </div>
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(230,195,103,0.2); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
-          <span style="background: #e6c367; color: #08090a; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; padding: 4px 14px; border-radius: 999px; text-transform: uppercase;">Allocation Reserved</span>
-          <h2 style="color: #ffffff; font-size: 20px; margin: 14px 0 8px;">Sovereign Heavyweight Tee</h2>
-          <p style="color: #a1a1aa; font-size: 13px; line-height: 1.6; margin: 0 0 16px;">
-            Your reservation for the <strong>${reservationData.colorway}</strong> in size <strong>${reservationData.size}</strong> has been secured for Launch Drop 001.
-          </p>
-          <div style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 12px; font-size: 12px; text-align: left; color: #d4d4d8;">
-            <p style="margin: 0 0 6px;">🔒 <strong>Allocation Hold:</strong> 2-Hour Guaranteed Window before public release</p>
-            <p style="margin: 0 0 6px;">📦 <strong>Archival Packaging:</strong> Serialized dustbag & authenticity certificate</p>
-            <p style="margin: 0;">💬 <strong>Drop Notification:</strong> Direct WhatsApp & email alert sent 1 hour early</p>
-          </div>
-        </div>
-        <p style="text-align: center; font-size: 11px; color: #71717a; margin: 0;">Lagos · Abuja · London · Worldwide</p>
+      <div style="background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 36px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
+          <tr>
+            <td align="center" style="padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9; background: #ffffff;">
+              <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+              <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #111827; letter-spacing: -0.5px;">ÌRÍSÍ</h1>
+              <p style="margin: 6px 0 0; font-size: 11px; color: #b89035; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Official Archive · Drop 001</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 32px 36px; background-color: #ffffff;">
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 26px 20px; text-align: center; margin-bottom: 20px;">
+                <span style="background: #111827; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 16px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">Allocation Reserved</span>
+                <h2 style="color: #111827; font-size: 22px; margin: 16px 0 10px; font-weight: 700;">Sovereign Heavyweight Tee</h2>
+                <p style="color: #4b5563; font-size: 14px; line-height: 1.65; margin: 0 0 18px;">
+                  Your reservation for the <strong>${reservationData.colorway}</strong> in size <strong>${reservationData.size}</strong> has been secured for Launch Drop 001.
+                </p>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; font-size: 12.5px; text-align: left; color: #374151;">
+                  <p style="margin: 0 0 6px;">🔒 <strong>Allocation Hold:</strong> 2-Hour Guaranteed Window before public release</p>
+                  <p style="margin: 0 0 6px;">📦 <strong>Archival Packaging:</strong> Serialized dustbag &amp; authenticity certificate</p>
+                  <p style="margin: 0;">💬 <strong>Drop Notification:</strong> Direct WhatsApp &amp; email alert sent 1 hour early</p>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 18px 24px; background-color: #f8fafc; border-top: 1px solid #f1f5f9;">
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; font-weight: 500;">ÌRÍSÍ Marketplace · Sovereign Luxury</p>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 
-    sendLuxuryEmail(reservationData.email, 'Ì R Í S Í · Sovereign Tee Priority Allocation Confirmed', emailHtml, {
+    sendLuxuryEmail(reservationData.email, 'ÌRÍSÍ · Sovereign Tee Priority Allocation Confirmed', emailHtml, {
       fromName: 'ÌRÍSÍ Archive',
     }).catch(() => {});
 
     // Notify founder
     const merchAlertHtml = `
-      <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 36px 24px; max-width: 580px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3); box-shadow: 0 20px 40px rgba(0,0,0,0.65);">
-        <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 20px;">
-          <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
-          <h1 style="margin: 0; font-size: 22px; letter-spacing: 0.25em; text-transform: uppercase; color: #e6c367;">Ì R Í S Í</h1>
-          <p style="margin: 4px 0 0; font-size: 10px; letter-spacing: 0.3em; color: #9ca3af; text-transform: uppercase;">Merch Allocation Desk</p>
-        </div>
-        <div style="background: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; text-align: center;">
-          <span style="color: #e6c367; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">👕 New Heavyweight Tee Allocation Hold</span>
-        </div>
-        <div style="background: rgba(255,255,255,0.04); border-radius: 12px; padding: 20px; font-size: 13px; line-height: 1.8;">
-          <p style="margin: 0 0 8px;"><strong>Colorway:</strong> <span style="color: #ffffff; font-weight: 700;">${reservationData.colorway}</span></p>
-          <p style="margin: 0 0 8px;"><strong>Size:</strong> <span style="color: #e6c367; font-weight: 700;">${reservationData.size}</span></p>
-          <p style="margin: 0 0 8px;"><strong>Email:</strong> <span style="color: #ffffff;">${reservationData.email}</span></p>
-          <p style="margin: 0 0 8px;"><strong>WhatsApp:</strong> <a href="https://wa.me/${reservationData.phone.replace(/\\D/g, '')}" style="color: #22c55e; font-weight: bold;">${reservationData.phone} (Tap to Chat)</a></p>
-          <p style="margin: 0;"><strong>Timestamp:</strong> ${new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })}</p>
-        </div>
+      <div style="background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 36px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
+          <tr>
+            <td align="center" style="padding: 32px 24px 20px; border-bottom: 1px solid #f1f5f9;">
+              <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 14px; border: 1px solid #e2e8f0;" />
+              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #111827;">ÌRÍSÍ</h1>
+              <p style="margin: 4px 0 0; font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Merch Allocation Desk</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px;">
+              <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; text-align: center;">
+                <span style="color: #92400e; font-weight: 700; font-size: 12px; text-transform: uppercase;">👕 New Heavyweight Tee Allocation Hold</span>
+              </div>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; font-size: 13.5px; line-height: 1.8; color: #1f2937;">
+                <p style="margin: 0 0 8px;"><strong>Colorway:</strong> <span style="color: #111827; font-weight: 700;">${reservationData.colorway}</span></p>
+                <p style="margin: 0 0 8px;"><strong>Size:</strong> <span style="color: #b89035; font-weight: 700;">${reservationData.size}</span></p>
+                <p style="margin: 0 0 8px;"><strong>Email:</strong> <span style="color: #111827;">${reservationData.email}</span></p>
+                <p style="margin: 0 0 8px;"><strong>WhatsApp:</strong> <a href="https://wa.me/${reservationData.phone.replace(/\\D/g, '')}" style="color: #16a34a; font-weight: bold;">${reservationData.phone} (Tap to Chat)</a></p>
+                <p style="margin: 0; color: #64748b;"><strong>Timestamp:</strong> ${new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })}</p>
+              </div>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
 

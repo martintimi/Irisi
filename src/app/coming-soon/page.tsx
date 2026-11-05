@@ -282,6 +282,7 @@ export default function ComingSoonPage() {
 
   // Vendor Application Modal
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [showVendorTerms, setShowVendorTerms] = useState(false);
   const [vendorForm, setVendorForm] = useState({
     brandName: '',
     socialLinks: [{ platform: 'instagram', handle: '' }],
@@ -295,6 +296,7 @@ export default function ComingSoonPage() {
     activePostUrl: '',
     workshopAddress: '',
     sampleMedia: [] as string[],
+    agreedToTerms: false,
   });
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
@@ -699,6 +701,12 @@ export default function ComingSoonPage() {
 
     if (!vendorForm.stockModel) {
       setVendorMessage('Please select how you stock or make your items.');
+      setVendorStatus('error');
+      return;
+    }
+
+    if (!vendorForm.agreedToTerms) {
+      setVendorMessage('Please read and accept the ÌRÍSÍ Merchant Rules & Escrow Policy before submitting.');
       setVendorStatus('error');
       return;
     }
@@ -1776,6 +1784,56 @@ export default function ComingSoonPage() {
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-white placeholder-zinc-500"
                       />
                     </div>
+                  </div>
+
+                  {/* ── MERCHANT PLATFORM RULES & ESCROW AGREEMENT ─────────────── */}
+                  <div className="p-4 rounded-xl bg-white/[0.04] border border-white/15 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-[#E6C367] font-bold">
+                        ⚖️ ÌRÍSÍ Merchant Platform Rules
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowVendorTerms(!showVendorTerms)}
+                        className="text-[10px] font-mono text-white underline hover:text-[#E6C367] cursor-pointer"
+                      >
+                        {showVendorTerms ? 'Hide Full Details' : 'Read Full Terms'}
+                      </button>
+                    </div>
+
+                    <ul className="text-[11px] text-zinc-300 space-y-1.5 leading-relaxed list-disc pl-4">
+                      <li>
+                        <strong className="text-white">Escrow Payout Policy:</strong> Customer payments are held safely in Escrow and released to your bank account once the order is delivered &amp; verified.
+                      </li>
+                      <li>
+                        <strong className="text-white">Zero Bait-and-Switch:</strong> Every item shipped must match the exact photo, fabric, and quality uploaded. Fake or inferior items result in automatic buyer refund and store removal.
+                      </li>
+                      <li>
+                        <strong className="text-white">Strict Dispatch Timelines:</strong> Stock on Ground must be ready within 24–48hrs. Made-to-Order (Native) must ship within your stated production days. Lying about stock status leads to suspension.
+                      </li>
+                      {showVendorTerms && (
+                        <>
+                          <li>
+                            <strong className="text-white">No Off-Platform Poaching:</strong> Contacting ÌRÍSÍ shoppers to pay outside the platform to bypass Escrow results in immediate permanent ban.
+                          </li>
+                          <li>
+                            <strong className="text-white">Fair Pricing &amp; Commission:</strong> Prices listed on ÌRÍSÍ must remain fair and transparent, subject to standard platform commission on completed sales.
+                          </li>
+                        </>
+                      )}
+                    </ul>
+
+                    <label className="flex items-start gap-2.5 pt-2 border-t border-white/10 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={vendorForm.agreedToTerms}
+                        onChange={(e) => setVendorForm({ ...vendorForm, agreedToTerms: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 rounded accent-[#E6C367] cursor-pointer shrink-0"
+                      />
+                      <span className="text-[11px] text-white leading-snug">
+                        I have read and agree to the <strong>ÌRÍSÍ Merchant Terms &amp; Conditions</strong>, Escrow Payout Rules, and Quality Standards. *
+                      </span>
+                    </label>
                   </div>
 
                   {vendorMessage && (

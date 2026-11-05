@@ -97,6 +97,7 @@ function VendorAuthPageContent() {
   const [isVerifyingVip, setIsVerifyingVip] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'password' | 'vip_code'>('password');
   const [vipAccessCode, setVipAccessCode] = useState('');
+  const [copiedCodeAlert, setCopiedCodeAlert] = useState<string | null>(null);
 
   // Register form state
   const [regForm, setRegForm] = useState({
@@ -184,16 +185,38 @@ function VendorAuthPageContent() {
     const emailParam = searchParams.get('email');
     const claimParam = searchParams.get('claim');
     const modeParam = searchParams.get('mode') || searchParams.get('tab');
+    const codeParam = searchParams.get('code');
+    const autocopyParam = searchParams.get('autocopy') || searchParams.get('copy');
 
-    // 1-Tap VIP Magic Login Link from approval email
-    if ((actionParam === 'access' || actionParam === 'claim' || modeParam === 'claim') && (tokenParam || claimParam)) {
+    // Handle 4-Digit VIP Access Code passed via URL / Clickable Copy Button
+    if (codeParam) {
+      setVipAccessCode(codeParam);
+      setLoginMethod('vip_code');
+      if (emailParam) {
+        setLoginIdentifier(emailParam);
+      }
+      if (autocopyParam === '1' || autocopyParam === 'true' || actionParam === 'code') {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(codeParam).then(() => {
+            setCopiedCodeAlert(`Access code ${codeParam} copied to clipboard!`);
+          }).catch(() => {
+            setCopiedCodeAlert(`Access code ${codeParam} loaded.`);
+          });
+        } else {
+          setCopiedCodeAlert(`Access code ${codeParam} loaded.`);
+        }
+      }
+    }
+
+    // 1-Tap VIP Magic Login Link from approval email (only if action is access or claim without code-only copy action)
+    if (actionParam !== 'code' && (actionParam === 'access' || actionParam === 'claim' || modeParam === 'claim') && (tokenParam || claimParam)) {
       const activeToken = tokenParam || claimParam || '';
       setIsVerifyingVip(true);
       handleVipMagicLogin({ token: activeToken, email: emailParam || '' });
       return;
     }
 
-    if (tokenParam && emailParam) {
+    if (actionParam !== 'code' && tokenParam && emailParam) {
       setIsVerifyingVip(true);
       handleVipMagicLogin({ token: tokenParam, email: emailParam });
       return;
@@ -1424,6 +1447,26 @@ function VendorAuthPageContent() {
                 }}
                 className="space-y-4"
               >
+                {copiedCodeAlert && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>{copiedCodeAlert}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (vipAccessCode && typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(vipAccessCode);
+                        }
+                      }}
+                      className="px-2 py-0.5 bg-emerald-500/20 rounded text-[11px] font-mono hover:bg-emerald-500/30 cursor-pointer transition-colors"
+                    >
+                      Copy Again
+                    </button>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
                     Business Email
@@ -1443,9 +1486,25 @@ function VendorAuthPageContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                    4-Digit Access Code
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] font-bold">
+                      4-Digit Access Code
+                    </label>
+                    {vipAccessCode && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText(vipAccessCode);
+                            setCopiedCodeAlert(`Access code ${vipAccessCode} copied to clipboard!`);
+                          }
+                        }}
+                        className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        📋 Copy Code
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gold-accent)] pointer-events-none" />
                     <input

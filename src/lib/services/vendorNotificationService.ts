@@ -298,29 +298,29 @@ function wrapLuxuryTemplate(title: string, bodyContent: string): string {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
     </head>
-    <body style="background-color: #08090a; color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #08090a;">
+    <body style="background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.22); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.65);">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
               <!-- Brand Header with Official Logo -->
               <tr>
-                <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
-                  <h1 style="color: #e6c367; font-size: 24px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
-                  <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Merchant Partner Relations</p>
+                <td align="center" style="background-color: #ffffff; padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9;">
+                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+                  <h1 style="color: #111827; font-size: 24px; letter-spacing: -0.5px; margin: 0; font-weight: 800; text-transform: uppercase;">ÌRÍSÍ</h1>
+                  <p style="color: #b89035; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; font-weight: 700;">Merchant Partner Relations</p>
                 </td>
               </tr>
               <!-- Email Body Content -->
               <tr>
-                <td style="padding: 36px 32px;">
+                <td style="padding: 32px 32px 36px; background-color: #ffffff; color: #1e293b;">
                   ${bodyContent}
                   <!-- Concierge WhatsApp Support Footer -->
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 24px; margin-top: 32px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f1f5f9; padding-top: 24px; margin-top: 32px;">
                     <tr>
                       <td align="center">
-                        <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px;">We are here to support your brand's growth</p>
-                        <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); color: #e6c367; padding: 10px 20px; border-radius: 10px; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">
+                        <p style="color: #64748b; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">We are here to support your brand's growth</p>
+                        <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: #111827; border: 1px solid #111827; color: #ffffff; padding: 12px 22px; border-radius: 10px; font-size: 12.5px; text-decoration: none; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                           💬 Chat with ÌRÍSÍ Merchant Concierge on WhatsApp &rarr;
                         </a>
                       </td>
