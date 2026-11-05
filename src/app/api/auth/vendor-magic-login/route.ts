@@ -44,31 +44,50 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── Method 2: Verify 6-Digit VIP Access Code ─────────────────────────────
+    // ── Method 2: Verify 4-Digit / 6-Digit VIP Access Code ───────────────────
     if (!isAuthorized && accessCode) {
       const cleanCode = String(accessCode).replace(/\D/g, '').trim();
 
-      // Look up application in notifications table
-      const { data: appNotifs } = await adminClient
-        .from('notifications')
+      // 2a. Check vendors table bio.accessCode directly
+      const { data: existingVendors } = await adminClient
+        .from('vendors')
         .select('*')
-        .eq('type', 'vendor_application')
-        .order('created_at', { ascending: false });
+        .eq('email', normalizedEmail);
 
-      for (const notif of appNotifs || []) {
+      for (const v of existingVendors || []) {
         try {
-          const parsed = JSON.parse(notif.message);
-          if (
-            parsed.founderEmail &&
-            parsed.founderEmail.toLowerCase().trim() === normalizedEmail &&
-            parsed.accessCode &&
-            String(parsed.accessCode).trim() === cleanCode
-          ) {
+          const bioObj = typeof v.bio === 'string' && v.bio.startsWith('{') ? JSON.parse(v.bio) : (v.bio || {});
+          if (bioObj?.accessCode && String(bioObj.accessCode).trim() === cleanCode) {
             isAuthorized = true;
-            applicantData = parsed;
+            resolvedVendorId = v.id;
             break;
           }
         } catch (_) {}
+      }
+
+      // 2b. Look up application in notifications table
+      if (!isAuthorized) {
+        const { data: appNotifs } = await adminClient
+          .from('notifications')
+          .select('*')
+          .eq('type', 'vendor_application')
+          .order('created_at', { ascending: false });
+
+        for (const notif of appNotifs || []) {
+          try {
+            const parsed = JSON.parse(notif.message);
+            if (
+              parsed.founderEmail &&
+              parsed.founderEmail.toLowerCase().trim() === normalizedEmail &&
+              parsed.accessCode &&
+              String(parsed.accessCode).trim() === cleanCode
+            ) {
+              isAuthorized = true;
+              applicantData = parsed;
+              break;
+            }
+          } catch (_) {}
+        }
       }
     }
 

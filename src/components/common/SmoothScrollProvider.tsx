@@ -14,6 +14,28 @@ export default function SmoothScrollProvider({ children }: { children: React.Rea
           easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
           smoothWheel: true,
           touchMultiplier: 1.5,
+          prevent: (node: HTMLElement) => {
+            if (!node) return false;
+            let el: HTMLElement | null = node;
+            while (el && el !== document.body && el !== document.documentElement) {
+              if (
+                el.hasAttribute?.('data-lenis-prevent') ||
+                el.getAttribute?.('role') === 'dialog'
+              ) {
+                return true;
+              }
+              const style = window.getComputedStyle(el);
+              const overflowY = style.overflowY;
+              if (
+                (overflowY === 'auto' || overflowY === 'scroll') &&
+                el.scrollHeight > el.clientHeight
+              ) {
+                return true;
+              }
+              el = el.parentElement;
+            }
+            return false;
+          },
         });
 
         function raf(time: number) {

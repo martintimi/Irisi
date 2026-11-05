@@ -208,7 +208,13 @@ function VendorAuthPageContent() {
       }
     }
 
-    // 1-Tap VIP Magic Login Link from approval email (only if action is access or claim without code-only copy action)
+    // 1-Tap VIP Magic Login Link from approval email (supports clean ?action=access&code=XXXX&email=... or ?token=...)
+    if (actionParam === 'access' && codeParam && emailParam && !autocopyParam) {
+      setIsVerifyingVip(true);
+      handleVipMagicLogin({ accessCode: codeParam, email: emailParam });
+      return;
+    }
+
     if (actionParam !== 'code' && (actionParam === 'access' || actionParam === 'claim' || modeParam === 'claim') && (tokenParam || claimParam)) {
       const activeToken = tokenParam || claimParam || '';
       setIsVerifyingVip(true);
