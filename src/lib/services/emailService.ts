@@ -6,6 +6,9 @@ import {
 } from '@/lib/services/vendorNotificationService';
 import { getBaseUrl } from '@/lib/utils/url';
 
+export const BRAND_LOGO_URL = 'https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png';
+export const BRAND_WORDMARK_URL = 'https://res.cloudinary.com/dvnj8idde/image/upload/v1793703378/brand_assets/irisi_wordmark_logo.png';
+
 export interface OrderEmailPayload {
   orderNumber: string;
   customerName: string;
@@ -38,26 +41,26 @@ function wrapEmailHtml(title: string, content: string): string {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
     </head>
-    <body style="background-color: #08090a; color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #08090a;">
+    <body style="background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.22); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.65);">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
               <tr>
-                <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="${getBaseUrl()}/images/logo/irisi-icon.png" alt="ÌRÍSÍ Logo" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.35);" />
-                  <h1 style="color: #e6c367; font-size: 24px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
-                  <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion & Commerce</p>
+                <td align="center" style="background-color: #ffffff; padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9;">
+                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Logo" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+                  <h1 style="color: #111827; font-size: 24px; letter-spacing: -0.5px; margin: 0; font-weight: 800; text-transform: uppercase;">ÌRÍSÍ</h1>
+                  <p style="color: #b89035; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; font-weight: 700;">Luxury Nigerian Fashion & Commerce</p>
                 </td>
               </tr>
               <tr>
-                <td style="padding: 36px 32px;">
+                <td style="padding: 32px 32px 36px; background-color: #ffffff; color: #1e293b;">
                   ${content}
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 24px; margin-top: 32px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f1f5f9; padding-top: 24px; margin-top: 32px;">
                     <tr>
                       <td align="center">
-                        <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px;">Questions, Sizing or Delivery Help? We Dey For You</p>
-                        <a href="https://wa.me/2349070332145" style="display: inline-block; background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); color: #e6c367; padding: 10px 20px; border-radius: 10px; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">
+                        <p style="color: #64748b; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Questions, Sizing or Delivery Help? We Dey For You</p>
+                        <a href="https://wa.me/2349070332145" style="display: inline-block; background-color: #111827; border: 1px solid #111827; color: #ffffff; padding: 12px 22px; border-radius: 10px; font-size: 12.5px; text-decoration: none; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                           💬 Chat with Concierge on WhatsApp &rarr;
                         </a>
                       </td>
@@ -495,33 +498,33 @@ function buildRecoveryEmailHtml(payload: PasswordResetEmailPayload): string {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>ÌRÍSÍ Security Recovery</title>
     </head>
-    <body style="background-color: #08090a; color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #08090a;">
+    <body style="background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.2); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.6);">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
               <!-- Luxury Brand Header -->
               <tr>
-                <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="${getBaseUrl()}/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
-                  <h1 style="color: #e6c367; font-size: 26px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
-                  <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion & Commerce</p>
+                <td align="center" style="background-color: #ffffff; padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9;">
+                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+                  <h1 style="color: #111827; font-size: 24px; letter-spacing: -0.5px; margin: 0; font-weight: 800; text-transform: uppercase;">ÌRÍSÍ</h1>
+                  <p style="color: #b89035; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; font-weight: 700;">Luxury Nigerian Fashion & Commerce</p>
                 </td>
               </tr>
               <!-- Content Body -->
               <tr>
-                <td style="padding: 36px 32px;">
-                  <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Password Recovery Code</h2>
-                  <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+                <td style="padding: 32px 32px 36px; background-color: #ffffff;">
+                  <h2 style="color: #111827; font-size: 20px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px;">Password Recovery Code</h2>
+                  <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
                     Hello ${recipientName || (isVendor ? 'Merchant Partner' : 'Customer')},<br><br>
                     We received a request to reset the password for your <strong>${roleLabel}</strong>. Use the 6-digit verification code below to authorize this change and set your new password:
                   </p>
                   <!-- 6-Digit OTP Box -->
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
                     <tr>
-                      <td align="center" style="background-color: #0a0b0d; border: 1.5px dashed #e6c367; border-radius: 16px; padding: 26px 20px;">
-                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #e6c367; display: block;">${otpCode}</span>
-                        <span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 10px; font-weight: 500;">Valid for 15 minutes • Single-use only</span>
+                      <td align="center" style="background-color: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 16px; padding: 24px 20px;">
+                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 10px; color: #111827; display: block;">${otpCode}</span>
+                        <span style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 10px; font-weight: 600;">Valid for 15 minutes • Single-use only</span>
                       </td>
                     </tr>
                   </table>
@@ -529,19 +532,19 @@ function buildRecoveryEmailHtml(payload: PasswordResetEmailPayload): string {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
                       <tr>
                         <td align="center">
-                          <a href="${actionLink}" style="display: inline-block; background-color: #e6c367; color: #0a0b0d; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">Or Click Here to Reset Password</a>
+                          <a href="${actionLink}" style="display: inline-block; background-color: #111827; color: #ffffff; font-weight: 700; font-size: 13.5px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(17,24,39,0.18);">Or Click Here to Reset Password</a>
                         </td>
                       </tr>
                     </table>
                   ` : ''}
-                  <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0 0 24px;">
+                  <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin: 0 0 24px;">
                     If you did not request this recovery code, please disregard this email. Your password will remain unchanged and your account is secure.
                   </p>
                   <!-- Support Concierge -->
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 22px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f1f5f9; padding-top: 22px;">
                     <tr>
                       <td align="center">
-                        <a href="${supportUrl || 'https://wa.me/2349070332145'}" style="color: #e6c367; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">Questions or concerns? Contact Concierge Support on WhatsApp &rarr;</a>
+                        <a href="${supportUrl || 'https://wa.me/2349070332145'}" style="color: #b89035; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">Questions or concerns? Contact Concierge Support on WhatsApp &rarr;</a>
                       </td>
                     </tr>
                   </table>
@@ -607,33 +610,33 @@ function buildSignupVerificationEmailHtml(payload: SignupVerificationEmailPayloa
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>ÌRÍSÍ Account Verification</title>
     </head>
-    <body style="background-color: #08090a; color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #08090a;">
+    <body style="background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.2); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.6);">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
               <!-- Luxury Brand Header -->
               <tr>
-                <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 28px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="${getBaseUrl()}/images/logo/irisi-icon.png" alt="ÌRÍSÍ Emblem" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.3);" />
-                  <h1 style="color: #e6c367; font-size: 26px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
-                  <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Luxury Nigerian Fashion &amp; Commerce</p>
+                <td align="center" style="background-color: #ffffff; padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9;">
+                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+                  <h1 style="color: #111827; font-size: 24px; letter-spacing: -0.5px; margin: 0; font-weight: 800; text-transform: uppercase;">ÌRÍSÍ</h1>
+                  <p style="color: #b89035; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; font-weight: 700;">Luxury Nigerian Fashion &amp; Commerce</p>
                 </td>
               </tr>
               <!-- Content Body -->
               <tr>
-                <td style="padding: 36px 32px;">
-                  <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">${headline}</h2>
-                  <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+                <td style="padding: 32px 32px 36px; background-color: #ffffff;">
+                  <h2 style="color: #111827; font-size: 20px; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.3px;">${headline}</h2>
+                  <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
                     Hello ${recipientName || (isVendor ? 'Merchant Partner' : 'Valued Client')},<br><br>
                     Welcome to ÌRÍSÍ! Use the 6-digit verification code below to confirm your business email and complete your <strong>${roleLabel}</strong> registration:
                   </p>
                   <!-- 6-Digit OTP Box -->
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
                     <tr>
-                      <td align="center" style="background-color: #0a0b0d; border: 1.5px dashed #e6c367; border-radius: 16px; padding: 26px 20px;">
-                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #e6c367; display: block;">${otpCode}</span>
-                        <span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 10px; font-weight: 500;">Valid for 15 minutes • Single-use only</span>
+                      <td align="center" style="background-color: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 16px; padding: 24px 20px;">
+                        <span style="font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 10px; color: #111827; display: block;">${otpCode}</span>
+                        <span style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-top: 10px; font-weight: 600;">Valid for 15 minutes • Single-use only</span>
                       </td>
                     </tr>
                   </table>
@@ -641,19 +644,19 @@ function buildSignupVerificationEmailHtml(payload: SignupVerificationEmailPayloa
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
                       <tr>
                         <td align="center">
-                          <a href="${actionLink}" style="display: inline-block; background-color: #e6c367; color: #0a0b0d; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">Confirm Account Instantly &rarr;</a>
+                          <a href="${actionLink}" style="display: inline-block; background-color: #111827; color: #ffffff; font-weight: 700; font-size: 13.5px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(17,24,39,0.18);">Confirm Account Instantly &rarr;</a>
                         </td>
                       </tr>
                     </table>
                   ` : ''}
-                  <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0 0 24px;">
+                  <p style="color: #64748b; font-size: 12px; line-height: 1.5; margin: 0 0 24px;">
                     If you did not initiate this registration on ÌRÍSÍ, you can safely ignore this email.
                   </p>
                   <!-- Support Concierge -->
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 22px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f1f5f9; padding-top: 22px;">
                     <tr>
                       <td align="center">
-                        <a href="${supportUrl || 'https://wa.me/2349070332145'}" style="color: #e6c367; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">Need assistance? Chat with ÌRÍSÍ Merchant Concierge on WhatsApp &rarr;</a>
+                        <a href="${supportUrl || 'https://wa.me/2349070332145'}" style="color: #b89035; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">Need assistance? Chat with ÌRÍSÍ Merchant Concierge on WhatsApp &rarr;</a>
                       </td>
                     </tr>
                   </table>

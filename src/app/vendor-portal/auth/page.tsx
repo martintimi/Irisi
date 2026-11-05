@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Building, Scissors, Mail, Phone, Lock, MapPin,
   ShieldCheck, ArrowRight, ArrowLeft, Sparkles, User, Sun, Moon, Loader2,
-  Eye, EyeOff, CheckCircle2, RotateCw, Store, KeyRound, MessageCircle
+  Eye, EyeOff, CheckCircle2, RotateCw, Store, KeyRound, MessageCircle, Crown
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -91,6 +91,14 @@ function VendorAuthPageContent() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [recoverySuccessMsg, setRecoverySuccessMsg] = useState('');
 
+  // Pre-approved claim & VIP magic login state
+  const [isClaimFlow, setIsClaimFlow] = useState(false);
+  const [claimDetails, setClaimDetails] = useState<any>(null);
+  const [isVerifyingVip, setIsVerifyingVip] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'password' | 'vip_code'>('password');
+  const [vipAccessCode, setVipAccessCode] = useState('');
+  const [copiedCodeAlert, setCopiedCodeAlert] = useState<string | null>(null);
+
   // Register form state
   const [regForm, setRegForm] = useState({
     brandName: '',
@@ -111,11 +119,139 @@ function VendorAuthPageContent() {
     accountName: '',
   });
 
+  const handleVipMagicLogin = async (opts: { token?: string; accessCode?: string; email?: string }) => {
+    setIsSubmitting(true);
+    setErrorMessage('');
+    try {
+      const res = await fetch('/api/auth/vendor-magic-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'VIP access verification failed.');
+
+      if (data.vendor) {
+        const v = data.vendor;
+        const vId = v.id || v.email || opts.email;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('irisi_vendor_id', vId);
+          localStorage.setItem('irisi_vendor_email', v.email || opts.email || '');
+          localStorage.setItem('veyra_vendor_id', vId);
+          localStorage.setItem('veyra_vendor_email', v.email || opts.email || '');
+          document.cookie = `irisi_vendor_id=${vId}; path=/; max-age=2592000; samesite=lax`;
+          document.cookie = `veyra_vendor_id=${vId}; path=/; max-age=2592000; samesite=lax`;
+        }
+
+        setVendorProfile({
+          brandName: v.brand_name || 'My Brand',
+          designerName: v.designer_name || 'Lead Manager',
+          contactPerson: v.contact_person || v.designer_name,
+          email: v.email || opts.email,
+          phone: v.phone || '',
+          location: v.location || '',
+          vendorType: isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer',
+          specialty: v.specialty || v.vendorSpecialty || 'multi_department',
+          vendorSpecialty: v.specialty || v.vendorSpecialty || 'multi_department',
+          bankName: v.bank_name || '',
+          accountNumber: v.account_number || '',
+          accountName: v.account_name || '',
+          instagram: v.instagram || '',
+          bio: v.bio || '',
+        });
+      }
+
+      setIsVendorLoggedIn(true);
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#e6c367', '#10b981', '#ffffff'],
+      });
+      router.push('/vendor-portal');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'VIP Access failed.');
+      setIsVerifyingVip(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle URL search params for direct vendor onboarding links
   useEffect(() => {
     if (!searchParams) return;
-    const modeParam = searchParams.get('mode') || searchParams.get('tab') || searchParams.get('action');
-    if (modeParam === 'register' || modeParam === 'signup' || modeParam === 'onboard') {
+    const actionParam = searchParams.get('action');
+    const tokenParam = searchParams.get('token');
+    const emailParam = searchParams.get('email');
+    const claimParam = searchParams.get('claim');
+    const modeParam = searchParams.get('mode') || searchParams.get('tab');
+    const codeParam = searchParams.get('code');
+    const autocopyParam = searchParams.get('autocopy') || searchParams.get('copy');
+
+    // Handle 4-Digit VIP Access Code passed via URL / Clickable Copy Button
+    if (codeParam) {
+      setVipAccessCode(codeParam);
+      setLoginMethod('vip_code');
+      if (emailParam) {
+        setLoginIdentifier(emailParam);
+      }
+      if (autocopyParam === '1' || autocopyParam === 'true' || actionParam === 'code') {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(codeParam).then(() => {
+            setCopiedCodeAlert(`Access code ${codeParam} copied to clipboard!`);
+          }).catch(() => {
+            setCopiedCodeAlert(`Access code ${codeParam} loaded.`);
+          });
+        } else {
+          setCopiedCodeAlert(`Access code ${codeParam} loaded.`);
+        }
+      }
+    }
+
+    // 1-Tap VIP Magic Login Link from approval email (only if action is access or claim without code-only copy action)
+    if (actionParam !== 'code' && (actionParam === 'access' || actionParam === 'claim' || modeParam === 'claim') && (tokenParam || claimParam)) {
+      const activeToken = tokenParam || claimParam || '';
+      setIsVerifyingVip(true);
+      handleVipMagicLogin({ token: activeToken, email: emailParam || '' });
+      return;
+    }
+
+    if (actionParam !== 'code' && tokenParam && emailParam) {
+      setIsVerifyingVip(true);
+      handleVipMagicLogin({ token: tokenParam, email: emailParam });
+      return;
+    }
+
+    if (claimParam || modeParam === 'claim') {
+      let claimData: any = null;
+      if (claimParam) {
+        try {
+          const jsonStr = decodeURIComponent(escape(atob(claimParam.replace(/-/g, '+').replace(/_/g, '/'))));
+          claimData = JSON.parse(jsonStr);
+        } catch (e) {
+          console.warn('Could not decode claim token', e);
+        }
+      }
+
+      if (claimData) {
+        setIsClaimFlow(true);
+        setClaimDetails(claimData);
+        setAuthMode('register');
+        setRegForm((prev) => ({
+          ...prev,
+          brandName: claimData.brandName || prev.brandName,
+          designerName: claimData.designerName || claimData.brandName || prev.designerName,
+          email: claimData.email || prev.email,
+          phone: claimData.phone || prev.phone,
+          state: claimData.state || prev.state,
+          city: claimData.city || prev.city,
+          specialty: claimData.specialty || prev.specialty,
+          vendorType: claimData.specialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller',
+        }));
+      } else {
+        setAuthMode('register');
+      }
+    } else if (modeParam === 'register' || modeParam === 'signup' || modeParam === 'onboard') {
       setAuthMode('register');
     }
 
@@ -420,11 +556,29 @@ function VendorAuthPageContent() {
         bankName: regForm.accountNumber.trim() ? (regForm.bankName || '') : '',
         accountNumber: regForm.accountNumber.trim(),
         accountName: regForm.accountNumber.trim() ? regForm.accountName.trim() : '',
+        isPreApproved: isClaimFlow,
+        socialLinks: claimDetails?.socialLinks || [],
+        claimToken: searchParams?.get('claim') || '',
       });
 
       if (!res.success) {
         setErrorMessage(res.error || 'Vendor registration failed. Please check your details.');
         setIsSubmitting(false);
+        return;
+      }
+
+      // If pre-approved direct login (No double approval! Immediate access)
+      if (res.directLogin) {
+        confetti({
+          particleCount: 90,
+          spread: 75,
+          origin: { y: 0.6 }
+        });
+        setIsVendorLoggedIn(true);
+        if (res.vendorProfile) {
+          setVendorProfile(res.vendorProfile);
+        }
+        router.push('/vendor-portal/products');
         return;
       }
 
@@ -801,6 +955,25 @@ function VendorAuthPageContent() {
         {/* Center Container */}
         <div className="w-full max-w-md mx-auto space-y-6 my-auto py-6">
           
+          {isVerifyingVip ? (
+            <div className="py-12 px-6 rounded-3xl bg-white/[0.03] border border-[#E6C367]/40 text-center space-y-4 shadow-2xl animate-fadeIn">
+              <div className="w-16 h-16 rounded-full bg-[#E6C367]/15 border border-[#E6C367] flex items-center justify-center mx-auto text-[#E6C367] animate-pulse">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-white">
+                Verifying VIP Invitation...
+              </h2>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                Authenticating your brand approval on ÌRÍSÍ. Logging you in and activating your store dashboard...
+              </p>
+              {errorMessage && (
+                <div className="pt-2 text-xs text-rose-400 font-medium">
+                  {errorMessage}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-xs font-mono-luxury uppercase font-bold tracking-wider">
               <span>
@@ -811,7 +984,7 @@ function VendorAuthPageContent() {
                   : authMode === 'reset_password'
                   ? 'Set New Password'
                   : authMode === 'register'
-                  ? 'Partner Onboarding'
+                  ? 'Founding Merchant'
                   : 'Merchant Partner Portal'}
               </span>
             </div>
@@ -823,7 +996,7 @@ function VendorAuthPageContent() {
                 : authMode === 'reset_password'
                 ? 'Set New Password'
                 : authMode === 'register'
-                ? (isBoutiqueSelected ? 'Register Your Boutique' : 'Register Your Atelier')
+                ? 'Sell on ÌRÍSÍ'
                 : 'Partner Workspace Login'}
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light">
@@ -834,7 +1007,7 @@ function VendorAuthPageContent() {
                 : authMode === 'reset_password'
                 ? `Enter the recovery code sent to ${recoveryInfo?.maskedEmail || 'your registered email'} and choose your new password.`
                 : authMode === 'register'
-                ? 'Publish your ready-to-wear drops and receive orders from verified shoppers.'
+                ? 'Apply to join Drop 001 as a founding designer, boutique, or fragrance brand.'
                 : 'Access your store orders, catalog inventory, and instant settlement banking.'}
             </p>
           </div>
@@ -868,8 +1041,21 @@ function VendorAuthPageContent() {
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                Register Store
+                Apply to Sell
               </button>
+            </div>
+          )}
+
+          {/* Pre-Approved Application Banner */}
+          {isClaimFlow && (
+            <div className="p-4 rounded-2xl bg-[#B89035]/15 border border-[#E6C367] text-[#E6C367] space-y-1.5 animate-fadeIn">
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-[#E6C367]" />
+                <span>Application Approved · Fast-Track Onboarding</span>
+              </div>
+              <p className="text-xs text-white/90 leading-relaxed font-light">
+                Congratulations <strong>{regForm.brandName || 'Designer'}</strong>! The ÌRÍSÍ Curation Board has vetted and approved your merchant application. Your details are pre-loaded below. Simply create your password to immediately activate your storefront.
+              </p>
             </div>
           )}
 
@@ -1242,102 +1428,303 @@ function VendorAuthPageContent() {
           ) : authMode === 'login' ? (
 
             /* ======================================================== */
-            /* 4. SIGN IN VIEW */
+            /* 4. SIGN IN VIEW (CLEAN SINGLE FORM - NO DOUBLE TABS) */
             /* ======================================================== */
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  Business Email or Phone Number
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    required
-                    value={loginIdentifier}
-                    onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="contact@brand.ng or 08012*****"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
-                  />
-                </div>
-                <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onTouchStart={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowLoginPassword((prev) => !prev);
-                    }}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
-                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRecoveryIdentifier(loginIdentifier);
-                      setErrorMessage('');
-                      setRecoverySuccessMsg('');
-                      setAuthMode('forgot_password');
-                    }}
-                    className="text-xs font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+            loginMethod === 'vip_code' ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!loginIdentifier.trim()) {
+                    setErrorMessage('Please enter your business email.');
+                    return;
+                  }
+                  const code = vipAccessCode.trim();
+                  if (!code || (code.length !== 4 && code.length !== 6)) {
+                    setErrorMessage('Please enter your 4-digit access code.');
+                    return;
+                  }
+                  handleVipMagicLogin({ email: loginIdentifier.trim(), accessCode: code });
+                }}
+                className="space-y-4"
               >
-                {isSubmitting ? (
-                  <>
-                    <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
-                    <span>Signing In to Merchant Portal...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In to Merchant Portal</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
+                {copiedCodeAlert && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <span>{copiedCodeAlert}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (vipAccessCode && typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(vipAccessCode);
+                        }
+                      }}
+                      className="px-2 py-0.5 bg-emerald-500/20 rounded text-[11px] font-mono hover:bg-emerald-500/30 cursor-pointer transition-colors"
+                    >
+                      Copy Again
+                    </button>
+                  </div>
                 )}
-              </button>
 
-              <div className="text-center pt-4">
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                    Business Email
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                    <input
+                      type="email"
+                      required
+                      value={loginIdentifier}
+                      onChange={(e) => setLoginIdentifier(e.target.value)}
+                      placeholder="contact@brand.ng"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] font-bold">
+                      4-Digit Access Code
+                    </label>
+                    {vipAccessCode && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText(vipAccessCode);
+                            setCopiedCodeAlert(`Access code ${vipAccessCode} copied to clipboard!`);
+                          }
+                        }}
+                        className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        📋 Copy Code
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--gold-accent)] pointer-events-none" />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      required
+                      value={vipAccessCode}
+                      onChange={(e) => setVipAccessCode(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="e.g. 7392"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-2xl font-mono tracking-[0.3em] text-center font-bold focus:border-[var(--gold-accent)] focus:outline-none transition-all"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginMethod('password');
+                        setErrorMessage('');
+                      }}
+                      className="font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 font-medium"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Sign in with Password instead</span>
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || (vipAccessCode.length !== 4 && vipAccessCode.length !== 6) || !loginIdentifier.trim()}
+                  className="w-full py-3.5 rounded-full bg-[#E6C367] hover:bg-[#d4b055] text-black font-mono-luxury uppercase text-xs font-bold tracking-wider transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Sparkles className="h-4 w-4 animate-spin text-black" />
+                      <span>Verifying Code...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Enter Merchant Portal</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-3">
+                  <Link href="/" className="text-[11px] font-mono-luxury text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                    ← Return to Shopper Storefront
+                  </Link>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                    Business Email or Phone Number
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      required
+                      value={loginIdentifier}
+                      onChange={(e) => setLoginIdentifier(e.target.value)}
+                      placeholder="contact@brand.ng or 08012*****"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onTouchStart={(e) => {
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowLoginPassword((prev) => !prev);
+                      }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
+                      aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between pt-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginMethod('vip_code');
+                        setErrorMessage('');
+                      }}
+                      className="font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 font-medium"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Use 4-Digit Access Code</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRecoveryIdentifier(loginIdentifier);
+                        setErrorMessage('');
+                        setRecoverySuccessMsg('');
+                        setAuthMode('forgot_password');
+                      }}
+                      className="font-mono-luxury text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:underline cursor-pointer transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                      <span>Signing In to Merchant Portal...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In to Merchant Portal</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+
+                <div className="text-center pt-4">
+                  <Link href="/" className="text-[11px] font-mono-luxury text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                    ← Return to Shopper Storefront
+                  </Link>
+                </div>
+              </form>
+            )
+          ) : !isClaimFlow ? (
+
+            /* ======================================================== */
+            /* 3. APPLY TO SELL VIEW (CLEAN HIGH CONTRAST) */
+            /* ======================================================== */
+            <div className="py-8 px-6 rounded-3xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-center space-y-6 animate-fadeIn">
+              <div className="w-14 h-14 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 flex items-center justify-center mx-auto text-[var(--gold-accent)]">
+                <Store className="w-7 h-7" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+                  Sell on ÌRÍSÍ
+                </h3>
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed font-light">
+                  We are onboarding founding fashion designers, ready-to-wear boutiques, perfume brands, and luxury creators for Launch Drop 001.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-3 text-left shadow-sm">
+                <span className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)] block">
+                  How Merchant Admission Works
+                </span>
+                <ol className="list-decimal list-inside space-y-2 text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed pl-1">
+                  <li>Submit your brand application with photos of your real items.</li>
+                  <li>Our team reviews your catalog and contacts your WhatsApp within 48h.</li>
+                  <li>Upon approval, you receive your 4-digit code and instant dashboard access.</li>
+                </ol>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <Link
+                  href="/coming-soon#apply"
+                  className="w-full py-3.5 rounded-full bg-[#E6C367] hover:bg-[#d4b055] text-black font-mono-luxury uppercase text-xs font-bold tracking-wider transition-all shadow-xl flex items-center justify-center gap-2"
+                >
+                  <span>Apply As A Founding Brand</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setLoginMethod('vip_code');
+                    setErrorMessage('');
+                  }}
+                  className="w-full py-3 rounded-full border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-semibold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer bg-[var(--bg-secondary)]"
+                >
+                  <KeyRound className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                  <span>Already Approved? Enter 4-Digit Code</span>
+                </button>
+              </div>
+
+              <div className="pt-2 text-center">
                 <Link href="/" className="text-[11px] font-mono-luxury text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
                   ← Return to Shopper Storefront
                 </Link>
               </div>
-            </form>
+            </div>
           ) : (
 
             /* ======================================================== */
@@ -1402,11 +1789,19 @@ function VendorAuthPageContent() {
                     <input
                       type="email"
                       required
+                      readOnly={isClaimFlow}
                       value={regForm.email}
                       onChange={(e) => setRegForm({ ...regForm, email: e.target.value })}
                       placeholder="contact@brand.ng"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                      className={`w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none ${
+                        isClaimFlow ? 'opacity-80 cursor-not-allowed bg-emerald-950/10 border-emerald-500/30' : ''
+                      }`}
                     />
+                    {isClaimFlow && (
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 mt-1 font-bold">
+                        <CheckCircle2 className="w-3 h-3" /> Pre-approved Business Email
+                      </span>
+                    )}
                   </div>
                   <EmailDomainSuggestions
                     email={regForm.email}
@@ -1692,7 +2087,7 @@ function VendorAuthPageContent() {
                   </>
                 ) : (
                   <>
-                    <span>{labels.btnText}</span>
+                    <span>{isClaimFlow ? 'Activate Verified Store & Open Atelier' : labels.btnText}</span>
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -1704,6 +2099,8 @@ function VendorAuthPageContent() {
                 </Link>
               </div>
             </form>
+          )}
+          </>
           )}
 
         </div>

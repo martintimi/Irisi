@@ -34,7 +34,8 @@ export interface UnsoldItemReport {
   imageUrl?: string;
 }
 
-const BRAND_LOGO_URL = `${getBaseUrl()}/images/logo/irisi-icon.png`;
+export const BRAND_LOGO_URL = 'https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png';
+export const BRAND_WORDMARK_URL = 'https://res.cloudinary.com/dvnj8idde/image/upload/v1793703378/brand_assets/irisi_wordmark_logo.png';
 const CONCIERGE_WHATSAPP_URL = 'https://wa.me/2349070332145';
 
 /**
@@ -81,7 +82,7 @@ export async function sendDirectGmailTls(opts: {
 
         if (state === 'INIT' && code === '220') {
           state = 'EHLO';
-          socket.write('EHLO irisi.ng\r\n');
+          socket.write('EHLO irisimi.ng\r\n');
         } else if (state === 'EHLO' && code === '250') {
           state = 'AUTH_LOGIN';
           socket.write('AUTH LOGIN\r\n');
@@ -102,7 +103,7 @@ export async function sendDirectGmailTls(opts: {
           socket.write('DATA\r\n');
         } else if (state === 'DATA' && code === '354') {
           state = 'SENDING_DATA';
-          const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@irisi.ng>`;
+          const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@irisimi.ng>`;
           const cleanSubject = `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`;
           const bodyPayload = (opts.html || opts.text || '').replace(/\r?\n\./g, '\r\n..');
           const senderName = opts.fromName || 'ÌRÍSÍ Marketplace';
@@ -144,7 +145,42 @@ export async function sendLuxuryEmail(
   html: string,
   options?: { fromName?: string }
 ): Promise<{ success: boolean; provider: string; error?: string }> {
-  // 1. Direct TLS Gmail SMTP (Fastest & 100% Reliable Delivery)
+  // 1. Resend API (Top Priority: Verified Domain Delivery with DKIM/SPF)
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey && !resendApiKey.startsWith('re_placeholder')) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: (() => {
+            const rawFrom = process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>';
+            const emailAddr = rawFrom.includes('<') ? rawFrom.replace(/^[^<]*<([^>]+)>.*$/, '$1').trim() : rawFrom.trim();
+            return options?.fromName ? `"${options.fromName}" <${emailAddr}>` : (rawFrom.includes('<') ? rawFrom : `ÌRÍSÍ <${emailAddr}>`);
+          })(),
+          to,
+          subject,
+          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+          html,
+        }),
+      });
+
+      if (response.ok) {
+        console.log(`[EMAIL DISPATCH] 🚀 Delivered via Resend (irisimi.ng) to ${to} (${subject})`);
+        return { success: true, provider: 'resend' };
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        console.warn(`[EMAIL DISPATCH] ⚠️ Resend response not ok for ${to}:`, errJson);
+      }
+    } catch (err: any) {
+      console.warn(`[EMAIL DISPATCH] ⚠️ Resend failed for ${to}:`, err.message);
+    }
+  }
+
+  // 2. Direct TLS Gmail SMTP (Fastest & 100% Reliable Delivery)
   const rawUser = process.env.GMAIL_USER || process.env.SMTP_USER;
   const rawPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASSWORD || process.env.SMTP_PASS;
 
@@ -181,6 +217,7 @@ export async function sendLuxuryEmail(
           from: `"${options?.fromName || 'ÌRÍSÍ Marketplace'}" <${gmailUser}>`,
           to,
           subject,
+          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
           html,
         });
 
@@ -203,7 +240,8 @@ export async function sendLuxuryEmail(
             from: `"${options?.fromName || 'ÌRÍSÍ Marketplace'}" <${gmailUser}>`,
             to,
             subject,
-            html,
+            text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+          html,
           });
 
           console.log(`[EMAIL DISPATCH] ✅ Sent via Nodemailer Gmail 587 to ${to} (${subject}) - ID: ${info587?.messageId || 'ok'}`);
@@ -242,32 +280,7 @@ export async function sendLuxuryEmail(
     }
   }
 
-  // 3. Resend API
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (resendApiKey) {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'ÌRÍSÍ Merchant Relations <vendors@irisi.ng>',
-          to,
-          subject,
-          html,
-        }),
-      });
 
-      if (response.ok) {
-        console.log(`[VENDOR NOTIFICATION] ✅ Sent via Resend to ${to} (${subject})`);
-        return { success: true, provider: 'resend' };
-      }
-    } catch (err: any) {
-      console.warn(`[VENDOR NOTIFICATION] ⚠️ Resend failed for ${to}:`, err.message);
-    }
-  }
 
   console.log(`[VENDOR NOTIFICATION] ℹ️ Email queued for ${to} (${subject}), but all email transport engines were exhausted.`);
   return { success: false, provider: 'none', error: 'All email transport engines failed or timed out' };
@@ -285,29 +298,29 @@ function wrapLuxuryTemplate(title: string, bodyContent: string): string {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
     </head>
-    <body style="background-color: #08090a; color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #08090a;">
+    <body style="background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
         <tr>
           <td align="center">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #121316; border: 1px solid rgba(230, 195, 103, 0.22); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 48px rgba(0,0,0,0.65);">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
               <!-- Brand Header with Official Logo -->
               <tr>
-                <td align="center" style="background: linear-gradient(180deg, rgba(230, 195, 103, 0.16) 0%, rgba(18, 19, 22, 0) 100%); padding: 36px 24px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Logo" width="56" height="56" style="display: block; margin: 0 auto 16px; border-radius: 12px; box-shadow: 0 6px 18px rgba(230, 195, 103, 0.35);" />
-                  <h1 style="color: #e6c367; font-size: 24px; letter-spacing: 1.5px; margin: 0; font-weight: 700; text-transform: uppercase;">ÌRÍSÍ</h1>
-                  <p style="color: #9ca3af; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0; font-weight: 500;">Merchant Partner Relations</p>
+                <td align="center" style="background-color: #ffffff; padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9;">
+                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
+                  <h1 style="color: #111827; font-size: 24px; letter-spacing: -0.5px; margin: 0; font-weight: 800; text-transform: uppercase;">ÌRÍSÍ</h1>
+                  <p style="color: #b89035; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; font-weight: 700;">Merchant Partner Relations</p>
                 </td>
               </tr>
               <!-- Email Body Content -->
               <tr>
-                <td style="padding: 36px 32px;">
+                <td style="padding: 32px 32px 36px; background-color: #ffffff; color: #1e293b;">
                   ${bodyContent}
                   <!-- Concierge WhatsApp Support Footer -->
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 24px; margin-top: 32px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f1f5f9; padding-top: 24px; margin-top: 32px;">
                     <tr>
                       <td align="center">
-                        <p style="color: #9ca3af; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px;">We are here to support your brand's growth</p>
-                        <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); color: #e6c367; padding: 10px 20px; border-radius: 10px; font-size: 12px; text-decoration: none; font-weight: 600; letter-spacing: 0.3px;">
+                        <p style="color: #64748b; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">We are here to support your brand's growth</p>
+                        <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: #111827; border: 1px solid #111827; color: #ffffff; padding: 12px 22px; border-radius: 10px; font-size: 12.5px; text-decoration: none; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                           💬 Chat with ÌRÍSÍ Merchant Concierge on WhatsApp &rarr;
                         </a>
                       </td>

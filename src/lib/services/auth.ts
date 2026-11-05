@@ -29,6 +29,9 @@ export interface VendorSignUpData {
   bankName?: string;
   accountNumber?: string;
   accountName?: string;
+  isPreApproved?: boolean;
+  socialLinks?: any;
+  claimToken?: string;
 }
 
 // 1. REGISTER CUSTOMER via /api/auth/register
@@ -113,6 +116,9 @@ export async function signUpVendor(data: VendorSignUpData) {
         bankName: data.bankName,
         accountNumber: data.accountNumber,
         accountName: data.accountName,
+        isPreApproved: data.isPreApproved,
+        socialLinks: data.socialLinks,
+        claimToken: data.claimToken,
         userType: 'vendor',
       }),
     });
@@ -125,7 +131,9 @@ export async function signUpVendor(data: VendorSignUpData) {
     return {
       success: true,
       user: result.user,
-      vendorProfile: result.vendorProfile,
+      vendorProfile: result.vendorProfile || result.vendor,
+      vendor: result.vendor,
+      directLogin: !!result.directLogin,
     };
   } catch (err: any) {
     return { success: false, error: err.message || 'Network error' };

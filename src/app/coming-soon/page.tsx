@@ -19,6 +19,10 @@ import {
   Award,
   Plus,
   Trash2,
+  Upload,
+  Camera,
+  Video,
+  Loader2,
 } from 'lucide-react';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
@@ -278,6 +282,7 @@ export default function ComingSoonPage() {
 
   // Vendor Application Modal
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
+  const [showVendorTerms, setShowVendorTerms] = useState(false);
   const [vendorForm, setVendorForm] = useState({
     brandName: '',
     socialLinks: [{ platform: 'instagram', handle: '' }],
@@ -287,9 +292,15 @@ export default function ComingSoonPage() {
     state: 'Lagos',
     city: '',
     lookbookUrl: '',
+    stockModel: '',
+    activePostUrl: '',
+    workshopAddress: '',
+    sampleMedia: [] as string[],
+    agreedToTerms: false,
   });
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   // Merch Priority Reservation Modal
   const [isMerchModalOpen, setIsMerchModalOpen] = useState(false);
@@ -642,11 +653,60 @@ export default function ComingSoonPage() {
     }
   };
 
+  const handleUploadSampleMedia = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (vendorForm.sampleMedia.length + files.length > 4) {
+      setVendorMessage('You can upload up to 4 sample photos maximum.');
+      return;
+    }
+    // Only accept image files (no videos)
+    for (let i = 0; i < files.length; i++) {
+      if (!files[i].type.startsWith('image/')) {
+        setVendorMessage('Only photos (JPEG, PNG, WEBP) are accepted. Video files are not permitted.');
+        return;
+      }
+    }
+    setIsUploadingMedia(true);
+    setVendorMessage('');
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.url) {
+          setVendorForm((prev) => ({
+            ...prev,
+            sampleMedia: [...prev.sampleMedia, data.url],
+          }));
+        }
+      }
+    } catch (err: any) {
+      setVendorMessage('Photo upload failed. You can also paste an active post link below.');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
   // ── Vendor Application Submit ──────────────────────────────────────────
   const handleVendorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vendorForm.brandName || !vendorForm.founderPhone || !vendorForm.founderEmail) {
       setVendorMessage('Please provide brand name, phone, and email.');
+      setVendorStatus('error');
+      return;
+    }
+
+    if (!vendorForm.stockModel) {
+      setVendorMessage('Please select how you stock or make your items.');
+      setVendorStatus('error');
+      return;
+    }
+
+    if (!vendorForm.agreedToTerms) {
+      setVendorMessage('Please read and accept the ÌRÍSÍ Merchant Rules & Escrow Policy before submitting.');
       setVendorStatus('error');
       return;
     }
@@ -1286,48 +1346,61 @@ export default function ComingSoonPage() {
       {/* ── MODAL 2: VENDOR APPLICATION MODAL ────────────────────────────── */}
       {isVendorModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn touch-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
           onClick={() => setIsVendorModalOpen(false)}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl max-h-[88dvh] overflow-y-auto overscroll-contain touch-pan-y"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className="relative w-full max-w-lg max-h-[90vh] sm:max-h-[88vh] bg-zinc-950 border border-white/20 rounded-3xl flex flex-col text-left text-white shadow-2xl shadow-black/80 overflow-hidden"
           >
-            <button
-              onClick={() => setIsVendorModalOpen(false)}
-              className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {vendorStatus === 'success' ? (
-              <div className="text-center py-8">
-                <div className="w-14 h-14 rounded-full bg-[#B89035] text-black flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h3 className="font-editorial text-3xl font-normal mb-2">Application Received!</h3>
-                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md mx-auto">
-                  {vendorMessage ||
-                    'Thank you. Our curatorial council will review your catalog and reach out via WhatsApp within 48 hours.'}
-                </p>
-                <button
-                  onClick={() => setIsVendorModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs tracking-wider"
-                >
-                  Close Window
-                </button>
-              </div>
-            ) : (
+            {/* Header: Fixed at top */}
+            <div className="p-6 sm:p-8 pb-4 border-b border-white/10 shrink-0 flex items-start justify-between bg-zinc-950/95 backdrop-blur-sm z-10">
               <div>
                 <span className="text-[10px] font-mono font-medium tracking-[0.25em] text-[#B89035] uppercase block mb-1">
                   EXCLUSIVE ONBOARDING
                 </span>
                 <h3 className="font-editorial text-2xl sm:text-3xl font-normal mb-1">Apply As A Founding Brand</h3>
-                <p className="text-xs text-zinc-400 mb-6 font-light">
+                <p className="text-xs text-zinc-400 font-light">
                   Tell us about your brand. We are onboarding 25 founding designers for Drop 001.
                 </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVendorModalOpen(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0 ml-3"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
+            {/* Scrollable Form Body */}
+            <div 
+              className="p-6 sm:p-8 pt-5 overflow-y-auto overscroll-contain flex-1"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#B89035 rgba(255,255,255,0.08)',
+              }}
+            >
+              {vendorStatus === 'success' ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 rounded-full bg-[#B89035] text-black flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-editorial text-3xl font-normal mb-2">Application Received!</h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md mx-auto">
+                    {vendorMessage ||
+                      'Thank you. Our curatorial council will review your catalog and reach out via WhatsApp within 48 hours.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsVendorModalOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs tracking-wider cursor-pointer"
+                  >
+                    Close Window
+                  </button>
+                </div>
+              ) : (
                 <form onSubmit={handleVendorSubmit} className="space-y-4">
                   {/* Department / Specialty */}
                   <div>
@@ -1336,11 +1409,19 @@ export default function ComingSoonPage() {
                     </label>
                     <select
                       value={vendorForm.specialty}
-                      onChange={(e) => setVendorForm({ ...vendorForm, specialty: e.target.value })}
+                      onChange={(e) => {
+                        const newSpecialty = e.target.value;
+                        const isNative = newSpecialty === 'native_tailoring';
+                        setVendorForm((prev) => ({
+                          ...prev,
+                          specialty: newSpecialty,
+                          stockModel: (!isNative && prev.stockModel === 'pre_order') ? '' : prev.stockModel,
+                        }));
+                      }}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white cursor-pointer"
                     >
                       <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
-                      <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
+                      <option value="native_tailoring">Bespoke Native Tailor &amp; Fashion Designer (Agbada, Kaftans, Senator — Made to Measure)</option>
                       <option value="perfume">Perfumes &amp; Fragrances (Arabian Ouds, EDP, Body Mists, Scent Oils)</option>
                       <option value="wigs">Hair &amp; Wigs (Bone Straight, Curly Wigs, Frontals, Closures, Braided Wigs)</option>
                       <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
@@ -1511,6 +1592,250 @@ export default function ComingSoonPage() {
                     </div>
                   </div>
 
+                  
+                  {/* Stocking & Production Model */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block">
+                        How Do You Stock Or Sell Your Items? *
+                      </label>
+                      {!vendorForm.stockModel && (
+                        <span className="text-[10px] text-amber-400/90 font-mono">Select 1 option</span>
+                      )}
+                    </div>
+
+                    {vendorForm.specialty === 'native_tailoring' ? (
+                      /* Bespoke Native Tailors & Fashion Designers see Made to Order + Stock on Ground + Sourcing */
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'pre_order' })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'pre_order'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-amber-300">
+                            <span>✂️</span> Made to Order
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I produce or sew each piece after receiving the customer's order &amp; measurements.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'in_stock' })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'in_stock'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-[#E6C367]">
+                            <span>📦</span> Stock on Ground
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I have ready-made native outfits sewn and ready in my atelier to pack &amp; dispatch.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'sourcing' })}
+                          className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'sourcing'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-pink-300">
+                            <span>🤝</span> Sourcing / Middleman
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I source fabrics/materials or outsource from tailoring suppliers when ordered.
+                          </p>
+                        </button>
+                      </div>
+                    ) : (
+                      /* Footwear, Perfumes, Hair/Wigs, Bags, Jewelry, Boutique Streetwear only see Stock on Ground or Sourcing */
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'in_stock' })}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'in_stock'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-[#E6C367]">
+                            <span>📦</span> Stock on Ground
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I have physical items ready in my shop or studio to pack &amp; dispatch immediately.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setVendorForm({ ...vendorForm, stockModel: 'sourcing' })}
+                          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            vendorForm.stockModel === 'sourcing'
+                              ? 'bg-[#B89035]/20 border-[#E6C367] text-white shadow-md ring-1 ring-[#E6C367]'
+                              : 'bg-white/5 border-white/10 text-zinc-300 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-xs font-bold flex items-center gap-1.5 text-pink-300">
+                            <span>🤝</span> Sourcing / Middleman
+                          </div>
+                          <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                            I source the item from the market or suppliers after receiving the order.
+                          </p>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Proof of Products & Active Video Link */}
+                  <div className="space-y-3 pt-1 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] font-mono uppercase text-[#E6C367] font-bold block">
+                          Proof of Goods &amp; Visual Quality
+                        </label>
+                        <span className="text-[10px] text-zinc-400 font-mono">1 to 4 photos</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 font-light mb-2">
+                        Upload 1–4 clear photos showing your real pieces in good lighting.
+                      </p>
+
+                      {/* Upload Box & Previews */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {vendorForm.sampleMedia.map((url, idx) => (
+                          <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/20 group">
+                            <img src={url} alt={`Sample photo ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVendorForm((prev) => ({
+                                  ...prev,
+                                  sampleMedia: prev.sampleMedia.filter((_, i) => i !== idx),
+                                }));
+                              }}
+                              className="absolute top-0.5 right-0.5 p-0.5 bg-black/80 hover:bg-rose-500 text-white rounded-full transition-colors cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {vendorForm.sampleMedia.length < 4 && (
+                          <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 hover:border-[#E6C367] bg-white/5 hover:bg-white/10 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-zinc-400 hover:text-white shrink-0">
+                            {isUploadingMedia ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-[#E6C367]" />
+                            ) : (
+                              <>
+                                <Upload className="w-4 h-4 text-[#E6C367]" />
+                                <span className="text-[9px] font-mono uppercase">Upload Photo</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              multiple
+                              disabled={isUploadingMedia}
+                              onChange={handleUploadSampleMedia}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Direct Link to Active Reel / TikTok / Post */}
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Link to Recent Instagram / TikTok Post of Your Goods (Optional)
+                      </label>
+                      <input
+                        type="url"
+                        value={vendorForm.activePostUrl}
+                        onChange={(e) => setVendorForm({ ...vendorForm, activePostUrl: e.target.value })}
+                        placeholder="e.g. https://instagram.com/reel/... or https://tiktok.com/@..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-white font-mono placeholder-zinc-500"
+                      />
+                      <span className="text-[10px] text-zinc-500 mt-1 block">
+                        Direct link showing your actual clothes, perfumes, hair, or shoes on hand.
+                      </span>
+                    </div>
+
+                    {/* Workshop or Physical Location (Optional) */}
+                    <div>
+                      <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
+                        Workshop / Store Location (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={vendorForm.workshopAddress}
+                        onChange={(e) => setVendorForm({ ...vendorForm, workshopAddress: e.target.value })}
+                        placeholder="e.g. Shop 14, Balogun Market / Workshop in Ikeja / Home Studio"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-white placeholder-zinc-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ── MERCHANT PLATFORM RULES & ESCROW AGREEMENT ─────────────── */}
+                  <div className="p-4 rounded-xl bg-white/[0.04] border border-white/15 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-[#E6C367] font-bold">
+                        ⚖️ ÌRÍSÍ Merchant Platform Rules
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowVendorTerms(!showVendorTerms)}
+                        className="text-[10px] font-mono text-white underline hover:text-[#E6C367] cursor-pointer"
+                      >
+                        {showVendorTerms ? 'Hide Full Details' : 'Read Full Terms'}
+                      </button>
+                    </div>
+
+                    <ul className="text-[11px] text-zinc-300 space-y-1.5 leading-relaxed list-disc pl-4">
+                      <li>
+                        <strong className="text-white">Escrow Payout Policy:</strong> Customer payments are held safely in Escrow and released to your bank account once the order is delivered &amp; verified.
+                      </li>
+                      <li>
+                        <strong className="text-white">Zero Bait-and-Switch:</strong> Every item shipped must match the exact photo, fabric, and quality uploaded. Fake or inferior items result in automatic buyer refund and store removal.
+                      </li>
+                      <li>
+                        <strong className="text-white">Strict Dispatch Timelines:</strong> Stock on Ground must be ready within 24–48hrs. Made-to-Order (Native) must ship within your stated production days. Lying about stock status leads to suspension.
+                      </li>
+                      {showVendorTerms && (
+                        <>
+                          <li>
+                            <strong className="text-white">No Off-Platform Poaching:</strong> Contacting ÌRÍSÍ shoppers to pay outside the platform to bypass Escrow results in immediate permanent ban.
+                          </li>
+                          <li>
+                            <strong className="text-white">Fair Pricing &amp; Commission:</strong> Prices listed on ÌRÍSÍ must remain fair and transparent, subject to standard platform commission on completed sales.
+                          </li>
+                        </>
+                      )}
+                    </ul>
+
+                    <label className="flex items-start gap-2.5 pt-2 border-t border-white/10 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={vendorForm.agreedToTerms}
+                        onChange={(e) => setVendorForm({ ...vendorForm, agreedToTerms: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 rounded accent-[#E6C367] cursor-pointer shrink-0"
+                      />
+                      <span className="text-[11px] text-white leading-snug">
+                        I have read and agree to the <strong>ÌRÍSÍ Merchant Terms &amp; Conditions</strong>, Escrow Payout Rules, and Quality Standards. *
+                      </span>
+                    </label>
+                  </div>
+
                   {vendorMessage && (
                     <p className="text-xs text-rose-400 font-medium">{vendorMessage}</p>
                   )}
@@ -1535,8 +1860,8 @@ export default function ComingSoonPage() {
                       </button>
                     </div>
                 </form>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1544,7 +1869,7 @@ export default function ComingSoonPage() {
       {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
       {isMerchModalOpen && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn touch-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
           onClick={() => {
             setIsMerchModalOpen(false);
             setMerchStatus('idle');
@@ -1553,8 +1878,11 @@ export default function ComingSoonPage() {
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white max-h-[88dvh] overflow-y-auto overscroll-contain touch-pan-y"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className="relative w-full max-w-lg max-h-[90vh] sm:max-h-[88vh] overflow-y-auto overscroll-contain p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#B89035 rgba(255,255,255,0.08)',
+            }}
           >
             <button
               onClick={() => {
