@@ -193,8 +193,6 @@ export async function POST(request: Request) {
         </table>
       </div>
     `;
-      </div>
-    `;
 
     sendLuxuryEmail(
       'martintimi2443@gmail.com',
