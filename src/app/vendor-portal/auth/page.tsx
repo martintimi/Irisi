@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Building, Scissors, Mail, Phone, Lock, MapPin,
   ShieldCheck, ArrowRight, ArrowLeft, Sparkles, User, Sun, Moon, Loader2,
-  Eye, EyeOff, CheckCircle2, RotateCw, Store, KeyRound, MessageCircle
+  Eye, EyeOff, CheckCircle2, RotateCw, Store, KeyRound, MessageCircle, Crown
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -91,9 +91,12 @@ function VendorAuthPageContent() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [recoverySuccessMsg, setRecoverySuccessMsg] = useState('');
 
-  // Pre-approved claim flow state
+  // Pre-approved claim & VIP magic login state
   const [isClaimFlow, setIsClaimFlow] = useState(false);
   const [claimDetails, setClaimDetails] = useState<any>(null);
+  const [isVerifyingVip, setIsVerifyingVip] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'password' | 'vip_code'>('password');
+  const [vipAccessCode, setVipAccessCode] = useState('');
 
   // Register form state
   const [regForm, setRegForm] = useState({
@@ -115,11 +118,86 @@ function VendorAuthPageContent() {
     accountName: '',
   });
 
+  const handleVipMagicLogin = async (opts: { token?: string; accessCode?: string; email?: string }) => {
+    setIsSubmitting(true);
+    setErrorMessage('');
+    try {
+      const res = await fetch('/api/auth/vendor-magic-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'VIP access verification failed.');
+
+      if (data.vendor) {
+        const v = data.vendor;
+        const vId = v.id || v.email || opts.email;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('irisi_vendor_id', vId);
+          localStorage.setItem('irisi_vendor_email', v.email || opts.email || '');
+          localStorage.setItem('veyra_vendor_id', vId);
+          localStorage.setItem('veyra_vendor_email', v.email || opts.email || '');
+          document.cookie = `irisi_vendor_id=${vId}; path=/; max-age=2592000; samesite=lax`;
+          document.cookie = `veyra_vendor_id=${vId}; path=/; max-age=2592000; samesite=lax`;
+        }
+
+        setVendorProfile({
+          brandName: v.brand_name || 'My Brand',
+          designerName: v.designer_name || 'Lead Manager',
+          contactPerson: v.contact_person || v.designer_name,
+          email: v.email || opts.email,
+          phone: v.phone || '',
+          location: v.location || '',
+          vendorType: isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer',
+          specialty: v.specialty || v.vendorSpecialty || 'multi_department',
+          vendorSpecialty: v.specialty || v.vendorSpecialty || 'multi_department',
+          bankName: v.bank_name || '',
+          accountNumber: v.account_number || '',
+          accountName: v.account_name || '',
+          instagram: v.instagram || '',
+          bio: v.bio || '',
+        });
+      }
+
+      setIsVendorLoggedIn(true);
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#e6c367', '#10b981', '#ffffff'],
+      });
+      router.push('/vendor-portal');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'VIP Access failed.');
+      setIsVerifyingVip(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle URL search params for direct vendor onboarding links
   useEffect(() => {
     if (!searchParams) return;
+    const actionParam = searchParams.get('action');
+    const tokenParam = searchParams.get('token');
+    const emailParam = searchParams.get('email');
     const claimParam = searchParams.get('claim');
-    const modeParam = searchParams.get('mode') || searchParams.get('tab') || searchParams.get('action');
+    const modeParam = searchParams.get('mode') || searchParams.get('tab');
+
+    // 1-Tap VIP Magic Login Link from approval email
+    if ((actionParam === 'access' || actionParam === 'claim' || modeParam === 'claim') && (tokenParam || claimParam)) {
+      const activeToken = tokenParam || claimParam || '';
+      setIsVerifyingVip(true);
+      handleVipMagicLogin({ token: activeToken, email: emailParam || '' });
+      return;
+    }
+
+    if (tokenParam && emailParam) {
+      setIsVerifyingVip(true);
+      handleVipMagicLogin({ token: tokenParam, email: emailParam });
+      return;
+    }
 
     if (claimParam || modeParam === 'claim') {
       let claimData: any = null;
@@ -854,6 +932,25 @@ function VendorAuthPageContent() {
         {/* Center Container */}
         <div className="w-full max-w-md mx-auto space-y-6 my-auto py-6">
           
+          {isVerifyingVip ? (
+            <div className="py-12 px-6 rounded-3xl bg-white/[0.03] border border-[#E6C367]/40 text-center space-y-4 shadow-2xl animate-fadeIn">
+              <div className="w-16 h-16 rounded-full bg-[#E6C367]/15 border border-[#E6C367] flex items-center justify-center mx-auto text-[#E6C367] animate-pulse">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-white">
+                Verifying VIP Invitation...
+              </h2>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                Authenticating your brand approval on ÌRÍSÍ. Logging you in and activating your store dashboard...
+              </p>
+              {errorMessage && (
+                <div className="pt-2 text-xs text-rose-400 font-medium">
+                  {errorMessage}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-xs font-mono-luxury uppercase font-bold tracking-wider">
               <span>
@@ -921,7 +1018,7 @@ function VendorAuthPageContent() {
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                Register Store
+                Curated Admission
               </button>
             </div>
           )}
@@ -1310,100 +1407,281 @@ function VendorAuthPageContent() {
             /* ======================================================== */
             /* 4. SIGN IN VIEW */
             /* ======================================================== */
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  Business Email or Phone Number
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
-                  <input
-                    type="text"
-                    required
-                    value={loginIdentifier}
-                    onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="contact@brand.ng or 08012*****"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
-                  />
-                </div>
-                <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
+            <div className="space-y-4">
+              {/* Method Switch: Password vs 6-Digit VIP Code */}
+              <div className="grid grid-cols-2 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMethod('password');
+                    setErrorMessage('');
+                  }}
+                  className={`py-2 rounded-xl transition-all font-semibold cursor-pointer ${
+                    loginMethod === 'password'
+                      ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  Password Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMethod('vip_code');
+                    setErrorMessage('');
+                  }}
+                  className={`py-2 rounded-xl transition-all font-semibold cursor-pointer flex items-center justify-center gap-1.5 ${
+                    loginMethod === 'vip_code'
+                      ? 'bg-[#E6C367] text-black shadow-sm font-bold'
+                      : 'text-[var(--text-muted)] hover:text-[#E6C367]'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>VIP Access Code</span>
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
-                  />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onTouchStart={(e) => {
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowLoginPassword((prev) => !prev);
-                    }}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
-                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRecoveryIdentifier(loginIdentifier);
-                      setErrorMessage('');
-                      setRecoverySuccessMsg('');
-                      setAuthMode('forgot_password');
-                    }}
-                    className="text-xs font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              </div>
+              {loginMethod === 'vip_code' ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!loginIdentifier.trim()) {
+                      setErrorMessage('Please enter your business email.');
+                      return;
+                    }
+                    if (!vipAccessCode.trim() || vipAccessCode.trim().length !== 6) {
+                      setErrorMessage('Please enter your 6-digit VIP access code.');
+                      return;
+                    }
+                    handleVipMagicLogin({ email: loginIdentifier.trim(), accessCode: vipAccessCode.trim() });
+                  }}
+                  className="space-y-4"
+                >
+                  <div className="p-3.5 rounded-xl bg-[#B89035]/10 border border-[#E6C367]/30 text-xs font-mono text-[#E6C367] space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" /> Approved Brand Admission
+                    </p>
+                    <p className="text-zinc-300 font-light text-[11px] leading-relaxed">
+                      Enter the business email from your application and the 6-digit VIP code sent in your approval email.
+                    </p>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
-                    <span>Signing In to Merchant Portal...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In to Merchant Portal</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                      Approved Business Email
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                      <input
+                        type="email"
+                        required
+                        value={loginIdentifier}
+                        onChange={(e) => setLoginIdentifier(e.target.value)}
+                        placeholder="contact@brand.ng"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                      6-Digit VIP Access Code
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#E6C367] pointer-events-none" />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        required
+                        value={vipAccessCode}
+                        onChange={(e) => setVipAccessCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="e.g. 739201"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[#E6C367]/40 text-[var(--text-primary)] text-lg font-mono tracking-widest text-center font-bold focus:border-[#E6C367] focus:outline-none focus:ring-2 focus:ring-[#E6C367]/20 transition-all"
+                      />
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5 text-center">
+                      Check your approval email inbox for your 6-digit access code.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || vipAccessCode.length !== 6 || !loginIdentifier.trim()}
+                    className="w-full py-3.5 rounded-full bg-[#E6C367] hover:bg-[#d4b055] text-black font-mono-luxury uppercase text-xs font-bold tracking-wider transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Sparkles className="h-4 w-4 animate-spin text-black" />
+                        <span>Verifying VIP Code...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Enter Merchant Portal</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                      Business Email or Phone Number
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                      <input
+                        type="text"
+                        required
+                        value={loginIdentifier}
+                        onChange={(e) => setLoginIdentifier(e.target.value)}
+                        placeholder="contact@brand.ng or 08012*****"
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <EmailDomainSuggestions email={loginIdentifier} onSelectDomain={(full) => setLoginIdentifier(full)} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1.5 font-bold">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                      <input
+                        type={showLoginPassword ? 'text' : 'password'}
+                        required
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="w-full pl-10 pr-12 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowLoginPassword((prev) => !prev);
+                        }}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer z-30 select-none rounded-lg active:scale-95"
+                        aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRecoveryIdentifier(loginIdentifier);
+                          setErrorMessage('');
+                          setRecoverySuccessMsg('');
+                          setAuthMode('forgot_password');
+                        }}
+                        className="text-xs font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                        <span>Signing In to Merchant Portal...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Sign In to Merchant Portal</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
 
               <div className="text-center pt-4">
                 <Link href="/" className="text-[11px] font-mono-luxury text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
                   ← Return to Shopper Storefront
                 </Link>
               </div>
-            </form>
+            </div>
+          ) : !isClaimFlow ? (
+
+            /* ======================================================== */
+            /* 3. CURATED ADMISSION VIEW (NO UNVETTED SIGNUPS) */
+            /* ======================================================== */
+            <div className="py-8 px-6 rounded-3xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-center space-y-6 animate-fadeIn">
+              <div className="w-14 h-14 rounded-2xl bg-[#E6C367]/15 border border-[#E6C367]/40 flex items-center justify-center mx-auto text-[#E6C367]">
+                <Crown className="w-7 h-7" />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+                  Curated Merchant Admission
+                </h3>
+                <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">
+                  To maintain strict luxury quality standards and fraud prevention for verified Nigerian shoppers, ÌRÍSÍ merchant admission is strictly by curated application review.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-black/20 border border-white/5 space-y-2 text-left text-xs font-mono-luxury text-zinc-300">
+                <div className="flex items-center gap-2 text-[#E6C367] font-bold">
+                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <span>How Brand Admission Works</span>
+                </div>
+                <ol className="list-decimal list-inside space-y-1.5 text-zinc-400 text-[11px] pl-1">
+                  <li>Submit your brand application on our Founding Merchant page.</li>
+                  <li>Our Curation Board reviews your catalogue quality & proof of goods.</li>
+                  <li>Upon approval, you receive your VIP invitation email with instant 1-Click access & VIP code.</li>
+                </ol>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <Link
+                  href="/coming-soon#apply"
+                  className="w-full py-3.5 rounded-full bg-[#E6C367] hover:bg-[#d4b055] text-black font-mono-luxury uppercase text-xs font-bold tracking-wider transition-all shadow-xl flex items-center justify-center gap-2"
+                >
+                  <span>Apply As A Founding Brand</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setLoginMethod('vip_code');
+                    setErrorMessage('');
+                  }}
+                  className="w-full py-3 rounded-full border border-[var(--border-subtle)] hover:border-[#E6C367] text-[var(--text-secondary)] hover:text-[#E6C367] font-mono-luxury uppercase text-xs font-semibold tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span>Already Approved? Enter VIP Access Code</span>
+                </button>
+              </div>
+
+              <div className="pt-2 text-center">
+                <Link href="/" className="text-[11px] font-mono-luxury text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                  ← Return to Shopper Storefront
+                </Link>
+              </div>
+            </div>
           ) : (
 
             /* ======================================================== */
@@ -1778,6 +2056,8 @@ function VendorAuthPageContent() {
                 </Link>
               </div>
             </form>
+          )}
+          </>
           )}
 
         </div>

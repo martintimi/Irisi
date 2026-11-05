@@ -87,61 +87,176 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Vendor email required' }, { status: 400 });
       }
 
-      const claimData = {
-        appId: id || '',
-        email: email.toLowerCase().trim(),
-        brandName: brandName || 'Designer',
-        phone: (body.phone || body.founderPhone || '').trim(),
-        state: (body.state || 'Lagos').trim(),
-        city: (body.city || '').trim(),
-        specialty: specialty || 'streetwear',
+      const normalizedEmail = email.toLowerCase().trim();
+      const phone = (body.phone || body.founderPhone || '').trim();
+      const state = (body.state || 'Lagos').trim();
+      const city = (body.city || '').trim();
+      const effectiveSpecialty = specialty || body.specialty || 'streetwear';
+      const effectiveStockModel = body.stockModel || 'in_stock';
+      const cleanBrand = (brandName || 'Designer').trim();
+
+      // 1. Generate 6-Digit VIP Access Code
+      const accessCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // 2. Generate or locate Vendor ID
+      let vendorId = cleanBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `brand-${Date.now()}`;
+
+      // Check if vendor already exists
+      const { data: existingVendors } = await adminClient
+        .from('vendors')
+        .select('*')
+        .eq('email', normalizedEmail)
+        .limit(1);
+
+      if (existingVendors?.[0]) {
+        vendorId = existingVendors[0].id;
+      }
+
+      // 3. Locate or create Supabase Auth User
+      const { data: userList } = await adminClient.auth.admin.listUsers();
+      let authUser = userList?.users?.find((u: any) => u.email?.toLowerCase() === normalizedEmail);
+
+      if (!authUser) {
+        const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+          email: normalizedEmail,
+          password: 'IrisiVendor2026!',
+          email_confirm: true,
+          user_metadata: {
+            user_type: 'vendor',
+            brand_name: cleanBrand,
+            phone,
+            is_verified: true,
+          },
+        });
+        if (!createErr && created?.user) {
+          authUser = created.user;
+        }
+      } else {
+        await adminClient.auth.admin.updateUserById(authUser.id, {
+          email_confirm: true,
+          user_metadata: {
+            ...authUser.user_metadata,
+            user_type: 'vendor',
+            brand_name: cleanBrand,
+            is_verified: true,
+          },
+        }).catch(() => {});
+      }
+
+      // 4. Provision & Approve Vendor Record in Database
+      const bioObj = {
+        bio: '',
+        specialty: effectiveSpecialty,
+        vendorSpecialty: effectiveSpecialty,
+        city,
+        state,
         socialLinks: body.socialLinks || [],
-        stockModel: body.stockModel || 'in_stock',
-        isPreApproved: true,
+        stockModel: effectiveStockModel,
+        isProfileSaved: true,
+        approvalStatus: 'approved',
+        mustSetPassword: true,
+        accessCode,
         approvedAt: new Date().toISOString(),
       };
 
-      const claimToken = Buffer.from(JSON.stringify(claimData)).toString('base64url');
-      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?mode=claim&claim=${claimToken}`;
+      await adminClient.from('vendors').upsert({
+        id: vendorId,
+        user_id: authUser?.id || null,
+        brand_name: cleanBrand,
+        designer_name: cleanBrand,
+        contact_person: cleanBrand,
+        email: normalizedEmail,
+        phone,
+        location: [city, state].filter(Boolean).join(', ') || 'Lagos, Nigeria',
+        vendor_type: effectiveSpecialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller',
+        is_verified: true,
+        bio: JSON.stringify(bioObj),
+      }, { onConflict: 'id' });
+
+      // 5. Construct 1-Click Magic Login Token
+      const tokenPayload = {
+        email: normalizedEmail,
+        vendorId,
+        accessCode,
+        brandName: cleanBrand,
+        exp: Date.now() + 7 * 86400000, // 7 days validity
+      };
+      const magicToken = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
+      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?action=access&token=${magicToken}&email=${encodeURIComponent(normalizedEmail)}`;
+
+      // 6. Update notification record if ID is provided
+      if (id) {
+        const { data: currentNotif } = await adminClient.from('notifications').select('message').eq('id', id).maybeSingle();
+        let notifMsg: any = {};
+        try {
+          notifMsg = JSON.parse(currentNotif?.message || '{}');
+        } catch (_) {}
+        notifMsg.approved = true;
+        notifMsg.accessCode = accessCode;
+        notifMsg.magicToken = magicToken;
+        notifMsg.approvedAt = new Date().toISOString();
+
+        await adminClient.from('notifications').update({
+          read: true,
+          message: JSON.stringify(notifMsg),
+        }).eq('id', id);
+      }
+
+      // 7. Dispatch Official Luxury Approval Email
       const emailHtml = `
-        <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; max-width: 600px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3);">
+        <div style="background-color: #08090a; color: #f4ede3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px 20px; max-width: 600px; margin: 0 auto; border-radius: 16px; border: 1px solid rgba(230,195,103,0.3); box-shadow: 0 20px 48px rgba(0,0,0,0.7);">
+          <!-- Brand Logo Header -->
           <div style="text-align: center; margin-bottom: 28px;">
             <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(230, 195, 103, 0.35); border: 1px solid rgba(230, 195, 103, 0.4);" />
             <h1 style="margin: 0; font-size: 26px; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff;">Ì R Í S Í</h1>
-            <p style="margin: 6px 0 0; font-size: 10px; letter-spacing: 0.35em; color: #e6c367; text-transform: uppercase;">Founding Designer Invitation · Drop 001</p>
+            <p style="margin: 6px 0 0; font-size: 10px; letter-spacing: 0.35em; color: #e6c367; text-transform: uppercase;">Official Merchant Admission · Drop 001</p>
           </div>
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(230,195,103,0.2); border-radius: 12px; padding: 28px; margin-bottom: 24px;">
-            <span style="background: #e6c367; color: #08090a; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; padding: 4px 14px; border-radius: 999px; text-transform: uppercase;">Application Accepted</span>
-            <h2 style="color: #ffffff; font-size: 22px; margin: 16px 0 10px;">Welcome to the Runway, ${brandName || 'Designer'}</h2>
-            <p style="color: #a1a1aa; font-size: 13px; line-height: 1.7; margin: 0 0 20px;">
-              The ÌRÍSÍ Curation Board has reviewed your brand application and selected you as a <strong>Founding Fashion House</strong> for Launch Drop 001.
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${portalUrl}" style="background-color: #e6c367; color: #08090a; font-weight: 800; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; padding: 14px 28px; border-radius: 10px; text-decoration: none; display: inline-block;">
-                Complete Vendor Onboarding →
-              </a>
+
+          <!-- Main Acceptance Card -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(230,195,103,0.25); border-radius: 14px; padding: 28px; margin-bottom: 24px;">
+            <div style="text-align: center; margin-bottom: 16px;">
+              <span style="background: #e6c367; color: #08090a; font-size: 10px; font-weight: 800; letter-spacing: 0.2em; padding: 5px 16px; border-radius: 999px; text-transform: uppercase;">Application Approved</span>
             </div>
-            <p style="color: #71717a; font-size: 11px; margin: 0; text-align: center;">
-              Direct Link: <a href="${portalUrl}" style="color: #e6c367;">${portalUrl}</a>
+            <h2 style="color: #ffffff; font-size: 22px; margin: 0 0 12px; text-align: center;">Welcome to the Collective, ${cleanBrand} 🥂</h2>
+            <p style="color: #d1d5db; font-size: 13.5px; line-height: 1.7; margin: 0 0 24px; text-align: center;">
+              The ÌRÍSÍ Curation Board has reviewed your brand and officially approved your merchant store for <strong>Launch Drop 001</strong>. Your account is already verified — no secondary review required!
             </p>
+
+            <!-- 1-Click Instant Login Button -->
+            <div style="text-align: center; margin: 28px 0;">
+              <a href="${portalUrl}" style="background-color: #e6c367; color: #08090a; font-weight: 800; font-size: 13px; letter-spacing: 0.15em; text-transform: uppercase; padding: 16px 36px; border-radius: 12px; text-decoration: none; display: inline-block; box-shadow: 0 6px 20px rgba(230,195,103,0.35);">
+                Enter Your Store Now &rarr;
+              </a>
+              <span style="display: block; margin-top: 8px; font-size: 11px; color: #9ca3af;">1-Tap Secure Login (No password needed)</span>
+            </div>
+
+            <!-- 6-Digit VIP Access Code Alternative -->
+            <div style="margin-top: 24px; padding: 18px; background-color: #0b0c0e; border: 1.5px dashed rgba(230,195,103,0.5); border-radius: 12px; text-align: center;">
+              <span style="font-size: 10px; font-mono: monospace; text-transform: uppercase; letter-spacing: 1.5px; color: #9ca3af; display: block; margin-bottom: 6px;">Your 6-Digit VIP Access Code</span>
+              <span style="font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #e6c367; display: block;">${accessCode}</span>
+              <span style="font-size: 11px; color: #9ca3af; display: block; margin-top: 6px;">
+                You can also enter this code at the <a href="${getBaseUrl()}/vendor-portal/auth" style="color: #e6c367; text-decoration: underline;">Merchant Portal</a> to log in.
+              </span>
+            </div>
           </div>
+
           <p style="text-align: center; font-size: 11px; color: #71717a; margin: 0;">Lagos · Abuja · London · Worldwide</p>
         </div>
       `;
 
-      const emailRes = await sendLuxuryEmail(email, `✨ Ì R Í S Í · Founding Brand Invitation (${brandName || 'Designer'})`, emailHtml, {
-        fromName: 'ÌRÍSÍ Brand Curation',
-      });
-
-      // Mark notification as read (invited)
-      if (id) {
-        await adminClient.from('notifications').update({ read: true }).eq('id', id);
-      }
+      const emailRes = await sendLuxuryEmail(
+        normalizedEmail,
+        `✨ Ì R Í S Í · Your Brand Has Been Approved! Welcome to Drop 001 (${cleanBrand})`,
+        emailHtml,
+        { fromName: 'ÌRÍSÍ Brand Curation' }
+      );
 
       return NextResponse.json({
         success: true,
-        message: `Invitation dispatched to ${email}`,
+        message: `Account approved and VIP invitation dispatched to ${normalizedEmail}`,
         portalUrl,
+        accessCode,
+        vendorId,
         provider: emailRes.provider,
         emailDelivered: emailRes.success,
       });

@@ -42,6 +42,8 @@ interface VendorApp {
   workshopAddress?: string;
   sampleMedia?: string[];
   submittedAt?: string;
+  accessCode?: string;
+  magicToken?: string;
 }
 
 interface MerchReserve {
@@ -485,11 +487,19 @@ export default function AdminPrelaunchManager() {
                         isPreApproved: true,
                         approvedAt: new Date().toISOString(),
                       };
-                      const claimToken = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(JSON.stringify(claimData)))) : '';
-                      const portalUrl = `${origin}/vendor-portal/auth?mode=claim&claim=${claimToken}`;
+                      const cleanBrand = (vendor.brandName || 'Designer').trim();
+                      const vId = cleanBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `brand-${Date.now()}`;
+                      const accessPayload = {
+                        email: (vendor.founderEmail || '').toLowerCase().trim(),
+                        vendorId: vId,
+                        brandName: cleanBrand,
+                        exp: Date.now() + 7 * 86400000,
+                      };
+                      const magicToken = vendor.magicToken || (typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(JSON.stringify(accessPayload)))) : '');
+                      const portalUrl = `${origin}/vendor-portal/auth?action=access&token=${magicToken}&email=${encodeURIComponent((vendor.founderEmail || '').toLowerCase().trim())}`;
                       const waNumber = cleanPhone(vendor.founderPhone);
                       const waText = encodeURIComponent(
-                        `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your brand application and approved your fashion house for Launch Drop 001. Complete your vendor onboarding here: ${portalUrl}`
+                        `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your application and officially approved your brand for Launch Drop 001!\n\nClick here to enter your store dashboard instantly:\n${portalUrl}${vendor.accessCode ? `\n\nYour 6-Digit VIP Access Code: ${vendor.accessCode}` : ''}`
                       );
                       const waLink = `https://wa.me/${waNumber}?text=${waText}`;
 

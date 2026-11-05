@@ -58,6 +58,7 @@ export async function GET(request: Request) {
     let state = '';
     let dispatchDays = '1-2 business days';
     let logoUrl = vendor?.logo_url || vendor?.logo || '';
+    let mustSetPassword = false;
 
     let socialLinks: any = {
       instagram: '',
@@ -86,6 +87,7 @@ export async function GET(request: Request) {
         const parsed = JSON.parse(bioText);
         bioText = parsed.bio || '';
         socialLinks = { ...socialLinks, ...parsed.socialLinks };
+        mustSetPassword = parsed.mustSetPassword === true;
         isProfileSaved = parsed.isProfileSaved === true;
         approvalStatus = parsed.approvalStatus || (vendor?.is_verified ? 'approved' : isProfileSaved ? 'pending' : 'unsubmitted');
         rejectionReason = parsed.rejectionReason || '';
@@ -147,6 +149,7 @@ export async function GET(request: Request) {
         rejectionReason,
         isSuspended,
         suspensionReason,
+        mustSetPassword,
       }
     });
   } catch (error: any) {

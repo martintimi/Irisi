@@ -14,6 +14,7 @@ import {
 import MobileVendorOverview from '@/components/vendor/MobileVendorOverview';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import EditProductModal from '@/components/vendor/EditProductModal';
+import FirstTimeVendorModal from '@/components/vendor/FirstTimeVendorModal';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
 
 export default function VendorOverviewPage() {
@@ -38,6 +39,8 @@ export default function VendorOverviewPage() {
     approvalStatus: string;
     rejectionReason: string;
   } | null>(null);
+
+  const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
 
   const loadVendorData = useCallback(async () => {
     try {
@@ -72,6 +75,10 @@ export default function VendorOverviewPage() {
             approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
             rejectionReason: v.rejectionReason || ''
           });
+
+          if (v.mustSetPassword || (v.bio && typeof v.bio === 'string' && v.bio.includes('"mustSetPassword":true'))) {
+            setShowFirstTimeModal(true);
+          }
 
           const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
           setVendorProfile({
@@ -659,6 +666,14 @@ export default function VendorOverviewPage() {
         onProductDeleted={(delId) => {
           setDbProducts((prev) => prev.filter((p) => p.id !== delId));
         }}
+      />
+
+      <FirstTimeVendorModal
+        isOpen={showFirstTimeModal}
+        onClose={() => setShowFirstTimeModal(false)}
+        vendorName={vendorProfile.brandName}
+        vendorEmail={vendorProfile.email}
+        vendorId={getActiveVendorId() || vendorProfile.email}
       />
     </>
   );
