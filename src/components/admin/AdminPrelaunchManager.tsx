@@ -132,7 +132,10 @@ export default function AdminPrelaunchManager() {
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error || 'Failed to dispatch invitation');
 
-      setActionMessage(`✨ Invitation email dispatched to ${vendor.brandName} (${vendor.founderEmail}). Check Spam/Promotions tab if not in inbox.`);
+      const providerLabel = resData.provider === 'resend'
+        ? 'Verified Domain (vendors@irisimi.ng via Resend)'
+        : 'Direct SMTP';
+      setActionMessage(`✨ Invitation email dispatched to ${vendor.brandName} (${vendor.founderEmail}) via ${providerLabel}.`);
       // Update local state to marked as read
       if (data) {
         setData({

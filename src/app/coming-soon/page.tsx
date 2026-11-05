@@ -655,8 +655,15 @@ export default function ComingSoonPage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     if (vendorForm.sampleMedia.length + files.length > 4) {
-      setVendorMessage('You can upload up to 4 sample photos/videos maximum.');
+      setVendorMessage('You can upload up to 4 sample photos maximum.');
       return;
+    }
+    // Only accept image files (no videos)
+    for (let i = 0; i < files.length; i++) {
+      if (!files[i].type.startsWith('image/')) {
+        setVendorMessage('Only photos (JPEG, PNG, WEBP) are accepted. Video files are not permitted.');
+        return;
+      }
     }
     setIsUploadingMedia(true);
     setVendorMessage('');
@@ -675,7 +682,7 @@ export default function ComingSoonPage() {
         }
       }
     } catch (err: any) {
-      setVendorMessage('Media upload failed. You can also paste an active post link below.');
+      setVendorMessage('Photo upload failed. You can also paste an active post link below.');
     } finally {
       setIsUploadingMedia(false);
     }
@@ -1690,21 +1697,17 @@ export default function ComingSoonPage() {
                         <label className="text-[10px] font-mono uppercase text-[#E6C367] font-bold block">
                           Proof of Goods &amp; Visual Quality
                         </label>
-                        <span className="text-[10px] text-zinc-400 font-mono">1 to 4 items</span>
+                        <span className="text-[10px] text-zinc-400 font-mono">1 to 4 photos</span>
                       </div>
                       <p className="text-[11px] text-zinc-400 font-light mb-2">
-                        Upload 1-4 clear photos or a short video (under 15s) showing your real pieces in good lighting.
+                        Upload 1–4 clear photos showing your real pieces in good lighting.
                       </p>
 
                       {/* Upload Box & Previews */}
                       <div className="flex flex-wrap items-center gap-2">
                         {vendorForm.sampleMedia.map((url, idx) => (
                           <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/20 group">
-                            {url.endsWith('.mp4') || url.endsWith('.mov') || url.endsWith('.webm') ? (
-                              <video src={url} className="w-full h-full object-cover" />
-                            ) : (
-                              <img src={url} alt={`Sample ${idx + 1}`} className="w-full h-full object-cover" />
-                            )}
+                            <img src={url} alt={`Sample photo ${idx + 1}`} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               onClick={() => {
@@ -1727,12 +1730,12 @@ export default function ComingSoonPage() {
                             ) : (
                               <>
                                 <Upload className="w-4 h-4 text-[#E6C367]" />
-                                <span className="text-[9px] font-mono uppercase">Upload</span>
+                                <span className="text-[9px] font-mono uppercase">Upload Photo</span>
                               </>
                             )}
                             <input
                               type="file"
-                              accept="image/*,video/*"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
                               multiple
                               disabled={isUploadingMedia}
                               onChange={handleUploadSampleMedia}
@@ -1746,7 +1749,7 @@ export default function ComingSoonPage() {
                     {/* Direct Link to Active Reel / TikTok / Post */}
                     <div>
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block mb-1">
-                        Link to Recent Video / Reel / Post of Your Goods
+                        Link to Recent Instagram / TikTok Post of Your Goods (Optional)
                       </label>
                       <input
                         type="url"
