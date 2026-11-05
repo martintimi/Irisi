@@ -182,7 +182,7 @@ export async function POST(request: Request) {
         exp: Date.now() + 7 * 86400000, // 7 days validity
       };
       const magicToken = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
-      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?action=access&token=${magicToken}&email=${encodeURIComponent(normalizedEmail)}`;
+      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?action=access&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}`;
 
       // 6. Update notification record if ID is provided
       if (id) {
@@ -202,8 +202,22 @@ export async function POST(request: Request) {
         }).eq('id', id);
       }
 
-      // 7. Dispatch Official Luxury Approval Email (Clean White Background & Clickable Copy Button)
+      // 7. Dispatch Official Luxury Approval Email (Clean White Background, High Inbox Deliverability & Clickable Copy Button)
       const copyUrl = `${getBaseUrl()}/vendor-portal/auth?action=code&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}&autocopy=1`;
+      const plainText = [
+        `ÌRÍSÍ — Official Merchant Admission`,
+        ``,
+        `Welcome to the Collective, ${cleanBrand}.`,
+        `The ÌRÍSÍ team has reviewed your brand and approved your merchant store for Launch Drop 001. Your account is verified and ready.`,
+        ``,
+        `Enter Your Store Now: ${portalUrl}`,
+        ``,
+        `Your 4-Digit Access Code: ${accessCode}`,
+        `Copy Code & Sign In: ${copyUrl}`,
+        ``,
+        `ÌRÍSÍ Marketplace · Direct Merchant Atelier`,
+      ].join('\n');
+
       const emailHtml = `
         <!DOCTYPE html>
         <html lang="en">
@@ -232,9 +246,9 @@ export async function POST(request: Request) {
                       <div style="text-align: center; margin-bottom: 20px;">
                         <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 11px; font-weight: 800; padding: 5px 16px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">Application Approved</span>
                       </div>
-                      <h2 style="color: #111827; font-size: 22px; margin: 0 0 12px; text-align: center; font-weight: 700;">Welcome to the Collective, ${cleanBrand} 🥂</h2>
+                      <h2 style="color: #111827; font-size: 22px; margin: 0 0 12px; text-align: center; font-weight: 700;">Welcome to the Collective, ${cleanBrand}</h2>
                       <p style="color: #4b5563; font-size: 14px; line-height: 1.65; margin: 0 0 26px; text-align: center;">
-                        The ÌRÍSÍ team has reviewed your brand and officially approved your merchant store for <strong>Launch Drop 001</strong>. Your account is already verified — no secondary review required!
+                        The ÌRÍSÍ team has reviewed your brand and officially approved your merchant store for <strong>Launch Drop 001</strong>. Your account is already verified — no secondary review required.
                       </p>
 
                       <!-- 1-Click Instant Login Button -->
@@ -246,14 +260,14 @@ export async function POST(request: Request) {
                       </div>
 
                       <!-- 4-Digit VIP Access Code Card with Clickable Copy Button -->
-                      <div style="background-color: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 14px; padding: 22px 20px; text-align: center;">
+                      <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 14px; padding: 22px 20px; text-align: center;">
                         <span style="font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 700; display: block; margin-bottom: 6px;">Your 4-Digit Access Code</span>
                         <div style="font-family: 'Courier New', Courier, monospace; font-size: 40px; font-weight: 900; letter-spacing: 12px; color: #111827; display: block; margin: 8px 0; user-select: all; -webkit-user-select: all;">${accessCode}</div>
                         
                         <!-- Clickable Copy Code Button -->
                         <div style="margin-top: 14px;">
                           <a href="${copyUrl}" target="_blank" style="display: inline-block; background-color: #111827; color: #ffffff; border: 1px solid #111827; padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-                            📋 Copy Code to Clipboard
+                            Copy Code to Clipboard
                           </a>
                         </div>
                         <span style="font-size: 11px; color: #64748b; display: block; margin-top: 8px;">
@@ -279,9 +293,9 @@ export async function POST(request: Request) {
 
       const emailRes = await sendLuxuryEmail(
         normalizedEmail,
-        `✨ ÌRÍSÍ · Your Brand Has Been Approved! Welcome to Drop 001 (${cleanBrand})`,
+        `ÌRÍSÍ Merchant Portal: Application Approved for ${cleanBrand}`,
         emailHtml,
-        { fromName: 'ÌRÍSÍ Brand Curation' }
+        { fromName: 'ÌRÍSÍ Brand Relations', plainText }
       );
 
       return NextResponse.json({

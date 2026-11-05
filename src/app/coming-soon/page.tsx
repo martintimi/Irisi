@@ -714,11 +714,6 @@ export default function ComingSoonPage() {
     const activeSocialLinks = vendorForm.socialLinks.filter(
       (s) => s.handle && s.handle.trim().length > 0
     );
-    if (activeSocialLinks.length === 0) {
-      setVendorMessage('Please provide at least one social media channel handle or link.');
-      setVendorStatus('error');
-      return;
-    }
 
     const primaryInstagram =
       activeSocialLinks.find((s) => s.platform === 'instagram')?.handle ||
@@ -1351,6 +1346,8 @@ export default function ComingSoonPage() {
         >
           <div 
             onClick={(e) => e.stopPropagation()}
+            data-lenis-prevent="true"
+            role="dialog"
             className="relative w-full max-w-lg max-h-[90vh] sm:max-h-[88vh] bg-zinc-950 border border-white/20 rounded-3xl flex flex-col text-left text-white shadow-2xl shadow-black/80 overflow-hidden"
           >
             {/* Header: Fixed at top */}
@@ -1376,6 +1373,7 @@ export default function ComingSoonPage() {
 
             {/* Scrollable Form Body */}
             <div 
+              data-lenis-prevent="true"
               className="p-6 sm:p-8 pt-5 overflow-y-auto overscroll-contain flex-1"
               style={{
                 scrollbarWidth: 'thin',
@@ -1449,7 +1447,7 @@ export default function ComingSoonPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-[10px] font-mono uppercase text-zinc-400 block">
-                        Social Media Channels *
+                        Social Media Channels
                       </label>
                       <button
                         type="button"
@@ -1496,7 +1494,6 @@ export default function ComingSoonPage() {
                             <div className="relative flex-1">
                               <input
                                 type="text"
-                                required={index === 0}
                                 value={item.handle}
                                 onChange={(e) => {
                                   const newLinks = [...vendorForm.socialLinks];
@@ -1878,6 +1875,8 @@ export default function ComingSoonPage() {
         >
           <div 
             onClick={(e) => e.stopPropagation()}
+            data-lenis-prevent="true"
+            role="dialog"
             className="relative w-full max-w-lg max-h-[90vh] sm:max-h-[88vh] overflow-y-auto overscroll-contain p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white"
             style={{
               scrollbarWidth: 'thin',

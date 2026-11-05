@@ -82,7 +82,8 @@ export async function sendDirectGmailTls(opts: {
 
         if (state === 'INIT' && code === '220') {
           state = 'EHLO';
-          socket.write('EHLO irisimi.ng\r\n');
+          const senderDomain = opts.user.includes('@') ? opts.user.split('@')[1] : 'gmail.com';
+          socket.write(`EHLO ${senderDomain}\r\n`);
         } else if (state === 'EHLO' && code === '250') {
           state = 'AUTH_LOGIN';
           socket.write('AUTH LOGIN\r\n');
@@ -103,12 +104,16 @@ export async function sendDirectGmailTls(opts: {
           socket.write('DATA\r\n');
         } else if (state === 'DATA' && code === '354') {
           state = 'SENDING_DATA';
-          const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@irisimi.ng>`;
+          const senderDomain = opts.user.includes('@') ? opts.user.split('@')[1] : 'gmail.com';
+          const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@${senderDomain}>`;
           const cleanSubject = `=?UTF-8?B?${Buffer.from(opts.subject).toString('base64')}?=`;
           const bodyPayload = (opts.html || opts.text || '').replace(/\r?\n\./g, '\r\n..');
           const senderName = opts.fromName || 'ÌRÍSÍ Marketplace';
+          const encodedFromName = `=?UTF-8?B?${Buffer.from(senderName).toString('base64')}?=`;
           const emailContent = [
-            `From: "${senderName}" <${opts.user}>`,
+            `Date: ${new Date().toUTCString()}`,
+            `From: ${encodedFromName} <${opts.user}>`,
+            `Reply-To: <${opts.user}>`,
             `To: <${opts.to}>`,
             `Subject: ${cleanSubject}`,
             `Message-ID: ${messageId}`,
@@ -143,12 +148,22 @@ export async function sendLuxuryEmail(
   to: string,
   subject: string,
   html: string,
-  options?: { fromName?: string }
+  options?: { fromName?: string; plainText?: string }
 ): Promise<{ success: boolean; provider: string; error?: string }> {
   // 1. Resend API (Top Priority: Verified Domain Delivery with DKIM/SPF)
-  const resendApiKey = process.env.RESEND_API_KEY;
+  const resendApiKey = (process.env.RESEND_API_KEY || '').replace(/^["']|["']$/g, '').trim();
   if (resendApiKey && !resendApiKey.startsWith('re_placeholder')) {
     try {
+      const plainTextBody =
+        options?.plainText ||
+        (html || '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/p>/gi, '\n\n')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/[ \t]+/g, ' ')
+          .trim();
+
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -157,14 +172,18 @@ export async function sendLuxuryEmail(
         },
         body: JSON.stringify({
           from: (() => {
-            const rawFrom = process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>';
+            const rawFrom = (process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>').replace(/^["']|["']$/g, '').trim();
             const emailAddr = rawFrom.includes('<') ? rawFrom.replace(/^[^<]*<([^>]+)>.*$/, '$1').trim() : rawFrom.trim();
-            return options?.fromName ? `"${options.fromName}" <${emailAddr}>` : (rawFrom.includes('<') ? rawFrom : `ÌRÍSÍ <${emailAddr}>`);
+            return options?.fromName ? `${options.fromName} <${emailAddr}>` : (rawFrom.includes('<') ? rawFrom : `ÌRÍSÍ <${emailAddr}>`);
           })(),
-          to,
+          reply_to: 'martintimi2443@gmail.com',
+          to: [to],
           subject,
-          text: (html || '').replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+          text: plainTextBody,
           html,
+          headers: {
+            'X-Entity-Ref-ID': `irisi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          },
         }),
       });
 
