@@ -1331,48 +1331,61 @@ export default function ComingSoonPage() {
       {/* ── MODAL 2: VENDOR APPLICATION MODAL ────────────────────────────── */}
       {isVendorModalOpen && (
         <div 
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md animate-fadeIn"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
           onClick={() => setIsVendorModalOpen(false)}
         >
-          <div className="min-h-full flex items-center justify-center p-3 sm:p-6 py-10 sm:py-16 pointer-events-none">
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg bg-zinc-950 border border-white/20 rounded-3xl p-6 sm:p-8 text-left text-white shadow-2xl my-auto pointer-events-auto"
-            >
-            <button
-              onClick={() => setIsVendorModalOpen(false)}
-              className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {vendorStatus === 'success' ? (
-              <div className="text-center py-8">
-                <div className="w-14 h-14 rounded-full bg-[#B89035] text-black flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h3 className="font-editorial text-3xl font-normal mb-2">Application Received!</h3>
-                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md mx-auto">
-                  {vendorMessage ||
-                    'Thank you. Our curatorial council will review your catalog and reach out via WhatsApp within 48 hours.'}
-                </p>
-                <button
-                  onClick={() => setIsVendorModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs tracking-wider"
-                >
-                  Close Window
-                </button>
-              </div>
-            ) : (
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg max-h-[90vh] sm:max-h-[88vh] bg-zinc-950 border border-white/20 rounded-3xl flex flex-col text-left text-white shadow-2xl shadow-black/80 overflow-hidden"
+          >
+            {/* Header: Fixed at top */}
+            <div className="p-6 sm:p-8 pb-4 border-b border-white/10 shrink-0 flex items-start justify-between bg-zinc-950/95 backdrop-blur-sm z-10">
               <div>
                 <span className="text-[10px] font-mono font-medium tracking-[0.25em] text-[#B89035] uppercase block mb-1">
                   EXCLUSIVE ONBOARDING
                 </span>
                 <h3 className="font-editorial text-2xl sm:text-3xl font-normal mb-1">Apply As A Founding Brand</h3>
-                <p className="text-xs text-zinc-400 mb-6 font-light">
+                <p className="text-xs text-zinc-400 font-light">
                   Tell us about your brand. We are onboarding 25 founding designers for Drop 001.
                 </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVendorModalOpen(false)}
+                className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0 ml-3"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
+            {/* Scrollable Form Body */}
+            <div 
+              className="p-6 sm:p-8 pt-5 overflow-y-auto overscroll-contain flex-1"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#B89035 rgba(255,255,255,0.08)',
+              }}
+            >
+              {vendorStatus === 'success' ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 rounded-full bg-[#B89035] text-black flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-editorial text-3xl font-normal mb-2">Application Received!</h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed mb-6 max-w-md mx-auto">
+                    {vendorMessage ||
+                      'Thank you. Our curatorial council will review your catalog and reach out via WhatsApp within 48 hours.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsVendorModalOpen(false)}
+                    className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs tracking-wider cursor-pointer"
+                  >
+                    Close Window
+                  </button>
+                </div>
+              ) : (
                 <form onSubmit={handleVendorSubmit} className="space-y-4">
                   {/* Department / Specialty */}
                   <div>
@@ -1786,9 +1799,8 @@ export default function ComingSoonPage() {
                       </button>
                     </div>
                 </form>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1796,18 +1808,21 @@ export default function ComingSoonPage() {
       {/* ── MODAL: MERCH PRIORITY RESERVATION ──────────────────────────── */}
       {isMerchModalOpen && (
         <div 
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md animate-fadeIn"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
           onClick={() => {
             setIsMerchModalOpen(false);
             setMerchStatus('idle');
             setMerchMessage('');
           }}
         >
-          <div className="min-h-full flex items-center justify-center p-3 sm:p-6 py-10 sm:py-16 pointer-events-none">
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white my-auto pointer-events-auto"
-            >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg max-h-[90vh] sm:max-h-[88vh] overflow-y-auto overscroll-contain p-6 sm:p-8 rounded-3xl bg-zinc-950 border border-white/10 shadow-2xl text-white"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#B89035 rgba(255,255,255,0.08)',
+            }}
+          >
             <button
               onClick={() => {
                 setIsMerchModalOpen(false);
@@ -1950,7 +1965,6 @@ export default function ComingSoonPage() {
                 </form>
               </div>
             )}
-          </div>
           </div>
         </div>
       )}
