@@ -55,9 +55,13 @@ type DropMode = 'apparel' | 'footwear' | 'jewelry' | 'perfume' | 'wigs';
 
 const ALL_CATEGORY_OPTIONS = [
   // Perfumes & Scents
-  { id: 'men_perfumes', label: 'Perfumes & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'male' as GenderTarget, group: 'perfume' },
-  { id: 'women_perfumes', label: 'Women Perfumes & Scents (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
-  { id: 'unisex_oud', label: 'Arabian Oud & Oils (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  { id: 'men_perfumes', label: 'Eau de Parfum (EDP) & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'male' as GenderTarget, group: 'perfume' },
+  { id: 'women_perfumes', label: 'Women Eau de Parfum & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_perfumes', label: 'Unisex Niche Perfumes & Scents (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  { id: 'women_body_mist', label: 'Body Mists & Hair Mists (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_gift_sets', label: 'Perfume Discovery Sets & Gift Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
   // Hair & Wigs
   { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
   { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
@@ -602,8 +606,8 @@ export default function BatchProductUploadView({
           videoUrl: item.videoPreview || undefined,
           description: '',
           tags: ['Ready-to-Wear', 'Collection Drop'],
-          colors: item.category === 'accessories' ? [] : (item.selectedColors.length > 0 ? item.selectedColors.map(c => ({ name: c.name.trim() || 'Standard', hex: c.hex || '#111111' })) : [{ name: 'As Pictured', hex: '#111111' }]),
-          sizes: item.category === 'accessories' ? ['One Size'] : (activeSizes.length > 0 ? activeSizes : (item.category === 'footwear' ? ['40', '41', '42'] : ['M', 'L', 'XL'])),
+          colors: (item.category === 'accessories' || item.category === 'perfume' || dropMode === 'perfume' || vendorSpecialty === 'perfume') ? [] : (item.selectedColors.length > 0 ? item.selectedColors.map(c => ({ name: c.name.trim() || 'Standard', hex: c.hex || '#111111' })) : [{ name: 'As Pictured', hex: '#111111' }]),
+          sizes: item.category === 'accessories' ? ['One Size'] : (activeSizes.length > 0 ? activeSizes : (item.category === 'perfume' ? ['50ml', '100ml'] : item.category === 'wigs' ? ['18"', '22"'] : item.category === 'footwear' ? ['40', '41', '42'] : ['M', 'L', 'XL'])),
           sizeStock: sizeStockObj,
           stockQuantity: totalItemStock,
           vendorId: activeVendorId,
@@ -725,8 +729,8 @@ export default function BatchProductUploadView({
         )}
       </div>
 
-      {/* 1-TAP DROP TYPE SELECTOR (Apparel / Slides & Footwear / Jewelry & Accessories) */}
-      {items.length === 0 && (
+      {/* 1-TAP DROP TYPE SELECTOR (Hidden for specialized perfume/wigs vendors) */}
+      {items.length === 0 && vendorSpecialty !== 'perfume' && vendorSpecialty !== 'wigs' && (
         <div className="p-1.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono-luxury text-xs">
           <button
             type="button"
@@ -1094,8 +1098,8 @@ export default function BatchProductUploadView({
                       </div>
                     </div>
 
-                    {/* Multi-Color Swatches (Apparel & Footwear only) */}
-                    {item.category !== 'accessories' && (
+                    {/* Multi-Color Swatches (Hidden for Accessories and Perfumes) */}
+                    {item.category !== 'accessories' && item.category !== 'perfume' && dropMode !== 'perfume' && vendorSpecialty !== 'perfume' && (
                       <div className="space-y-1.5 pt-0.5">
                         <div className="flex items-center justify-between text-xs font-mono-luxury">
                           <div className="flex items-center gap-1 flex-wrap">

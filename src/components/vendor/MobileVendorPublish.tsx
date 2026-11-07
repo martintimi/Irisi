@@ -52,8 +52,13 @@ const MALE_CATEGORIES = [
   { id: 'men_belts', label: 'Designer Belts & Leather Belts (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_caps_hats', label: 'Caps, Hats & Beanies (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   // Perfumes & Scents
-  { id: 'men_perfumes', label: 'Perfumes & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'men_oud', label: 'Arabian Oud & Attars (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_perfumes', label: 'Eau de Parfum (EDP) & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_body_mist', label: 'Body Sprays & Mists (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_gift_sets', label: 'Perfume Gift Sets & Discovery Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  // Hair & Wigs
+  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles & Units (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const FEMALE_CATEGORIES = [
@@ -84,14 +89,18 @@ const FEMALE_CATEGORIES = [
   { id: 'women_belts', label: 'Belts, Corset Belts & Chains (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   // Perfumes & Scents
-  { id: 'women_perfumes', label: 'Perfumes & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'women_oud', label: 'Arabian Oud & Oils (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_perfumes', label: 'Eau de Parfum (EDP) & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_body_mist', label: 'Body Mists & Hair Mists (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_gift_sets', label: 'Perfume Gift Sets & Discovery Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
   // Hair & Wigs
   { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
   { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
   { id: 'women_braided_wigs', label: 'Braided Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
-  { id: 'women_frontals', label: 'Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_frontals', label: 'HD Lace Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
   { id: 'women_bob_wigs', label: 'Bob & Pixie Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_hair_bundles', label: 'Raw Hair Bundles & Ponytails (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const UNISEX_CATEGORIES = [
@@ -112,8 +121,10 @@ const UNISEX_CATEGORIES = [
   { id: 'unisex_belts', label: 'Belts & Buckles (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Hats (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   // Perfumes & Scents
-  { id: 'unisex_perfumes', label: 'Unisex Perfumes & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'unisex_oud', label: 'Arabian Oud & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_perfumes', label: 'Unisex Eau de Parfum & Niche Scents (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_oud', label: 'Arabian Oud, Bakhoor & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_perfume_oils', label: 'Unisex Perfume Oils & Attars (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_gift_sets', label: 'Perfume Discovery Sets & Gift Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
   // Hair & Wigs
   { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles & Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
@@ -373,11 +384,17 @@ export default function MobileVendorPublish({
   const rawCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
 
   const currentCategoryList = useMemo(() => {
+    if (vendorSpecialty === 'perfume') {
+      return rawCategoryList.filter(c => c.group === 'perfume' || c.generalCat === 'perfume');
+    }
+    if (vendorSpecialty === 'wigs') {
+      return rawCategoryList.filter(c => c.group === 'wigs' || c.generalCat === 'wigs');
+    }
     if (isBoutique) {
       return rawCategoryList.filter(c => c.group !== 'native' && c.generalCat !== 'native');
     }
     return rawCategoryList;
-  }, [rawCategoryList, isBoutique]);
+  }, [rawCategoryList, isBoutique, vendorSpecialty]);
 
   const filteredCategoryList = currentCategoryList;
 
@@ -1105,8 +1122,10 @@ export default function MobileVendorPublish({
         }
       });
 
-      const enrichedColorsToSubmit = Array.from(mergedColorMap.values());
-      if (enrichedColorsToSubmit.length === 0 && category !== 'accessories') {
+      const enrichedColorsToSubmit = (category === 'perfume' || vendorSpecialty === 'perfume')
+        ? []
+        : Array.from(mergedColorMap.values());
+      if (enrichedColorsToSubmit.length === 0 && category !== 'accessories' && category !== 'perfume' && vendorSpecialty !== 'perfume') {
         enrichedColorsToSubmit.push({ name: 'As Pictured', hex: '#111111', imageUrl: finalImg });
       }
 
@@ -1299,7 +1318,13 @@ export default function MobileVendorPublish({
               onClick={() => {
                 setGenderTarget(gt);
                 const list = gt === 'male' ? MALE_CATEGORIES : gt === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
-                const filtered = isBoutique ? list.filter(c => c.group !== 'native' && c.generalCat !== 'native') : list;
+                const filtered = vendorSpecialty === 'perfume'
+                  ? list.filter(c => c.group === 'perfume' || c.generalCat === 'perfume')
+                  : vendorSpecialty === 'wigs'
+                  ? list.filter(c => c.group === 'wigs' || c.generalCat === 'wigs')
+                  : isBoutique
+                  ? list.filter(c => c.group !== 'native' && c.generalCat !== 'native')
+                  : list;
                 if (filtered.length > 0) {
                   handleCategorySelect(filtered[0].id, filtered[0].generalCat);
                 }
@@ -1436,14 +1461,16 @@ export default function MobileVendorPublish({
                         View {idx + 1} {img.isCover ? '(Cover)' : ''}
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleColorTag(img.id)}
-                        className="text-[9px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        <Palette className="h-2.5 w-2.5" />
-                        <span>{img.showColorTag || img.colorName ? 'Color Tagged' : '+ Color Tag'}</span>
-                      </button>
+                      {category !== 'perfume' && vendorSpecialty !== 'perfume' && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleColorTag(img.id)}
+                          className="text-[9px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Palette className="h-2.5 w-2.5" />
+                          <span>{img.showColorTag || img.colorName ? 'Color Tagged' : '+ Color Tag'}</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Quick View Presets (Front, Back, Side, Detail, Model) */}
@@ -1732,7 +1759,13 @@ export default function MobileVendorPublish({
             required
             value={name}
             onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="e.g. Leather Crocodile Palms, Velvet Fila, Silk Boubou, Cuban Chain"
+            placeholder={
+              category === 'perfume' || vendorSpecialty === 'perfume'
+                ? 'e.g. Lattafa Khamrah 100ml, Sauvage Elixir, Royal Oud Oil'
+                : category === 'wigs' || vendorSpecialty === 'wigs'
+                ? 'e.g. 30-Inch Bone Straight HD Lace Wig, Deep Wave Frontal'
+                : 'e.g. Leather Crocodile Palms, Velvet Fila, Silk Boubou, Cuban Chain'
+            }
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
           />
           {smartDetectedCat && (
@@ -1791,10 +1824,14 @@ export default function MobileVendorPublish({
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-[var(--text-secondary)] uppercase font-bold text-[10px]">
-              Category / Piece Type <strong className="text-rose-400">*</strong>
+              {category === 'perfume' || vendorSpecialty === 'perfume'
+                ? 'Fragrance / Scent Type'
+                : category === 'wigs' || vendorSpecialty === 'wigs'
+                ? 'Hair / Wig Type'
+                : 'Category / Piece Type'} <strong className="text-rose-400">*</strong>
             </label>
             <span className="text-[9px] text-[var(--gold-accent)] font-bold uppercase">
-              {category === 'footwear' ? 'Shoe Sizing' : (category === 'accessories' || category === 'bags') ? 'Accessories / One-Size' : 'Apparel Sizing'}
+              {category === 'perfume' ? 'Bottle Volumes (ml)' : category === 'wigs' ? 'Wig Lengths (Inches)' : category === 'footwear' ? 'Shoe Sizing' : (category === 'accessories' || category === 'bags') ? 'Accessories / One-Size' : 'Apparel Sizing'}
             </span>
           </div>
 
@@ -1810,6 +1847,28 @@ export default function MobileVendorPublish({
             }}
             className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
           >
+            {/* Perfumes, Ouds & Fragrances (shown first for perfume vendors) */}
+            {vendorSpecialty === 'perfume' && filteredCategoryList.some(c => c.group === 'perfume') && (
+              <optgroup label="Perfumes, Ouds & Fragrances">
+                {filteredCategoryList.filter(c => c.group === 'perfume').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {/* Hair, Wigs & Bundles (shown first for wigs vendors) */}
+            {vendorSpecialty === 'wigs' && filteredCategoryList.some(c => c.group === 'wigs') && (
+              <optgroup label="Hair, Wigs & Bundles">
+                {filteredCategoryList.filter(c => c.group === 'wigs').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
             {/* If vendor is accessories/jewelry/caps, show Bags & Accessories first */}
             {(vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps') && (
               <>
@@ -1888,6 +1947,28 @@ export default function MobileVendorPublish({
                 ))}
               </optgroup>
             )}
+
+            {/* Perfumes, Ouds & Fragrances (for multi-category vendors) */}
+            {vendorSpecialty !== 'perfume' && filteredCategoryList.some(c => c.group === 'perfume') && (
+              <optgroup label="Perfumes, Ouds & Fragrances">
+                {filteredCategoryList.filter(c => c.group === 'perfume').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+
+            {/* Hair, Wigs & Bundles (for multi-category vendors) */}
+            {vendorSpecialty !== 'wigs' && filteredCategoryList.some(c => c.group === 'wigs') && (
+              <optgroup label="Hair, Wigs & Bundles">
+                {filteredCategoryList.filter(c => c.group === 'wigs').map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
 
@@ -1916,7 +1997,13 @@ export default function MobileVendorPublish({
             rows={5}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Fabric specs, tailoring notes, occasion..."
+            placeholder={
+              category === 'perfume' || vendorSpecialty === 'perfume'
+                ? 'Fragrance notes (top, heart, base), longevity, concentration (EDP/Oil)...'
+                : category === 'wigs' || vendorSpecialty === 'wigs'
+                ? 'Hair origin, lace type (HD/Transparent), density, styling notes...'
+                : 'Fabric specs, tailoring notes, occasion...'
+            }
             className="w-full px-3.5 py-2.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none min-h-[120px] leading-relaxed resize-y overflow-y-auto text-xs"
           />
         </div>
@@ -2050,7 +2137,8 @@ export default function MobileVendorPublish({
         )}
       </div>
 
-      {/* 4. Colorways & Finishes (Optional for all pieces, including jewelry, bags & footwear) */}
+      {/* 4. Colorways & Finishes (Hidden for Perfume & Fragrances) */}
+      {category !== 'perfume' && vendorSpecialty !== 'perfume' && (
       <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm font-mono-luxury text-xs">
         <div className="flex items-center justify-between">
           <span className="text-xs uppercase font-bold text-[var(--text-primary)] flex items-center gap-1.5">
@@ -2241,6 +2329,7 @@ export default function MobileVendorPublish({
           </div>
         </div>
       </div>
+      )}
 
       {/* Success Toast */}
       {successToast && (
@@ -2330,8 +2419,8 @@ export default function MobileVendorPublish({
                 videoUrl: safeQuickVideoUrl,
                 description: description.trim(),
                 tags,
-                colors: category === 'accessories' ? [] : (photoDerivedColors.length > 0 ? photoDerivedColors : selectedColors.map(c => ({ name: c.name, hex: c.hex, imageUrl: quickFinalImg }))),
-                sizes: enabledSizes.length > 0 ? enabledSizes : ['M', 'L', 'XL'],
+                colors: (category === 'accessories' || category === 'perfume' || vendorSpecialty === 'perfume') ? [] : (photoDerivedColors.length > 0 ? photoDerivedColors : selectedColors.map(c => ({ name: c.name, hex: c.hex, imageUrl: quickFinalImg }))),
+                sizes: enabledSizes.length > 0 ? enabledSizes : (category === 'perfume' ? ['100ml'] : category === 'wigs' ? ['20"'] : ['M', 'L', 'XL']),
                 sizeStock,
                 stockQuantity: totalStock,
                 shipsFrom: shipsFrom || vendorProfile.city || vendorProfile.location || undefined,

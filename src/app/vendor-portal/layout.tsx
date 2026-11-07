@@ -156,7 +156,7 @@ export default function VendorPortalLayout({
     },
     {
       id: 'tour-nav-publish',
-      label: 'Add Drop',
+      label: specialtyInfo.publishLabel || 'Add Drop',
       href: '/vendor-portal/publish',
       icon: UploadCloud,
       active: pathname === '/vendor-portal/publish'
@@ -246,17 +246,14 @@ export default function VendorPortalLayout({
                 priority
               />
             </div>
-            <span className="font-editorial text-xl sm:text-2xl font-bold tracking-[0.24em] text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
-              Ì R Í S Í
-            </span>
-            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20">
+            <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20">
               {specialtyInfo.badge}
             </span>
           </Link>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury truncate">
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury truncate">
             <span className={`h-2 w-2 rounded-full shrink-0 ${liveStatus.isVerified ? 'bg-emerald-500 animate-pulse' : liveStatus.approvalStatus === 'rejected' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`} />
-            <span className="font-bold text-[var(--text-primary)] truncate max-w-[100px] sm:max-w-[180px]">{vendorProfile.brandName}</span>
+            <span className="font-bold text-[var(--text-primary)] truncate max-w-[180px]">{vendorProfile.brandName}</span>
           </div>
         </div>
 
@@ -267,10 +264,10 @@ export default function VendorPortalLayout({
           <button
             type="button"
             onClick={() => setShowTour(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--gold-subtle)] hover:bg-[var(--gold-accent)]/20 border border-[var(--gold-accent)]/40 text-xs font-mono-luxury uppercase font-bold text-[var(--gold-accent)] transition-all cursor-pointer shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-full bg-[var(--gold-subtle)] hover:bg-[var(--gold-accent)]/20 border border-[var(--gold-accent)]/40 text-xs font-mono-luxury uppercase font-bold text-[var(--gold-accent)] transition-all cursor-pointer shadow-sm"
             title="Take interactive tour"
           >
-            <Sparkles className="h-3.5 w-3.5" />
+            <Sparkles className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
             <span className="hidden sm:inline">Tour Guide</span>
           </button>
 
@@ -280,7 +277,7 @@ export default function VendorPortalLayout({
           <Link
             href={`/brand/${encodeURIComponent(vendorProfile.brandName)}`}
             target="_blank"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] transition-all"
+            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] transition-all"
           >
             <span>{isBoutique ? 'View Boutique' : 'View Atelier'}</span>
             <ExternalLink className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
@@ -343,8 +340,8 @@ export default function VendorPortalLayout({
             {/* Mobile Drawer Top Header (Close button & Logo) */}
             <div className="flex items-center justify-between md:hidden pb-3 border-b border-[var(--border-subtle)]">
               <div className="flex items-center gap-2">
-                <span className="font-editorial text-lg font-bold text-[var(--text-primary)] tracking-widest uppercase">
-                  Ì R Í S Í
+                <span className="font-editorial text-lg font-bold text-[var(--text-primary)] tracking-wider uppercase">
+                  ÌRÍSÍ
                 </span>
               </div>
               <button
@@ -361,7 +358,17 @@ export default function VendorPortalLayout({
             <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-[var(--gold-accent)]/15 text-[var(--gold-accent)] flex items-center justify-center font-editorial font-bold text-lg shrink-0">
-                  {specialty === 'caps' ? (
+                  {specialty === 'perfume' ? (
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 2h4v3h-4z" />
+                      <path d="M12 5v2" />
+                      <path d="M14 3.5h3" />
+                      <rect x="6" y="7" width="12" height="14" rx="3" />
+                      <path d="M9 12h6" />
+                    </svg>
+                  ) : specialty === 'wigs' ? (
+                    <Crown className="h-5 w-5" />
+                  ) : specialty === 'caps' ? (
                     <Crown className="h-5 w-5" />
                   ) : specialty === 'accessories' ? (
                     <Sparkles className="h-5 w-5" />

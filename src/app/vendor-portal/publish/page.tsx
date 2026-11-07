@@ -56,6 +56,14 @@ const MALE_CATEGORIES = [
   { id: 'men_eyewear', label: 'Sunglasses & Glasses (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_belts', label: 'Designer Belts & Leather Goods (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_caps_hats', label: 'Caps, Hats & Beanies (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  // Perfumes & Scents
+  { id: 'men_perfumes', label: 'Eau de Parfum (EDP) & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_body_mist', label: 'Body Sprays & Mists (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_gift_sets', label: 'Perfume Gift Sets & Discovery Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  // Hair & Wigs
+  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles & Units (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const FEMALE_CATEGORIES = [
@@ -85,6 +93,19 @@ const FEMALE_CATEGORIES = [
   { id: 'women_sunglasses', label: 'Sunglasses & Shades (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_belts', label: 'Designer Belts & Waist Chains (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  // Perfumes & Scents
+  { id: 'women_perfumes', label: 'Eau de Parfum (EDP) & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_body_mist', label: 'Body Mists & Hair Mists (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_gift_sets', label: 'Perfume Gift Sets & Discovery Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  // Hair & Wigs
+  { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_braided_wigs', label: 'Braided Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_frontals', label: 'HD Lace Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_bob_wigs', label: 'Bob & Pixie Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_hair_bundles', label: 'Raw Hair Bundles & Ponytails (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const UNISEX_CATEGORIES = [
@@ -105,11 +126,20 @@ const UNISEX_CATEGORIES = [
   { id: 'unisex_sunglasses', label: 'Sunglasses & Eyewear (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_belts', label: 'Designer Belts & Small Leather Goods (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Bucket Hats (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
+  // Perfumes & Scents
+  { id: 'unisex_perfumes', label: 'Unisex Eau de Parfum & Niche Scents (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_oud', label: 'Arabian Oud, Bakhoor & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_perfume_oils', label: 'Unisex Perfume Oils & Attars (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_gift_sets', label: 'Perfume Discovery Sets & Gift Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  // Hair & Wigs
+  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles & Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const APPAREL_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 const FOOTWEAR_SIZES = ['38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'];
 const ACCESSORY_SIZES = ['One Size'];
+const PERFUME_SIZES = ['30ml', '50ml', '100ml', '200ml', 'One Size'];
+const WIG_SIZES = ['10"', '12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"', 'One Size'];
 
 export default function PublishGarmentPage() {
   const { vendorProfile, setVendorProfile, fetchProductsFromDb } = useStore();
@@ -143,8 +173,10 @@ export default function PublishGarmentPage() {
   const [uploadMode, setUploadMode] = useState<'single' | 'batch'>('single');
 
   // Department / Gender Filter: male | female | unisex
-  const [genderTarget, setGenderTarget] = useState<GenderTarget>('male');
-  const [catFilterTab, setCatFilterTab] = useState<'all' | 'apparel' | 'footwear' | 'accessories'>(
+  const [genderTarget, setGenderTarget] = useState<GenderTarget>(vendorSpecialty === 'wigs' ? 'female' : 'male');
+  const [catFilterTab, setCatFilterTab] = useState<'all' | 'apparel' | 'footwear' | 'accessories' | 'perfume' | 'wigs'>(
+    vendorSpecialty === 'perfume' ? 'perfume' :
+    vendorSpecialty === 'wigs' ? 'wigs' :
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' ? 'accessories' :
     vendorSpecialty === 'footwear' ? 'footwear' :
     vendorSpecialty === 'apparel' || vendorSpecialty === 'native_tailoring' || vendorSpecialty === 'streetwear' ? 'apparel' : 'all'
@@ -153,6 +185,8 @@ export default function PublishGarmentPage() {
   // Core Form State
   const [name, setName] = useState('');
   const [subCategory, setSubCategory] = useState(
+    vendorSpecialty === 'perfume' ? 'men_perfumes' :
+    vendorSpecialty === 'wigs' ? 'women_bone_straight' :
     vendorSpecialty === 'caps' ? 'men_caps_hats' :
     vendorSpecialty === 'jewelry' ? 'men_jewelry_chains' :
     vendorSpecialty === 'accessories' ? 'men_bags_backpacks' :
@@ -161,6 +195,8 @@ export default function PublishGarmentPage() {
     (initialMaleList[0]?.id || 'streetwear_hoodie')
   );
   const [category, setCategory] = useState<GarmentCategory>(
+    vendorSpecialty === 'perfume' ? 'perfume' :
+    vendorSpecialty === 'wigs' ? 'wigs' :
     vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' ? 'accessories' :
     vendorSpecialty === 'footwear' ? 'footwear' :
     (initialMaleList[0]?.generalCat || 'clothing')
@@ -183,7 +219,30 @@ export default function PublishGarmentPage() {
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [showCustomSizeInput, setShowCustomSizeInput] = useState(false);
   const [sizeStock, setSizeStock] = useState<{ [size: string]: { enabled: boolean; quantity: number | string } }>(
-    vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry'
+    vendorSpecialty === 'perfume'
+      ? {
+          '30ml': { enabled: false, quantity: '' },
+          '50ml': { enabled: false, quantity: '' },
+          '100ml': { enabled: false, quantity: '' },
+          '200ml': { enabled: false, quantity: '' },
+          'One Size': { enabled: false, quantity: '' },
+        }
+      : vendorSpecialty === 'wigs'
+      ? {
+          '10"': { enabled: false, quantity: '' },
+          '12"': { enabled: false, quantity: '' },
+          '14"': { enabled: false, quantity: '' },
+          '16"': { enabled: false, quantity: '' },
+          '18"': { enabled: false, quantity: '' },
+          '20"': { enabled: false, quantity: '' },
+          '22"': { enabled: false, quantity: '' },
+          '24"': { enabled: false, quantity: '' },
+          '26"': { enabled: false, quantity: '' },
+          '28"': { enabled: false, quantity: '' },
+          '30"': { enabled: false, quantity: '' },
+          'One Size': { enabled: false, quantity: '' },
+        }
+      : vendorSpecialty === 'caps' || vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry'
       ? { 'One Size': { enabled: true, quantity: '' } }
       : vendorSpecialty === 'footwear'
       ? {
@@ -292,7 +351,37 @@ export default function PublishGarmentPage() {
           state: v.state || ''
         });
 
-        if (spec === 'jewelry' || spec === 'accessories' || spec === 'caps') {
+        if (spec === 'perfume') {
+          setCatFilterTab('perfume');
+          setCategory('perfume');
+          setSubCategory('men_perfumes');
+          setSizeStock({
+            '30ml': { enabled: false, quantity: '' },
+            '50ml': { enabled: false, quantity: '' },
+            '100ml': { enabled: false, quantity: '' },
+            '200ml': { enabled: false, quantity: '' },
+            'One Size': { enabled: false, quantity: '' },
+          });
+        } else if (spec === 'wigs') {
+          setCatFilterTab('wigs');
+          setCategory('wigs');
+          setGenderTarget('female');
+          setSubCategory('women_bone_straight');
+          setSizeStock({
+            '10"': { enabled: false, quantity: '' },
+            '12"': { enabled: false, quantity: '' },
+            '14"': { enabled: false, quantity: '' },
+            '16"': { enabled: false, quantity: '' },
+            '18"': { enabled: false, quantity: '' },
+            '20"': { enabled: false, quantity: '' },
+            '22"': { enabled: false, quantity: '' },
+            '24"': { enabled: false, quantity: '' },
+            '26"': { enabled: false, quantity: '' },
+            '28"': { enabled: false, quantity: '' },
+            '30"': { enabled: false, quantity: '' },
+            'One Size': { enabled: false, quantity: '' },
+          });
+        } else if (spec === 'jewelry' || spec === 'accessories' || spec === 'caps') {
           setCatFilterTab('accessories');
           setCategory('accessories');
           setSubCategory(spec === 'caps' ? 'men_caps_hats' : spec === 'jewelry' ? 'men_jewelry_chains' : 'men_bags_backpacks');
@@ -348,22 +437,40 @@ export default function PublishGarmentPage() {
   // Update categories when genderTarget or catFilterTab changes
   useEffect(() => {
     const rawList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
-    const list = isBoutique ? rawList.filter(c => c.group !== 'native' && c.generalCat !== 'native') : rawList;
+    const list = vendorSpecialty === 'perfume'
+      ? rawList.filter(c => c.group === 'perfume' || c.generalCat === 'perfume')
+      : vendorSpecialty === 'wigs'
+      ? rawList.filter(c => c.group === 'wigs' || c.generalCat === 'wigs')
+      : isBoutique
+      ? rawList.filter(c => c.group !== 'native' && c.generalCat !== 'native')
+      : rawList;
     const allowed = list.filter(c => {
+      if (vendorSpecialty === 'perfume') return c.group === 'perfume';
+      if (vendorSpecialty === 'wigs') return c.group === 'wigs';
       if (catFilterTab === 'all') return true;
       if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'clothing' || (!isBoutique && c.group === 'native');
       if (catFilterTab === 'footwear') return c.group === 'footwear';
       if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
+      if (catFilterTab === 'perfume') return c.group === 'perfume';
+      if (catFilterTab === 'wigs') return c.group === 'wigs';
       return c.group === catFilterTab;
     });
 
     if (allowed.length > 0 && !allowed.some(c => c.id === subCategory)) {
       handleCategorySelect(allowed[0].id, allowed[0].generalCat);
     }
-  }, [genderTarget, catFilterTab, isBoutique]);
+  }, [genderTarget, catFilterTab, isBoutique, vendorSpecialty]);
 
   const currentSizeList = useMemo(() => {
-    const base = category === 'footwear' ? FOOTWEAR_SIZES : (category === 'accessories' || category === 'bags') ? ACCESSORY_SIZES : APPAREL_SIZES;
+    const base = category === 'footwear'
+      ? FOOTWEAR_SIZES
+      : category === 'perfume'
+      ? PERFUME_SIZES
+      : category === 'wigs'
+      ? WIG_SIZES
+      : (category === 'accessories' || category === 'bags')
+      ? ACCESSORY_SIZES
+      : APPAREL_SIZES;
     const custom = Object.keys(sizeStock).filter((sz) => !base.includes(sz) && sz !== 'One Size');
     return [...base, ...custom];
   }, [category, sizeStock]);
@@ -410,6 +517,29 @@ export default function PublishGarmentPage() {
         '46': { enabled: false, quantity: '' },
         '47': { enabled: false, quantity: '' },
         '48': { enabled: false, quantity: '' },
+      });
+    } else if (generalCat === 'perfume') {
+      setSizeStock({
+        '30ml': { enabled: false, quantity: '' },
+        '50ml': { enabled: false, quantity: '' },
+        '100ml': { enabled: false, quantity: '' },
+        '200ml': { enabled: false, quantity: '' },
+        'One Size': { enabled: false, quantity: '' },
+      });
+    } else if (generalCat === 'wigs') {
+      setSizeStock({
+        '10"': { enabled: false, quantity: '' },
+        '12"': { enabled: false, quantity: '' },
+        '14"': { enabled: false, quantity: '' },
+        '16"': { enabled: false, quantity: '' },
+        '18"': { enabled: false, quantity: '' },
+        '20"': { enabled: false, quantity: '' },
+        '22"': { enabled: false, quantity: '' },
+        '24"': { enabled: false, quantity: '' },
+        '26"': { enabled: false, quantity: '' },
+        '28"': { enabled: false, quantity: '' },
+        '30"': { enabled: false, quantity: '' },
+        'One Size': { enabled: false, quantity: '' },
       });
     } else if (generalCat === 'accessories' || generalCat === 'bags') {
       setSizeStock({
@@ -928,8 +1058,10 @@ export default function PublishGarmentPage() {
         }
       });
 
-      const enrichedColorsToSubmit = Array.from(mergedColorMap.values());
-      if (enrichedColorsToSubmit.length === 0 && category !== 'accessories') {
+      const enrichedColorsToSubmit = (category === 'perfume' || vendorSpecialty === 'perfume')
+        ? []
+        : Array.from(mergedColorMap.values());
+      if (enrichedColorsToSubmit.length === 0 && category !== 'accessories' && category !== 'perfume' && vendorSpecialty !== 'perfume') {
         enrichedColorsToSubmit.push({ name: 'As Pictured', hex: '#111111', imageUrl: finalImageUrl });
       }
 
@@ -1028,21 +1160,31 @@ export default function PublishGarmentPage() {
 
   const rawCategoryList = genderTarget === 'male' ? MALE_CATEGORIES : genderTarget === 'female' ? FEMALE_CATEGORIES : UNISEX_CATEGORIES;
   const currentCategoryList = useMemo(() => {
+    if (vendorSpecialty === 'perfume') {
+      return rawCategoryList.filter(c => c.group === 'perfume' || c.generalCat === 'perfume');
+    }
+    if (vendorSpecialty === 'wigs') {
+      return rawCategoryList.filter(c => c.group === 'wigs' || c.generalCat === 'wigs');
+    }
     if (isBoutique) {
       return rawCategoryList.filter(c => c.group !== 'native' && c.generalCat !== 'native');
     }
     return rawCategoryList;
-  }, [rawCategoryList, isBoutique]);
+  }, [rawCategoryList, isBoutique, vendorSpecialty]);
 
   const filteredCategoryList = useMemo(() => {
     return currentCategoryList.filter(c => {
+      if (vendorSpecialty === 'perfume') return c.group === 'perfume';
+      if (vendorSpecialty === 'wigs') return c.group === 'wigs';
       if (catFilterTab === 'all') return true;
       if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'clothing' || (!isBoutique && c.group === 'native');
       if (catFilterTab === 'footwear') return c.group === 'footwear';
       if (catFilterTab === 'accessories') return c.group === 'accessories' || c.group === 'bags';
+      if (catFilterTab === 'perfume') return c.group === 'perfume';
+      if (catFilterTab === 'wigs') return c.group === 'wigs';
       return c.group === catFilterTab;
     });
-  }, [currentCategoryList, catFilterTab, isBoutique]);
+  }, [currentCategoryList, catFilterTab, isBoutique, vendorSpecialty]);
   const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled);
 
   const totalStockCount = Object.values(sizeStock)
@@ -1441,14 +1583,16 @@ export default function PublishGarmentPage() {
                             View {idx + 1} {img.isCover ? '(Cover)' : ''}
                           </span>
 
-                          <button
-                            type="button"
-                            onClick={() => handleToggleColorTag(img.id)}
-                            className="text-[9px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors cursor-pointer flex items-center gap-1"
-                          >
-                            <Palette className="h-2.5 w-2.5" />
-                            <span>{img.showColorTag || img.colorName ? 'Color Tagged' : '+ Color Tag'}</span>
-                          </button>
+                          {category !== 'perfume' && vendorSpecialty !== 'perfume' && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleColorTag(img.id)}
+                              className="text-[9px] font-mono-luxury font-bold text-[var(--text-secondary)] hover:text-[var(--gold-accent)] transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <Palette className="h-2.5 w-2.5" />
+                              <span>{img.showColorTag || img.colorName ? 'Color Tagged' : '+ Color Tag'}</span>
+                            </button>
+                          )}
                         </div>
 
                         {/* Quick View Presets (Front, Back, Detail, Side, Model) */}
@@ -1733,7 +1877,13 @@ export default function PublishGarmentPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Cuban Chain, Leather Palms, Puffer Jacket, Silk Boubou"
+                  placeholder={
+                    category === 'perfume' || vendorSpecialty === 'perfume'
+                      ? 'e.g. Lattafa Khamrah 100ml, Sauvage Elixir, Royal Oud Oil'
+                      : category === 'wigs' || vendorSpecialty === 'wigs'
+                      ? 'e.g. 30-Inch Bone Straight HD Lace Wig, Deep Wave Frontal'
+                      : 'e.g. Cuban Chain, Leather Palms, Puffer Jacket, Silk Boubou'
+                  }
                   className="w-full px-4 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
                 />
               </div>
@@ -1820,39 +1970,47 @@ export default function PublishGarmentPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] font-bold">
-                  Garment / Accessory Category <strong className="text-rose-400">*</strong>
+                  {category === 'perfume' || vendorSpecialty === 'perfume'
+                    ? 'Fragrance / Scent Type'
+                    : category === 'wigs' || vendorSpecialty === 'wigs'
+                    ? 'Hair / Wig Category'
+                    : 'Garment / Accessory Category'} <strong className="text-rose-400">*</strong>
                 </label>
                 <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)] font-bold uppercase">
-                  {category === 'footwear' ? 'Shoe Sizing Active' : (category === 'accessories' || category === 'bags') ? 'Accessories / One-Size Stock Active' : 'Apparel Sizing Active'}
+                  {category === 'perfume' ? 'Bottle Volumes (ml) Active' : category === 'wigs' ? 'Wig Lengths (Inches) Active' : category === 'footwear' ? 'Shoe Sizing Active' : (category === 'accessories' || category === 'bags') ? 'Accessories / One-Size Stock Active' : 'Apparel Sizing Active'}
                 </span>
               </div>
 
-              {/* Category Segment Tabs with Lucide Icons */}
-              <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
-                {[
-                  { id: 'all', label: 'All Categories', icon: Layers, allowed: true },
-                  { id: 'accessories', label: 'Accessories & Bags', icon: Sparkles, allowed: true },
-                  { id: 'apparel', label: isBoutique ? 'Apparel & Streetwear' : 'Apparel & Native Sets', icon: Shirt, allowed: true },
-                  { id: 'footwear', label: 'Footwear & Slides', icon: Footprints, allowed: true },
-                ].filter(t => t.allowed).map((tab) => {
-                  const IconComp = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setCatFilterTab(tab.id as any)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-mono-luxury uppercase font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                        catFilterTab === tab.id
-                          ? 'bg-[var(--gold-accent)] text-black shadow-sm'
-                          : 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white'
-                      }`}
-                    >
-                      <IconComp className="h-3.5 w-3.5" />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Category Segment Tabs with Lucide Icons (hidden when vendor is strictly perfume or wigs) */}
+              {vendorSpecialty !== 'perfume' && vendorSpecialty !== 'wigs' && (
+                <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
+                  {[
+                    { id: 'all', label: 'All Categories', icon: Layers, allowed: true },
+                    { id: 'accessories', label: 'Accessories & Bags', icon: Sparkles, allowed: true },
+                    { id: 'apparel', label: isBoutique ? 'Apparel & Streetwear' : 'Apparel & Native Sets', icon: Shirt, allowed: true },
+                    { id: 'footwear', label: 'Footwear & Slides', icon: Footprints, allowed: true },
+                    { id: 'perfume', label: 'Perfumes & Scents', icon: Sparkle, allowed: true },
+                    { id: 'wigs', label: 'Hair & Wigs', icon: Crown, allowed: true },
+                  ].filter(t => t.allowed).map((tab) => {
+                    const IconComp = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setCatFilterTab(tab.id as any)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-mono-luxury uppercase font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                          catFilterTab === tab.id
+                            ? 'bg-[var(--gold-accent)] text-black shadow-sm'
+                            : 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white'
+                        }`}
+                      >
+                        <IconComp className="h-3.5 w-3.5" />
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {filteredCategoryList.map((cat) => (
@@ -1909,14 +2067,21 @@ export default function PublishGarmentPage() {
                 rows={6}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe material quality, leather grade, metal type, occasion, and care instructions..."
+                placeholder={
+                  category === 'perfume' || vendorSpecialty === 'perfume'
+                    ? 'Describe fragrance notes (top, heart, base), longevity, concentration (EDP/Oil), and occasion...'
+                    : category === 'wigs' || vendorSpecialty === 'wigs'
+                    ? 'Describe hair origin (Vietnamese/Raw), lace type (HD/Transparent), density, and styling notes...'
+                    : 'Describe material quality, leather grade, metal type, occasion, and care instructions...'
+                }
                 className="w-full px-4 py-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none min-h-[140px] leading-relaxed resize-y overflow-y-auto"
               />
             </div>
 
           </div>
 
-          {/* Section 4: Colorway / Metal Tone Variations */}
+          {/* Section 4: Colorway / Metal Tone Variations (Hidden for Perfume & Fragrances) */}
+          {category !== 'perfume' && vendorSpecialty !== 'perfume' && (
           <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -2086,6 +2251,7 @@ export default function PublishGarmentPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Section 5: Adaptive Size Stock & Inventory */}
           <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
@@ -2094,6 +2260,10 @@ export default function PublishGarmentPage() {
                 <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] font-bold block">
                   {category === 'footwear'
                     ? '5. Shoe / Slide Sizing & Inventory (EU Sizes)'
+                    : category === 'perfume'
+                    ? '4. Bottle Volumes & Stock Units (ml)'
+                    : category === 'wigs'
+                    ? '5. Hair Bundle / Wig Lengths & Stock (Inches)'
                     : category === 'accessories'
                     ? '4. Accessory / Jewelry Stock Units'
                     : '5. Ready-to-Wear Size Stocks & Units'}
@@ -2101,6 +2271,10 @@ export default function PublishGarmentPage() {
                 <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5">
                   {category === 'footwear'
                     ? 'Enable available shoe sizes and specify stock units per pair.'
+                    : category === 'perfume'
+                    ? 'Enable available bottle volumes (30ml, 50ml, 100ml, 200ml, or One Size) and specify stock units.'
+                    : category === 'wigs'
+                    ? 'Enable available hair lengths in inches (10"–30" or One Size) and specify stock units.'
                     : category === 'accessories'
                     ? 'No size complexity. Simply specify total units available in inventory.'
                     : 'Set available quantity per standard ready-to-wear sizing.'}
@@ -2115,7 +2289,7 @@ export default function PublishGarmentPage() {
                     className="px-3 py-1.5 rounded-xl border border-dashed border-[var(--gold-accent)]/50 hover:border-[var(--gold-accent)] bg-[var(--gold-subtle)]/30 text-xs font-mono-luxury text-[var(--gold-accent)] font-bold flex items-center gap-1.5 cursor-pointer transition-all"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    <span>{showCustomSizeInput ? 'Cancel' : category === 'footwear' ? '+ Custom Shoe Size' : '+ Custom Size'}</span>
+                    <span>{showCustomSizeInput ? 'Cancel' : category === 'footwear' ? '+ Custom Shoe Size' : category === 'perfume' ? '+ Custom Volume (e.g. 15ml)' : category === 'wigs' ? '+ Custom Length' : '+ Custom Size'}</span>
                   </button>
                 )}
                 <div className="text-right">
@@ -2189,7 +2363,7 @@ export default function PublishGarmentPage() {
                   {currentSizeList.map((size) => {
                     const isEnabled = sizeStock[size]?.enabled;
                     const qty = sizeStock[size]?.quantity;
-                    const isCustom = category === 'footwear' ? !FOOTWEAR_SIZES.includes(size) : !APPAREL_SIZES.includes(size);
+                    const isCustom = category === 'footwear' ? !FOOTWEAR_SIZES.includes(size) : category === 'perfume' ? !PERFUME_SIZES.includes(size) : category === 'wigs' ? !WIG_SIZES.includes(size) : !APPAREL_SIZES.includes(size);
 
                     return (
                       <div
@@ -2330,8 +2504,8 @@ export default function PublishGarmentPage() {
                       image_url: finalImageUrl,
                       description: description.trim(),
                       tags,
-                      colors: category === 'accessories' ? [] : selectedColors.map(c => ({ name: c.name, hex: c.hex })),
-                      sizes: enabledSizes.length > 0 ? enabledSizes : ['M', 'L', 'XL'],
+                      colors: (category === 'accessories' || category === 'perfume' || vendorSpecialty === 'perfume') ? [] : selectedColors.map(c => ({ name: c.name, hex: c.hex })),
+                      sizes: enabledSizes.length > 0 ? enabledSizes : (category === 'perfume' ? ['100ml'] : category === 'wigs' ? ['20"'] : ['M', 'L', 'XL']),
                       sizeStock,
                       stockQuantity: totalStockCount,
                       vendorId: activeVendorId,
