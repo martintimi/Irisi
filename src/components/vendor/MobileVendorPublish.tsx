@@ -52,13 +52,10 @@ const MALE_CATEGORIES = [
   { id: 'men_belts', label: 'Designer Belts & Leather Belts (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'men_caps_hats', label: 'Caps, Hats & Beanies (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   // Perfumes & Scents
-  { id: 'men_perfumes', label: 'Eau de Parfum (EDP) & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'men_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'men_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'men_body_mist', label: 'Body Sprays & Mists (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'men_gift_sets', label: 'Perfume Gift Sets & Discovery Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_perfumes', label: 'Perfumes & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'men_oud', label: 'Arabian Oud & Attars (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
   // Hair & Wigs
-  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles & Units (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const FEMALE_CATEGORIES = [
@@ -89,18 +86,14 @@ const FEMALE_CATEGORIES = [
   { id: 'women_belts', label: 'Belts, Corset Belts & Chains (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   // Perfumes & Scents
-  { id: 'women_perfumes', label: 'Eau de Parfum (EDP) & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'women_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'women_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'women_body_mist', label: 'Body Mists & Hair Mists (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'women_gift_sets', label: 'Perfume Gift Sets & Discovery Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_perfumes', label: 'Perfumes & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'women_oud', label: 'Arabian Oud & Perfume Oils (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
   // Hair & Wigs
   { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
   { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
   { id: 'women_braided_wigs', label: 'Braided Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
-  { id: 'women_frontals', label: 'HD Lace Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_frontals', label: 'Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
   { id: 'women_bob_wigs', label: 'Bob & Pixie Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
-  { id: 'women_hair_bundles', label: 'Raw Hair Bundles & Ponytails (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const UNISEX_CATEGORIES = [
@@ -121,12 +114,14 @@ const UNISEX_CATEGORIES = [
   { id: 'unisex_belts', label: 'Belts & Buckles (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   { id: 'unisex_caps_hats', label: 'Caps, Beanies & Hats (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
   // Perfumes & Scents
-  { id: 'unisex_perfumes', label: 'Unisex Eau de Parfum & Niche Scents (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'unisex_oud', label: 'Arabian Oud, Bakhoor & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'unisex_perfume_oils', label: 'Unisex Perfume Oils & Attars (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
-  { id: 'unisex_gift_sets', label: 'Perfume Discovery Sets & Gift Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_perfumes', label: 'Perfumes, Colognes & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
+  { id: 'unisex_oud', label: 'Arabian Oud, Attars & Perfume Oils (perfume)', generalCat: 'perfume' as GarmentCategory, group: 'perfume' },
   // Hair & Wigs
-  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles & Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_braided_wigs', label: 'Braided Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_frontals', label: 'Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
+  { id: 'women_bob_wigs', label: 'Bob & Pixie Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, group: 'wigs' },
 ];
 
 const APPAREL_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];

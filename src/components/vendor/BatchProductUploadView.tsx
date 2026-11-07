@@ -55,19 +55,16 @@ type DropMode = 'apparel' | 'footwear' | 'jewelry' | 'perfume' | 'wigs';
 
 const ALL_CATEGORY_OPTIONS = [
   // Perfumes & Scents
-  { id: 'men_perfumes', label: 'Eau de Parfum (EDP) & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'male' as GenderTarget, group: 'perfume' },
-  { id: 'women_perfumes', label: 'Women Eau de Parfum & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
-  { id: 'unisex_perfumes', label: 'Unisex Niche Perfumes & Scents (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
-  { id: 'unisex_oud', label: 'Arabian Oud, Attars & Musk (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
-  { id: 'unisex_perfume_oils', label: 'Perfume Oils & Concentrates (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
-  { id: 'women_body_mist', label: 'Body Mists & Hair Mists (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
-  { id: 'unisex_gift_sets', label: 'Perfume Discovery Sets & Gift Boxes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  { id: 'men_perfumes', label: 'Perfumes & Colognes (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'male' as GenderTarget, group: 'perfume' },
+  { id: 'women_perfumes', label: 'Perfumes & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'female' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_perfumes', label: 'Perfumes, Colognes & Fragrances (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
+  { id: 'unisex_oud', label: 'Arabian Oud, Attars & Perfume Oils (perfume)', generalCat: 'perfume' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'perfume' },
   // Hair & Wigs
   { id: 'women_bone_straight', label: 'Bone Straight & Raw Hair (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
   { id: 'women_curly_wigs', label: 'Curly & Deep Wave Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
-  { id: 'women_braided_wigs', label: 'Braided Wigs & Units (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
+  { id: 'women_braided_wigs', label: 'Braided Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
   { id: 'women_frontals', label: 'Frontals & Closures (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
-  { id: 'unisex_hair_bundles', label: 'Raw Hair Bundles (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'wigs' },
+  { id: 'women_bob_wigs', label: 'Bob & Pixie Wigs (wigs)', generalCat: 'wigs' as GarmentCategory, dept: 'female' as GenderTarget, group: 'wigs' },
   // Clothing / Apparel
   { id: 'streetwear_hoodie', label: 'Hoodies & Sweatshirts (clothing)', generalCat: 'clothing' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },
   { id: 'unisex_tees', label: 'Graphic Tees & Shirts (clothing)', generalCat: 'clothing' as GarmentCategory, dept: 'unisex' as GenderTarget, group: 'apparel' },

@@ -210,14 +210,55 @@ export async function POST(request: Request) {
       }
       const alreadyLoggedInOnThisApp = currentNotifMsg.hasLoggedIn === true;
 
+      // Normalize socialLinks from application array [{ platform, handle }] or existing object into { instagram, tiktok, snapchat, whatsapp }
+      const rawSocialSource = body.socialLinks || currentNotifMsg.socialLinks || existingBio.socialLinks;
+      const normalizedSocialLinks: Record<string, string> = {
+        instagram: (body.instagramHandle || currentNotifMsg.instagramHandle || existingBio.socialLinks?.instagram || '').trim(),
+        tiktok: (existingBio.socialLinks?.tiktok || '').trim(),
+        snapchat: (existingBio.socialLinks?.snapchat || '').trim(),
+        whatsapp: (phone || currentNotifMsg.founderPhone || existingBio.socialLinks?.whatsapp || '').trim(),
+      };
+      if (Array.isArray(rawSocialSource)) {
+        for (const s of rawSocialSource) {
+          if (s && typeof s === 'object' && s.platform && s.handle) {
+            const p = String(s.platform).toLowerCase().trim();
+            const h = String(s.handle).trim();
+            if (!h) continue;
+            if (p === 'instagram') normalizedSocialLinks.instagram = h;
+            else if (p === 'tiktok') normalizedSocialLinks.tiktok = h;
+            else if (p === 'snapchat') normalizedSocialLinks.snapchat = h;
+            else if (p === 'whatsapp') normalizedSocialLinks.whatsapp = h;
+          }
+        }
+      } else if (rawSocialSource && typeof rawSocialSource === 'object') {
+        if (typeof rawSocialSource.instagram === 'string' && rawSocialSource.instagram.trim()) normalizedSocialLinks.instagram = rawSocialSource.instagram.trim();
+        if (typeof rawSocialSource.tiktok === 'string' && rawSocialSource.tiktok.trim()) normalizedSocialLinks.tiktok = rawSocialSource.tiktok.trim();
+        if (typeof rawSocialSource.snapchat === 'string' && rawSocialSource.snapchat.trim()) normalizedSocialLinks.snapchat = rawSocialSource.snapchat.trim();
+        if (typeof rawSocialSource.whatsapp === 'string' && rawSocialSource.whatsapp.trim()) normalizedSocialLinks.whatsapp = rawSocialSource.whatsapp.trim();
+        for (const val of Object.values(rawSocialSource)) {
+          if (val && typeof val === 'object' && (val as any).platform && (val as any).handle) {
+            const p = String((val as any).platform).toLowerCase().trim();
+            const h = String((val as any).handle).trim();
+            if (!h) continue;
+            if (p === 'instagram' && !normalizedSocialLinks.instagram) normalizedSocialLinks.instagram = h;
+            else if (p === 'tiktok' && !normalizedSocialLinks.tiktok) normalizedSocialLinks.tiktok = h;
+            else if (p === 'snapchat' && !normalizedSocialLinks.snapchat) normalizedSocialLinks.snapchat = h;
+            else if (p === 'whatsapp' && !normalizedSocialLinks.whatsapp) normalizedSocialLinks.whatsapp = h;
+          }
+        }
+      }
+
+      const effectiveCity = city || (currentNotifMsg.city || existingBio.city || '').trim();
+      const effectiveState = state || (currentNotifMsg.state || existingBio.state || 'Lagos').trim();
+
       const bioObj = {
         ...existingBio,
         bio: existingBio.bio || '',
         specialty: effectiveSpecialty,
         vendorSpecialty: effectiveSpecialty,
-        city,
-        state,
-        socialLinks: body.socialLinks || existingBio.socialLinks || [],
+        city: effectiveCity,
+        state: effectiveState,
+        socialLinks: normalizedSocialLinks,
         stockModel: effectiveStockModel,
         isProfileSaved: true,
         approvalStatus: 'approved',

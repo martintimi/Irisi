@@ -81,19 +81,23 @@ export default function VendorOverviewPage() {
           }
 
           const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
+          const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+          const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
           setVendorProfile({
             brandName: v.brandName || v.brand_name || vendorProfile.brandName || 'My Brand',
             designerName: v.designerName || v.designer_name || v.contact_person || vendorProfile.designerName || 'Manager',
             contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || vendorProfile.contactPerson,
             email: v.email || vendorProfile.email,
             phone: v.phone || vendorProfile.phone,
-            location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : vendorProfile.location) || '',
+            location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : '') || '',
             vendorType: normalizedType,
-            bankName: v.bankName || v.bank_name || vendorProfile.bankName,
-            accountNumber: v.accountNumber || v.account_number || vendorProfile.accountNumber,
-            accountName: v.accountName || v.account_name || vendorProfile.accountName,
-            bio: v.bio || vendorProfile.bio,
-            logoUrl: v.logoUrl || v.logo || vendorProfile.logoUrl || ''
+            specialty: spec,
+            bankName: v.bankName || v.bank_name || '',
+            accountNumber: v.accountNumber || v.account_number || '',
+            accountName: v.accountName || v.account_name || '',
+            instagram: v.instagram || v.socialLinks?.instagram || '',
+            bio: v.bio || '',
+            logoUrl: v.logoUrl || v.logo || ''
           });
         }
       }
@@ -161,6 +165,18 @@ export default function VendorOverviewPage() {
   const isRejected = profileStatus?.approvalStatus === 'rejected';
   const isPendingReview = !isVerified && !isRejected && profileStatus?.isProfileSaved;
   const isProfileIncomplete = !isVerified && !isRejected && profileStatus && !profileStatus.isProfileSaved;
+
+  // Post-approval setup checklist for Founding Brands (Logo, Bio, Dispatch Hub & Payout Bank Account)
+  const missingLogo = !vendorProfile?.logoUrl || !vendorProfile.logoUrl.trim();
+  const missingBio = !vendorProfile?.bio || !vendorProfile.bio.trim();
+  const missingHub = !vendorProfile?.location || !vendorProfile.location.trim();
+  const needsStoreProfile = missingLogo || missingBio || missingHub;
+  const needsBankSetup =
+    !vendorProfile?.bankName ||
+    vendorProfile.bankName === 'Not Configured' ||
+    !vendorProfile?.accountNumber ||
+    vendorProfile.accountNumber === 'N/A' ||
+    vendorProfile.accountNumber.trim().length < 10;
 
   // Real computed metrics from live database
   const pendingOrdersCount = orders.filter(o => (o.trackingStage || 1) < 3).length;
@@ -311,6 +327,94 @@ export default function VendorOverviewPage() {
               <span>View Store Profile</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
+          </div>
+        )}
+
+        {/* POST-APPROVAL STORE PROFILE & PAYOUT BANKING CHECKLIST BANNER */}
+        {isVerified && (needsStoreProfile || needsBankSetup) && (
+          <div className="p-5 sm:p-6 rounded-3xl surface-card border border-[var(--gold-accent)]/40 bg-gradient-to-br from-[var(--gold-subtle)]/40 to-transparent space-y-4 animate-fadeIn shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-[var(--gold-accent)]/20 border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] flex items-center justify-center shrink-0">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono-luxury font-bold uppercase tracking-wider text-[var(--gold-accent)] block">
+                    Action Required · Complete Your Storefront &amp; Payout Setup
+                  </span>
+                  <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-primary)]">
+                    Finish Setting Up Your Approved Store
+                  </h3>
+                </div>
+              </div>
+              <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
+                Your social channels from your application are already attached! Complete the remaining steps below:
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* Step 1: Store Profile (Logo, Bio, Dispatch Hub) */}
+              <div className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 ${needsStoreProfile ? 'bg-[var(--bg-primary)] border-amber-500/40' : 'bg-emerald-500/5 border-emerald-500/30'}`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono-luxury font-bold uppercase text-[var(--text-primary)] flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                      <span>1. Store Profile &amp; Dispatch Hub</span>
+                    </span>
+                    {needsStoreProfile ? (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-mono-luxury font-bold uppercase">
+                        {[missingLogo && 'Logo', missingBio && 'Bio', missingHub && 'Dispatch Hub'].filter(Boolean).join(' + ')} Needed
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono-luxury font-bold uppercase flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Completed
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
+                    Upload your <strong>Brand Logo</strong>, write your <strong>Store Bio</strong>, and confirm your <strong>Dispatch Hub &amp; Delivery Zone Rates</strong>. (Your social media handles from your application are already pre-filled).
+                  </p>
+                </div>
+                <Link
+                  href="/vendor-portal/atelier"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury uppercase font-bold hover:opacity-90 transition-all w-fit cursor-pointer"
+                >
+                  <span>{needsStoreProfile ? 'Complete Store Profile' : 'Edit Store Profile'}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              {/* Step 2: Settlement Banking */}
+              <div className={`p-4 rounded-2xl border flex flex-col justify-between gap-3 ${needsBankSetup ? 'bg-[var(--bg-primary)] border-amber-500/40' : 'bg-emerald-500/5 border-emerald-500/30'}`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono-luxury font-bold uppercase text-[var(--text-primary)] flex items-center gap-1.5">
+                      <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>2. Settlement Banking (Payouts)</span>
+                    </span>
+                    {needsBankSetup ? (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[10px] font-mono-luxury font-bold uppercase">
+                        Bank Details Missing
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono-luxury font-bold uppercase flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Connected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
+                    Add your <strong>Bank Name &amp; 10-Digit Account Number</strong> in Settlement Banking so you can receive your automated escrow payouts when orders are delivered.
+                  </p>
+                </div>
+                <Link
+                  href="/vendor-portal/settlements"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-black text-[11px] font-mono-luxury uppercase font-bold hover:bg-emerald-400 transition-all w-fit cursor-pointer"
+                >
+                  <span>{needsBankSetup ? 'Add Payout Bank Account' : 'Manage Payout Bank'}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 

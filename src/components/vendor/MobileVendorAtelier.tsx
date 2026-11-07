@@ -148,19 +148,38 @@ export default function MobileVendorAtelier({
 
       {/* 2. Live Status Banner */}
       {isVerified ? (
-        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs font-mono-luxury">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span className="font-bold">Store Profile Approved & Active</span>
+        <div className="space-y-2.5">
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs font-mono-luxury">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span className="font-bold">Store Profile Approved &amp; Active</span>
+            </div>
+            <Link
+              href={`/brand/${encodeURIComponent(form.brandName || 'Atelier')}`}
+              target="_blank"
+              className="text-[10px] text-[var(--gold-accent)] uppercase font-bold flex items-center gap-1 shrink-0 underline"
+            >
+              <span>Preview</span>
+              <ExternalLink className="h-3 w-3" />
+            </Link>
           </div>
-          <Link
-            href={`/brand/${encodeURIComponent(form.brandName || 'Atelier')}`}
-            target="_blank"
-            className="text-[10px] text-[var(--gold-accent)] uppercase font-bold flex items-center gap-1 shrink-0 underline"
-          >
-            <span>Preview</span>
-            <ExternalLink className="h-3 w-3" />
-          </Link>
+          {(!form.logoUrl || !form.bio || !form.city || !form.state) && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono-luxury text-amber-300 space-y-1.5">
+              <div className="font-bold uppercase text-amber-400 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                <span>Complete Your Storefront Identity</span>
+              </div>
+              <p className="text-[var(--text-secondary)] leading-relaxed">
+                Your social media handles from your application have been pre-filled below! Please upload your <strong>Brand Logo</strong>, write a short <strong>Store Bio</strong>, confirm your <strong>Dispatch Hub</strong>, and tap <strong>Save</strong>.
+              </p>
+              <Link
+                href="/vendor-portal/settlements"
+                className="inline-flex items-center gap-1 text-[10px] text-emerald-400 uppercase font-bold underline pt-0.5"
+              >
+                <span>Also remember to add your Payout Bank Account in Settlement Banking &rarr;</span>
+              </Link>
+            </div>
+          )}
         </div>
       ) : isRejected ? (
         <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-1 text-xs font-mono-luxury">

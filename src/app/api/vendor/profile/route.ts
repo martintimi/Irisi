@@ -86,7 +86,39 @@ export async function GET(request: Request) {
       try {
         const parsed = JSON.parse(bioText);
         bioText = parsed.bio || '';
-        socialLinks = { ...socialLinks, ...parsed.socialLinks };
+        if (Array.isArray(parsed.socialLinks)) {
+          for (const s of parsed.socialLinks) {
+            if (s && typeof s === 'object' && s.platform && s.handle) {
+              const p = String(s.platform).toLowerCase().trim();
+              const h = String(s.handle).trim();
+              if (!h) continue;
+              if (p === 'instagram') socialLinks.instagram = h;
+              else if (p === 'tiktok') socialLinks.tiktok = h;
+              else if (p === 'snapchat') socialLinks.snapchat = h;
+              else if (p === 'whatsapp') socialLinks.whatsapp = h;
+            }
+          }
+        } else if (parsed.socialLinks && typeof parsed.socialLinks === 'object') {
+          if (typeof parsed.socialLinks.instagram === 'string' && parsed.socialLinks.instagram.trim()) socialLinks.instagram = parsed.socialLinks.instagram.trim();
+          if (typeof parsed.socialLinks.tiktok === 'string' && parsed.socialLinks.tiktok.trim()) socialLinks.tiktok = parsed.socialLinks.tiktok.trim();
+          if (typeof parsed.socialLinks.snapchat === 'string' && parsed.socialLinks.snapchat.trim()) socialLinks.snapchat = parsed.socialLinks.snapchat.trim();
+          if (typeof parsed.socialLinks.whatsapp === 'string' && parsed.socialLinks.whatsapp.trim()) socialLinks.whatsapp = parsed.socialLinks.whatsapp.trim();
+          // Recover from previously spread array ({ '0': { platform, handle }, ... })
+          for (const val of Object.values(parsed.socialLinks)) {
+            if (val && typeof val === 'object' && (val as any).platform && (val as any).handle) {
+              const p = String((val as any).platform).toLowerCase().trim();
+              const h = String((val as any).handle).trim();
+              if (!h) continue;
+              if (p === 'instagram' && !socialLinks.instagram) socialLinks.instagram = h;
+              else if (p === 'tiktok' && !socialLinks.tiktok) socialLinks.tiktok = h;
+              else if (p === 'snapchat' && !socialLinks.snapchat) socialLinks.snapchat = h;
+              else if (p === 'whatsapp' && !socialLinks.whatsapp) socialLinks.whatsapp = h;
+            }
+          }
+        }
+        if (parsed.instagramHandle && !socialLinks.instagram) {
+          socialLinks.instagram = String(parsed.instagramHandle).trim();
+        }
         mustSetPassword = parsed.mustSetPassword === true;
         isProfileSaved = parsed.isProfileSaved === true;
         approvalStatus = parsed.approvalStatus || (vendor?.is_verified ? 'approved' : isProfileSaved ? 'pending' : 'unsubmitted');
@@ -111,6 +143,48 @@ export async function GET(request: Request) {
       } catch (e) {}
     } else if (bioText && bioText.trim().length > 0) {
       isProfileSaved = true;
+    }
+
+    // If social links or city/state are still missing on this vendor record, look up their pre-launch vendor_application notification
+    if ((!socialLinks.instagram && !socialLinks.tiktok && !socialLinks.snapchat) || !city || !state) {
+      try {
+        const { data: appNotifs } = await adminClient
+          .from('notifications')
+          .select('message')
+          .eq('type', 'vendor_application')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        const vEmailLower = (vendor?.email || '').toLowerCase().trim();
+        const vBrandLower = (vendor?.brand_name || '').toLowerCase().trim();
+        for (const n of appNotifs || []) {
+          try {
+            const msg = typeof n.message === 'string' ? JSON.parse(n.message) : (n.message || {});
+            const mEmail = (msg.founderEmail || '').toLowerCase().trim();
+            const mBrand = (msg.brandName || '').toLowerCase().trim();
+            if ((vEmailLower && mEmail === vEmailLower) || (vBrandLower && mBrand === vBrandLower)) {
+              if (!city && msg.city) city = String(msg.city).trim();
+              if (!state && msg.state) state = String(msg.state).trim();
+              if (!socialLinks.instagram && msg.instagramHandle) {
+                socialLinks.instagram = String(msg.instagramHandle).trim();
+              }
+              if (Array.isArray(msg.socialLinks)) {
+                for (const s of msg.socialLinks) {
+                  if (s && typeof s === 'object' && s.platform && s.handle) {
+                    const p = String(s.platform).toLowerCase().trim();
+                    const h = String(s.handle).trim();
+                    if (!h) continue;
+                    if (p === 'instagram' && !socialLinks.instagram) socialLinks.instagram = h;
+                    else if (p === 'tiktok' && !socialLinks.tiktok) socialLinks.tiktok = h;
+                    else if (p === 'snapchat' && !socialLinks.snapchat) socialLinks.snapchat = h;
+                    else if (p === 'whatsapp' && !socialLinks.whatsapp) socialLinks.whatsapp = h;
+                  }
+                }
+              }
+              break;
+            }
+          } catch {}
+        }
+      } catch {}
     }
 
     const verified = !isSuspended && !!vendor?.is_verified;
@@ -226,11 +300,36 @@ export async function POST(request: Request) {
     const vendorType = body.vendorType || 
       (specialty === 'native_tailoring' ? 'fashion_designer' : (existingVendor?.vendor_type || 'boutique_seller'));
 
+    const existingSocialMap: Record<string, string> = {
+      instagram: '',
+      tiktok: '',
+      snapchat: '',
+      whatsapp: existingVendor?.phone || '',
+    };
+    if (Array.isArray(existingBioObj.socialLinks)) {
+      for (const s of existingBioObj.socialLinks) {
+        if (s && typeof s === 'object' && s.platform && s.handle) {
+          const p = String(s.platform).toLowerCase().trim();
+          const h = String(s.handle).trim();
+          if (!h) continue;
+          if (p === 'instagram') existingSocialMap.instagram = h;
+          else if (p === 'tiktok') existingSocialMap.tiktok = h;
+          else if (p === 'snapchat') existingSocialMap.snapchat = h;
+          else if (p === 'whatsapp') existingSocialMap.whatsapp = h;
+        }
+      }
+    } else if (existingBioObj.socialLinks && typeof existingBioObj.socialLinks === 'object') {
+      if (typeof existingBioObj.socialLinks.instagram === 'string') existingSocialMap.instagram = existingBioObj.socialLinks.instagram;
+      if (typeof existingBioObj.socialLinks.tiktok === 'string') existingSocialMap.tiktok = existingBioObj.socialLinks.tiktok;
+      if (typeof existingBioObj.socialLinks.snapchat === 'string') existingSocialMap.snapchat = existingBioObj.socialLinks.snapchat;
+      if (typeof existingBioObj.socialLinks.whatsapp === 'string') existingSocialMap.whatsapp = existingBioObj.socialLinks.whatsapp;
+    }
+
     const socialLinks = {
-      instagram: (body.instagram !== undefined ? body.instagram : (existingBioObj.socialLinks?.instagram || '')).trim(),
-      tiktok: (body.tiktok !== undefined ? body.tiktok : (existingBioObj.socialLinks?.tiktok || '')).trim(),
-      snapchat: (body.snapchat !== undefined ? body.snapchat : (existingBioObj.socialLinks?.snapchat || '')).trim(),
-      whatsapp: (body.whatsapp !== undefined ? body.whatsapp : (existingBioObj.socialLinks?.whatsapp || existingVendor?.phone || '')).trim()
+      instagram: (body.instagram !== undefined ? body.instagram : existingSocialMap.instagram).trim(),
+      tiktok: (body.tiktok !== undefined ? body.tiktok : existingSocialMap.tiktok).trim(),
+      snapchat: (body.snapchat !== undefined ? body.snapchat : existingSocialMap.snapchat).trim(),
+      whatsapp: (body.whatsapp !== undefined ? body.whatsapp : existingSocialMap.whatsapp).trim()
     };
 
     const logoUrl = (body.logoUrl !== undefined ? body.logoUrl : (existingBioObj.logoUrl || existingVendor?.logo_url || '')).trim();
@@ -251,6 +350,7 @@ export async function POST(request: Request) {
     };
 
     const bioPayload = JSON.stringify({
+      ...existingBioObj,
       bio: body.bio !== undefined ? body.bio : (existingBioObj.bio || ''),
       logoUrl,
       specialty,

@@ -351,16 +351,35 @@ export default function VendorAtelierProfilePage() {
           
           {/* Status Alert Banner */}
           {approvalStatus === 'approved' && (
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-              <div>
-                <div className="text-xs font-mono-luxury text-emerald-400 font-bold uppercase">
-                  Store Profile Approved & Verified
-                </div>
-                <div className="text-[11px] text-[var(--text-secondary)] font-mono-luxury">
-                  Your store profile and delivery rates are verified and live across the Ìrísí storefront.
+            <div className="space-y-3">
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                <div>
+                  <div className="text-xs font-mono-luxury text-emerald-400 font-bold uppercase">
+                    Store Profile Approved &amp; Verified
+                  </div>
+                  <div className="text-[11px] text-[var(--text-secondary)] font-mono-luxury">
+                    Your store profile and delivery rates are verified and live across the ÌRÍSÍ storefront.
+                  </div>
                 </div>
               </div>
+              {(!form.logoUrl || !form.bio || !form.city || !form.state) && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                  <div className="text-xs font-mono-luxury text-amber-400 font-bold uppercase flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 shrink-0" />
+                    <span>Complete Your Storefront Details</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
+                    Your social media channels from your application are already pre-filled below! Please upload your <strong>Brand Logo</strong>, write your <strong>Store Bio</strong>, confirm your <strong>Primary Dispatch Hub</strong>, and click <strong>Save</strong> at the bottom.
+                  </p>
+                  <Link
+                    href="/vendor-portal/settlements"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono-luxury text-emerald-400 font-bold underline pt-1"
+                  >
+                    <span>Need to receive payouts? Add your bank details in Settlement Banking &rarr;</span>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 

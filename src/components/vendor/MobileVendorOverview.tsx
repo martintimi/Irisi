@@ -8,7 +8,7 @@ import {
   Plus, ExternalLink, ShieldCheck, ShoppingBag,
   Scissors, AlertTriangle, AlertCircle, Clock,
   ArrowRight, Store, Copy, Check, Share2, Banknote, Lock,
-  Gem, Footprints, Shirt, Crown
+  Gem, Footprints, Shirt, Crown, CheckCircle2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -51,6 +51,18 @@ export default function MobileVendorOverview({
   const isRejected = profileStatus?.approvalStatus === 'rejected';
   const isPendingReview = !isVerified && !isRejected && profileStatus?.isProfileSaved;
   const isProfileIncomplete = !isVerified && !isRejected && profileStatus && !profileStatus.isProfileSaved;
+
+  // Post-approval setup checklist for Founding Brands (Logo, Bio, Dispatch Hub & Payout Bank Account)
+  const missingLogo = !vendorProfile?.logoUrl || !vendorProfile.logoUrl.trim();
+  const missingBio = !vendorProfile?.bio || !vendorProfile.bio.trim();
+  const missingHub = !vendorProfile?.location || !vendorProfile.location.trim();
+  const needsStoreProfile = missingLogo || missingBio || missingHub;
+  const needsBankSetup =
+    !vendorProfile?.bankName ||
+    vendorProfile.bankName === 'Not Configured' ||
+    !vendorProfile?.accountNumber ||
+    vendorProfile.accountNumber === 'N/A' ||
+    vendorProfile.accountNumber.trim().length < 10;
 
   const brandName = vendorProfile?.brandName || 'Atelier';
   const storeUrl = typeof window !== 'undefined'
@@ -126,14 +138,91 @@ export default function MobileVendorOverview({
         </div>
       )}
 
+      {/* POST-APPROVAL STORE PROFILE & PAYOUT BANKING CHECKLIST (MOBILE) */}
+      {isVerified && (needsStoreProfile || needsBankSetup) && (
+        <div className="p-4 rounded-3xl surface-card border border-[var(--gold-accent)]/40 bg-gradient-to-br from-[var(--gold-subtle)]/30 to-transparent space-y-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
+            <div>
+              <span className="text-[9px] font-mono-luxury font-bold uppercase tracking-wider text-[var(--gold-accent)] block">
+                Action Required · Store &amp; Payout Setup
+              </span>
+              <h3 className="font-editorial text-base font-bold text-[var(--text-primary)] leading-tight">
+                Finish Setting Up Your Storefront
+              </h3>
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Step 1: Store Profile */}
+            <div className={`p-3 rounded-2xl border space-y-2 ${needsStoreProfile ? 'bg-[var(--bg-primary)] border-amber-500/40' : 'bg-emerald-500/5 border-emerald-500/30'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono-luxury font-bold uppercase text-[var(--text-primary)] flex items-center gap-1.5">
+                  <Store className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                  <span>1. Store Profile</span>
+                </span>
+                {needsStoreProfile ? (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-mono-luxury font-bold uppercase">
+                    {[missingLogo && 'Logo', missingBio && 'Bio', missingHub && 'Hub'].filter(Boolean).join(' + ')} Needed
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono-luxury font-bold uppercase flex items-center gap-1">
+                    <CheckCircle2 className="h-2.5 w-2.5" /> Done
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
+                Upload your <strong>Logo</strong>, <strong>Bio</strong> &amp; confirm your <strong>Dispatch Hub</strong>. (Your social media handles from your application are already filled in!).
+              </p>
+              <Link
+                href="/vendor-portal/atelier"
+                className="w-full py-2 px-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-1.5"
+              >
+                <span>{needsStoreProfile ? 'Complete Store Profile' : 'Edit Store Profile'}</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+
+            {/* Step 2: Settlement Banking */}
+            <div className={`p-3 rounded-2xl border space-y-2 ${needsBankSetup ? 'bg-[var(--bg-primary)] border-amber-500/40' : 'bg-emerald-500/5 border-emerald-500/30'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-mono-luxury font-bold uppercase text-[var(--text-primary)] flex items-center gap-1.5">
+                  <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>2. Settlement Banking</span>
+                </span>
+                {needsBankSetup ? (
+                  <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-mono-luxury font-bold uppercase">
+                    Bank Missing
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono-luxury font-bold uppercase flex items-center gap-1">
+                    <CheckCircle2 className="h-2.5 w-2.5" /> Connected
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
+                Add your <strong>Bank Name &amp; 10-Digit Account Number</strong> so you can receive payouts when orders are delivered.
+              </p>
+              <Link
+                href="/vendor-portal/settlements"
+                className="w-full py-2 px-3 rounded-xl bg-emerald-500 text-black text-[10px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-1.5"
+              >
+                <span>{needsBankSetup ? 'Add Payout Bank Account' : 'Manage Payout Bank'}</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 2. Welcome & Brand Card */}
       <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm relative overflow-hidden">
         <div className="flex items-start justify-between gap-2 relative z-10">
           <div>
             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[9px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20 mb-1.5">
-              {specialty === 'caps' ? (
+              {specialty === 'caps' || specialty === 'wigs' ? (
                 <Crown className="h-3 w-3" />
-              ) : specialty === 'accessories' ? (
+              ) : specialty === 'accessories' || specialty === 'perfume' ? (
                 <Sparkles className="h-3 w-3" />
               ) : specialty === 'jewelry' ? (
                 <Gem className="h-3 w-3" />

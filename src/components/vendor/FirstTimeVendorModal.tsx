@@ -184,8 +184,16 @@ export default function FirstTimeVendorModal({
                 </button>
               </div>
 
-              <div className="pt-2 border-t border-white/5 text-[11px] text-zinc-500 text-center">
-                Tip: You can personalize your store logo and banner anytime in your Atelier settings.
+              <div className="pt-3 border-t border-white/10 space-y-2 text-[11px] text-zinc-300">
+                <p className="font-mono uppercase text-[10px] tracking-wider text-[#E6C367] font-bold">
+                  Next 2 Quick Steps on Your Dashboard:
+                </p>
+                <p className="text-zinc-400 leading-relaxed">
+                  <strong>1. Store Profile:</strong> Upload your Brand Logo, Bio &amp; confirm your Dispatch Hub (your social media handles from your application are already attached!).
+                </p>
+                <p className="text-zinc-400 leading-relaxed">
+                  <strong>2. Settlement Banking:</strong> Add your Bank Name &amp; 10-Digit Account Number so you can receive payouts when orders are delivered.
+                </p>
               </div>
             </form>
           </div>
