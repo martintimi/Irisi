@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
+import { compressImageToFile } from '@/lib/utils/imageUtils';
 
 // Available Social Media Platforms for Founding Brand Onboarding
 const SOCIAL_PLATFORMS = [
@@ -672,8 +673,9 @@ export default function ComingSoonPage() {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        const compressedFile = await compressImageToFile(file, 1400, 0.85);
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', compressedFile);
         const res = await fetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.url) {

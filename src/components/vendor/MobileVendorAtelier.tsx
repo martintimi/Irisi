@@ -11,6 +11,7 @@ import Link from 'next/link';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import SearchableCitySelect from '@/components/common/SearchableCitySelect';
+import { compressImageToFile } from '@/lib/utils/imageUtils';
 
 interface MobileVendorAtelierProps {
   form: any;
@@ -58,8 +59,8 @@ export default function MobileVendorAtelier({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage?.('Logo image exceeds 5MB limit. Please choose a smaller image.');
+    if (file.size > 12 * 1024 * 1024) {
+      setErrorMessage?.('Logo image exceeds 12MB limit. Please choose a smaller image.');
       return;
     }
 
@@ -67,8 +68,9 @@ export default function MobileVendorAtelier({
     setErrorMessage?.('');
 
     try {
+      const compressedFile = await compressImageToFile(file, 1000, 0.88);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressedFile);
 
       const res = await fetch('/api/upload', {
         method: 'POST',
