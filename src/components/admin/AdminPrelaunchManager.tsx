@@ -21,6 +21,8 @@ import {
   Filter,
   Copy,
   Check,
+  RotateCcw,
+  Trash2,
 } from 'lucide-react';
 
 interface VendorApp {
@@ -47,6 +49,8 @@ interface VendorApp {
   hasLoggedIn?: boolean;
   firstLoginAt?: string | null;
   approvedAt?: string | null;
+  reapplyRequested?: boolean;
+  reapplyNote?: string;
 }
 
 interface MerchReserve {
@@ -141,15 +145,22 @@ export default function AdminPrelaunchManager() {
       const providerLabel = resData.provider === 'resend'
         ? 'Verified Domain (vendors@irisimi.ng via Resend)'
         : 'Direct SMTP';
-      setActionMessage(`✨ Invitation email dispatched to ${vendor.brandName} (${vendor.founderEmail}) via ${providerLabel}.`);
-      // Update local state to marked as read and store accessCode
+      setActionMessage(`✨ Invitation email dispatched to ${vendor.brandName} (${vendor.founderEmail}) via ${providerLabel}. Code: ${resData.accessCode}`);
+      // Update local state to marked as Invite Sent (Not Logged In unless they already logged in)
       if (data) {
         const wasPending = !vendor.read && !vendor.hasLoggedIn;
         setData({
           ...data,
           vendors: data.vendors.map((v) =>
             v.id === vendor.id
-              ? { ...v, read: true, accessCode: resData.accessCode || v.accessCode }
+              ? {
+                  ...v,
+                  read: true,
+                  reapplyRequested: false,
+                  hasLoggedIn: !!v.hasLoggedIn,
+                  accessCode: resData.accessCode || v.accessCode,
+                  approvedAt: new Date().toISOString(),
+                }
               : v
           ),
           metrics: {
@@ -163,6 +174,78 @@ export default function AdminPrelaunchManager() {
       setActionMessage(`Error: ${err.message || 'Could not send invitation'}`);
     } finally {
       setInvitingId(null);
+    }
+  };
+
+  const handleRequestReapply = async (vendor: VendorApp) => {
+    const defaultNote = 'Please check your brand details and attach clear photos of your items before re-submitting.';
+    const note = typeof window !== 'undefined'
+      ? window.prompt(`Ask ${vendor.brandName} (${vendor.founderEmail}) to fix their form and reapply.\n\nReason / Note to send in email:`, defaultNote)
+      : defaultNote;
+    if (note === null) return;
+
+    setInvitingId(vendor.id);
+    setActionMessage(null);
+    try {
+      const res = await fetch('/api/admin/prelaunch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request_reapply',
+          id: vendor.id,
+          email: vendor.founderEmail,
+          brandName: vendor.brandName,
+          note: note.trim() || defaultNote,
+        }),
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || 'Failed to send reapply request');
+
+      setActionMessage(`🔄 Re-application email sent to ${vendor.brandName} (${vendor.founderEmail}).`);
+      if (data) {
+        setData({
+          ...data,
+          vendors: data.vendors.map((v) =>
+            v.id === vendor.id
+              ? { ...v, read: false, hasLoggedIn: false, reapplyRequested: true, reapplyNote: note.trim() || defaultNote }
+              : v
+          ),
+        });
+      }
+    } catch (err: any) {
+      setActionMessage(`Error: ${err.message || 'Could not request re-application'}`);
+    } finally {
+      setInvitingId(null);
+    }
+  };
+
+  const handleDeleteApplication = async (vendor: VendorApp) => {
+    if (typeof window !== 'undefined' && !window.confirm(`Remove application for "${vendor.brandName}" (${vendor.founderEmail})?`)) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/prelaunch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_application', id: vendor.id }),
+      });
+      if (res.ok && data) {
+        const updatedVendors = data.vendors.filter((v) => v.id !== vendor.id);
+        setData({
+          ...data,
+          vendors: updatedVendors,
+          metrics: {
+            ...data.metrics,
+            totalVendors: updatedVendors.length,
+            pendingVendors: updatedVendors.filter((v) => !v.read).length,
+            invitedNotLoggedIn: updatedVendors.filter((v) => v.read && !v.hasLoggedIn).length,
+            loggedInVendors: updatedVendors.filter((v) => v.hasLoggedIn).length,
+          },
+        });
+        setActionMessage(`🗑️ Removed application for ${vendor.brandName}.`);
+      }
+    } catch (err: any) {
+      setActionMessage(`Error: Could not delete application`);
     }
   };
 
@@ -730,6 +813,18 @@ export default function AdminPrelaunchManager() {
                                   </span>
                                 )}
                               </div>
+                            ) : vendor.reapplyRequested ? (
+                              <div className="space-y-1">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 inline-flex items-center gap-1">
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>Asked to Reapply</span>
+                                </span>
+                                {vendor.reapplyNote && (
+                                  <span className="block text-[9px] font-mono text-rose-300/80 max-w-[180px] truncate" title={vendor.reapplyNote}>
+                                    {vendor.reapplyNote}
+                                  </span>
+                                )}
+                              </div>
                             ) : vendor.read ? (
                               <div className="space-y-1">
                                 <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-orange-300 border border-orange-500/30 inline-flex items-center gap-1">
@@ -751,7 +846,7 @@ export default function AdminPrelaunchManager() {
                           </td>
 
                           <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -779,23 +874,65 @@ export default function AdminPrelaunchManager() {
                                 href={waLink}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-[10px] font-bold hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-1"
+                                className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-[10px] font-bold hover:bg-emerald-500 hover:text-black transition-all flex items-center gap-1"
                               >
                                 <MessageCircle className="w-3 h-3" />
                                 <span>WhatsApp</span>
                               </a>
 
+                              {!vendor.hasLoggedIn && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRequestReapply(vendor)}
+                                  disabled={invitingId === vendor.id}
+                                  className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 font-mono text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  title="Ask vendor to fix a mistake in their form and reapply"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  <span>Reapply</span>
+                                </button>
+                              )}
+
+                              {vendor.hasLoggedIn ? (
+                                <button
+                                  onClick={() => handleSendVendorInvite(vendor)}
+                                  disabled={invitingId === vendor.id}
+                                  className="px-2.5 py-1.5 rounded-xl bg-white/5 text-zinc-400 hover:text-white border border-white/10 font-mono text-[10px] transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  title="Vendor has already logged in. Click only if they need a new code."
+                                >
+                                  {invitingId === vendor.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3 h-3" />
+                                  )}
+                                  <span>Resend Code</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleSendVendorInvite(vendor)}
+                                  disabled={invitingId === vendor.id}
+                                  className={`px-3 py-1.5 rounded-xl font-mono text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
+                                    vendor.read
+                                      ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40 hover:bg-orange-500 hover:text-black'
+                                      : 'bg-[var(--gold-accent)] text-black hover:bg-[#d6af4b]'
+                                  }`}
+                                >
+                                  {invitingId === vendor.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3 h-3" />
+                                  )}
+                                  <span>{vendor.read ? 'Resend Invite' : 'Grant Invite'}</span>
+                                </button>
+                              )}
+
                               <button
-                                onClick={() => handleSendVendorInvite(vendor)}
-                                disabled={invitingId === vendor.id}
-                                className="px-3 py-1.5 rounded-xl bg-[var(--gold-accent)] text-black font-mono text-[10px] font-bold hover:bg-[#d6af4b] transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                type="button"
+                                onClick={() => handleDeleteApplication(vendor)}
+                                className="p-1.5 rounded-xl bg-white/5 hover:bg-rose-500/20 text-zinc-400 hover:text-rose-400 border border-white/10 transition-all cursor-pointer"
+                                title="Delete application"
                               >
-                                {invitingId === vendor.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <Send className="w-3 h-3" />
-                                )}
-                                <span>{vendor.read ? 'Resend Invite' : 'Grant Invite'}</span>
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>

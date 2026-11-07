@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       if (bioText.startsWith('{') && bioText.endsWith('}')) {
         try {
           const parsed = JSON.parse(bioText);
-          if (parsed.invitedPrelaunch === true && parsed.hasLoggedIn === false) {
+          if ((parsed.invitedPrelaunch === true || !!parsed.accessCode) && parsed.hasLoggedIn !== true && parsed.mustSetPassword !== false) {
             awaitingPrelaunchLogin = true;
           }
           bioText = parsed.bio || '';

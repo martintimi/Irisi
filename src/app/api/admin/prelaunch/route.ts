@@ -63,15 +63,19 @@ export async function GET() {
         const matchedVendor = emailKey ? vendorMap.get(emailKey) : null;
         const bio = matchedVendor?.parsedBio || {};
 
+        // STRICT LOGIN TRACKING: Never mark as logged in just because invite_vendor created a vendor record.
+        // Only true when the vendor actually signs in via 1-tap link, 4-digit code, or sets their password.
         const hasLoggedIn = !!(
-          item.hasLoggedIn ||
-          bio.hasLoggedIn ||
-          (matchedVendor && bio.invitedPrelaunch !== true && item.read)
+          item.hasLoggedIn === true ||
+          bio.hasLoggedIn === true ||
+          (matchedVendor && bio.mustSetPassword === false && !!bio.accessCode)
         );
         item.hasLoggedIn = hasLoggedIn;
         item.firstLoginAt = item.firstLoginAt || bio.firstLoginAt || null;
         item.accessCode = item.accessCode || bio.accessCode || null;
         item.approvedAt = item.approvedAt || bio.approvedAt || null;
+        item.reapplyRequested = !!item.reapplyRequested;
+        item.reapplyNote = item.reapplyNote || '';
 
         vendors.push(item);
       } else if (row.type === 'merch_waitlist') {
@@ -176,7 +180,7 @@ export async function POST(request: Request) {
         }).catch(() => {});
       }
 
-      // 4. Provision & Approve Vendor Record in Database
+      // 4. Provision & Approve Vendor Record in Database (Stays in Pre-Launch until first login)
       let existingBio: any = {};
       if (existingVendors?.[0]?.bio) {
         try {
@@ -185,6 +189,16 @@ export async function POST(request: Request) {
             : {};
         } catch {}
       }
+
+      // Check if this specific application already had a recorded login
+      let currentNotifMsg: any = {};
+      if (id) {
+        const { data: currentNotif } = await adminClient.from('notifications').select('message').eq('id', id).maybeSingle();
+        try {
+          currentNotifMsg = JSON.parse(currentNotif?.message || '{}');
+        } catch (_) {}
+      }
+      const alreadyLoggedInOnThisApp = currentNotifMsg.hasLoggedIn === true;
 
       const bioObj = {
         ...existingBio,
@@ -198,9 +212,9 @@ export async function POST(request: Request) {
         isProfileSaved: true,
         approvalStatus: 'approved',
         invitedPrelaunch: true,
-        hasLoggedIn: !!existingBio.hasLoggedIn,
-        firstLoginAt: existingBio.firstLoginAt || null,
-        mustSetPassword: existingBio.mustSetPassword !== false,
+        hasLoggedIn: alreadyLoggedInOnThisApp,
+        firstLoginAt: alreadyLoggedInOnThisApp ? (currentNotifMsg.firstLoginAt || existingBio.firstLoginAt || null) : null,
+        mustSetPassword: alreadyLoggedInOnThisApp ? existingBio.mustSetPassword !== false : true,
         accessCode,
         approvedAt: new Date().toISOString(),
       };
@@ -232,19 +246,17 @@ export async function POST(request: Request) {
 
       // 6. Update notification record if ID is provided
       if (id) {
-        const { data: currentNotif } = await adminClient.from('notifications').select('message').eq('id', id).maybeSingle();
-        let notifMsg: any = {};
-        try {
-          notifMsg = JSON.parse(currentNotif?.message || '{}');
-        } catch (_) {}
-        notifMsg.approved = true;
-        notifMsg.accessCode = accessCode;
-        notifMsg.magicToken = magicToken;
-        notifMsg.approvedAt = new Date().toISOString();
+        currentNotifMsg.approved = true;
+        currentNotifMsg.reapplyRequested = false;
+        currentNotifMsg.reapplyNote = '';
+        currentNotifMsg.hasLoggedIn = alreadyLoggedInOnThisApp;
+        currentNotifMsg.accessCode = accessCode;
+        currentNotifMsg.magicToken = magicToken;
+        currentNotifMsg.approvedAt = new Date().toISOString();
 
         await adminClient.from('notifications').update({
           read: true,
-          message: JSON.stringify(notifMsg),
+          message: JSON.stringify(currentNotifMsg),
         }).eq('id', id);
       }
 
@@ -353,6 +365,93 @@ export async function POST(request: Request) {
         provider: emailRes.provider,
         emailDelivered: emailRes.success,
       });
+    }
+
+    if (action === 'request_reapply') {
+      if (!id || !email) {
+        return NextResponse.json({ error: 'Application ID and email are required.' }, { status: 400 });
+      }
+      const normalizedEmail = email.toLowerCase().trim();
+      const cleanBrand = (brandName || 'Designer').trim();
+      const note = (body.note || 'Please review your brand details and attach clear photos of your products before re-submitting.').trim();
+      const reapplyUrl = `${getBaseUrl()}/coming-soon?apply=1`;
+
+      const { data: currentNotif } = await adminClient.from('notifications').select('message').eq('id', id).maybeSingle();
+      let notifMsg: any = {};
+      try {
+        notifMsg = JSON.parse(currentNotif?.message || '{}');
+      } catch (_) {}
+
+      notifMsg.approved = false;
+      notifMsg.hasLoggedIn = false;
+      notifMsg.reapplyRequested = true;
+      notifMsg.reapplyNote = note;
+      notifMsg.reapplyRequestedAt = new Date().toISOString();
+
+      await adminClient.from('notifications').update({
+        read: false,
+        message: JSON.stringify(notifMsg),
+      }).eq('id', id);
+
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; padding: 36px 16px;">
+            <tr>
+              <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
+                  <tr>
+                    <td align="center" style="padding: 32px 24px 18px; border-bottom: 1px solid #f1f5f9;">
+                      <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ" width="56" height="56" style="display: block; margin: 0 auto 12px; border-radius: 12px; border: 1px solid #e2e8f0;" />
+                      <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #111827;">ÌRÍSÍ</h1>
+                      <p style="margin: 4px 0 0; font-size: 11px; color: #b89035; text-transform: uppercase; font-weight: 700;">Founding Brand Application Update</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 28px 28px 32px;">
+                      <h2 style="color: #111827; font-size: 20px; margin: 0 0 12px; font-weight: 700;">Action Required for ${cleanBrand}</h2>
+                      <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0 0 18px;">
+                        Thank you for applying to join <strong>ÌRÍSÍ Drop 001</strong>. Before we can issue your merchant invite, please update and re-submit your application with the following correction:
+                      </p>
+                      <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin-bottom: 24px; color: #92400e; font-size: 13.5px; line-height: 1.6;">
+                        <strong>Curation Team Note:</strong><br/>${note}
+                      </div>
+                      <div style="text-align: center; margin: 24px 0 8px;">
+                        <a href="${reapplyUrl}" style="background-color: #111827; color: #ffffff; font-weight: 700; font-size: 13.5px; text-transform: uppercase; padding: 14px 32px; border-radius: 10px; text-decoration: none; display: inline-block;">
+                          Update &amp; Re-Apply Now &rarr;
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
+
+      await sendLuxuryEmail(
+        normalizedEmail,
+        `ÌRÍSÍ Application Update: Action Required for ${cleanBrand}`,
+        emailHtml,
+        { fromName: 'ÌRÍSÍ Brand Relations' }
+      ).catch(() => {});
+
+      return NextResponse.json({
+        success: true,
+        message: `Re-application request sent to ${cleanBrand} (${normalizedEmail}).`,
+      });
+    }
+
+    if (action === 'delete_application') {
+      if (!id) {
+        return NextResponse.json({ error: 'Application ID required' }, { status: 400 });
+      }
+      await adminClient.from('notifications').delete().eq('id', id);
+      return NextResponse.json({ success: true, message: 'Application removed.' });
     }
 
     if (action === 'mark_read') {

@@ -67,12 +67,35 @@ export async function POST(request: Request) {
             bioObj = JSON.parse(v.bio);
           }
           bioObj.mustSetPassword = false;
+          bioObj.hasLoggedIn = true;
+          bioObj.firstLoginAt = bioObj.firstLoginAt || new Date().toISOString();
           bioObj.passwordConfiguredAt = new Date().toISOString();
 
           await adminClient.from('vendors').update({
             user_id: authUser?.id || v.user_id,
             bio: JSON.stringify(bioObj),
           }).eq('id', v.id);
+
+          // Also sync login status to matching prelaunch notification record(s)
+          const { data: matchingNotifs } = await adminClient
+            .from('notifications')
+            .select('id, message')
+            .eq('type', 'vendor_application');
+
+          for (const n of matchingNotifs || []) {
+            try {
+              const msgObj = typeof n.message === 'string' ? JSON.parse(n.message) : (n.message || {});
+              if (msgObj.founderEmail && msgObj.founderEmail.toLowerCase().trim() === normalizedEmail) {
+                msgObj.hasLoggedIn = true;
+                msgObj.firstLoginAt = msgObj.firstLoginAt || bioObj.firstLoginAt;
+                msgObj.approved = true;
+                await adminClient.from('notifications').update({
+                  read: true,
+                  message: JSON.stringify(msgObj),
+                }).eq('id', n.id);
+              }
+            } catch (_) {}
+          }
         } catch (_) {}
       }
     }
