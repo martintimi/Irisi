@@ -3,9 +3,10 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
-import { Sparkles, UploadCloud, CheckCircle2, ShoppingBag, ExternalLink, ArrowRight, Tag } from 'lucide-react';
+import { Sparkles, UploadCloud, CheckCircle2, ShoppingBag, ExternalLink, ArrowRight, Tag, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
+import { compressImageToFile } from '@/lib/utils/imageUtils';
 
 export default function VendorStoriesPage() {
   const { vendorProfile, allProducts, addVendorStory } = useStore();
@@ -13,6 +14,7 @@ export default function VendorStoriesPage() {
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [caption, setCaption] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -22,15 +24,25 @@ export default function VendorStoriesPage() {
     (p) => (p.vendorId || '').toLowerCase() === (vendorProfile.email || '').toLowerCase() || p.vendorName === vendorProfile.brandName
   );
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      try {
+        const compressed = await compressImageToFile(file, 1400, 0.85);
+        const formData = new FormData();
+        formData.append('file', compressed);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          setImagePreview(data.url);
+        }
+      } catch (err) {
+        console.error('Story image upload to Cloudinary failed:', err);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
