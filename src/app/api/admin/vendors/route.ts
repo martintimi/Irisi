@@ -45,10 +45,14 @@ export async function GET(request: Request) {
       let hasSensitivePendingUpdate = false;
       let suspensionReason = '';
       let suspendedAt = '';
+      let awaitingPrelaunchLogin = false;
 
       if (bioText.startsWith('{') && bioText.endsWith('}')) {
         try {
           const parsed = JSON.parse(bioText);
+          if (parsed.invitedPrelaunch === true && parsed.hasLoggedIn === false) {
+            awaitingPrelaunchLogin = true;
+          }
           bioText = parsed.bio || '';
           if (parsed.socialLinks && typeof parsed.socialLinks === 'object') {
             socialLinks = { ...socialLinks, ...parsed.socialLinks };
@@ -120,12 +124,13 @@ export async function GET(request: Request) {
         isSuspended,
         suspensionReason,
         suspendedAt,
+        awaitingPrelaunchLogin,
         productCount: vendorProducts.length,
         totalInventoryValue,
         rating: v.rating || 5.0,
         createdAt: v.created_at || new Date().toISOString()
       };
-    });
+    }).filter((v: any) => !v.awaitingPrelaunchLogin);
 
     return NextResponse.json({
       success: true,

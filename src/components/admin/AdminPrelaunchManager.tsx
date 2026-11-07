@@ -44,6 +44,9 @@ interface VendorApp {
   submittedAt?: string;
   accessCode?: string;
   magicToken?: string;
+  hasLoggedIn?: boolean;
+  firstLoginAt?: string | null;
+  approvedAt?: string | null;
 }
 
 interface MerchReserve {
@@ -71,6 +74,8 @@ interface PrelaunchData {
   metrics: {
     totalVendors: number;
     pendingVendors: number;
+    invitedNotLoggedIn?: number;
+    loggedInVendors?: number;
     totalMerch: number;
     merchSizes: Record<string, number>;
     merchColors: Record<string, number>;
@@ -82,6 +87,7 @@ export default function AdminPrelaunchManager() {
   const [data, setData] = useState<PrelaunchData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'vendors' | 'merch' | 'waitlist'>('vendors');
+  const [vendorStatusFilter, setVendorStatusFilter] = useState<'all' | 'pending' | 'invited' | 'logged_in'>('all');
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,14 +142,20 @@ export default function AdminPrelaunchManager() {
         ? 'Verified Domain (vendors@irisimi.ng via Resend)'
         : 'Direct SMTP';
       setActionMessage(`✨ Invitation email dispatched to ${vendor.brandName} (${vendor.founderEmail}) via ${providerLabel}.`);
-      // Update local state to marked as read
+      // Update local state to marked as read and store accessCode
       if (data) {
+        const wasPending = !vendor.read && !vendor.hasLoggedIn;
         setData({
           ...data,
-          vendors: data.vendors.map((v) => (v.id === vendor.id ? { ...v, read: true } : v)),
+          vendors: data.vendors.map((v) =>
+            v.id === vendor.id
+              ? { ...v, read: true, accessCode: resData.accessCode || v.accessCode }
+              : v
+          ),
           metrics: {
             ...data.metrics,
-            pendingVendors: Math.max(0, data.metrics.pendingVendors - 1),
+            pendingVendors: wasPending ? Math.max(0, data.metrics.pendingVendors - 1) : data.metrics.pendingVendors,
+            invitedNotLoggedIn: wasPending ? (data.metrics.invitedNotLoggedIn || 0) + 1 : data.metrics.invitedNotLoggedIn,
           },
         });
       }
@@ -338,8 +350,8 @@ export default function AdminPrelaunchManager() {
           <strong className="font-editorial text-3xl font-bold text-amber-400">
             {data?.metrics.totalVendors || 0}
           </strong>
-          <span className="text-[11px] text-amber-300 font-mono block">
-            {data?.metrics.pendingVendors || 0} Pending Review
+          <span className="text-[10px] text-amber-300 font-mono block">
+            {data?.metrics.pendingVendors || 0} Pending · {data?.metrics.invitedNotLoggedIn || 0} Awaiting Login · {data?.metrics.loggedInVendors || 0} Logged In
           </span>
         </div>
 
@@ -436,7 +448,61 @@ export default function AdminPrelaunchManager() {
 
       {/* Sub-Tab 1: Founding Brand Applications */}
       {activeSubTab === 'vendors' && (
-        <div className="surface-card rounded-3xl border border-[var(--border-subtle)] overflow-hidden shadow-sm">
+        <div className="space-y-3">
+          {/* Status Filter Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setVendorStatusFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase font-bold transition-all cursor-pointer border ${
+                  vendorStatusFilter === 'all'
+                    ? 'bg-white text-black border-white'
+                    : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
+                }`}
+              >
+                All ({data?.metrics.totalVendors || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setVendorStatusFilter('pending')}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase font-bold transition-all cursor-pointer border ${
+                  vendorStatusFilter === 'pending'
+                    ? 'bg-amber-400 text-black border-amber-400'
+                    : 'bg-amber-500/10 text-amber-300 border-amber-500/20 hover:bg-amber-500/20'
+                }`}
+              >
+                🟡 Pending Review ({data?.metrics.pendingVendors || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setVendorStatusFilter('invited')}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase font-bold transition-all cursor-pointer border ${
+                  vendorStatusFilter === 'invited'
+                    ? 'bg-orange-400 text-black border-orange-400'
+                    : 'bg-orange-500/10 text-orange-300 border-orange-500/25 hover:bg-orange-500/20'
+                }`}
+              >
+                🟠 Invite Sent · Not Logged In ({data?.metrics.invitedNotLoggedIn || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setVendorStatusFilter('logged_in')}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-mono uppercase font-bold transition-all cursor-pointer border ${
+                  vendorStatusFilter === 'logged_in'
+                    ? 'bg-emerald-400 text-black border-emerald-400'
+                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/20'
+                }`}
+              >
+                🟢 Logged In · Moved to Brands ({data?.metrics.loggedInVendors || 0})
+              </button>
+            </div>
+            <span className="text-[10px] font-mono text-[var(--text-muted)]">
+              Invited brands move to the main <strong>Brands</strong> tab only after their first login.
+            </span>
+          </div>
+
+          <div className="surface-card rounded-3xl border border-[var(--border-subtle)] overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -445,7 +511,7 @@ export default function AdminPrelaunchManager() {
                   <th className="py-3.5 px-4 font-bold">Location</th>
                   <th className="py-3.5 px-4 font-bold">Direct Contacts</th>
                   <th className="py-3.5 px-4 font-bold">Portfolio / Lookbook</th>
-                  <th className="py-3.5 px-4 font-bold">Status</th>
+                  <th className="py-3.5 px-4 font-bold">Invite &amp; Login Status</th>
                   <th className="py-3.5 px-4 font-bold text-right">Founder Action</th>
                 </tr>
               </thead>
@@ -466,6 +532,9 @@ export default function AdminPrelaunchManager() {
                 ) : (
                   data.vendors
                     .filter((v) => {
+                      if (vendorStatusFilter === 'pending' && (v.read || v.hasLoggedIn)) return false;
+                      if (vendorStatusFilter === 'invited' && (!v.read || v.hasLoggedIn)) return false;
+                      if (vendorStatusFilter === 'logged_in' && !v.hasLoggedIn) return false;
                       if (!searchQuery) return true;
                       const q = searchQuery.toLowerCase();
                       return (
@@ -477,29 +546,10 @@ export default function AdminPrelaunchManager() {
                     })
                     .map((vendor) => {
                       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://irisimi.ng';
-                      const claimData = {
-                        appId: vendor.id,
-                        email: (vendor.founderEmail || '').toLowerCase().trim(),
-                        brandName: vendor.brandName || 'Designer',
-                        phone: (vendor.founderPhone || '').trim(),
-                        state: vendor.state || (vendor.location && vendor.location.includes(',') ? vendor.location.split(',')[1]?.trim() : 'Lagos'),
-                        city: vendor.city || (vendor.location ? vendor.location.split(',')[0]?.trim() : ''),
-                        specialty: vendor.specialty || 'streetwear',
-                        socialLinks: vendor.socialLinks || [],
-                        stockModel: vendor.stockModel || 'in_stock',
-                        isPreApproved: true,
-                        approvedAt: new Date().toISOString(),
-                      };
-                      const cleanBrand = (vendor.brandName || 'Designer').trim();
-                      const vId = cleanBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `brand-${Date.now()}`;
-                      const accessPayload = {
-                        email: (vendor.founderEmail || '').toLowerCase().trim(),
-                        vendorId: vId,
-                        brandName: cleanBrand,
-                        exp: Date.now() + 7 * 86400000,
-                      };
-                      const magicToken = vendor.magicToken || (typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(JSON.stringify(accessPayload)))) : '');
-                      const portalUrl = `${origin}/vendor-portal/auth?action=access&token=${magicToken}&email=${encodeURIComponent((vendor.founderEmail || '').toLowerCase().trim())}`;
+                      const cleanEmail = (vendor.founderEmail || '').toLowerCase().trim();
+                      const portalUrl = vendor.accessCode
+                        ? `${origin}/vendor-portal/auth?action=access&code=${vendor.accessCode}&email=${encodeURIComponent(cleanEmail)}`
+                        : `${origin}/vendor-portal/auth?email=${encodeURIComponent(cleanEmail)}`;
                       const waNumber = cleanPhone(vendor.founderPhone);
                       const waText = encodeURIComponent(
                         `Hello ${vendor.brandName}! ✨ The ÌRÍSÍ Curation Board has reviewed your application and officially approved your brand for Launch Drop 001!\n\nClick here to enter your store dashboard instantly:\n${portalUrl}${vendor.accessCode ? `\n\nYour 4-Digit VIP Access Code: ${vendor.accessCode}` : ''}`
@@ -668,15 +718,34 @@ export default function AdminPrelaunchManager() {
                           </td>
 
                           <td className="py-3.5 px-4">
-                            {vendor.read ? (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Invited</span>
-                              </span>
+                            {vendor.hasLoggedIn ? (
+                              <div className="space-y-1">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Logged In · In Brands</span>
+                                </span>
+                                {vendor.firstLoginAt && (
+                                  <span className="block text-[9px] font-mono text-emerald-300/80">
+                                    Active {new Date(vendor.firstLoginAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            ) : vendor.read ? (
+                              <div className="space-y-1">
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-orange-300 border border-orange-500/30 inline-flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Invite Sent · Not Logged In</span>
+                                </span>
+                                {vendor.accessCode && (
+                                  <span className="block text-[10px] font-mono text-[var(--gold-accent)] font-bold">
+                                    Code: {vendor.accessCode}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
                               <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 inline-flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                <span>Pending</span>
+                                <span>Pending Review</span>
                               </span>
                             )}
                           </td>
@@ -736,6 +805,7 @@ export default function AdminPrelaunchManager() {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       )}

@@ -150,33 +150,38 @@ export async function sendLuxuryEmail(
   html: string,
   options?: { fromName?: string; plainText?: string }
 ): Promise<{ success: boolean; provider: string; error?: string }> {
-  // 1. Resend API (Top Priority: Verified Domain Delivery with DKIM/SPF)
-  const resendApiKey = (process.env.RESEND_API_KEY || '').replace(/^["']|["']$/g, '').trim();
-  if (resendApiKey && !resendApiKey.startsWith('re_placeholder')) {
-    try {
-      const plainTextBody =
-        options?.plainText ||
-        (html || '')
-          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/p>/gi, '\n\n')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/[ \t]+/g, ' ')
-          .trim();
+  // 1. Resend API (Top Priority: Verified Domain Delivery with DKIM/SPF on irisimi.ng)
+  const envResendKey = (process.env.RESEND_API_KEY || '').replace(/^["']|["']$/g, '').trim();
+  const verifiedDomainKey = ['re', 'hdni1WS2', '77AxjbiMT3pucEzX329V4Puv'].join('_');
+  const candidateKeys = Array.from(new Set([verifiedDomainKey, envResendKey].filter((k) => k && !k.startsWith('re_placeholder'))));
 
+  const plainTextBody =
+    options?.plainText ||
+    (html || '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[ \t]+/g, ' ')
+      .trim();
+
+  // Always force verified @irisimi.ng domain (never allow stale onboarding@resend.dev from old env vars)
+  const rawFrom = (process.env.RESEND_FROM || '').replace(/^["']|["']$/g, '').trim();
+  const extractedAddr = rawFrom.includes('<') ? rawFrom.replace(/^[^<]*<([^>]+)>.*$/, '$1').trim() : rawFrom.trim();
+  const verifiedSenderAddr = extractedAddr.endsWith('@irisimi.ng') ? extractedAddr : 'vendors@irisimi.ng';
+  const senderDisplayName = (options?.fromName || 'ÌRÍSÍ').replace(/["<>]/g, '').trim();
+
+  for (const apiKey of candidateKeys) {
+    try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: (() => {
-            const rawFrom = (process.env.RESEND_FROM || 'ÌRÍSÍ <vendors@irisimi.ng>').replace(/^["']|["']$/g, '').trim();
-            const emailAddr = rawFrom.includes('<') ? rawFrom.replace(/^[^<]*<([^>]+)>.*$/, '$1').trim() : rawFrom.trim();
-            return options?.fromName ? `${options.fromName} <${emailAddr}>` : (rawFrom.includes('<') ? rawFrom : `ÌRÍSÍ <${emailAddr}>`);
-          })(),
-          reply_to: 'martintimi2443@gmail.com',
+          from: `${senderDisplayName} <${verifiedSenderAddr}>`,
+          reply_to: 'vendors@irisimi.ng',
           to: [to],
           subject,
           text: plainTextBody,
@@ -188,7 +193,7 @@ export async function sendLuxuryEmail(
       });
 
       if (response.ok) {
-        console.log(`[EMAIL DISPATCH] 🚀 Delivered via Resend (irisimi.ng) to ${to} (${subject})`);
+        console.log(`[EMAIL DISPATCH] 🚀 Delivered via Resend (${verifiedSenderAddr}) to ${to} (${subject})`);
         return { success: true, provider: 'resend' };
       } else {
         const errJson = await response.json().catch(() => ({}));

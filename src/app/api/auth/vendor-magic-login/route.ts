@@ -157,7 +157,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Vendor profile not found for this invitation.' }, { status: 404 });
     }
 
-    // Ensure vendor is marked as verified & approved in DB
+    // Ensure vendor is marked as verified, approved & logged in in DB
+    const loginTimestamp = new Date().toISOString();
     try {
       let currentBio: any = {};
       if (vendor.bio && vendor.bio.startsWith('{')) {
@@ -165,11 +166,34 @@ export async function POST(request: Request) {
       }
       currentBio.isProfileSaved = true;
       currentBio.approvalStatus = 'approved';
+      currentBio.hasLoggedIn = true;
+      currentBio.firstLoginAt = currentBio.firstLoginAt || loginTimestamp;
 
       await adminClient.from('vendors').update({
         is_verified: true,
         bio: JSON.stringify(currentBio),
       }).eq('id', vendor.id);
+
+      // Also sync login status to matching prelaunch notification record(s)
+      const { data: matchingNotifs } = await adminClient
+        .from('notifications')
+        .select('id, message')
+        .eq('type', 'vendor_application');
+
+      for (const n of matchingNotifs || []) {
+        try {
+          const msgObj = typeof n.message === 'string' ? JSON.parse(n.message) : (n.message || {});
+          if (msgObj.founderEmail && msgObj.founderEmail.toLowerCase().trim() === normalizedEmail) {
+            msgObj.hasLoggedIn = true;
+            msgObj.firstLoginAt = msgObj.firstLoginAt || loginTimestamp;
+            msgObj.approved = true;
+            await adminClient.from('notifications').update({
+              read: true,
+              message: JSON.stringify(msgObj),
+            }).eq('id', n.id);
+          }
+        } catch (_) {}
+      }
     } catch (_) {}
 
     // Check / fetch Supabase Auth user to generate auth session token

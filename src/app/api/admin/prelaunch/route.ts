@@ -8,15 +8,32 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const adminClient = createAdminClient();
-    const { data: notifications, error } = await adminClient
-      .from('notifications')
-      .select('*')
-      .in('type', ['waitlist_subscriber', 'vendor_application', 'merch_waitlist'])
-      .order('created_at', { ascending: false });
+    const [{ data: notifications, error }, { data: dbVendors }] = await Promise.all([
+      adminClient
+        .from('notifications')
+        .select('*')
+        .in('type', ['waitlist_subscriber', 'vendor_application', 'merch_waitlist'])
+        .order('created_at', { ascending: false }),
+      adminClient
+        .from('vendors')
+        .select('id, email, brand_name, is_verified, bio'),
+    ]);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Build lookup map of vendor records by email
+    const vendorMap = new Map<string, any>();
+    (dbVendors || []).forEach((v: any) => {
+      if (v.email) {
+        let parsedBio: any = {};
+        try {
+          parsedBio = typeof v.bio === 'string' && v.bio.startsWith('{') ? JSON.parse(v.bio) : (v.bio || {});
+        } catch {}
+        vendorMap.set(v.email.toLowerCase().trim(), { ...v, parsedBio });
+      }
+    });
 
     const vendors: any[] = [];
     const merch: any[] = [];
@@ -33,7 +50,7 @@ export async function GET() {
         parsedMessage = { raw: row.message };
       }
 
-      const item = {
+      const item: any = {
         id: row.id,
         createdAt: row.created_at,
         read: !!row.read,
@@ -42,6 +59,20 @@ export async function GET() {
       };
 
       if (row.type === 'vendor_application') {
+        const emailKey = (item.founderEmail || '').toLowerCase().trim();
+        const matchedVendor = emailKey ? vendorMap.get(emailKey) : null;
+        const bio = matchedVendor?.parsedBio || {};
+
+        const hasLoggedIn = !!(
+          item.hasLoggedIn ||
+          bio.hasLoggedIn ||
+          (matchedVendor && bio.invitedPrelaunch !== true && item.read)
+        );
+        item.hasLoggedIn = hasLoggedIn;
+        item.firstLoginAt = item.firstLoginAt || bio.firstLoginAt || null;
+        item.accessCode = item.accessCode || bio.accessCode || null;
+        item.approvedAt = item.approvedAt || bio.approvedAt || null;
+
         vendors.push(item);
       } else if (row.type === 'merch_waitlist') {
         merch.push(item);
@@ -64,6 +95,8 @@ export async function GET() {
         metrics: {
           totalVendors: vendors.length,
           pendingVendors: vendors.filter((v) => !v.read).length,
+          invitedNotLoggedIn: vendors.filter((v) => v.read && !v.hasLoggedIn).length,
+          loggedInVendors: vendors.filter((v) => v.hasLoggedIn).length,
           totalMerch: merch.length,
           merchSizes,
           merchColors,
@@ -144,17 +177,30 @@ export async function POST(request: Request) {
       }
 
       // 4. Provision & Approve Vendor Record in Database
+      let existingBio: any = {};
+      if (existingVendors?.[0]?.bio) {
+        try {
+          existingBio = typeof existingVendors[0].bio === 'string' && existingVendors[0].bio.startsWith('{')
+            ? JSON.parse(existingVendors[0].bio)
+            : {};
+        } catch {}
+      }
+
       const bioObj = {
-        bio: '',
+        ...existingBio,
+        bio: existingBio.bio || '',
         specialty: effectiveSpecialty,
         vendorSpecialty: effectiveSpecialty,
         city,
         state,
-        socialLinks: body.socialLinks || [],
+        socialLinks: body.socialLinks || existingBio.socialLinks || [],
         stockModel: effectiveStockModel,
         isProfileSaved: true,
         approvalStatus: 'approved',
-        mustSetPassword: true,
+        invitedPrelaunch: true,
+        hasLoggedIn: !!existingBio.hasLoggedIn,
+        firstLoginAt: existingBio.firstLoginAt || null,
+        mustSetPassword: existingBio.mustSetPassword !== false,
         accessCode,
         approvedAt: new Date().toISOString(),
       };
