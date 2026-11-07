@@ -7,6 +7,7 @@ import {
   sendVendorAccountReinstatedNotification,
 } from '@/lib/services/vendorNotificationService';
 import { invalidateProductsCache } from '@/app/api/products/route';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export async function POST(request: Request) {
   try {
@@ -118,6 +119,8 @@ export async function POST(request: Request) {
         phone: updatedVendor.phone,
       };
 
+      const baseUrl = getBaseUrl(request);
+
       if (isSuspend) {
         await sendVendorAccountSuspendedNotification({
           vendor: vendorContact,
@@ -126,15 +129,18 @@ export async function POST(request: Request) {
       } else if (isUnsuspend) {
         await sendVendorAccountReinstatedNotification({
           vendor: vendorContact,
+          portalUrl: `${baseUrl}/vendor-portal`,
         }).catch((e) => console.warn('[Admin Unsuspend] Reinstatement email error:', e));
       } else if (isApprove) {
         await sendVendorAccountApprovedNotification({
-          vendor: vendorContact
+          vendor: vendorContact,
+          portalUrl: `${baseUrl}/vendor-portal`,
         }).catch((e) => console.warn('[Admin Approve] Approval email error:', e));
       } else if (isReject) {
         await sendVendorAccountRejectedNotification({
           vendor: vendorContact,
           rejectionReason: bioObj.rejectionReason,
+          portalUrl: `${baseUrl}/vendor-portal/settings`,
         }).catch((e) => console.warn('[Admin Reject] Rejection email error:', e));
       }
     }

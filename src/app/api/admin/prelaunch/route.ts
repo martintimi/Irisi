@@ -138,15 +138,25 @@ export async function POST(request: Request) {
       // 2. Generate or locate Vendor ID
       let vendorId = cleanBrand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `brand-${Date.now()}`;
 
-      // Check if vendor already exists
+      // Check if vendor already exists by email (case-insensitive)
       const { data: existingVendors } = await adminClient
         .from('vendors')
         .select('*')
-        .eq('email', normalizedEmail)
+        .ilike('email', normalizedEmail)
         .limit(1);
 
       if (existingVendors?.[0]) {
         vendorId = existingVendors[0].id;
+      } else {
+        // Ensure vendorId slug does not collide with another brand that has a different email
+        const { data: idCollision } = await adminClient
+          .from('vendors')
+          .select('id, email')
+          .eq('id', vendorId)
+          .maybeSingle();
+        if (idCollision && idCollision.email?.toLowerCase().trim() !== normalizedEmail) {
+          vendorId = `${vendorId}-${accessCode}`;
+        }
       }
 
       // 3. Locate or create Supabase Auth User
@@ -233,18 +243,23 @@ export async function POST(request: Request) {
         bio: JSON.stringify(bioObj),
       }, { onConflict: 'id' });
 
-      // 5. Construct 1-Click Magic Login Token
+      // 5. Construct 1-Click Magic Login Token & Environment-Aware URL (Staging vs Production)
+      const baseUrl = getBaseUrl(request);
       const tokenPayload = {
         email: normalizedEmail,
         vendorId,
         accessCode,
         brandName: cleanBrand,
+        specialty: effectiveSpecialty,
+        city,
+        state,
+        phone,
         exp: Date.now() + 7 * 86400000, // 7 days validity
       };
       const magicToken = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
-      const portalUrl = `${getBaseUrl()}/vendor-portal/auth?action=access&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}`;
+      const portalUrl = `${baseUrl}/vendor-portal/auth?action=access&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}&token=${magicToken}`;
 
-      // 6. Update notification record if ID is provided
+      // 6. Update notification record(s) so magic login always finds the latest code
       if (id) {
         currentNotifMsg.approved = true;
         currentNotifMsg.reapplyRequested = false;
@@ -260,8 +275,29 @@ export async function POST(request: Request) {
         }).eq('id', id);
       }
 
+      // Also sync accessCode on any other vendor_application rows for this email
+      const { data: allEmailApps } = await adminClient
+        .from('notifications')
+        .select('id, message')
+        .eq('type', 'vendor_application');
+      for (const n of allEmailApps || []) {
+        if (n.id === id) continue;
+        try {
+          const parsed = typeof n.message === 'string' ? JSON.parse(n.message) : (n.message || {});
+          if (parsed.founderEmail && parsed.founderEmail.toLowerCase().trim() === normalizedEmail) {
+            parsed.approved = true;
+            parsed.accessCode = accessCode;
+            parsed.magicToken = magicToken;
+            await adminClient.from('notifications').update({
+              read: true,
+              message: JSON.stringify(parsed),
+            }).eq('id', n.id);
+          }
+        } catch (_) {}
+      }
+
       // 7. Dispatch Official Luxury Approval Email (Clean White Background, High Inbox Deliverability & Clickable Copy Button)
-      const copyUrl = `${getBaseUrl()}/vendor-portal/auth?action=code&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}&autocopy=1`;
+      const copyUrl = `${baseUrl}/vendor-portal/auth?action=code&code=${accessCode}&email=${encodeURIComponent(normalizedEmail)}&autocopy=1`;
       const plainText = [
         `ÌRÍSÍ — Official Merchant Admission`,
         ``,
@@ -374,7 +410,7 @@ export async function POST(request: Request) {
       const normalizedEmail = email.toLowerCase().trim();
       const cleanBrand = (brandName || 'Designer').trim();
       const note = (body.note || 'Please review your brand details and attach clear photos of your products before re-submitting.').trim();
-      const reapplyUrl = `${getBaseUrl()}/coming-soon?apply=1`;
+      const reapplyUrl = `${getBaseUrl(request)}/coming-soon?apply=1`;
 
       const { data: currentNotif } = await adminClient.from('notifications').select('message').eq('id', id).maybeSingle();
       let notifMsg: any = {};

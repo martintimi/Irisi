@@ -32,11 +32,12 @@ export async function POST(request: Request) {
         const decodedStr = Buffer.from(token, 'base64url').toString('utf8');
         const tokenObj = JSON.parse(decodedStr);
 
-        if (tokenObj.email && tokenObj.email.toLowerCase() === normalizedEmail) {
+        if (tokenObj.email && tokenObj.email.toLowerCase().trim() === normalizedEmail) {
           // Check expiration (7 days validity)
           if (!tokenObj.exp || tokenObj.exp > Date.now()) {
             isAuthorized = true;
             resolvedVendorId = tokenObj.vendorId || '';
+            applicantData = tokenObj;
           }
         }
       } catch (err) {
@@ -48,11 +49,11 @@ export async function POST(request: Request) {
     if (!isAuthorized && accessCode) {
       const cleanCode = String(accessCode).replace(/\D/g, '').trim();
 
-      // 2a. Check vendors table bio.accessCode directly
+      // 2a. Check vendors table bio.accessCode directly (case-insensitive email)
       const { data: existingVendors } = await adminClient
         .from('vendors')
         .select('*')
-        .eq('email', normalizedEmail);
+        .ilike('email', normalizedEmail);
 
       for (const v of existingVendors || []) {
         try {
@@ -110,14 +111,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find or locate vendor in vendors table
+    // Find or locate vendor in vendors table (case-insensitive email or resolvedVendorId)
     let { data: vendorList } = await adminClient
       .from('vendors')
       .select('*')
-      .eq('email', normalizedEmail)
+      .ilike('email', normalizedEmail)
       .order('created_at', { ascending: false });
 
     let vendor = vendorList?.[0] || null;
+    if (!vendor && resolvedVendorId) {
+      const { data: byId } = await adminClient
+        .from('vendors')
+        .select('*')
+        .eq('id', resolvedVendorId)
+        .maybeSingle();
+      if (byId && (!byId.email || byId.email.toLowerCase().trim() === normalizedEmail)) {
+        vendor = byId;
+      }
+    }
 
     // Self-healing: If vendor record wasn't created yet, provision it immediately from applicant data
     if (!vendor && applicantData) {
