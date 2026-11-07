@@ -6,7 +6,6 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 import { SHOPPER_EMAIL_PRESETS } from '@/lib/data/shopperEmailPresets';
-export { SHOPPER_EMAIL_PRESETS };
 
 export async function GET(request: Request) {
   try {

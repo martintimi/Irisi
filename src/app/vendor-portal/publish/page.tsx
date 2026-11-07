@@ -26,7 +26,7 @@ import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex
 const STANDARD_COLORS = STANDARD_FASHION_COLORS;
 
 // Department-Specific Categories
-export const MALE_CATEGORIES = [
+const MALE_CATEGORIES = [
   // Native & Cultural
   { id: 'senator_kaftan', label: 'Senator Sets & Kaftans (native)', generalCat: 'native' as GarmentCategory, group: 'native' },
   { id: 'agbada_robes', label: 'Grand Agbada 3-Piece (native)', generalCat: 'native' as GarmentCategory, group: 'native' },
@@ -58,7 +58,7 @@ export const MALE_CATEGORIES = [
   { id: 'men_caps_hats', label: 'Caps, Hats & Beanies (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
-export const FEMALE_CATEGORIES = [
+const FEMALE_CATEGORIES = [
   // Native & Cultural
   { id: 'boubou_kaftans', label: 'Silk Boubou, Kaftans & Abayas (native)', generalCat: 'native' as GarmentCategory, group: 'native' },
   { id: 'lace_ankara', label: 'Lace & Ankara Tailored Sets (native)', generalCat: 'native' as GarmentCategory, group: 'native' },
@@ -87,7 +87,7 @@ export const FEMALE_CATEGORIES = [
   { id: 'women_caps_scarves', label: 'Headbands, Scarves & Caps (accessories)', generalCat: 'accessories' as GarmentCategory, group: 'accessories' },
 ];
 
-export const UNISEX_CATEGORIES = [
+const UNISEX_CATEGORIES = [
   // Apparel
   { id: 'unisex_hoodie', label: 'Hoodies & Sweatshirts (clothing)', generalCat: 'clothing' as GarmentCategory, group: 'clothing' },
   { id: 'unisex_tees', label: 'Graphic Tees & Oversized Shirts (clothing)', generalCat: 'clothing' as GarmentCategory, group: 'clothing' },
