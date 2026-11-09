@@ -81,16 +81,18 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     }
   }, [pathname]);
 
-  // Standalone portals (Auth, Vendor Portal, Super Admin, and Coming Soon Teaser)
+  // Standalone portals (Auth, Vendor Portal, Super Admin, Promo Reel Studio, and Coming Soon Teaser)
+  const isReelStudio = pathname.startsWith('/reel');
   const isStandalonePage =
     pathname.startsWith('/auth') ||
     pathname.startsWith('/vendor') ||
     pathname.startsWith('/admin') ||
+    isReelStudio ||
     pathname === '/coming-soon';
 
   return (
     <SmoothScrollProvider>
-      <LuxuryLoader />
+      {!isReelStudio && <LuxuryLoader />}
       {!isStandalonePage && (
         <>
           {/* Desktop Top Navbar (Fixed at the very top of the page - never scrolls away) */}
@@ -121,7 +123,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
       )}
 
       {/* WhatsApp VIP Concierge & Style Advisor */}
-      <WhatsAppConciergeWidget />
+      {!isReelStudio && <WhatsAppConciergeWidget />}
 
       {/* Ambient Netflix-Style Idle Lookbook Screensaver (Commented out temporarily - will add back later) */}
       {/* <AmbientScreenSaver /> */}

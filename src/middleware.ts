@@ -21,6 +21,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/favicon') ||
     pathname.startsWith('/icon') ||
     pathname.startsWith('/apple-icon') ||
+    pathname.startsWith('/reel') ||
     pathname.includes('.') ||
     pathname === '/coming-soon';
 
