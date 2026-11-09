@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 
 interface LuxuryLoaderProps {
@@ -14,6 +15,7 @@ export default function LuxuryLoader({
   fullScreen = true,
   autoHideMs,
 }: LuxuryLoaderProps) {
+  const pathname = usePathname();
   // If fullScreen (app splash screen), default to auto-hiding after 850ms
   const effectiveAutoHide = autoHideMs !== undefined ? autoHideMs : (fullScreen ? 850 : undefined);
   const [visible, setVisible] = useState(true);
@@ -36,7 +38,7 @@ export default function LuxuryLoader({
     };
   }, [effectiveAutoHide]);
 
-  if (!visible) return null;
+  if (!visible || pathname?.startsWith('/reel')) return null;
 
   // Couture Floating Pearl / Liquid Fashion Bubbles
   const bubbles = [

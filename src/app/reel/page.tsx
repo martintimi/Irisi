@@ -160,9 +160,9 @@ function Glossy3DPill({
 
   return (
     <motion.div
-      initial={{ scale: 0.5, opacity: 0, y: 24, filter: 'blur(8px)', rotate: tilt - 5 }}
-      animate={{ scale: 1, opacity: 1, y: 0, filter: 'blur(0px)', rotate: tilt }}
-      exit={{ scale: 0.75, opacity: 0, filter: 'blur(8px)' }}
+      initial={{ scale: 0.9, opacity: 1, y: 8, rotate: tilt - 2 }}
+      animate={{ scale: 1, opacity: 1, y: 0, rotate: tilt }}
+      exit={{ scale: 0.85, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 230, damping: 18 }}
       className={`inline-flex items-center justify-center px-9 py-3.5 rounded-full ${styles[variant]} ${className}`}
     >
@@ -354,9 +354,9 @@ export default function IrisiDanushkMotionReel() {
     return (
       <motion.div
         key="beat1"
-        initial={{ opacity: 0, x: 140, filter: 'blur(10px)' }}
-        animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, x: -200, filter: 'blur(12px)' }}
+        initial={false}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -160 }}
         transition={{ type: 'spring', stiffness: 175, damping: 20 }}
         className="relative w-full h-full flex items-center justify-center px-3 sm:px-6"
       >
@@ -365,9 +365,9 @@ export default function IrisiDanushkMotionReel() {
             /* PART A (0.0 - 3.1s): 4-Corner Floating Chat Layout (Top-Left, Top-Right, Bottom-Left, Bottom-Right) */
             <motion.div
               key="hook-text"
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={false}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.08, opacity: 0, filter: 'blur(10px)' }}
+              exit={{ scale: 1.05, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 18 }}
               className="relative w-full max-w-[355px] sm:max-w-[780px] flex flex-col items-center justify-center text-center"
             >
@@ -376,11 +376,9 @@ export default function IrisiDanushkMotionReel() {
                 {topBubbles.map((b, idx) => (
                   <motion.div
                     key={b.text}
-                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    initial={false}
                     animate={{ opacity: 1, scale: 1, y: [0, -3.5, 0] }}
                     transition={{
-                      opacity: { delay: b.delay, duration: 0.28 },
-                      scale: { delay: b.delay, type: 'spring', stiffness: 210 },
                       y: { delay: b.delay + 0.3, duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
                     }}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3.5 sm:py-2 rounded-2xl bg-white/95 backdrop-blur-md border border-zinc-200/90 shadow-[0_10px_24px_rgba(0,0,0,0.06)] text-[9.5px] sm:text-xs text-zinc-700 font-light leading-tight text-left max-w-full ${
@@ -399,8 +397,8 @@ export default function IrisiDanushkMotionReel() {
               {/* Center Hook Lockup */}
               <div className="flex flex-col items-center my-6 sm:my-8">
                 <motion.span
-                  initial={{ y: 10, opacity: 0, filter: 'blur(6px)' }}
-                  animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
+                  initial={false}
+                  animate={{ y: 0, opacity: 1 }}
                   className="font-editorial text-xl sm:text-4xl text-zinc-700 tracking-tight mb-1"
                 >
                   are you tired of
@@ -413,9 +411,8 @@ export default function IrisiDanushkMotionReel() {
                 </Glossy3DPill>
 
                 <motion.span
-                  initial={{ y: 10, opacity: 0, filter: 'blur(6px)' }}
-                  animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
-                  transition={{ delay: 0.14 }}
+                  initial={false}
+                  animate={{ y: 0, opacity: 1 }}
                   className="font-editorial italic text-lg sm:text-3xl md:text-4xl text-[#c4972e] tracking-tight mt-1.5"
                 >
                   &amp; jumping across 10 pages to shop?
@@ -427,11 +424,9 @@ export default function IrisiDanushkMotionReel() {
                 {bottomBubbles.map((b, idx) => (
                   <motion.div
                     key={b.text}
-                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    initial={false}
                     animate={{ opacity: 1, scale: 1, y: [0, -3.5, 0] }}
                     transition={{
-                      opacity: { delay: b.delay, duration: 0.28 },
-                      scale: { delay: b.delay, type: 'spring', stiffness: 210 },
                       y: { delay: b.delay + 0.3, duration: 2.6, repeat: Infinity, ease: 'easeInOut' },
                     }}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3.5 sm:py-2 rounded-2xl bg-white/95 backdrop-blur-md border border-zinc-200/90 shadow-[0_10px_24px_rgba(0,0,0,0.06)] text-[9.5px] sm:text-xs text-zinc-700 font-light leading-tight text-left max-w-full ${
@@ -451,9 +446,9 @@ export default function IrisiDanushkMotionReel() {
             /* PART B (3.1 - 6.2s): Pure Open-Canvas Light Reveal — Compact & Balanced */
             <motion.div
               key="hook-solution"
-              initial={{ scale: 0.88, opacity: 0, filter: 'blur(10px)' }}
-              animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-              exit={{ x: -200, opacity: 0, filter: 'blur(12px)' }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ x: -160, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 190, damping: 18 }}
               className="relative w-full max-w-[325px] sm:max-w-[520px] flex flex-col items-center justify-center text-center"
             >
@@ -487,7 +482,6 @@ export default function IrisiDanushkMotionReel() {
                     fill
                     className="object-contain p-1"
                     unoptimized
-                    priority
                   />
                 </motion.div>
 
@@ -549,9 +543,9 @@ export default function IrisiDanushkMotionReel() {
     return (
       <motion.div
         key="beat2"
-        initial={{ opacity: 0, x: 180, filter: 'blur(10px)' }}
-        animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, x: -200, filter: 'blur(12px)' }}
+        initial={{ opacity: 0, x: 140 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -160 }}
         transition={{ type: 'spring', stiffness: 180, damping: 20 }}
         className="relative w-full h-full flex flex-col items-center justify-center px-3 sm:px-6"
       >
@@ -561,7 +555,7 @@ export default function IrisiDanushkMotionReel() {
             initial={{ scale: 0.92, y: 14 }}
             animate={{ scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 190, damping: 18 }}
-            className="relative w-full rounded-[20px] sm:rounded-[28px] overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border-2 border-white shadow-[0_18px_42px_rgba(0,0,0,0.2)] p-3 sm:p-4.5 flex items-center justify-between gap-2 sm:gap-4"
+            className="relative w-full rounded-[20px] sm:rounded-[28px] overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900 to-black border-2 border-white shadow-[0_18px_42px_rgba(0,0,0,0.2)] p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-4"
           >
             <div className="absolute -top-16 -left-16 w-40 h-40 rounded-full bg-[#c4972e]/25 blur-3xl" />
 
@@ -575,7 +569,6 @@ export default function IrisiDanushkMotionReel() {
                     fill
                     className="object-contain p-0.5"
                     unoptimized
-                    priority
                   />
                 </div>
                 <span className="text-[8px] sm:text-[9px] font-mono-luxury uppercase tracking-widest text-[#e6c367]">
@@ -624,7 +617,6 @@ export default function IrisiDanushkMotionReel() {
                         className="object-cover object-top"
                         sizes="130px"
                         unoptimized
-                        priority
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                       <span className="absolute bottom-1 sm:bottom-1.5 left-1.5 right-1.5 text-white font-editorial text-[9px] sm:text-xs leading-tight">
@@ -640,7 +632,6 @@ export default function IrisiDanushkMotionReel() {
                         className="object-cover object-top"
                         sizes="130px"
                         unoptimized
-                        priority
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                       <span className="absolute bottom-1 sm:bottom-1.5 left-1.5 right-1.5 text-[#e6c367] font-editorial text-[9px] sm:text-xs leading-tight">
@@ -662,8 +653,8 @@ export default function IrisiDanushkMotionReel() {
               return (
                 <motion.div
                   key={node.label}
-                  initial={{ opacity: 0, x: -12, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
                   transition={{ type: 'spring', stiffness: 220, damping: 18 }}
                   className="relative flex items-center justify-between gap-2 sm:gap-3 py-0.5 pr-1"
                 >
@@ -712,15 +703,15 @@ export default function IrisiDanushkMotionReel() {
     return (
       <motion.div
         key="beat3-escrow"
-        initial={{ opacity: 0, x: 180, filter: 'blur(10px)' }}
-        animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, x: -200, filter: 'blur(12px)' }}
+        initial={{ opacity: 0, x: 140 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -160 }}
         transition={{ type: 'spring', stiffness: 180, damping: 20 }}
         className="relative w-full h-full flex flex-col items-center justify-center px-3 sm:px-6"
       >
         <div className="w-full max-w-[325px] sm:max-w-[540px] flex flex-col items-start">
           {/* Top Escrow Card — Compact on Mobile & Desktop */}
-          <div className="relative w-full rounded-[20px] sm:rounded-[28px] bg-white border-2 border-zinc-200/90 shadow-[0_18px_42px_rgba(0,0,0,0.1)] p-3.5 sm:p-4.5 flex flex-col overflow-hidden">
+          <div className="relative w-full rounded-[20px] sm:rounded-[28px] bg-white border-2 border-zinc-200/90 shadow-[0_18px_42px_rgba(0,0,0,0.1)] p-3.5 sm:p-4 flex flex-col overflow-hidden">
             {/* Top Bar */}
             <div className="relative z-20 flex items-center justify-between gap-2 border-b border-zinc-100 pb-2 mb-2.5">
               <span className="inline-flex items-center gap-1.5 text-[8px] sm:text-[10px] font-mono-luxury uppercase tracking-wider text-zinc-600">
@@ -1248,9 +1239,9 @@ export default function IrisiDanushkMotionReel() {
     return (
       <motion.div
         key="beat5-finale"
-        initial={{ opacity: 0, x: 180, filter: 'blur(10px)' }}
-        animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, scale: 0.92, filter: 'blur(10px)' }}
+        initial={{ opacity: 0, x: 140 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.92 }}
         transition={{ type: 'spring', stiffness: 185, damping: 20 }}
         className="relative w-full h-full flex items-center justify-center px-3 sm:px-6"
       >
@@ -1260,7 +1251,7 @@ export default function IrisiDanushkMotionReel() {
               key="finale-part1"
               initial={{ scale: 0.88, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ x: -180, opacity: 0, filter: 'blur(12px)' }}
+              exit={{ x: -160, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 18 }}
               className="w-full max-w-[260px] sm:max-w-[340px] flex flex-col items-center"
             >
@@ -1277,7 +1268,6 @@ export default function IrisiDanushkMotionReel() {
                     fill
                     className="object-contain p-1.5"
                     unoptimized
-                    priority
                   />
                 </motion.div>
               </div>
@@ -1294,8 +1284,8 @@ export default function IrisiDanushkMotionReel() {
           ) : (
             <motion.div
               key="finale-part2"
-              initial={{ scale: 0.88, opacity: 0, filter: 'blur(8px)' }}
-              animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ type: 'spring', stiffness: 210, damping: 18 }}
               className="flex flex-col items-center text-center"
@@ -1337,7 +1327,7 @@ export default function IrisiDanushkMotionReel() {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden flex items-center justify-center select-none bg-[#F6F5F0] text-zinc-900">
+    <div className="relative w-full h-screen h-[100dvh] overflow-hidden flex items-center justify-center select-none bg-[#F6F5F0] text-zinc-900">
       {/* Full-Screen Dotted Grid + Corner Dashed Arcs */}
       <DanushkBackdrop beat={beat} />
 

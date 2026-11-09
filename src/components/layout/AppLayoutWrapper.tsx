@@ -16,12 +16,15 @@ import WhatsAppConciergeWidget from '@/components/common/WhatsAppConciergeWidget
 import { supabase } from '@/lib/supabase/client';
 
 export default function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || '';
+  const isReelStudio = pathname.startsWith('/reel');
   const { theme, setTheme, fetchProductsFromDb } = useStore();
 
   // Supabase Realtime: Automatically syncs new product drops live across the app!
-  // When a vendor drops a new piece, shoppers see it instantly without reloading or restarting
+  // Skip on standalone /reel promo studio so mobile loads instantaneously
   useEffect(() => {
+    if (isReelStudio) return;
+
     fetchProductsFromDb();
 
     const channel = supabase
@@ -45,7 +48,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchProductsFromDb]);
+  }, [fetchProductsFromDb, isReelStudio]);
   
   // Synchronize default theme: Light mode by default unless user manually toggled
   useEffect(() => {
@@ -82,12 +85,14 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
   }, [pathname]);
 
   // Standalone portals (Auth, Vendor Portal, Super Admin, Promo Reel Studio, and Coming Soon Teaser)
-  const isReelStudio = pathname.startsWith('/reel');
+  if (isReelStudio) {
+    return <main className="min-h-screen">{children}</main>;
+  }
+
   const isStandalonePage =
     pathname.startsWith('/auth') ||
     pathname.startsWith('/vendor') ||
     pathname.startsWith('/admin') ||
-    isReelStudio ||
     pathname === '/coming-soon';
 
   return (
