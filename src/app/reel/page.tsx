@@ -74,23 +74,27 @@ function useMotionSound(enabled: boolean) {
 function DanushkBackdrop({ beat }: { beat: number }) {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-[#F6F5F0]">
-      {/* Architectural Dot Grid */}
+      {/* Softened Architectural Dot Grid — very subtle so it never clashes with text */}
       <div
-        className="absolute inset-0 opacity-[0.48]"
+        className="absolute inset-0 opacity-[0.14]"
         style={{
-          backgroundImage: 'radial-gradient(#9ca3af 1.4px, transparent 1.4px)',
-          backgroundSize: '24px 24px',
+          backgroundImage: 'radial-gradient(#a89f91 1.1px, transparent 1.1px)',
+          backgroundSize: '28px 28px',
+        }}
+      />
+
+      {/* Pure Luxury Center Stage Clear Field — ensures 100% text contrast and readability */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(246, 245, 240, 0.98) 20%, rgba(246, 245, 240, 0.82) 65%, transparent 100%)',
         }}
       />
 
       {/* Soft Radial Champagne Glow in Center */}
-      <motion.div
-        animate={{
-          scale: [1, 1.12, 1],
-          opacity: [0.45, 0.65, 0.45],
-        }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[680px] rounded-full bg-[#c4972e]/12 blur-[120px]"
+      <div
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#c4972e]/10 blur-[100px] will-change-transform"
       />
 
       {/* Soft Radial Vignette */}
@@ -98,39 +102,33 @@ function DanushkBackdrop({ beat }: { beat: number }) {
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 50% 50%, transparent 48%, rgba(232, 227, 217, 0.72) 100%)',
+            'radial-gradient(circle at 50% 50%, transparent 55%, rgba(232, 227, 217, 0.45) 100%)',
         }}
       />
 
-      {/* Top-Left Animated Dashed Orbit Curve */}
-      <motion.div
-        animate={{
-          rotate: beat * 40,
-          x: beat % 2 === 0 ? -15 : 20,
-          y: beat % 2 === 0 ? -10 : 20,
-          scale: beat === 1 || beat === 6 ? 0.96 : 1.08,
+      {/* Top-Left Animated Dashed Orbit Curve — GPU hardware-accelerated CSS transform */}
+      <div
+        style={{
+          transform: `translate3d(${beat % 2 === 0 ? '-15px' : '15px'}, ${beat % 2 === 0 ? '-10px' : '15px'}, 0) rotate(${beat * 35}deg)`,
+          transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        transition={{ type: 'spring', stiffness: 65, damping: 18 }}
-        className="absolute -top-64 -left-64 w-[580px] h-[580px] rounded-full border-[3px] border-dashed border-zinc-400/55"
+        className="absolute -top-64 -left-64 w-[540px] h-[540px] rounded-full border-[2.5px] border-dashed border-zinc-300/40 will-change-transform"
       />
 
-      {/* Bottom-Right Animated Dashed Orbit Curve */}
-      <motion.div
-        animate={{
-          rotate: -beat * 45,
-          x: beat % 2 === 0 ? 20 : -15,
-          y: beat % 2 === 0 ? 20 : -10,
-          scale: beat === 3 ? 1.12 : 0.98,
+      {/* Bottom-Right Animated Dashed Orbit Curve — GPU hardware-accelerated CSS transform */}
+      <div
+        style={{
+          transform: `translate3d(${beat % 2 === 0 ? '15px' : '-15px'}, ${beat % 2 === 0 ? '15px' : '-10px'}, 0) rotate(${-beat * 40}deg)`,
+          transition: 'transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        transition={{ type: 'spring', stiffness: 65, damping: 18 }}
-        className="absolute -bottom-64 -right-64 w-[600px] h-[600px] rounded-full border-[3px] border-dashed border-[#c4972e]/50"
+        className="absolute -bottom-64 -right-64 w-[560px] h-[560px] rounded-full border-[2.5px] border-dashed border-[#c4972e]/30 will-change-transform"
       />
 
       {/* Subtle Floating Plus Accents */}
-      <div className="absolute top-[16%] right-[18%] text-[#c4972e]/45 text-2xl font-light select-none">
+      <div className="absolute top-[16%] right-[18%] text-[#c4972e]/30 text-2xl font-light select-none">
         +
       </div>
-      <div className="absolute bottom-[18%] left-[16%] text-zinc-400/50 text-2xl font-light select-none">
+      <div className="absolute bottom-[18%] left-[16%] text-zinc-300/40 text-2xl font-light select-none">
         +
       </div>
     </div>
@@ -248,6 +246,18 @@ export default function IrisiDanushkMotionReel() {
 
   const lastPopRef = useRef<number>(-1);
   const { playPop, playWhip } = useMotionSound(sound);
+
+  // Warm up category thumbnails in browser memory cache so category transitions never freeze/hang
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      SHOPPER_TREE_NODES.forEach((node) => {
+        const a = new window.Image();
+        a.src = node.imgA;
+        const b = new window.Image();
+        b.src = node.imgB;
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!playing) return;
@@ -645,30 +655,29 @@ export default function IrisiDanushkMotionReel() {
           </motion.div>
 
           {/* Connected Vertical Timeline Tree Below Card */}
-          <div className="relative pl-4 sm:pl-7 pt-2 sm:pt-3.5 space-y-1 sm:space-y-2 w-full">
-            <div className="absolute left-[9px] sm:left-[22px] top-2.5 bottom-2.5 w-[2px] bg-zinc-800 rounded-full" />
+          <div className="relative pl-4 sm:pl-7 pt-2.5 sm:pt-3.5 space-y-1 sm:space-y-1.5 w-full">
+            <div className="absolute left-[9px] sm:left-[22px] top-2.5 bottom-2.5 w-[2px] bg-zinc-700/80 rounded-full" />
 
             {SHOPPER_TREE_NODES.slice(0, visibleCount).map((node, idx) => {
               const isLatest = idx === activeNodeIdx;
               return (
-                <motion.div
+                <div
                   key={node.label}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-                  className="relative flex items-center justify-between gap-2 sm:gap-3 py-0.5 pr-1"
+                  className="relative flex items-center justify-between gap-2 sm:gap-3 py-0.5 pr-1 transition-all duration-300"
                 >
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <span
                       className={`relative z-10 -ml-[12px] w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-[2px] border-[#F6F5F0] shrink-0 transition-transform duration-300 ${
                         isLatest
-                          ? 'bg-[#c4972e] scale-125 shadow-[0_0_10px_rgba(196,151,46,0.7)]'
-                          : 'bg-zinc-800'
+                          ? 'bg-[#c4972e] scale-125 shadow-[0_0_12px_rgba(196,151,46,0.8)]'
+                          : 'bg-zinc-700'
                       }`}
                     />
                     <span
-                      className={`font-editorial text-sm sm:text-xl md:text-2xl tracking-tight truncate transition-colors ${
-                        isLatest ? 'text-zinc-950 italic' : 'text-zinc-500'
+                      className={`font-editorial text-sm sm:text-xl md:text-2xl tracking-tight truncate transition-all duration-300 px-2.5 py-0.5 rounded-lg ${
+                        isLatest
+                          ? 'text-zinc-950 font-semibold italic bg-white/95 border border-zinc-200/90 shadow-xs'
+                          : 'text-zinc-700 bg-white/55 backdrop-blur-xs'
                       }`}
                     >
                       {node.label}
@@ -676,15 +685,13 @@ export default function IrisiDanushkMotionReel() {
                   </div>
 
                   {isLatest && (
-                    <motion.span
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full bg-white border border-zinc-200 text-[9px] font-mono-luxury uppercase tracking-wider text-zinc-700 shadow-xs shrink-0"
+                    <span
+                      className="hidden sm:inline-flex px-2.5 py-0.5 rounded-full bg-white border border-zinc-200 text-[9px] font-mono-luxury uppercase tracking-wider text-zinc-700 shadow-xs shrink-0 animate-in fade-in duration-200"
                     >
                       {node.deptTitle}
-                    </motion.span>
+                    </span>
                   )}
-                </motion.div>
+                </div>
               );
             })}
           </div>
@@ -871,32 +878,34 @@ export default function IrisiDanushkMotionReel() {
               .map((step) => {
                 const isCurrent = step.id === activeStep;
                 return (
-                  <motion.div
+                  <div
                     key={step.id}
-                    initial={{ opacity: 0, x: -12, filter: 'blur(4px)' }}
-                    animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                    className="relative flex items-start sm:items-center gap-2 sm:gap-3"
+                    className="relative flex items-start sm:items-center gap-2 sm:gap-3 transition-all duration-300"
                   >
                     <span
-                      className={`relative z-10 -ml-[12px] mt-1 sm:mt-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-[2px] border-[#F6F5F0] shrink-0 ${
+                      className={`relative z-10 -ml-[12px] mt-1 sm:mt-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-[2px] border-[#F6F5F0] shrink-0 transition-transform duration-300 ${
                         isCurrent
-                          ? 'bg-[#c4972e] scale-125 shadow-[0_0_10px_rgba(196,151,46,0.7)]'
+                          ? 'bg-[#c4972e] scale-125 shadow-[0_0_12px_rgba(196,151,46,0.8)]'
                           : 'bg-emerald-600'
                       }`}
                     />
-                    <div className="min-w-0">
+                    <div className={`min-w-0 px-2.5 py-1 rounded-xl transition-all duration-300 ${
+                      isCurrent
+                        ? 'bg-white/95 border border-zinc-200/90 shadow-xs'
+                        : 'bg-white/55 backdrop-blur-xs'
+                    }`}>
                       <span
                         className={`font-editorial text-base sm:text-2xl leading-tight block ${
-                          isCurrent ? 'text-zinc-950 italic' : 'text-zinc-600'
+                          isCurrent ? 'text-zinc-950 italic font-semibold' : 'text-zinc-700'
                         }`}
                       >
                         {step.title}
                       </span>
-                      <span className="text-[9px] sm:text-[11px] text-zinc-500 font-light mt-0.5 block">
+                      <span className="text-[9.5px] sm:text-[11.5px] text-zinc-600 font-light mt-0.5 block">
                         {step.sub}
                       </span>
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
           </div>
@@ -1193,32 +1202,34 @@ export default function IrisiDanushkMotionReel() {
                   .map((step) => {
                     const isCurrent = step.id === activeVendorStep;
                     return (
-                      <motion.div
+                      <div
                         key={step.id}
-                        initial={{ opacity: 0, x: -12, filter: 'blur(4px)' }}
-                        animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                        className="relative flex items-start sm:items-center gap-2 sm:gap-3"
+                        className="relative flex items-start sm:items-center gap-2 sm:gap-3 transition-all duration-300"
                       >
                         <span
-                          className={`relative z-10 -ml-[12px] mt-1 sm:mt-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-[2px] border-[#F6F5F0] shrink-0 ${
+                          className={`relative z-10 -ml-[12px] mt-1 sm:mt-0 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-[2px] border-[#F6F5F0] shrink-0 transition-transform duration-300 ${
                             isCurrent
-                              ? 'bg-[#c4972e] scale-125 shadow-[0_0_10px_rgba(196,151,46,0.7)]'
+                              ? 'bg-[#c4972e] scale-125 shadow-[0_0_12px_rgba(196,151,46,0.8)]'
                               : 'bg-emerald-600'
                           }`}
                         />
-                        <div className="min-w-0">
+                        <div className={`min-w-0 px-2.5 py-1 rounded-xl transition-all duration-300 ${
+                          isCurrent
+                            ? 'bg-white/95 border border-zinc-200/90 shadow-xs'
+                            : 'bg-white/55 backdrop-blur-xs'
+                        }`}>
                           <span
                             className={`font-editorial text-base sm:text-2xl leading-tight block ${
-                              isCurrent ? 'text-zinc-950 italic' : 'text-zinc-600'
+                              isCurrent ? 'text-zinc-950 italic font-semibold' : 'text-zinc-700'
                             }`}
                           >
                             {step.title}
                           </span>
-                          <span className="text-[9px] sm:text-[11px] text-zinc-500 font-light mt-0.5 block">
+                          <span className="text-[9.5px] sm:text-[11.5px] text-zinc-600 font-light mt-0.5 block">
                             {step.sub}
                           </span>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
               </div>

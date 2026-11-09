@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/reels',
+        destination: '/reel',
+        permanent: false,
+      },
+      {
         source: '/vendor-portal/drops',
         destination: '/vendor-portal/products',
         permanent: false,
