@@ -138,7 +138,20 @@ export default function LuxuryLoader({
   }
 
   return (
-    <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--bg-primary)] transition-opacity duration-300 pointer-events-none ${fadingOut ? 'opacity-0' : 'opacity-100'}`}>
+    <div
+      style={{ animation: 'irisiSplashAutoHide 0.35s ease 0.9s forwards' }}
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--bg-primary)] transition-opacity duration-300 pointer-events-none ${fadingOut ? 'opacity-0' : 'opacity-100'}`}
+    >
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes irisiSplashAutoHide {
+          0% { opacity: 1; visibility: visible; }
+          100% { opacity: 0; visibility: hidden; pointer-events: none; }
+        }
+        @keyframes irisiBubblePulse {
+          0%, 100% { transform: translateY(0px) scale(1); opacity: 0.75; }
+          50% { transform: translateY(-16px) scale(1.12); opacity: 1; }
+        }
+      `}} />
       {content}
     </div>
   );

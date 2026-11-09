@@ -4,7 +4,14 @@
  * preventing "Invalid API key" (HTTP 500) errors from cross-contaminated environment variables.
  */
 
-const b64Decode = (b64: string) => Buffer.from(b64, 'base64').toString('utf-8');
+const b64Decode = (b64: string): string => {
+  try {
+    if (typeof globalThis.atob === 'function') {
+      return globalThis.atob(b64);
+    }
+  } catch {}
+  return '';
+};
 
 // Production Database (Drop 001 - Fresh Clean Production DB)
 export const PROD_SUPABASE_URL = 'https://bqcizugrxglhozfzceah.supabase.co';
