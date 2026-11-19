@@ -110,26 +110,36 @@ export default function VendorPortalLayout({
   }, [pathname, checkVendorStatus]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel('vendor-live-status-sync')
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'vendors' },
-        (payload) => {
-          const updated = payload.new as any;
-          if (
-            !vendorProfile.email ||
-            !updated.email ||
-            updated.email.toLowerCase() === vendorProfile.email.toLowerCase()
-          ) {
-            checkVendorStatus();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      const chanId = `vendor-live-status-sync-${Math.random().toString(36).slice(2, 8)}`;
+      channel = supabase
+        .channel(chanId)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'vendors' },
+          (payload) => {
+            const updated = payload.new as any;
+            if (
+              !vendorProfile.email ||
+              !updated.email ||
+              updated.email.toLowerCase() === vendorProfile.email.toLowerCase()
+            ) {
+              checkVendorStatus();
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('Vendor status realtime subscription skipped:', err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
     };
   }, [vendorProfile.email, checkVendorStatus]);
 

@@ -40,6 +40,7 @@ export default function VendorNotificationBell() {
   const [readIds, setReadIds] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const instanceIdRef = useRef<string>(Math.random().toString(36).slice(2, 9));
 
   const activeVendorId = getActiveVendorId();
 
@@ -81,18 +82,27 @@ export default function VendorNotificationBell() {
   useEffect(() => {
     fetchNotifications();
 
-    const channel = supabase
-      .channel(`vendor-notifs-${activeVendorId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-        fetchNotifications();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`vendor-notifs-${activeVendorId}-${instanceIdRef.current}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+          fetchNotifications();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'product_variants' }, () => {
+          fetchNotifications();
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('Vendor notifications realtime subscription skipped:', err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
     };
   }, [activeVendorId]);
 
