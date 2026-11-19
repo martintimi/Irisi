@@ -250,7 +250,7 @@ export default function VendorPortalLayout({
       items: [
         {
           label: 'Lookbook Stories',
-          sub: 'Post 48h drops & alert followers',
+          sub: 'Post 24h drops & alert followers',
           href: '/vendor-portal/stories',
           icon: Camera,
         },
@@ -776,7 +776,7 @@ export default function VendorPortalLayout({
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-[var(--text-primary)]">
-                        Post 48h Lookbook Story
+                        Post 24h Lookbook Story
                       </div>
                       <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
                         Share a photo or clip &amp; alert your followers

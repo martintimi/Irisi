@@ -5,12 +5,11 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import {
-  ShoppingBag, Sparkles, Sun, Moon, SlidersHorizontal, User, LogOut,
-  Bell, Check, Package, Star, ChevronRight, Bookmark, Heart
+  ShoppingBag, Sun, Moon, SlidersHorizontal, User, LogOut, Heart
 } from 'lucide-react';
-import React, { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
 import BrandWordmark from '@/components/common/BrandWordmark';
+import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -23,16 +22,9 @@ export default function Navbar() {
     setIsVaultOpen,
     userAuth,
     logout,
-    setSelectedGender,
-    selectedGender,
-    userNotifications,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
   } = useStore();
 
   const [mounted, setMounted] = useState(false);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -45,19 +37,7 @@ export default function Navbar() {
     }
   }, [theme]);
 
-  // Close notifications dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
-        setIsNotifOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const unreadNotifs = userNotifications.filter(n => !n.read).length;
 
   // Consumer shopper navigation links
   const navLinks = [
@@ -122,101 +102,8 @@ export default function Navbar() {
             </button>
           )}
 
-          {/* Interactive Notifications Bell Dropdown */}
-          <div className="relative" ref={notifRef}>
-            <button
-              onClick={() => setIsNotifOpen(!isNotifOpen)}
-              className="relative p-2.5 rounded-full text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--badge-bg)] transition-colors"
-              title="Notifications"
-            >
-              <Bell className="h-5 w-5" />
-              {unreadNotifs > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-[var(--bg-primary)] animate-pulse" />
-              )}
-            </button>
-
-            {/* Notifications Dropdown Panel */}
-            <AnimatePresence>
-              {isNotifOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -12, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.96 }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="fixed inset-x-3 top-16 sm:inset-auto sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:w-96 rounded-3xl sm:rounded-2xl surface-card border border-[var(--border-subtle)] shadow-2xl p-4 space-y-3 z-50"
-                >
-                  <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-mono-luxury font-bold uppercase text-[var(--text-primary)]">
-                        Notifications
-                      </span>
-                      {unreadNotifs > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 text-[10px] font-bold">
-                          {unreadNotifs} new
-                        </span>
-                      )}
-                    </div>
-
-                    {unreadNotifs > 0 && (
-                      <button
-                        onClick={markAllNotificationsAsRead}
-                        className="text-[10px] font-mono-luxury text-[var(--gold-accent)] font-bold hover:underline uppercase"
-                      >
-                        Mark read
-                      </button>
-                    )}
-                  </div>
-
-                  <div
-                    onWheel={(e) => e.stopPropagation()}
-                    onTouchMove={(e) => e.stopPropagation()}
-                    className="max-h-64 overflow-y-auto pr-1.5 space-y-2 overscroll-contain touch-pan-y"
-                    style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}
-                  >
-                    {userNotifications.length === 0 ? (
-                      <div className="p-6 text-center text-xs font-mono-luxury text-[var(--text-muted)]">
-                        No notifications yet.
-                      </div>
-                    ) : (
-                      userNotifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          onClick={() => {
-                            markNotificationAsRead(notif.id);
-                            setIsNotifOpen(false);
-                          }}
-                          className={`p-3 rounded-xl border text-left transition-colors cursor-pointer hover:border-[var(--gold-accent)]/50 ${
-                            notif.read
-                              ? 'bg-[var(--bg-primary)] border-[var(--border-subtle)] opacity-70'
-                              : 'bg-[var(--bg-surface)] border-[var(--gold-accent)]/30'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-[10px] font-mono-luxury text-[var(--text-muted)]">
-                            <span className="font-bold text-[var(--text-primary)]">{notif.title}</span>
-                            <span>{notif.timestamp}</span>
-                          </div>
-                          <p className="text-xs text-[var(--text-secondary)] font-light mt-0.5 leading-relaxed">
-                            {notif.message}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="pt-2 border-t border-[var(--border-subtle)] text-center">
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsNotifOpen(false)}
-                      className="text-xs font-mono-luxury text-[var(--gold-accent)] uppercase font-bold hover:underline inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>View All Orders & Reviews</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {/* Live Shopper Notifications Bell (Followed Vendor Stories, Drops & Order Updates) */}
+          <ShopperNotificationBell />
 
           {/* User Profile / Dashboard Link */}
           {userAuth.isLoggedIn ? (

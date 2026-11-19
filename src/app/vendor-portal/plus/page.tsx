@@ -144,7 +144,7 @@ export default function VendorPlusPage() {
             ÌRÍSÍ Plus
           </h1>
           <p className="text-xs text-[var(--text-muted)] font-light max-w-xl">
-            Clean white-label storefront, lower commission, unlimited listings, and 48h Lookbook Stories.
+            Clean white-label storefront, lower commission, unlimited listings, and 24h Lookbook Stories.
           </p>
         </div>
 
@@ -254,7 +254,7 @@ export default function VendorPlusPage() {
               </li>
               <li className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-                <span><strong>48h Lookbook Stories &amp; Follower Drop Alerts</strong></span>
+                <span><strong>24h Lookbook Stories &amp; Follower Drop Alerts</strong></span>
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />

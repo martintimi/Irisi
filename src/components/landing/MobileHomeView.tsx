@@ -9,7 +9,7 @@ import {
   ChevronRight, Sun, Moon, ArrowUpRight
 } from 'lucide-react';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
-import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
+import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
 
 export default function MobileHomeView() {
   const {
@@ -856,8 +856,9 @@ export default function MobileHomeView() {
             </span>
           </Link>
 
-          {/* Right Actions: Categories Directory + Theme Toggle */}
-          <div className="flex items-center gap-2">
+          {/* Right Actions: Categories Directory + Live Notifications + Theme Toggle */}
+          <div className="flex items-center gap-1.5">
+            <ShopperNotificationBell compact />
             <Link
               href="/categories"
               className="flex items-center gap-1 px-3 py-1 rounded-full border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
@@ -927,8 +928,7 @@ export default function MobileHomeView() {
         </div>
       </header>
 
-      {/* ── 3B. LIVE 48H BRAND DROP STORIES ── */}
-      <MobileStoriesRow onOpenQuickBuy={(prod) => setQuickBuyProduct(prod)} />
+      {/* Brand Stories appear exclusively on /shop */}
 
       {/* ── 4. FULL-BLEED EDGE-TO-EDGE HERO BANNER (ROTATING SLIDESHOW) ── */}
       <section className="relative w-full aspect-[4/5] max-h-[520px] bg-black overflow-hidden select-none">
