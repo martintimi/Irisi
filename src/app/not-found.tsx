@@ -16,10 +16,10 @@ export default function NotFound() {
 
         {/* Error Code & Heading */}
         <div className="space-y-2">
-          <span className="text-[10px] font-mono tracking-widest uppercase text-amber-500 font-bold block">
+          <span className="text-[10px] font-mono tracking-widest uppercase text-amber-500 font-normal block">
             ERROR 404 · PAGE NOT FOUND
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-black dark:text-white">
+          <h1 className="font-editorial text-3xl sm:text-4xl font-normal uppercase tracking-wide text-black dark:text-white">
             Page Not Found
           </h1>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-light max-w-sm mx-auto">
@@ -31,7 +31,7 @@ export default function NotFound() {
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/shop"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-black uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-md"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-xs font-medium uppercase tracking-wider hover:opacity-90 active:scale-95 transition-all shadow-md"
           >
             <span>Explore New Drops</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -39,7 +39,7 @@ export default function NotFound() {
 
           <Link
             href="/categories"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full border border-neutral-300 dark:border-neutral-700 text-xs font-bold uppercase tracking-wider text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full border border-neutral-300 dark:border-neutral-700 text-xs font-normal uppercase tracking-wider text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-500" />
             <span>Browse Categories</span>

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
-import { invalidateProductsCache } from '../route';
+import { parseProductMetaFromTags } from '@/lib/utils/productMetadata';
+import { invalidateProductsCache } from '@/lib/cache/productsCache';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 const NIGERIAN_STATES = [
@@ -294,13 +295,17 @@ export async function GET(
       return matchedImg ? { ...col, imageUrl: matchedImg } : col;
     });
 
-    // Filter out internal system tags (video:, img:, color_img:) from public customer tags
+    const productMeta = parseProductMetaFromTags(rawTags);
+    // Filter out internal system tags (video:, img:, color_img:, ships_from:, subcat:, __*) from public customer tags
     const cleanTags = rawTags.filter(
       (t: string) =>
         typeof t === 'string' &&
         !t.startsWith('video:') &&
         !t.startsWith('img:') &&
-        !t.startsWith('color_img:')
+        !t.startsWith('color_img:') &&
+        !t.startsWith('ships_from:') &&
+        !t.startsWith('subcat:') &&
+        !t.startsWith('__')
     );
 
     const formattedProduct = {
@@ -318,6 +323,8 @@ export async function GET(
       category: product.category || 'tops',
       genderTarget: product.gender_target || 'unisex',
       garmentOriginType: product.garment_origin_type || 'ready_made_boutique',
+      fulfillmentType: productMeta.fulfillmentType,
+      productionLeadTime: productMeta.productionLeadTime,
       imageUrl: primaryImg,
       images: combinedImages.length > 0 ? combinedImages : [primaryImg],
       videoUrl: videoUrl,

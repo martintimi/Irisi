@@ -180,6 +180,8 @@ export default function MobileVendorPublish({
   
   // Multi-Hub Dispatch Origin (only active if vendor has 2 dispatch hubs)
   const [shipsFrom, setShipsFrom] = useState('');
+  const [fulfillmentType, setFulfillmentType] = useState<'ready_to_ship' | 'made_to_order'>('ready_to_ship');
+  const [productionLeadTime, setProductionLeadTime] = useState('5-7 business days');
 
   useEffect(() => {
     if (vendorProfile?.city && !shipsFrom) {
@@ -1146,7 +1148,9 @@ export default function MobileVendorPublish({
         category,
         subcategory: subCategory,
         genderTarget,
-        garmentOriginType: 'ready_made_boutique',
+        garmentOriginType: fulfillmentType === 'made_to_order' ? 'handmade_designer' : 'ready_made_boutique',
+        fulfillmentType,
+        productionLeadTime: fulfillmentType === 'made_to_order' ? productionLeadTime : '1-2 business days',
         imageUrl: finalImg,
         image_url: finalImg,
         images: uploadedImages.map(img => ({
@@ -1815,6 +1819,51 @@ export default function MobileVendorPublish({
             </p>
           </div>
         )}
+
+        {/* Fulfillment Type: Ready to Ship vs Made to Order */}
+        <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2.5">
+          <label className="block text-[var(--text-secondary)] uppercase text-[10px] font-mono-luxury">
+            Fulfillment Mode
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setFulfillmentType('ready_to_ship')}
+              className={`p-2.5 rounded-xl border text-left cursor-pointer ${
+                fulfillmentType === 'ready_to_ship'
+                  ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--text-primary)]'
+                  : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'
+              }`}
+            >
+              <div className="text-[11px] font-mono-luxury uppercase">Ready to Ship</div>
+              <div className="text-[9px] text-[var(--text-muted)]">Ships in 1–2 days</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFulfillmentType('made_to_order')}
+              className={`p-2.5 rounded-xl border text-left cursor-pointer ${
+                fulfillmentType === 'made_to_order'
+                  ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--text-primary)]'
+                  : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'
+              }`}
+            >
+              <div className="text-[11px] font-mono-luxury uppercase">Made to Order</div>
+              <div className="text-[9px] text-[var(--text-muted)]">Crafted per order</div>
+            </button>
+          </div>
+          {fulfillmentType === 'made_to_order' && (
+            <select
+              value={productionLeadTime}
+              onChange={(e) => setProductionLeadTime(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+            >
+              <option value="2-3 business days">2–3 business days</option>
+              <option value="3-5 business days">3–5 business days</option>
+              <option value="5-7 business days">5–7 business days</option>
+              <option value="7-10 business days">7–10 business days</option>
+            </select>
+          )}
+        </div>
 
         <div>
           <div className="flex items-center justify-between mb-1.5">

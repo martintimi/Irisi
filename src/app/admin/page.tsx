@@ -137,27 +137,60 @@ export default function SuperAdminPage() {
       .catch(() => {});
   }, []);
 
-  // Platform Commission & Fee Setting State
-  const [commissionConfig, setCommissionConfig] = useState<{ commissionPercent: number; isEnabled: boolean }>({
+  // Platform Monetization, Free Launch Kill-Switch & ÌRÍSÍ Plus Settings
+  const [commissionConfig, setCommissionConfig] = useState<{
+    commissionPercent: number;
+    isEnabled: boolean;
+    freeLaunchMode: boolean;
+    freeTierCommissionPercent: number;
+    plusTierCommissionPercent: number;
+    plusMonthlyPriceNgn: number;
+    freeTierProductLimit: number;
+    requirePlusForStorefront: boolean;
+  }>({
     commissionPercent: 0,
     isEnabled: false,
+    freeLaunchMode: true,
+    freeTierCommissionPercent: 8,
+    plusTierCommissionPercent: 5,
+    plusMonthlyPriceNgn: 5000,
+    freeTierProductLimit: 12,
+    requirePlusForStorefront: false,
   });
-  const [commissionInput, setCommissionInput] = useState<string>('0');
+  const [commissionInput, setCommissionInput] = useState<string>('8');
+  const [plusCommissionInput, setPlusCommissionInput] = useState<string>('5');
+  const [plusPriceInput, setPlusPriceInput] = useState<string>('5000');
+  const [freeProductLimitInput, setFreeProductLimitInput] = useState<string>('12');
+  const [freeLaunchModeInput, setFreeLaunchModeInput] = useState<boolean>(true);
+  const [requirePlusStorefrontInput, setRequirePlusStorefrontInput] = useState<boolean>(false);
   const [commissionEnabledInput, setCommissionEnabledInput] = useState<boolean>(false);
   const [isSavingCommission, setIsSavingCommission] = useState<boolean>(false);
 
-  // Fetch live platform commission rate from server API
+  // Fetch live platform billing & monetization config from server API
   useEffect(() => {
     fetch('/api/admin/commission')
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data?.config) {
+          const cfg = data.config;
+          const freeLaunch = typeof cfg.freeLaunchMode === 'boolean' ? cfg.freeLaunchMode : !cfg.isEnabled;
           setCommissionConfig({
-            commissionPercent: Number(data.config.commissionPercent || 0),
-            isEnabled: Boolean(data.config.isEnabled),
+            commissionPercent: Number(cfg.commissionPercent || 0),
+            isEnabled: Boolean(cfg.isEnabled),
+            freeLaunchMode: freeLaunch,
+            freeTierCommissionPercent: Number(cfg.freeTierCommissionPercent ?? 8),
+            plusTierCommissionPercent: Number(cfg.plusTierCommissionPercent ?? 5),
+            plusMonthlyPriceNgn: Number(cfg.plusMonthlyPriceNgn ?? 5000),
+            freeTierProductLimit: Number(cfg.freeTierProductLimit ?? 12),
+            requirePlusForStorefront: Boolean(cfg.requirePlusForStorefront),
           });
-          setCommissionInput(String(data.config.commissionPercent || 0));
-          setCommissionEnabledInput(Boolean(data.config.isEnabled));
+          setCommissionInput(String(cfg.freeTierCommissionPercent ?? 8));
+          setPlusCommissionInput(String(cfg.plusTierCommissionPercent ?? 5));
+          setPlusPriceInput(String(cfg.plusMonthlyPriceNgn ?? 5000));
+          setFreeProductLimitInput(String(cfg.freeTierProductLimit ?? 12));
+          setFreeLaunchModeInput(freeLaunch);
+          setRequirePlusStorefrontInput(Boolean(cfg.requirePlusForStorefront));
+          setCommissionEnabledInput(!freeLaunch);
         }
       })
       .catch((err) => console.error('Error fetching commission config:', err));
@@ -3136,55 +3169,112 @@ export default function SuperAdminPage() {
                 </div>
               </div>
 
-              {/* Platform Fee & Commission Configuration Panel */}
-              <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
+              {/* Platform Monetization, Global Free Launch Kill-Switch & ÌRÍSÍ Plus Control Panel */}
+              <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Wallet className="h-5 w-5 text-[var(--gold-accent)]" />
-                      <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
-                        Platform Commission & Fee Configuration
+                      <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                        Global Free Launch Switch, Commission &amp; ÌRÍSÍ Plus Pricing
                       </h3>
                     </div>
                     <p className="text-xs text-[var(--text-secondary)] font-mono-luxury max-w-2xl">
-                      Configure the platform fee percentage deducted on garment sales. Currently set to <strong className="text-[var(--gold-accent)]">{commissionConfig.isEnabled ? `${commissionConfig.commissionPercent}%` : '0% (Disabled)'}</strong>. Vendors receive {100 - (commissionConfig.isEnabled ? commissionConfig.commissionPercent : 0)}% of sales. When you are ready to start charging fees, set your rate below and save.
+                      {commissionConfig.freeLaunchMode
+                        ? 'Launch Free Period is ON globally — all brands enjoy 0% commission and full Plus access. Switch it OFF anytime to activate per-order commissions & Plus subscriptions.'
+                        : `Billing is LIVE globally — Free tier: ${commissionConfig.freeTierCommissionPercent}% (max ${commissionConfig.freeTierProductLimit} items) · ÌRÍSÍ Plus: ₦${commissionConfig.plusMonthlyPriceNgn.toLocaleString()}/mo (${commissionConfig.plusTierCommissionPercent}% commission).`}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={commissionEnabledInput}
-                        onChange={(e) => setCommissionEnabledInput(e.target.checked)}
-                        className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
-                      />
-                      <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
-                        {commissionEnabledInput ? 'Fee Charging Active' : 'Fee Disabled (0%)'}
-                      </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !freeLaunchModeInput;
+                      setFreeLaunchModeInput(next);
+                      setCommissionEnabledInput(!next);
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider border transition-all cursor-pointer shrink-0 ${
+                      freeLaunchModeInput
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40'
+                    }`}
+                  >
+                    {freeLaunchModeInput ? 'Free Launch Trial: ON (0%)' : 'Free Launch Trial: OFF (Billing Active)'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-3 border-t border-[var(--border-subtle)]">
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      ÌRÍSÍ Plus Price (₦ / month)
                     </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={plusPriceInput}
+                      onChange={(e) => setPlusPriceInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      Free Tier Commission (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="40"
+                      step="0.5"
+                      value={commissionInput}
+                      onChange={(e) => setCommissionInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      ÌRÍSÍ Plus Commission (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="40"
+                      step="0.5"
+                      value={plusCommissionInput}
+                      onChange={(e) => setPlusCommissionInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      Free Tier Max Products
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={freeProductLimitInput}
+                      onChange={(e) => setFreeProductLimitInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
-                  <div className="w-full sm:w-auto flex items-center gap-2">
-                    <span className="text-xs font-mono-luxury text-[var(--text-secondary)] shrink-0">
-                      Platform Fee Percentage (%):
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--border-subtle)]">
+                  <label className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--text-secondary)] cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={requirePlusStorefrontInput}
+                      onChange={(e) => setRequirePlusStorefrontInput(e.target.checked)}
+                      className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
+                    />
+                    <span>
+                      Strict Storefront Paywall (unchecked = Option B: Free keeps basic storefront, Plus unlocks white-label)
                     </span>
-                    <div className="relative w-32">
-                      <input
-                        type="number"
-                        min="0"
-                        max="50"
-                        step="0.5"
-                        value={commissionInput}
-                        onChange={(e) => setCommissionInput(e.target.value)}
-                        placeholder="0"
-                        className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
-                      />
-                      <span className="absolute right-3 top-2.5 text-xs text-[var(--text-muted)] font-mono-luxury font-bold">%</span>
-                    </div>
-                  </div>
+                  </label>
 
                   <button
                     type="button"
@@ -3195,31 +3285,43 @@ export default function SuperAdminPage() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            commissionPercent: Number(commissionInput || 0),
-                            isEnabled: commissionEnabledInput,
+                            freeLaunchMode: freeLaunchModeInput,
+                            isEnabled: !freeLaunchModeInput,
+                            freeTierCommissionPercent: Number(commissionInput || 0),
+                            plusTierCommissionPercent: Number(plusCommissionInput || 0),
+                            plusMonthlyPriceNgn: Number(plusPriceInput || 0),
+                            freeTierProductLimit: Number(freeProductLimitInput || 12),
+                            requirePlusForStorefront: requirePlusStorefrontInput,
                           }),
                         });
                         const data = await res.json();
-                        if (res.ok && data.success) {
+                        if (res.ok && data.success && data.config) {
+                          const cfg = data.config;
                           setCommissionConfig({
-                            commissionPercent: Number(data.config.commissionPercent || 0),
-                            isEnabled: Boolean(data.config.isEnabled),
+                            commissionPercent: Number(cfg.commissionPercent || 0),
+                            isEnabled: Boolean(cfg.isEnabled),
+                            freeLaunchMode: Boolean(cfg.freeLaunchMode),
+                            freeTierCommissionPercent: Number(cfg.freeTierCommissionPercent ?? 8),
+                            plusTierCommissionPercent: Number(cfg.plusTierCommissionPercent ?? 5),
+                            plusMonthlyPriceNgn: Number(cfg.plusMonthlyPriceNgn ?? 5000),
+                            freeTierProductLimit: Number(cfg.freeTierProductLimit ?? 12),
+                            requirePlusForStorefront: Boolean(cfg.requirePlusForStorefront),
                           });
                           confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
-                          setActionSuccessMsg(`Platform commission rate updated to ${data.config.commissionPercent}% (${data.config.isEnabled ? 'Active' : 'Disabled'})!`);
-                          setTimeout(() => setActionSuccessMsg(''), 4000);
+                          setActionSuccessMsg(data.message || 'Platform billing settings updated!');
+                          setTimeout(() => setActionSuccessMsg(''), 4500);
                         }
                       } catch (err) {
-                        console.error('Failed to update commission rate:', err);
+                        console.error('Failed to update billing settings:', err);
                       } finally {
                         setIsSavingCommission(false);
                       }
                     }}
                     disabled={isSavingCommission}
-                    className="w-full sm:w-auto px-5 py-2 rounded-full bg-[var(--gold-accent)] hover:bg-[#d8b357] text-black text-xs font-mono-luxury font-bold uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[var(--gold-accent)] hover:bg-[#d8b357] text-black text-xs font-mono-luxury uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
                   >
                     {isSavingCommission ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    <span>Save Fee Setting</span>
+                    <span>Save Billing Rules</span>
                   </button>
                 </div>
               </div>
@@ -3232,7 +3334,7 @@ export default function SuperAdminPage() {
                       Vendor Payout Balances & Settlement Accounts
                     </h3>
                     <span className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                      Pending escrow vs settled payouts mapped to verified Nigerian bank accounts • Click any brand to view payout statement
+                      Pending escrow vs settled payouts mapped to verified merchant bank accounts • Click any brand to view payout statement
                     </span>
                   </div>
 

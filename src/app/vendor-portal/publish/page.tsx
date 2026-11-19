@@ -163,6 +163,9 @@ export default function PublishGarmentPage() {
 
   // Multi-Hub Dispatch Origin (only active if vendor has 2 dispatch hubs)
   const [shipsFrom, setShipsFrom] = useState('');
+  // Ready-to-Ship vs Made-to-Order (supports shoemakers & native wear designers)
+  const [fulfillmentType, setFulfillmentType] = useState<'ready_to_ship' | 'made_to_order'>('ready_to_ship');
+  const [productionLeadTime, setProductionLeadTime] = useState('5-7 business days');
 
   // Mode: single garment or multi-photo batch drop
   const [uploadMode, setUploadMode] = useState<'single' | 'batch'>('single');
@@ -1082,7 +1085,9 @@ export default function PublishGarmentPage() {
         category,
         subcategory: subCategory,
         genderTarget,
-        garmentOriginType: 'ready_made_boutique',
+        garmentOriginType: fulfillmentType === 'made_to_order' ? 'handmade_designer' : 'ready_made_boutique',
+        fulfillmentType,
+        productionLeadTime: fulfillmentType === 'made_to_order' ? productionLeadTime : '1-2 business days',
         imageUrl: finalImageUrl,
         image_url: finalImageUrl,
         images: uploadedImages.map(img => ({
@@ -1960,6 +1965,64 @@ export default function PublishGarmentPage() {
                 </p>
               </div>
             )}
+
+            {/* Fulfillment Mode: Ready to Ship vs Made to Order (Shoemakers & Native Tailors) */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)]">
+                  Fulfillment &amp; Production Mode
+                </label>
+                <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)]">
+                  Shown to shopper before checkout
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('ready_to_ship')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    fulfillmentType === 'ready_to_ship'
+                      ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--text-primary)]'
+                      : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  <div className="text-xs font-mono-luxury uppercase">Ready to Ship</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5">In stock · ships in 1–2 days</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType('made_to_order')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    fulfillmentType === 'made_to_order'
+                      ? 'border-[var(--gold-accent)] bg-[var(--gold-subtle)] text-[var(--text-primary)]'
+                      : 'border-[var(--border-subtle)] text-[var(--text-secondary)]'
+                  }`}
+                >
+                  <div className="text-xs font-mono-luxury uppercase">Made to Order</div>
+                  <div className="text-[10px] text-[var(--text-muted)] mt-0.5">Crafted / sewn after payment</div>
+                </button>
+              </div>
+              {fulfillmentType === 'made_to_order' && (
+                <div className="pt-1 space-y-1.5">
+                  <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block">
+                    Production Turnaround Time
+                  </label>
+                  <select
+                    value={productionLeadTime}
+                    onChange={(e) => setProductionLeadTime(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                  >
+                    <option value="2-3 business days">2–3 business days (Express Craft)</option>
+                    <option value="3-5 business days">3–5 business days (Standard Footwear / Craft)</option>
+                    <option value="5-7 business days">5–7 business days (Tailored Native / Custom)</option>
+                    <option value="7-10 business days">7–10 business days (Grand Couture / Agbada)</option>
+                  </select>
+                  <p className="text-[10px] text-[var(--text-muted)] font-light">
+                    Tip: Upload a quick photo of the finished piece before dispatch so escrow releases smoothly.
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Department Category Select */}
             <div>

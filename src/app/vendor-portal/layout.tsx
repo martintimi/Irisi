@@ -80,6 +80,7 @@ export default function VendorPortalLayout({
         const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
         const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
         setVendorProfile({
+          id: v.id || '',
           brandName: v.brandName || v.brand_name || 'My Brand',
           designerName: v.designerName || v.designer_name || v.contact_person || 'Manager',
           contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || '',
@@ -202,6 +203,13 @@ export default function VendorPortalLayout({
       href: '/vendor-portal/settlements',
       icon: DollarSign,
       active: pathname === '/vendor-portal/settlements'
+    },
+    {
+      id: 'tour-nav-plus',
+      label: 'ÌRÍSÍ Plus & Plan',
+      href: '/vendor-portal/plus',
+      icon: Crown,
+      active: pathname === '/vendor-portal/plus'
     },
     {
       label: 'Client Reviews & Ratings',

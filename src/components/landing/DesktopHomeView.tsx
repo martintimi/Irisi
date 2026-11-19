@@ -48,7 +48,7 @@ export default function DesktopHomeView() {
   const heroSlides = useMemo(() => {
     switch (activeTab) {
       case 'women': return [
-        { id: 'w-1', tag: 'DRESSES & GOWNS', title: 'EVENING GOWNS & BODYCONS', subtitle: 'NIGERIAN WOMEN\'S LUXURY', highlight: 'ASO-EBI & COUTURE STYLES', image: '/images/categories/dressesforwomen.jpeg', link: '/shop?gender=women&category=dresses' },
+        { id: 'w-1', tag: 'DRESSES & GOWNS', title: 'EVENING GOWNS & BODYCONS', subtitle: 'CONTEMPORARY WOMEN\'S LUXURY', highlight: 'ASO-EBI & COUTURE STYLES', image: '/images/categories/dressesforwomen.jpeg', link: '/shop?gender=women&category=dresses' },
         { id: 'w-2', tag: 'TWO-PIECE SETS', title: 'MATCHING COORD SETS', subtitle: 'TAILORED CO-ORDS & SETS', highlight: 'PREMIUM FABRIC QUALITY', image: '/images/categories/women_coord.jpg', link: '/shop?gender=women&category=two-piece' },
         { id: 'w-3', tag: 'SHOES & HEELS', title: 'HEELS, SLIDES & FLATS', subtitle: 'STATEMENT WOMEN\'S FOOTWEAR', highlight: 'EVERYDAY & OCCASION WEAR', image: '/images/categories/women_heels.jpg', link: '/shop?gender=women&department=footwear' },
       ];
@@ -68,7 +68,7 @@ export default function DesktopHomeView() {
       ];
       case 'men':
       default: return [
-        { id: 'm-1', tag: 'TRADITIONAL & NATIVE', title: 'ROYAL 3-PIECE AGBADA', subtitle: 'WEDDINGS & CELEBRATIONS', highlight: 'EMBROIDERED NIGERIAN ROBES', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123515/veyra_categories/agbadaformen.jpg', link: '/shop?gender=men&category=agbada' },
+        { id: 'm-1', tag: 'TRADITIONAL & NATIVE', title: 'ROYAL 3-PIECE AGBADA', subtitle: 'WEDDINGS & CELEBRATIONS', highlight: 'EMBROIDERED CEREMONIAL ROBES', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123515/veyra_categories/agbadaformen.jpg', link: '/shop?gender=men&category=agbada' },
         { id: 'm-2', tag: 'STREETWEAR', title: 'HOODIES & SWEATSHIRTS', subtitle: 'EVERYDAY CASUAL STREETWEAR', highlight: 'HEAVYWEIGHT RELAXED FITS', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123514/veyra_categories/prod_1788316482065_1_489.jpg', link: '/shop?gender=men&category=hoodies' },
         { id: 'm-3', tag: 'SENATOR & KAFTAN', title: 'TAILORED SENATOR SETS', subtitle: 'OFFICE & SUNDAY BEST', highlight: 'CLEAN TWO-PIECE KAFTANS', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123516/veyra_categories/senatorformen.jpg', link: '/shop?gender=men&category=senator' },
         { id: 'm-4', tag: 'SNEAKERS & FOOTWEAR', title: 'STREET SNEAKERS & SHOES', subtitle: 'URBAN TRAINERS & CASUAL FOOTWEAR', highlight: 'PREMIUM COMFORT & FIT', image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123512/veyra_categories/shoefootwareformen.jpg', link: '/shop?gender=men&department=footwear' },
@@ -327,7 +327,7 @@ export default function DesktopHomeView() {
               NEW ARRIVALS · READY TO SHIP
             </span>
             <span className="text-[9px] text-neutral-400 tracking-tight">
-              Direct courier delivery across all 36 states · Fast waybill dispatch
+              Direct courier delivery · Fast waybill dispatch
             </span>
           </div>
           <Link href="/shop" className="flex items-center gap-1 text-[11px] font-black uppercase tracking-widest text-white hover:text-amber-300 transition-colors shrink-0">
@@ -449,7 +449,7 @@ export default function DesktopHomeView() {
         <div className="flex items-end justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-5">
           <div>
             <h2 className="text-base font-black uppercase tracking-wider text-black dark:text-white">Featured Brands & Stores</h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Independent Nigerian designers on Ìrísí</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Independent fashion designers on Ìrísí</p>
           </div>
           <Link href="/vendors" className="flex items-center gap-0.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 hover:text-black dark:hover:text-white transition-colors">
             <span>View All Brands</span>
@@ -459,9 +459,9 @@ export default function DesktopHomeView() {
 
         <div className="grid grid-cols-3 gap-4">
           {[
-            { name: 'Atelier Sovereign', origin: 'Lagos Island', focus: 'Bespoke Ceremonial Agbada', image: '/images/products/BlackAgbada.jpg', slug: 'atelier-sovereign' },
-            { name: 'Urban Archive', origin: 'Yaba, Lagos', focus: '480GSM Heavyweight Streetwear', image: '/images/no-product.svg', slug: 'urban-archive' },
-            { name: 'Kano Leather Studio', origin: 'Kano', focus: 'Handcrafted Calfskin Footwear', image: '/images/products/UnisexSlides.jpg', slug: 'kano-leather-studio' },
+            { name: 'Atelier Sovereign', origin: 'Verified Atelier', focus: 'Bespoke Ceremonial Agbada', image: '/images/products/BlackAgbada.jpg', slug: 'atelier-sovereign' },
+            { name: 'Urban Archive', origin: 'Verified Streetwear', focus: '480GSM Heavyweight Streetwear', image: '/images/no-product.svg', slug: 'urban-archive' },
+            { name: 'Savanna Leather Studio', origin: 'Artisan Leathercraft', focus: 'Handcrafted Calfskin Footwear', image: '/images/products/UnisexSlides.jpg', slug: 'kano-leather-studio' },
           ].map((brand, i) => (
             <Link
               key={i}

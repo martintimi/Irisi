@@ -29,6 +29,8 @@ export default function VendorOrdersPage() {
   const [dispatchModalOrder, setDispatchModalOrder] = useState<any | null>(null);
   const [waybillInput, setWaybillInput] = useState('');
   const [driverPhoneInput, setDriverPhoneInput] = useState('');
+  const [preDispatchProofUrl, setPreDispatchProofUrl] = useState('');
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [dispatchError, setDispatchError] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
@@ -307,7 +309,29 @@ export default function VendorOrdersPage() {
     setDispatchModalOrder(ord);
     setWaybillInput(ord.waybillNumber || ord.trackingDetails?.waybillNumber || '');
     setDriverPhoneInput(ord.driverPhone || ord.trackingDetails?.driverPhone || '');
+    setPreDispatchProofUrl(ord.preDispatchProofUrl || '');
     setDispatchError('');
+  };
+
+  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingProof(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setPreDispatchProofUrl(data.url);
+      } else {
+        setDispatchError(data.error || 'Could not upload dispatch proof.');
+      }
+    } catch {
+      setDispatchError('Upload failed. Please try again.');
+    } finally {
+      setIsUploadingProof(false);
+    }
   };
 
   // Action 3: Confirm Dispatch with Waybill / Driver info
@@ -355,6 +379,7 @@ export default function VendorOrdersPage() {
           trackingStage: 3,
           waybillNumber: waybill,
           driverPhone: driverPhone,
+          preDispatchProofUrl: preDispatchProofUrl || undefined,
           vendorId: targetVendorId
         })
       });
@@ -841,6 +866,31 @@ export default function VendorOrdersPage() {
                 <p className="text-[10px] text-[var(--text-muted)] mt-1">
                   Customer will receive this number to contact the rider directly upon arrival.
                 </p>
+              </div>
+
+              {/* Pre-Dispatch Photo/Video Proof (Recommended for All Orders & Made-to-Order Craft) */}
+              <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
+                <label className="block uppercase text-[10px] text-[var(--gold-accent)]">
+                  Finished Piece Proof Photo (Protects Your Escrow Payout)
+                </label>
+                <p className="text-[10px] text-[var(--text-muted)] font-light">
+                  Snap a quick photo of the finished item before sealing — shows the buyer their piece matches their order and prevents disputes.
+                </p>
+                <input
+                  type="file"
+                  accept="image/*,video/mp4,video/quicktime"
+                  onChange={handleProofUpload}
+                  className="block w-full text-[11px] text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:uppercase file:bg-[var(--gold-subtle)] file:text-[var(--gold-accent)] cursor-pointer"
+                />
+                {isUploadingProof && (
+                  <p className="text-[10px] text-[var(--gold-accent)]">Uploading proof photo...</p>
+                )}
+                {preDispatchProofUrl && !isUploadingProof && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <img src={preDispatchProofUrl} alt="Pre-dispatch proof" className="h-12 w-12 rounded-lg object-cover border border-[var(--border-subtle)]" />
+                    <span className="text-[10px] text-emerald-500">✓ Proof attached &amp; visible to shopper</span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex items-center gap-3">

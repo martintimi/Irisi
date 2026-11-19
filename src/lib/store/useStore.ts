@@ -781,10 +781,25 @@ export const useStore = create<IrisiState>()(
       toggleFollowVendor: (vendorId) => {
         const lower = (vendorId || '').toLowerCase();
         const current = get().followedVendors || [];
-        if (current.includes(lower)) {
+        const isCurrentlyFollowing = current.includes(lower);
+        const nextAction = isCurrentlyFollowing ? 'unfollow' : 'follow';
+        if (isCurrentlyFollowing) {
           set({ followedVendors: current.filter(id => id !== lower) });
         } else {
           set({ followedVendors: [...current, lower] });
+        }
+        const shopperEmail = (get().userAuth?.email || '').trim().toLowerCase();
+        if (typeof window !== 'undefined' && lower && shopperEmail && shopperEmail.includes('@')) {
+          fetch('/api/vendors/follow', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vendorId: lower,
+              vendorSlug: lower,
+              shopperEmail,
+              action: nextAction,
+            }),
+          }).catch(() => {});
         }
       },
       isFollowingVendor: (vendorId) => {

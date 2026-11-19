@@ -46,7 +46,7 @@ export default function ProblemSolution() {
   const pillars = [
     {
       icon: Flame,
-      title: 'The Complete Nigerian Fit',
+      title: 'The Complete Modern Fit',
       desc: 'Bespoke Senator native suits, royal Agbada cuts, 450gsm heavyweight street hoodies, and relaxed linen sets — crafted with precision cuts and premium finishing.',
       tag: 'Native & Streetwear',
       sub: 'Senator · Agbada · Hoodies',
@@ -55,7 +55,7 @@ export default function ProblemSolution() {
     {
       icon: ShoppingBag,
       title: 'Artisanal Shoes & Leather Bags',
-      desc: 'Handcrafted genuine leather slides, artisanal smart mules, structured crossbodies, and luxury weekend travel totes handmade by Nigeria’s master leather artisans.',
+      desc: 'Handcrafted genuine leather slides, artisanal smart mules, structured crossbodies, and luxury weekend travel totes handmade by master leather artisans.',
       tag: 'Shoes & Leather Bags',
       sub: 'Leather Slides · Totes · Mules',
       num: '02'
@@ -63,7 +63,7 @@ export default function ProblemSolution() {
     {
       icon: Gem,
       title: 'Fine Jewelry & Statement Accents',
-      desc: 'Solid gold cuban chains, statement signet rings, iced pendants, and regal heritage wrist cuffs crafted for modern Nigerian royalty.',
+      desc: 'Solid gold cuban chains, statement signet rings, iced pendants, and regal heritage wrist cuffs crafted for modern luxury.',
       tag: 'Fine Gold & Jewelry',
       sub: 'Chains · Rings · Heritage Cuffs',
       num: '03'
@@ -71,9 +71,9 @@ export default function ProblemSolution() {
     {
       icon: ShieldCheck,
       title: 'Direct Dispatch & Escrow Security',
-      desc: 'Shop clothes, shoes, bags, and jewelry from verified Nigerian brands. Each designer dispatches directly to your doorstep, and funds stay 100% locked in escrow until you receive and inspect your pieces.',
+      desc: 'Shop clothes, shoes, bags, and jewelry from verified independent brands. Each designer dispatches directly to your doorstep, and funds stay 100% locked in escrow until you receive and inspect your pieces.',
       tag: '100% Escrow Protected',
-      sub: 'Zero Risk · All 36 States',
+      sub: 'Zero Risk · Verified Delivery',
       num: '04'
     }
   ];
@@ -111,7 +111,7 @@ export default function ProblemSolution() {
             >
               <Image
                 src={src}
-                alt="Nigerian Menswear Fashion Model"
+                alt="Contemporary Menswear Fashion Model"
                 fill
                 unoptimized
                 priority={idx === 0}
@@ -128,7 +128,7 @@ export default function ProblemSolution() {
 
         {/* Minimalist Vertical Editorial Accent */}
         <div className="absolute bottom-12 left-6 z-10 hidden xl:flex items-center gap-3 rotate-[-90deg] origin-left text-[9px] font-mono-luxury uppercase tracking-[0.3em] text-[var(--text-muted)] opacity-60">
-          <span>NIGERIAN MENSWEAR</span>
+          <span>MENSWEAR COLLECTION</span>
           <span className="h-px w-8 bg-[var(--gold-accent)]" />
           <span>MENS EDITORIAL</span>
         </div>
@@ -162,7 +162,7 @@ export default function ProblemSolution() {
             >
               <Image
                 src={src}
-                alt="Nigerian Womenswear Fashion Model"
+                alt="Contemporary Womenswear Fashion Model"
                 fill
                 unoptimized
                 priority={idx === 0}
@@ -179,7 +179,7 @@ export default function ProblemSolution() {
 
         {/* Minimalist Vertical Editorial Accent */}
         <div className="absolute top-28 right-6 z-10 hidden xl:flex items-center gap-3 rotate-[90deg] origin-right text-[9px] font-mono-luxury uppercase tracking-[0.3em] text-[var(--text-muted)] opacity-60">
-          <span>NIGERIAN WOMENSWEAR</span>
+          <span>WOMENSWEAR COLLECTION</span>
           <span className="h-px w-8 bg-[var(--gold-accent)]" />
           <span>WOMENS EDITORIAL</span>
         </div>
@@ -199,15 +199,15 @@ export default function ProblemSolution() {
         <div className="text-center max-w-3xl mx-auto space-y-3.5 mb-10 sm:mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] text-xs font-mono-luxury uppercase tracking-[0.2em] font-bold shadow-sm backdrop-blur-md">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>HEAD-TO-TOE NIGERIAN LUXURY · CULTURE & DRIP</span>
+            <span>HEAD-TO-TOE LUXURY · CULTURE &amp; STYLE</span>
           </div>
 
-          <h2 className="font-editorial text-3xl sm:text-5xl lg:text-6xl font-normal text-[var(--text-primary)] tracking-tight leading-[1.15]">
-            The Complete Nigerian Drip. <span className="italic font-light text-[var(--gold-accent)]">Escrow Secured.</span>
+          <h2 className="font-editorial text-3xl sm:text-4xl lg:text-[44px] font-normal text-[var(--text-primary)] tracking-tight leading-[1.15]">
+            The Complete Style Edit. <span className="italic font-light text-[var(--gold-accent)]">Escrow Secured.</span>
           </h2>
 
           <p className="text-sm sm:text-base text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl mx-auto">
-            From bespoke Senator cuts and streetwear drops to handcrafted leather shoes, luxury bags, and fine jewelry — assemble your entire fit from Nigeria&apos;s finest independent fashion houses.
+            From bespoke Senator cuts and streetwear drops to handcrafted leather shoes, luxury bags, and fine jewelry — assemble your entire fit from the finest independent fashion houses.
           </p>
         </div>
 
@@ -275,7 +275,7 @@ export default function ProblemSolution() {
         <div className="mt-14 text-center">
           <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-secondary)] shadow-sm">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Escrow Fit Guarantee: Order native wear, shoes, bags & jewelry with 100% money-back security across Nigeria</span>
+            <span>Escrow Fit Guarantee: Order native wear, shoes, bags & jewelry with 100% money-back security</span>
           </div>
         </div>
 

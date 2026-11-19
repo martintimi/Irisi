@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { parseProductMetaFromTags } from '@/lib/utils/productMetadata';
+import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
+import { isVendorPlusActive } from '@/lib/config/platformBilling';
 
 export async function GET(
   request: Request,
@@ -41,9 +44,11 @@ export async function GET(
 
     // Parse bio, location, turnaround, logo and multi-social links
     let bioText = resolvedVendor?.bio || '';
+    let parsedVendorBio: Record<string, any> = {};
     let logoUrl = resolvedVendor?.logo_url || resolvedVendor?.logo || '';
     let city = '';
     let state = '';
+    let country = '';
     let dispatchDays = '1-2 business days';
     let isSuspended = false;
     let socialLinks: any = {
@@ -56,6 +61,7 @@ export async function GET(
     if (bioText.startsWith('{') && bioText.endsWith('}')) {
       try {
         const parsed = JSON.parse(bioText);
+        parsedVendorBio = parsed;
         if (parsed.approvalStatus === 'suspended') {
           isSuspended = true;
         }
@@ -63,6 +69,7 @@ export async function GET(
         logoUrl = parsed.logoUrl || parsed.logo || logoUrl;
         city = parsed.city || '';
         state = parsed.state || '';
+        country = parsed.country || '';
         dispatchDays = parsed.dispatchDays || '1-2 business days';
         if (parsed.socialLinks) {
           socialLinks = { ...socialLinks, ...parsed.socialLinks };
@@ -77,7 +84,7 @@ export async function GET(
     // Return exact bio without mock fallbacks
     bioText = typeof bioText === 'string' ? bioText.trim() : '';
 
-    const locationDisplay = resolvedVendor?.location || (city && state ? `${city}, ${state}` : city || state || 'Nigeria');
+    const locationDisplay = resolvedVendor?.location || ([city, state, country].filter(Boolean).join(', ')) || 'Verified Studio';
 
     // 2. Fetch Products strictly for this Brand from Database
     const { data: dbProducts } = await supabase
@@ -138,6 +145,17 @@ export async function GET(
           ? { '40': { enabled: true, quantity: 10 }, '41': { enabled: true, quantity: 10 }, '42': { enabled: true, quantity: 10 } }
           : { S: { enabled: true, quantity: 10 }, M: { enabled: true, quantity: 25 }, L: { enabled: true, quantity: 30 }, XL: { enabled: true, quantity: 15 }, XXL: { enabled: true, quantity: 5 } });
 
+      const productMeta = parseProductMetaFromTags(Array.isArray(p.tags) ? p.tags : []);
+      const cleanTags = (Array.isArray(p.tags) ? p.tags : []).filter(
+        (t: string) =>
+          typeof t === 'string' &&
+          !t.startsWith('video:') &&
+          !t.startsWith('img:') &&
+          !t.startsWith('color_img:') &&
+          !t.startsWith('ships_from:') &&
+          !t.startsWith('subcat:') &&
+          !t.startsWith('__')
+      );
       return {
         id: p.id,
         vendorId: p.vendor_id,
@@ -148,8 +166,10 @@ export async function GET(
         category: p.category || 'tops',
         genderTarget: p.gender_target || 'unisex',
         garmentOriginType: p.garment_origin_type || 'ready_made_boutique',
+        fulfillmentType: productMeta.fulfillmentType,
+        productionLeadTime: productMeta.productionLeadTime,
         imageUrl: p.image_url || '/images/no-product.svg',
-        tags: Array.isArray(p.tags) ? p.tags : [],
+        tags: cleanTags,
         colors: isAccessory ? [] : normalizedColors,
         sizes: resolvedSizes,
         sizeStock: finalSizeStock,
@@ -160,6 +180,10 @@ export async function GET(
       };
     });
 
+    const billingConfig = await fetchLivePlatformBillingConfig();
+    const isPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
+    const storefrontLocked = !isPlus && billingConfig.requirePlusForStorefront;
+
     const vendorPayload = {
       id: vendorId,
       name: brandName,
@@ -168,6 +192,7 @@ export async function GET(
       origin: locationDisplay,
       city,
       state,
+      country,
       bio: bioText,
       logoUrl,
       socialLinks,
@@ -178,14 +203,24 @@ export async function GET(
       productCount: formattedProducts.length,
       satisfactionRate: null,
       deliveryDays: dispatchDays,
-      isVerified: !!resolvedVendor?.is_verified
+      isVerified: !!resolvedVendor?.is_verified,
+      isPlus,
+      storefrontCleanMode: isPlus,
+      storefrontLocked,
     };
 
     return NextResponse.json({
       success: true,
       vendor: vendorPayload,
-      products: formattedProducts,
-      count: formattedProducts.length
+      products: storefrontLocked ? [] : formattedProducts,
+      count: storefrontLocked ? 0 : formattedProducts.length,
+      plan: {
+        isPlus,
+        freeLaunchMode: billingConfig.freeLaunchMode,
+        storefrontCleanMode: isPlus,
+        storefrontLocked,
+        plusMonthlyPriceNgn: billingConfig.plusMonthlyPriceNgn,
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });

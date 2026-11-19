@@ -77,7 +77,7 @@ export default function BrandWordmark({
       {/* Editorial Typographic Wordmark */}
       <div className={`flex flex-col ${iconPosition === 'top' ? 'items-center text-center' : 'text-left'}`}>
         <span
-          className={`font-editorial font-bold uppercase transition-colors duration-300 leading-tight ${current.text} ${
+          className={`font-editorial font-normal uppercase transition-colors duration-300 leading-tight ${current.text} ${
             themeInvert
               ? 'text-white'
               : 'text-zinc-950 dark:text-white group-hover:text-[var(--gold-accent)]'
@@ -87,12 +87,12 @@ export default function BrandWordmark({
           Ì R Í S Í
         </span>
 
-        {/* Cultural Nigerian Luxury Subtitle */}
+        {/* Cultural African Luxury Subtitle */}
         {withSubtitle && (
           <span
-            className={`font-mono-luxury font-bold uppercase text-[var(--gold-accent)] mt-0.5 ${current.sub}`}
+            className={`font-mono-luxury font-normal uppercase text-[var(--gold-accent)] mt-0.5 ${current.sub}`}
           >
-            Nigeria · Luxury Marketplace
+            Luxury Fashion Marketplace
           </span>
         )}
       </div>

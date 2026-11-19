@@ -15,6 +15,7 @@ export async function POST(request: Request) {
       socialLinks,
       founderPhone,
       founderEmail,
+      country,
       state,
       city,
       lookbookUrl,
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
       (cleanedSocialLinks.find((s) => s.platform === 'instagram')?.handle || '').replace('@', '').trim() ||
       (cleanedSocialLinks[0]?.handle || '').replace('@', '').trim();
 
+    const effectiveCountry = (country || 'Nigeria').trim();
+
     const applicationData = {
       brandName: brandName.trim(),
       specialty: specialty || 'streetwear',
@@ -59,9 +62,10 @@ export async function POST(request: Request) {
       socialLinks: cleanedSocialLinks,
       founderPhone: founderPhone.trim(),
       founderEmail: founderEmail.toLowerCase().trim(),
-      location: [city, state].filter(Boolean).join(', ') || 'Nigeria',
+      country: effectiveCountry,
       state: (state || '').trim(),
       city: (city || '').trim(),
+      location: [city, state, effectiveCountry].filter(Boolean).join(', ') || 'Nigeria',
       lookbookUrl: (lookbookUrl || '').trim(),
       stockModel: stockModel || 'in_stock',
       activePostUrl: (activePostUrl || '').trim(),

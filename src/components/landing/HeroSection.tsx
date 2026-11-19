@@ -269,21 +269,21 @@ export default function HeroSection() {
           <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
 
             {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-xs font-mono-luxury tracking-wider uppercase">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-[11px] font-mono-luxury tracking-wider uppercase">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Doorstep &amp; Hub Delivery · Top Nigerian Designers</span>
+              <span>Doorstep &amp; Hub Delivery · Verified Independent Designers</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="font-editorial text-4xl sm:text-5xl lg:text-6xl font-medium tracking-tight text-[var(--text-primary)] leading-[1.1]">
-              Shop Top Nigerian Brands.<br />
+            <h1 className="font-editorial text-[28px] sm:text-4xl lg:text-[42px] font-normal tracking-tight text-[var(--text-primary)] leading-[1.14]">
+              Shop Top Fashion Brands.<br />
               <span className="italic font-normal shimmer-gold">Curated Luxury Pieces.</span><br />
               100% Escrow Secured.
             </h1>
 
             {/* Subtitle */}
-            <p className="text-sm sm:text-base text-[var(--text-secondary)] max-w-xl mx-auto lg:mx-0 font-light leading-relaxed">
-              Discover Nigeria&apos;s premier multi-brand fashion marketplace. Shop bespoke native wear, streetwear drops, handcrafted footwear, and fine jewelry from verified independent designers. Each brand dispatches directly to your doorstep with 100% escrow payment protection.
+            <p className="text-sm text-[var(--text-secondary)] max-w-lg mx-auto lg:mx-0 font-light leading-relaxed">
+              Discover a premier multi-brand fashion marketplace. Shop bespoke native wear, streetwear drops, handcrafted footwear, and fine jewelry from verified independent designers. Every order dispatches directly to your doorstep with 100% escrow payment protection.
             </p>
 
             {/* Action Buttons */}
@@ -339,7 +339,7 @@ export default function HeroSection() {
                     <Scissors className="h-3.5 w-3.5" />
                   </div>
                   <div>
-                    <span className="text-xs font-mono-luxury font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                    <span className="text-xs font-mono-luxury font-medium uppercase tracking-wider text-[var(--text-primary)]">
                       Explore Categories
                     </span>
                     <div className="text-[10px] text-[var(--text-muted)] font-mono-luxury">
@@ -350,7 +350,7 @@ export default function HeroSection() {
 
                 {/* Gender Tabs & Auto-Play Controls */}
                 <div className="flex items-center gap-1.5">
-                  <div className="flex rounded-full p-0.5 bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold uppercase">
+                  <div className="flex rounded-full p-0.5 bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-medium uppercase">
                     <button
                       onClick={() => handleGenderSwitch('men')}
                       className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${

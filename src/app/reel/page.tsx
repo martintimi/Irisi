@@ -497,7 +497,7 @@ export default function IrisiDanushkMotionReel() {
 
                 <div className="text-left min-w-0">
                   <span className="inline-block px-2 py-0.5 rounded-full bg-amber-50 border border-[#c4972e]/30 text-[8px] sm:text-[9px] font-mono-luxury uppercase tracking-[0.14em] text-[#c4972e] mb-0.5">
-                    Nigeria&apos;s Fashion Marketplace
+                    Curated Fashion Marketplace
                   </span>
                   <div className="flex flex-wrap items-baseline gap-1 sm:gap-2 leading-none">
                     <span className="font-editorial italic text-lg sm:text-2xl text-zinc-600">
@@ -518,7 +518,7 @@ export default function IrisiDanushkMotionReel() {
                 {[
                   '✨ 32+ Fashion Categories',
                   '🔒 100% Escrow Protected',
-                  '🇳🇬 Verified Nigerian Brands',
+                  '✨ Verified Independent Brands',
                 ].map((pill, idx) => (
                   <motion.span
                     key={pill}

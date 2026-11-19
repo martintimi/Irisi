@@ -25,7 +25,7 @@ const OCCASION_EDITS: OccasionEdit[] = [
     categoryTag: 'TRADITIONAL & NATIVE',
     title: 'Weddings & Owambe',
     subtitle: 'Agbada Robes & Senator Kaftans',
-    description: 'Statement 3-piece Agbada robes and tailored Senator sets crafted for Nigerian weddings, galas, and celebrations.',
+    description: 'Statement 3-piece Agbada robes and tailored Senator sets crafted for weddings, galas, and celebrations.',
     pieces: '3-Piece Agbada · Tailored Senators · Aso-Oke Fila',
     image: '/images/editorial/nigerian_male_couture.jpg',
     link: '/category/native',
@@ -83,7 +83,7 @@ export default function CuratedAteliers() {
             </div>
 
             <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl font-normal text-[var(--text-primary)] leading-tight">
-              Dress for Every Nigerian Occasion
+              Dress for Every Occasion
             </h2>
 
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed">

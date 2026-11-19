@@ -54,6 +54,7 @@ export default function BrandStorefrontPage() {
 
   const [vendor, setVendor] = useState<any | null>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [storePlan, setStorePlan] = useState<{ isPlus: boolean; storefrontCleanMode: boolean; storefrontLocked: boolean; freeLaunchMode: boolean } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -80,6 +81,7 @@ export default function BrandStorefrontPage() {
         if (res.ok && data.success && data.vendor) {
           setVendor(data.vendor);
           setProducts(data.products || []);
+          if (data.plan) setStorePlan(data.plan);
 
           try {
             const revRes = await fetch(`/api/reviews?vendorId=${encodeURIComponent(data.vendor.id || '')}`);
@@ -116,6 +118,28 @@ export default function BrandStorefrontPage() {
         label="Ì R Í S Í"
         sublabel="Loading Designer Collection..."
       />
+    );
+  }
+
+  if (vendor && storePlan?.storefrontLocked) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4 animate-fadeIn">
+        <div className="h-16 w-16 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 flex items-center justify-center mx-auto">
+          <Store className="h-8 w-8" />
+        </div>
+        <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--text-primary)]">
+          {vendor.name}&apos;s Dedicated Storefront Is Paused
+        </h2>
+        <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-md mx-auto">
+          Explore thousands of verified pieces and independent fashion houses across the ÌRÍSÍ marketplace.
+        </p>
+        <Link
+          href="/shop"
+          className="px-6 py-3 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider"
+        >
+          Explore ÌRÍSÍ Marketplace
+        </Link>
+      </div>
     );
   }
 
@@ -569,6 +593,26 @@ export default function BrandStorefrontPage() {
           ))}
         </div>
       </div>
+
+      {/* Option B: On Free Tier (outside launch promo), show tasteful marketplace discovery footer; Plus gets clean white-label */}
+      {storePlan && !storePlan.isPlus && !storePlan.freeLaunchMode && (
+        <div className="mt-10 p-6 rounded-3xl surface-card border border-[var(--border-subtle)] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)]">
+              Discover More on ÌRÍSÍ
+            </span>
+            <p className="text-xs text-[var(--text-secondary)] font-light">
+              Explore more curated native wear, streetwear, footwear, bags &amp; fragrances from verified independent brands.
+            </p>
+          </div>
+          <Link
+            href="/shop"
+            className="px-5 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider shrink-0"
+          >
+            Browse Full Marketplace →
+          </Link>
+        </div>
+      )}
 
       {/* Quick Look Modal */}
       {quickLookProduct && (

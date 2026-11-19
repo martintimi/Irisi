@@ -6,7 +6,7 @@ import {
   sendVendorAccountSuspendedNotification,
   sendVendorAccountReinstatedNotification,
 } from '@/lib/services/vendorNotificationService';
-import { invalidateProductsCache } from '@/app/api/products/route';
+import { invalidateProductsCache } from '@/lib/cache/productsCache';
 import { getBaseUrl } from '@/lib/utils/url';
 
 export async function POST(request: Request) {

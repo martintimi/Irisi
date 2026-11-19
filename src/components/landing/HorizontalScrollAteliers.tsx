@@ -8,8 +8,8 @@ import { ArrowRight, MapPin, Sparkles } from 'lucide-react';
 
 const ateliers = [
   {
-    name: 'Sartorial Lagos',
-    location: 'Victoria Island, Lagos',
+    name: 'Sartorial House',
+    location: 'Bespoke Atelier',
     focus: 'Bespoke Senator Suits & Ceremonial Agbada',
     desc: 'Renowned for razor-sharp geometric chest embroidery, structured shoulder lines, and fine Italian merino wool native cuts.',
     image: '/images/products/BlackSenator.jpg',
@@ -18,27 +18,27 @@ const ateliers = [
   },
   {
     name: 'Street Souk Co.',
-    location: 'Lekki Phase 1, Lagos',
+    location: 'Streetwear Studio',
     focus: 'Afro-Streetwear & 450gsm Heavyweight Fleece',
-    desc: 'Lagos youth culture engineered into oversized dropped-shoulder hoodies, boxy graphic tees, and cyber streetwear aesthetics.',
+    desc: 'Modern youth culture engineered into oversized dropped-shoulder hoodies, boxy graphic tees, and cyber streetwear aesthetics.',
     image: '/images/no-product.svg',
     tag: 'Ready-to-Wear Street',
     heroPieces: 'Trapstar Hoodies · Boxy Tees · Aqua Slides'
   },
   {
-    name: 'Yaba Denim Works',
-    location: 'Yaba, Lagos',
+    name: 'Indigo Denim Works',
+    location: 'Denim Workshop',
     focus: 'Raw 14oz Selvedge Denim & Tactical Cargos',
-    desc: 'Durable wide-leg denim, straight-cut vintage jeans, and articulated utility trousers tailored for the Nigerian urban rhythm.',
+    desc: 'Durable wide-leg denim, straight-cut vintage jeans, and articulated utility trousers tailored for the modern urban rhythm.',
     image: '/images/products/BaggyJean.jpg',
     tag: 'Ready-to-Wear Denim',
     heroPieces: 'Wide-Leg Baggy Denim · Multi-Pocket Cargos'
   },
   {
-    name: 'Kano Artisan Footwear',
-    location: 'Kano & Lagos',
+    name: 'Savanna Artisan Footwear',
+    location: 'Master Shoemakers',
     focus: 'Handcrafted Full-Grain Calf Leather Slides & Shoes',
-    desc: 'Century-old Northern tannery heritage crafting anatomical leather slides, horsebit mules, and Goodyear welted Oxfords.',
+    desc: 'Heritage full-grain tannery craftsmanship crafting anatomical leather slides, horsebit mules, and Goodyear welted Oxfords.',
     image: '/images/products/UnisexSlides.jpg',
     tag: 'Handmade Leathercraft',
     heroPieces: 'Calf Leather Slides · Suede Mules · Oxfords'
@@ -69,7 +69,7 @@ export default function HorizontalScrollAteliers() {
               <span>FEATURED DESIGNERS & BRANDS</span>
             </div>
             <h2 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
-              Top Nigerian Designers & Brands
+              Top Independent Designers & Brands
             </h2>
           </div>
 

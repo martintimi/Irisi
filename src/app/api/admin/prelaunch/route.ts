@@ -126,6 +126,7 @@ export async function POST(request: Request) {
 
       const normalizedEmail = email.toLowerCase().trim();
       const phone = (body.phone || body.founderPhone || '').trim();
+      const country = (body.country || 'Nigeria').trim();
       const state = (body.state || 'Lagos').trim();
       const city = (body.city || '').trim();
       const effectiveSpecialty = specialty || body.specialty || 'streetwear';
@@ -248,6 +249,7 @@ export async function POST(request: Request) {
         }
       }
 
+      const effectiveCountry = country || (currentNotifMsg.country || existingBio.country || 'Nigeria').trim();
       const effectiveCity = city || (currentNotifMsg.city || existingBio.city || '').trim();
       const effectiveState = state || (currentNotifMsg.state || existingBio.state || 'Lagos').trim();
 
@@ -256,6 +258,7 @@ export async function POST(request: Request) {
         bio: existingBio.bio || '',
         specialty: effectiveSpecialty,
         vendorSpecialty: effectiveSpecialty,
+        country: effectiveCountry,
         city: effectiveCity,
         state: effectiveState,
         socialLinks: normalizedSocialLinks,
@@ -278,7 +281,7 @@ export async function POST(request: Request) {
         contact_person: cleanBrand,
         email: normalizedEmail,
         phone,
-        location: [city, state].filter(Boolean).join(', ') || 'Lagos, Nigeria',
+        location: [effectiveCity, effectiveState, effectiveCountry].filter(Boolean).join(', ') || 'Verified Studio',
         vendor_type: effectiveSpecialty === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller',
         is_verified: true,
         bio: JSON.stringify(bioObj),

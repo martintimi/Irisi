@@ -1,9 +1,13 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
-import { Sparkles, UploadCloud, CheckCircle2, ShoppingBag, ExternalLink, ArrowRight, Tag, Loader2 } from 'lucide-react';
+import { VendorStory } from '@/types';
+import {
+  Sparkles, UploadCloud, CheckCircle2, ShoppingBag, ExternalLink,
+  Tag, Loader2, Trash2, Users, Clock, Crown
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { compressImageToFile } from '@/lib/utils/imageUtils';
@@ -12,144 +16,219 @@ export default function VendorStoriesPage() {
   const { vendorProfile, allProducts, addVendorStory } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [isUploading, setIsUploading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [caption, setCaption] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [followersNotified, setFollowersNotified] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [requiresPlus, setRequiresPlus] = useState(false);
+  const [activeStories, setActiveStories] = useState<VendorStory[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Vendor's own products to tag
   const vendorProducts = allProducts.filter(
-    (p) => (p.vendorId || '').toLowerCase() === (vendorProfile.email || '').toLowerCase() || p.vendorName === vendorProfile.brandName
+    (p) =>
+      (p.vendorId || '').toLowerCase() === (vendorProfile.email || '').toLowerCase() ||
+      (p.vendorId || '').toLowerCase() === (vendorProfile.id || '').toLowerCase() ||
+      p.vendorName === vendorProfile.brandName
   );
+
+  const vendorLookupKey = vendorProfile.id || vendorProfile.brandName?.toLowerCase().replace(/\s+/g, '-') || vendorProfile.email || '';
+
+  const loadMyStories = useCallback(async () => {
+    if (!vendorLookupKey) return;
+    try {
+      const res = await fetch(`/api/stories?vendorId=${encodeURIComponent(vendorLookupKey)}`);
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.stories)) {
+        setActiveStories(data.stories);
+      }
+    } catch {}
+  }, [vendorLookupKey]);
+
+  useEffect(() => {
+    loadMyStories();
+  }, [loadMyStories]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
+      const isVideo = file.type.startsWith('video/');
+      setErrorMsg('');
       setIsUploading(true);
       try {
-        const compressed = await compressImageToFile(file, 1400, 0.85);
+        const uploadFile = isVideo ? file : await compressImageToFile(file, 1400, 0.85);
         const formData = new FormData();
-        formData.append('file', compressed);
+        formData.append('file', uploadFile);
         const res = await fetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok && data.url) {
-          setImagePreview(data.url);
+          setMediaPreview(data.url);
+          setMediaType(isVideo ? 'video' : 'image');
+        } else {
+          setErrorMsg(data.error || 'Could not upload story media.');
         }
       } catch (err) {
-        console.error('Story image upload to Cloudinary failed:', err);
+        console.error('Story media upload failed:', err);
+        setErrorMsg('Upload failed. Please try a smaller photo or short clip.');
       } finally {
         setIsUploading(false);
       }
     }
   };
 
-  const handlePublishStory = (e: React.FormEvent) => {
+  const handlePublishStory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!imagePreview) return;
+    if (!mediaPreview) return;
+    setErrorMsg('');
+    setRequiresPlus(false);
+    setIsPublishing(true);
 
     const taggedProd = allProducts.find((p) => p.id === selectedProductId);
 
-    const newStory = {
-      id: `story-${Date.now()}`,
-      vendorId: vendorProfile.email || 'moji-wears',
-      vendorName: vendorProfile.brandName || 'Boutique Merchant',
-      vendorAvatar: imagePreview,
-      mediaUrl: imagePreview,
-      caption: caption.trim() || `New drop from ${vendorProfile.brandName}`,
-      taggedProductId: taggedProd?.id,
-      taggedProductName: taggedProd?.name,
-      taggedProductPrice: taggedProd?.price,
-      taggedProductImage: taggedProd?.imageUrl,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const res = await fetch('/api/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: vendorProfile.id || vendorLookupKey,
+          vendorEmail: vendorProfile.email,
+          vendorName: vendorProfile.brandName || 'Verified Brand',
+          vendorAvatar: vendorProfile.logoUrl || mediaPreview,
+          mediaUrl: mediaPreview,
+          mediaType,
+          caption: caption.trim() || `New drop from ${vendorProfile.brandName}`,
+          taggedProductId: taggedProd?.id,
+          taggedProductName: taggedProd?.name,
+          taggedProductPrice: taggedProd?.price,
+          taggedProductImage: taggedProd?.imageUrl,
+          notifyFollowers,
+        }),
+      });
 
-    addVendorStory(newStory);
-    setIsSuccess(true);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (data.requiresPlus) setRequiresPlus(true);
+        setErrorMsg(data.error || 'Could not publish story.');
+        return;
+      }
 
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#e6c367', '#ffffff', '#10b981']
-    });
+      if (data.story) {
+        addVendorStory(data.story);
+        setActiveStories((prev) => [data.story, ...prev]);
+      }
+      setFollowersNotified(Number(data.followersNotified || 0));
+      setIsSuccess(true);
+
+      confetti({
+        particleCount: 70,
+        spread: 65,
+        origin: { y: 0.6 },
+        colors: ['#e6c367', '#ffffff', '#10b981'],
+      });
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Network error while publishing story.');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleDeleteStory = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/stories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (res.ok) {
+        setActiveStories((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch {} finally {
+      setDeletingId(null);
+    }
   };
 
   const resetForm = () => {
-    setImageFile(null);
-    setImagePreview(null);
+    setMediaPreview(null);
+    setMediaType('image');
     setCaption('');
     setSelectedProductId('');
     setIsSuccess(false);
+    setErrorMsg('');
   };
 
   return (
     <div className="p-6 sm:p-10 max-w-4xl mx-auto space-y-8 animate-fadeIn pb-24">
-      
-      {/* Top Header */}
       <div className="border-b border-[var(--border-subtle)] pb-6">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-[var(--gold-accent)] animate-ping" />
-          <span className="text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold">
-            Mobile Discovery Engine
+          <span className="text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)]">
+            Live Brand Stories · 48h Feed
           </span>
         </div>
-        <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mt-1">
+        <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)] mt-1">
           Post Lookbook Drop Story
         </h1>
-        <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-1">
-          Publish vertical stories that appear directly on customer smartphone feeds. Tag garments for 1-tap shopping.
+        <p className="text-xs text-[var(--text-secondary)] font-light mt-1">
+          Share new arrivals, behind-the-scenes workshop clips, or restock teasers directly to shoppers and your followers.
         </p>
       </div>
 
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-500 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <span>{errorMsg}</span>
+          {requiresPlus && (
+            <Link
+              href="/vendor-portal/plus"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-[11px] shrink-0"
+            >
+              <Crown className="h-3.5 w-3.5" />
+              <span>Upgrade to ÌRÍSÍ Plus</span>
+            </Link>
+          )}
+        </div>
+      )}
+
       {isSuccess ? (
-        <div className="p-8 sm:p-12 rounded-3xl surface-card border border-emerald-500/40 text-center space-y-6 animate-fadeIn shadow-2xl">
-          <div className="h-16 w-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="h-8 w-8" />
+        <div className="p-8 rounded-3xl surface-card border border-emerald-500/30 text-center space-y-5">
+          <div className="h-14 w-14 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-7 w-7" />
           </div>
-          <div>
-            <span className="text-xs font-mono-luxury text-emerald-400 uppercase font-bold tracking-widest">
-              Live in Mobile Stories Bar
-            </span>
-            <h2 className="font-editorial text-3xl font-bold text-[var(--text-primary)] mt-1">
-              Story Published!
+          <div className="space-y-1">
+            <h2 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+              Story Published Live
             </h2>
-            <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-2 max-w-md mx-auto">
-              Your lookbook story is now featured in the glowing mobile discovery bar. Followers will see it first.
+            <p className="text-xs text-[var(--text-secondary)] font-light">
+              Your story is now live on the discovery feed and your brand storefront for 48 hours
+              {followersNotified > 0 ? ` — ${followersNotified} follower${followersNotified > 1 ? 's' : ''} alerted.` : '.'}
             </p>
           </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <Link
-              href="/shop"
-              target="_blank"
-              className="px-6 py-3 rounded-full bg-[var(--gold-accent)] text-black text-xs font-mono-luxury uppercase font-bold hover:bg-[#d8b357] transition-all shadow-md flex items-center gap-2"
-            >
-              <span>View Mobile Stories</span>
-              <ExternalLink className="h-4 w-4 text-black" />
-            </Link>
-
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               type="button"
               onClick={resetForm}
-              className="px-6 py-3 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury uppercase font-bold hover:border-[var(--gold-accent)] transition-all cursor-pointer"
+              className="px-6 py-3 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider cursor-pointer"
             >
-              + Post Another Story
+              Post Another Story
             </button>
+            <Link
+              href="/"
+              className="px-6 py-3 rounded-full border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] inline-flex items-center gap-1.5"
+            >
+              <span>View Feed</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       ) : (
         <form onSubmit={handlePublishStory} className="space-y-6">
-          
-          {/* 1. Media Upload */}
           <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
-                1. Lookbook Story Photo <span className="text-rose-500">*</span>
+              <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                1. Story Photo or Short Clip <span className="text-rose-500">*</span>
               </h3>
-              <span className="text-[11px] font-mono-luxury text-[var(--text-muted)]">Vertical 9:16 or Portrait</span>
+              <span className="text-[11px] font-mono-luxury text-[var(--text-muted)]">Portrait Photo or ≤15s Video</span>
             </div>
 
             <div
@@ -160,17 +239,26 @@ export default function VendorStoriesPage() {
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/*"
+                accept="image/*,video/mp4,video/quicktime,video/webm"
                 className="hidden"
               />
 
-              {imagePreview ? (
+              {isUploading ? (
+                <div className="py-10 flex flex-col items-center gap-3">
+                  <Loader2 className="h-7 w-7 animate-spin text-[var(--gold-accent)]" />
+                  <span className="text-xs font-mono-luxury text-[var(--text-secondary)]">Uploading story media...</span>
+                </div>
+              ) : mediaPreview ? (
                 <div className="space-y-4">
-                  <div className="relative h-72 max-w-xs mx-auto rounded-2xl overflow-hidden shadow-2xl border border-[var(--border-subtle)]">
-                    <Image src={imagePreview} alt="Preview" fill unoptimized className="object-cover" />
+                  <div className="relative h-72 max-w-xs mx-auto rounded-2xl overflow-hidden shadow-xl border border-[var(--border-subtle)] bg-black">
+                    {mediaType === 'video' ? (
+                      <video src={mediaPreview} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                    ) : (
+                      <Image src={mediaPreview} alt="Story preview" fill unoptimized className="object-cover" />
+                    )}
                   </div>
-                  <p className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold">
-                    Click to replace photo
+                  <p className="text-xs font-mono-luxury text-[var(--gold-accent)]">
+                    Click to replace media
                   </p>
                 </div>
               ) : (
@@ -179,11 +267,11 @@ export default function VendorStoriesPage() {
                     <UploadCloud className="h-7 w-7" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
-                      Upload Lookbook Photo
+                    <p className="text-xs font-mono-luxury text-[var(--text-primary)]">
+                      Upload Lookbook Photo or Video
                     </p>
-                    <p className="text-[11px] text-[var(--text-secondary)] font-mono-luxury">
-                      Behind-the-scenes, fitting showcase, or drop teaser
+                    <p className="text-[11px] text-[var(--text-secondary)] font-light">
+                      New drop preview, studio fitting, or fresh stock update
                     </p>
                   </div>
                 </div>
@@ -191,15 +279,14 @@ export default function VendorStoriesPage() {
             </div>
           </div>
 
-          {/* 2. Tagged Garment & Caption */}
           <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-5">
-            <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
-              2. Story Caption & Tagged Piece
+            <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+              2. Caption, Product Tag &amp; Follower Alert
             </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1.5 font-bold">
+                <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1.5">
                   Story Caption / Drop Teaser
                 </label>
                 <input
@@ -207,22 +294,22 @@ export default function VendorStoriesPage() {
                   required
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  placeholder="e.g. Midnight TrapStar Drop ⚡ Limited pieces available in Lagos now."
+                  placeholder="e.g. Fresh studio drop just went live — limited pieces available."
                   className="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1.5 font-bold flex items-center gap-1.5">
+                <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1.5 flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
                   <span>Tag a Published Piece for 1-Tap Quick Buy</span>
                 </label>
                 <select
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                  className="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
                 >
-                  <option value="">-- Select a garment to tag (Optional) --</option>
+                  <option value="">-- Select a piece to tag (Optional) --</option>
                   {(vendorProducts.length > 0 ? vendorProducts : allProducts).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name} (₦{Number(p.price || 0).toLocaleString()})
@@ -230,22 +317,77 @@ export default function VendorStoriesPage() {
                   ))}
                 </select>
               </div>
+
+              <label className="flex items-center gap-2.5 text-xs text-[var(--text-secondary)] cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={notifyFollowers}
+                  onChange={(e) => setNotifyFollowers(e.target.checked)}
+                  className="rounded border-[var(--border-subtle)] accent-[var(--gold-accent)]"
+                />
+                <Users className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                <span>Notify shoppers following my brand about this new drop</span>
+              </label>
             </div>
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
-            disabled={!imagePreview}
-            className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            disabled={!mediaPreview || isPublishing || isUploading}
+            className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            <Sparkles className="h-4 w-4" />
-            <span>Publish Lookbook Story to Mobile Feed</span>
+            {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            <span>{isPublishing ? 'Publishing Story...' : 'Publish Live Story (48h)'}</span>
           </button>
-
         </form>
       )}
 
+      {/* Active Stories Manager */}
+      {activeStories.length > 0 && (
+        <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
+          <div className="flex items-center justify-between">
+            <h2 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+              Your Active Stories ({activeStories.length})
+            </h2>
+            <span className="text-[11px] font-mono-luxury text-[var(--text-muted)] flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              <span>Auto-expires after 48h</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {activeStories.map((story) => (
+              <div key={story.id} className="rounded-2xl overflow-hidden surface-card border border-[var(--border-subtle)] flex flex-col">
+                <div className="relative aspect-[3/4] bg-black">
+                  {story.mediaType === 'video' ? (
+                    <video src={story.mediaUrl} muted playsInline className="w-full h-full object-cover" />
+                  ) : (
+                    <Image src={story.mediaUrl} alt={story.caption} fill unoptimized className="object-cover" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteStory(story.id)}
+                    disabled={deletingId === story.id}
+                    className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-rose-600 transition-colors cursor-pointer"
+                    aria-label="Delete story"
+                  >
+                    {deletingId === story.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                <div className="p-3 space-y-1">
+                  <p className="text-xs text-[var(--text-primary)] line-clamp-2 font-light">{story.caption}</p>
+                  {story.taggedProductName && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono-luxury text-[var(--gold-accent)] truncate max-w-full">
+                      <ShoppingBag className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{story.taggedProductName}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

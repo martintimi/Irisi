@@ -4,6 +4,15 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { computeVendorPackageMetrics, checkLocationServiceability, createShipbubbleShipment } from '@/lib/services/logistics';
+import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
+import { getEffectiveCommissionPercent } from '@/lib/config/platformBilling';
+import {
+  sendVendorNewOrderSms,
+  sendBuyerOrderConfirmedSms,
+  sendBuyerOrderDispatchedSms,
+  sendBuyerOrderDeliveredSms,
+  sendVendorPayoutReleasedSms,
+} from '@/lib/services/smsService';
 
 export async function GET(request: Request) {
   try {
@@ -339,21 +348,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: orderError.message }, { status: 400 });
     }
 
-    // 2. Fetch configured platform commission rate (defaults to 0%)
-    let commissionPercent = 0;
-    try {
-      const { data: commData } = await supabase
-        .from('vendors')
-        .select('bio')
-        .eq('id', 'admin-platform-commission')
-        .single();
-      if (commData?.bio) {
-        const parsed = JSON.parse(commData.bio);
-        if (parsed.isEnabled && Number(parsed.commissionPercent) > 0) {
-          commissionPercent = Number(parsed.commissionPercent);
+    // 2. Fetch live platform billing config (Free Launch Kill-Switch + per-tier Free vs Plus commission)
+    const billingConfig = await fetchLivePlatformBillingConfig();
+    const vendorBioCache = new Map<string, any>();
+
+    if (!billingConfig.freeLaunchMode && Array.isArray(body.items) && body.items.length > 0) {
+      try {
+        const uniqueVendorIds = Array.from(
+          new Set(body.items.map((it: any) => String(it.vendorId || it.vendor_id || '').toLowerCase().trim()).filter(Boolean))
+        );
+        if (uniqueVendorIds.length > 0) {
+          const adminClientForComm = createAdminClient();
+          const { data: vRows } = await adminClientForComm
+            .from('vendors')
+            .select('id, bio')
+            .in('id', uniqueVendorIds);
+          for (const vr of vRows || []) {
+            let parsedBio: any = {};
+            if (vr.bio && String(vr.bio).trim().startsWith('{')) {
+              try { parsedBio = JSON.parse(vr.bio); } catch {}
+            }
+            vendorBioCache.set(String(vr.id).toLowerCase(), parsedBio);
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     // Insert order items into order_items table without invalid image_url column
     if (body.items && Array.isArray(body.items) && body.items.length > 0) {
@@ -361,7 +380,9 @@ export async function POST(request: Request) {
         const qty = Number(item.quantity || 1);
         const itemPrice = Number(item.price || 0);
         const itemTotal = itemPrice * qty;
-        const platformComm = commissionPercent > 0 ? Math.round(itemTotal * (commissionPercent / 100)) : 0;
+        const itemVId = String(item.vendorId || item.vendor_id || 'vendor').toLowerCase().trim();
+        const effectiveCommPercent = getEffectiveCommissionPercent(vendorBioCache.get(itemVId), billingConfig);
+        const platformComm = effectiveCommPercent > 0 ? Math.round(itemTotal * (effectiveCommPercent / 100)) : 0;
         const vendorPayout = itemTotal - platformComm;
 
         return {
@@ -613,6 +634,26 @@ export async function POST(request: Request) {
           } catch (_) {}
         }
 
+        if (group.vendor.phone) {
+          const vItemsForSms = group.items;
+          const vSubForSms = vItemsForSms.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0);
+          const hasMto = vItemsForSms.some((it: any) => it.fulfillmentType === 'made_to_order');
+          emailTasks.push(async () => {
+            try {
+              return await sendVendorNewOrderSms({
+                phone: group.vendor.phone,
+                brandName: group.vendor.brandName,
+                orderNumber,
+                amountNgn: vSubForSms,
+                itemCount: vItemsForSms.reduce((s: number, it: any) => s + Number(it.quantity || 1), 0),
+                dispatchNote: hasMto ? 'Made-to-Order item — upload finished proof before dispatch' : undefined,
+              });
+            } catch (smsErr: any) {
+              return { success: false, error: smsErr?.message };
+            }
+          });
+        }
+
         if (!vEmail || !vEmail.includes('@')) {
           console.warn(`[Orders POST] ⚠️ Vendor "${group.vendor.brandName}" (${vKey}) does not have a registered email address. Skipping email.`);
           continue;
@@ -657,6 +698,22 @@ export async function POST(request: Request) {
         });
       }
 
+      // Queue instant transactional SMS to buyer so serverless runtime awaits completion
+      if (body.customerPhone || body.phone) {
+        emailTasks.push(async () => {
+          try {
+            return await sendBuyerOrderConfirmedSms({
+              phone: body.customerPhone || body.phone,
+              customerName: body.customerName || body.name || 'Shopper',
+              orderNumber,
+              amountNgn: Number(body.totalAmount || 0),
+            });
+          } catch (smsErr: any) {
+            return { success: false, error: smsErr?.message };
+          }
+        });
+      }
+
       // Execute all emails sequentially to ensure 100% reliable single-socket delivery
       if (emailTasks.length > 0) {
         console.log(`[Orders POST] ⏳ Dispatching ${emailTasks.length} outgoing emails sequentially...`);
@@ -690,7 +747,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { orderNumber, orderId, status, trackingStage, waybillNumber, driverPhone, driverName, vendorId } = body;
+    const { orderNumber, orderId, status, trackingStage, waybillNumber, driverPhone, driverName, vendorId, action, preDispatchProofUrl, disputeReason, disputeDetails, disputeProofUrls } = body;
 
     if (!orderNumber && !orderId) {
       return NextResponse.json({ error: 'Missing orderNumber or orderId' }, { status: 400 });
@@ -720,6 +777,90 @@ export async function PATCH(request: Request) {
 
     const existingMeasurements = existingOrder.customer_measurements || {};
     const existingVendorPackages = { ...(existingMeasurements.vendorPackages || {}) };
+
+    // Handle Buyer 48-Hour Dispute / Issue Report (Freezes Escrow Immediately)
+    if (action === 'open_dispute') {
+      const disputePayload = {
+        status: 'open',
+        reason: String(disputeReason || 'Item issue reported').trim(),
+        details: String(disputeDetails || '').trim(),
+        proofUrls: Array.isArray(disputeProofUrls) ? disputeProofUrls.filter((u: any) => typeof u === 'string' && u.startsWith('http')) : [],
+        openedAt: new Date().toISOString(),
+        openedBy: existingOrder.customer_email || 'buyer',
+      };
+
+      const disputedMeasurements = {
+        ...existingMeasurements,
+        escrowStatus: 'disputed',
+        dispute: disputePayload,
+      };
+
+      const { data: disputedOrder, error: dispErr } = await adminClient
+        .from('orders')
+        .update({
+          status: 'disputed',
+          customer_measurements: disputedMeasurements,
+        })
+        .eq('id', existingOrder.id)
+        .select()
+        .single();
+
+      if (dispErr) {
+        return NextResponse.json({ error: dispErr.message }, { status: 500 });
+      }
+
+      try {
+        await adminClient.from('notifications').insert({
+          title: `ORDER_DISPUTE:${existingOrder.order_number}`,
+          message: JSON.stringify({
+            orderId: existingOrder.id,
+            orderNumber: existingOrder.order_number,
+            customerName: existingOrder.customer_name,
+            customerEmail: existingOrder.customer_email,
+            customerPhone: existingOrder.customer_phone,
+            totalAmount: existingOrder.total_amount,
+            ...disputePayload,
+          }),
+          type: 'order_dispute',
+          read: false,
+        });
+      } catch {}
+
+      return NextResponse.json({
+        success: true,
+        message: 'Dispute opened. Escrow funds are frozen while our team reviews your evidence within 24-48 hours.',
+        order: disputedOrder,
+      });
+    }
+
+    // Handle Explicit Buyer Approval (Releases Escrow Immediately)
+    if (action === 'buyer_approve_escrow') {
+      const approvedMeasurements = {
+        ...existingMeasurements,
+        escrowStatus: 'released',
+        buyerApprovedAt: new Date().toISOString(),
+      };
+      const { data: approvedOrder, error: appErr } = await adminClient
+        .from('orders')
+        .update({
+          status: 'delivered',
+          customer_measurements: approvedMeasurements,
+        })
+        .eq('id', existingOrder.id)
+        .select()
+        .single();
+
+      if (appErr) {
+        return NextResponse.json({ error: appErr.message }, { status: 500 });
+      }
+      await adminClient.from('order_items').update({ status: 'delivered' }).eq('order_id', existingOrder.id);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Delivery confirmed! Escrow funds have been approved for vendor settlement.',
+        order: approvedOrder,
+      });
+    }
 
     // Fetch order items to discover all vendor IDs in this order
     const sourceItems = (existingMeasurements.items && Array.isArray(existingMeasurements.items))
@@ -777,6 +918,8 @@ export async function PATCH(request: Request) {
         driverName: driverName !== undefined ? driverName : (existingVendorPackages[matchedVendorKey]?.driverName || ''),
         pickupStatus: body.pickupStatus !== undefined ? body.pickupStatus : (existingVendorPackages[matchedVendorKey]?.pickupStatus || (Number(trackingStage) === 2 ? 'ready_for_pickup' : Number(trackingStage) === 3 ? 'in_transit' : Number(trackingStage) === 4 ? 'delivered' : 'pending_packaging')),
         deliveryIssue: body.deliveryIssue !== undefined ? body.deliveryIssue : (existingVendorPackages[matchedVendorKey]?.deliveryIssue || null),
+        preDispatchProofUrl: preDispatchProofUrl !== undefined ? preDispatchProofUrl : (existingVendorPackages[matchedVendorKey]?.preDispatchProofUrl || null),
+        deliveredAt: Number(trackingStage) === 4 ? (existingVendorPackages[matchedVendorKey]?.deliveredAt || new Date().toISOString()) : existingVendorPackages[matchedVendorKey]?.deliveredAt,
         lastUpdated: new Date().toISOString()
       };
 
@@ -868,6 +1011,19 @@ export async function PATCH(request: Request) {
         Object.values(existingVendorPackages)[0] || {};
 
       // Stage 3: Dispatched with waybill & rider details
+      if (status === 'dispatched' || stageNum === 3) {
+        if (existingOrder.customer_phone) {
+          const waybillTxt = waybillNumber || (pkgForVendor as any).waybillNumber || '';
+          patchEmailPromises.push(
+            sendBuyerOrderDispatchedSms({
+              phone: existingOrder.customer_phone,
+              customerName: existingOrder.customer_name || 'Shopper',
+              orderNumber: existingOrder.order_number,
+              waybillInfo: waybillTxt ? `Waybill ${waybillTxt}` : undefined,
+            }).catch((e) => ({ success: false, error: e?.message }))
+          );
+        }
+      }
       if ((status === 'dispatched' || stageNum === 3) && existingOrder.customer_email) {
         console.log(`[Orders PATCH] 🚚 Queuing dispatch notification email to customer ${existingOrder.customer_email}`);
         patchEmailPromises.push(
@@ -915,6 +1071,15 @@ export async function PATCH(request: Request) {
       }
       // Stage 4: Delivered & escrow settlement released
       else if (status === 'delivered' || stageNum === 4) {
+        if (existingOrder.customer_phone) {
+          patchEmailPromises.push(
+            sendBuyerOrderDeliveredSms({
+              phone: existingOrder.customer_phone,
+              customerName: existingOrder.customer_name || 'Shopper',
+              orderNumber: existingOrder.order_number,
+            }).catch((e) => ({ success: false, error: e?.message }))
+          );
+        }
         // Customer email: order delivered confirmation
         if (existingOrder.customer_email) {
           console.log(`[Orders PATCH] ✅ Queuing order delivered email to customer ${existingOrder.customer_email}`);
@@ -969,8 +1134,16 @@ export async function PATCH(request: Request) {
                 bankName: vRecord.bank_name,
                 accountNumber: vRecord.account_number,
                 customerName: existingOrder.customer_name,
-              }).then(res => {
+              }).then(async (res) => {
                 console.log(`[Settlement Email] ✅ Sent to vendor ${vRecord.email}:`, res);
+                if (vRecord.phone) {
+                  await sendVendorPayoutReleasedSms({
+                    phone: vRecord.phone,
+                    brandName: vRecord.brand_name || vIdToNotify,
+                    orderNumber: existingOrder.order_number,
+                    payoutAmountNgn: vPayout || Number(existingOrder.total_amount || 0),
+                  }).catch(() => {});
+                }
                 return res;
               }).catch(e => {
                 console.error('[Settlement Email] ❌ Failed:', e);

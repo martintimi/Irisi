@@ -132,6 +132,7 @@ export default function AdminPrelaunchManager() {
           brandName: vendor.brandName,
           specialty: vendor.specialty,
           phone: vendor.founderPhone,
+          country: (vendor as any).country || 'Nigeria',
           state: vendor.state || (vendor.location && vendor.location.includes(',') ? vendor.location.split(',')[1]?.trim() : 'Lagos'),
           city: vendor.city || (vendor.location ? vendor.location.split(',')[0]?.trim() : ''),
           socialLinks: vendor.socialLinks || [],

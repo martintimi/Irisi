@@ -62,7 +62,7 @@ export default function ScrollDressStory() {
           </div>
 
           <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--text-primary)]">
-            Layer Nigerian Designers in Real-Time
+            Layer Independent Designers in Real-Time
           </h2>
 
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed">
