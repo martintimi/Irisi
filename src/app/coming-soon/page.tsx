@@ -1778,7 +1778,7 @@ export default function ComingSoonPage() {
                               onClick={() => setVendorForm({ ...vendorForm, stockModel: opt.id })}
                               className={`relative p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
                                 selected
-                                  ? 'bg-[#E6C367]/12 border-[#E6C367]/70 text-white shadow-[0_0_24px_rgba(230,195,103,0.12)]'
+                                  ? 'bg-[#E6C367]/[0.12] border-[#E6C367]/70 text-white shadow-[0_0_24px_rgba(230,195,103,0.12)]'
                                   : 'bg-white/[0.02] border-white/[0.09] text-zinc-300 hover:border-white/25 hover:bg-white/[0.04]'
                               }`}
                             >

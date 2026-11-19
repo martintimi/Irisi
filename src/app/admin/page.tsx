@@ -31,7 +31,7 @@ const adminEditorialSlides = [
   {
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1600&auto=format&fit=crop',
     title: 'Executive Platform Governance',
-    subtitle: 'Master control for Nigerian brand verifications, catalog curation, and marketplace operations.',
+    subtitle: 'Master control for verified brand approvals, catalog curation, and marketplace operations.',
     tag: 'Platform Control'
   },
   {
@@ -626,6 +626,81 @@ export default function SuperAdminPage() {
       setActionLoadingId(null);
     }
   };
+
+  // Helper: Resolve all vendors involved in an order with live contact info (WhatsApp & Email)
+  const getOrderVendors = useCallback((ord: any) => {
+    const vendorMap = new Map<string, {
+      vendorId: string;
+      brandName: string;
+      email: string;
+      phone: string;
+      whatsapp: string;
+      itemCount: number;
+      subtotal: number;
+      items: string[];
+    }>();
+
+    const items = Array.isArray(ord?.items) ? ord.items : [];
+    const pkgs = ord?.vendorPackages || ord?.customer_measurements?.vendorPackages || {};
+
+    const matchDbVendor = (rawId: string, rawName: string) => {
+      const cleanId = (rawId || '').toLowerCase().trim();
+      const slugId = cleanId.replace(/[^a-z0-9]/g, '');
+      const cleanName = (rawName || '').toLowerCase().trim();
+      const slugName = cleanName.replace(/[^a-z0-9]/g, '');
+
+      return vendors.find((v: any) => {
+        const vId = String(v.id || '').toLowerCase().trim();
+        const vName = String(v.name || '').toLowerCase().trim();
+        return (
+          (cleanId && vId === cleanId) ||
+          (slugId && vId.replace(/[^a-z0-9]/g, '') === slugId) ||
+          (cleanName && vName === cleanName) ||
+          (slugName && vName.replace(/[^a-z0-9]/g, '') === slugName)
+        );
+      });
+    };
+
+    for (const item of items) {
+      const rawId = String(item.vendorId || item.vendor_id || '').trim();
+      const rawName = String(item.vendorName || item.vendor_name || '').trim();
+      const matched = matchDbVendor(rawId, rawName);
+      const key = (matched?.id || rawId || rawName || 'unknown-vendor').toLowerCase();
+
+      const existing = vendorMap.get(key);
+      const qty = Number(item.quantity || 1);
+      const lineTotal = Number(item.price || 0) * qty;
+      const itemLabel = item.productName || item.name || 'Item';
+
+      if (existing) {
+        existing.itemCount += qty;
+        existing.subtotal += lineTotal;
+        if (!existing.items.includes(itemLabel)) existing.items.push(itemLabel);
+      } else {
+        const pkgInfo = pkgs[rawId] || pkgs[matched?.id || ''] || Object.values(pkgs).find((p: any) =>
+          String(p?.vendorId || '').toLowerCase() === key
+        );
+        const rawEmail = matched?.email && matched.email !== 'N/A' ? matched.email : '';
+        const rawPhone = matched?.phone && matched.phone !== 'N/A' ? matched.phone : '';
+        const rawWa = matched?.socialLinks?.whatsapp && matched.socialLinks.whatsapp !== 'N/A'
+          ? matched.socialLinks.whatsapp
+          : rawPhone;
+
+        vendorMap.set(key, {
+          vendorId: matched?.id || rawId || key,
+          brandName: matched?.name || rawName || pkgInfo?.vendorName || (rawId ? rawId.replace(/-/g, ' ') : 'Unassigned Vendor'),
+          email: rawEmail,
+          phone: rawPhone,
+          whatsapp: rawWa,
+          itemCount: qty,
+          subtotal: lineTotal,
+          items: [itemLabel],
+        });
+      }
+    }
+
+    return Array.from(vendorMap.values());
+  }, [vendors]);
 
   // Derived Financial Calculations directly from real database orders with isolated vendor settlement
   const financialStats = useMemo(() => {
@@ -1986,27 +2061,118 @@ export default function SuperAdminPage() {
 
                         {/* Customer & Delivery Details */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono-luxury text-[var(--text-secondary)]">
-                          <div>
+                          <div className="space-y-1">
                             <span className="text-[10px] uppercase text-[var(--text-muted)] block">Customer:</span>
                             <strong className="text-[var(--text-primary)]">{ord.customerName}</strong>
                             <div className="text-[11px] text-[var(--text-muted)]">{ord.customerPhone}</div>
                             <div className="text-[11px] text-[var(--text-muted)] truncate">{ord.customerEmail}</div>
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                              {ord.customerPhone && (
+                                <a
+                                  href={generateWhatsAppUrl(ord.customerPhone, `Hi ${ord.customerName || 'there'}, this is ÌRÍSÍ Support regarding your order ${ord.orderNumber}.`) }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] hover:bg-emerald-500 hover:text-black transition-colors"
+                                >
+                                  <MessageCircle className="h-2.5 w-2.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                              {ord.customerEmail && (
+                                <a
+                                  href={`mailto:${ord.customerEmail}?subject=${encodeURIComponent(`ÌRÍSÍ Order ${ord.orderNumber}`)}`}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-[10px] hover:border-[var(--gold-accent)] hover:text-[var(--text-primary)] transition-colors"
+                                >
+                                  <Mail className="h-2.5 w-2.5" />
+                                  <span>Email</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
 
                           <div>
                             <span className="text-[10px] uppercase text-[var(--text-muted)] block">Delivery Destination:</span>
                             <strong className="text-[var(--text-primary)]">{ord.deliveryAddress}</strong>
-                            <div className="text-[11px] text-[var(--gold-accent)] font-bold">
+                            <div className="text-[11px] text-[var(--gold-accent)]">
                               City: {ord.deliveryCity || 'Lagos'}{ord.deliveryState ? ` • State: ${ord.deliveryState}` : ''}
                             </div>
                           </div>
 
                           <div>
                             <span className="text-[10px] uppercase text-[var(--text-muted)] block">Fulfillment / Courier:</span>
-                            <strong className="text-emerald-400">{ord.trackingDetails?.courierName || 'Shipbubble Live Dispatch'}</strong>
+                            <strong className="text-emerald-500">{ord.trackingDetails?.courierName || 'Shipbubble Live Dispatch'}</strong>
                             <div className="text-[11px] text-[var(--text-muted)]">Waybill: {ord.trackingDetails?.waybillNumber || 'Assigned on dispatch'}</div>
                           </div>
                         </div>
+
+                        {/* Vendors Bought From + Instant WhatsApp & Email Actions */}
+                        {(() => {
+                          const orderVendors = getOrderVendors(ord);
+                          if (orderVendors.length === 0) return null;
+                          return (
+                            <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] flex items-center gap-1.5">
+                                  <Store className="h-3.5 w-3.5" />
+                                  <span>Vendor{orderVendors.length > 1 ? 's' : ''} Bought From ({orderVendors.length})</span>
+                                </span>
+                                <span className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
+                                  Quick Admin Outreach
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                {orderVendors.map((v) => (
+                                  <div
+                                    key={v.vendorId}
+                                    className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-medium text-[var(--text-primary)] truncate">
+                                        {v.brandName}
+                                      </div>
+                                      <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate">
+                                        {v.itemCount} item{v.itemCount > 1 ? 's' : ''} · ₦{v.subtotal.toLocaleString()}
+                                        {v.phone ? ` · ${v.phone}` : ''}
+                                      </div>
+                                      {v.email && (
+                                        <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate">
+                                          {v.email}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {v.whatsapp ? (
+                                        <a
+                                          href={generateWhatsAppUrl(
+                                            v.whatsapp,
+                                            `Hello ${v.brandName}, this is ÌRÍSÍ Admin regarding Order ${ord.orderNumber} (Customer: ${ord.customerName || 'Shopper'}). Please confirm fulfillment status.`
+                                          )}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono-luxury uppercase hover:bg-emerald-500 hover:text-black transition-colors"
+                                        >
+                                          <MessageCircle className="h-3 w-3" />
+                                          <span>WhatsApp</span>
+                                        </a>
+                                      ) : (
+                                        <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] px-2">No Phone</span>
+                                      )}
+                                      {v.email && (
+                                        <a
+                                          href={`mailto:${v.email}?subject=${encodeURIComponent(`ÌRÍSÍ Admin — Order ${ord.orderNumber} (${v.brandName})`)}&body=${encodeURIComponent(`Hello ${v.brandName},\n\nWe are reaching out regarding Order ${ord.orderNumber} placed by ${ord.customerName || 'a shopper'}.\n\nBest regards,\nÌRÍSÍ Operations`)}`}
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase hover:bg-[var(--gold-accent)] hover:text-black transition-colors"
+                                        >
+                                          <Mail className="h-3 w-3" />
+                                          <span>Mail</span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Items Preview */}
                         <div className="pt-2 flex items-center gap-3 overflow-x-auto pb-1">
@@ -2016,8 +2182,11 @@ export default function SuperAdminPage() {
                                 <Image src={item.imageUrl || '/images/no-product.svg'} alt="" fill unoptimized className="object-cover" />
                               </div>
                               <div className="text-[11px] font-mono-luxury min-w-[120px]">
-                                <div className="font-bold text-[var(--text-primary)] truncate">{item.productName}</div>
+                                <div className="font-medium text-[var(--text-primary)] truncate">{item.productName}</div>
                                 <div className="text-[var(--text-muted)]">{item.size} • ₦{Number(item.price).toLocaleString()}</div>
+                                {(item.vendorName || item.vendorId) && (
+                                  <div className="text-[10px] text-[var(--gold-accent)] truncate">By {item.vendorName || item.vendorId}</div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -2095,7 +2264,7 @@ export default function SuperAdminPage() {
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-                    Manage multi-vendor door pickups, interstate motor park hubs, waybills, and delivery exceptions across all 36 states.
+                    Manage multi-vendor door pickups, interstate motor park hubs, waybills, and delivery exceptions across all regions.
                   </p>
                 </div>
 
@@ -3272,7 +3441,7 @@ export default function SuperAdminPage() {
                       className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
                     />
                     <span>
-                      Strict Storefront Paywall (unchecked = Option B: Free keeps basic storefront, Plus unlocks white-label)
+                      Lock Unpaid Storefront Links After Free Trial (Keep UNCHECKED for Option B: Free keeps basic storefront; Check for Option A: hard paywall)
                     </span>
                   </label>
 
@@ -3564,7 +3733,7 @@ export default function SuperAdminPage() {
                     Verified Shoppers Directory
                   </h1>
                   <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-                    Directory of buyers across Nigeria • Click on any shopper to see their complete purchase history and spent totals.
+                    Directory of verified shoppers • Click on any shopper to inspect purchase history, spend totals, and abandoned cart recovery.
                   </p>
                 </div>
 
@@ -4045,6 +4214,60 @@ export default function SuperAdminPage() {
                 </div>
               </div>
             </div>
+
+            {/* Vendors Bought From (Direct Admin Contact) */}
+            {(() => {
+              const modalVendors = getOrderVendors(selectedOrderModal);
+              if (modalVendors.length === 0) return null;
+              return (
+                <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2.5">
+                  <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5" />
+                    <span>Vendor{modalVendors.length > 1 ? 's' : ''} on This Order ({modalVendors.length})</span>
+                  </span>
+                  <div className="space-y-2">
+                    {modalVendors.map((v) => (
+                      <div
+                        key={v.vendorId}
+                        className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono-luxury"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[var(--text-primary)] font-medium">{v.brandName}</div>
+                          <div className="text-[10px] text-[var(--text-muted)] truncate">
+                            {v.phone || 'No phone'} {v.email ? `· ${v.email}` : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {v.whatsapp && (
+                            <a
+                              href={generateWhatsAppUrl(
+                                v.whatsapp,
+                                `Hello ${v.brandName}, this is ÌRÍSÍ Admin regarding Order ${selectedOrderModal.orderNumber}.`
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 text-[10px] uppercase hover:bg-emerald-500 hover:text-black transition-colors"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+                          {v.email && (
+                            <a
+                              href={`mailto:${v.email}?subject=${encodeURIComponent(`ÌRÍSÍ Order ${selectedOrderModal.orderNumber}`)}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[var(--gold-accent)] text-[10px] uppercase hover:bg-[var(--gold-accent)] hover:text-black transition-colors"
+                            >
+                              <Mail className="h-3 w-3" />
+                              <span>Email</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Items List */}
             <div className="space-y-3">
