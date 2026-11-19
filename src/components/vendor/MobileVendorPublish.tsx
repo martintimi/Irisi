@@ -1294,17 +1294,17 @@ export default function MobileVendorPublish({
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <span className="text-[10px] font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] font-bold block">
-              Catalog Publisher
-            </span>
-            <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-              Add New Piece
-            </h2>
+            <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+              Publish Piece
+            </h1>
+            <p className="text-xs text-[var(--text-muted)] font-light">
+              Ready-to-ship or made-to-order listing
+            </p>
           </div>
-          <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            {totalStock} in Stock
+          <span className="text-[10px] font-mono-luxury text-emerald-500 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+            {totalStock} units
           </span>
         </div>
 

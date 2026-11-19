@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import {
   PackageCheck, Truck, CheckCircle2, ShieldCheck,
   Phone, User, Package, RefreshCw, Send, Loader2,
-  X, Check, Star, AlertCircle, ChevronRight, Sparkles, Printer
+  X, Star, AlertCircle, Printer, Camera
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
 
 interface MobileVendorOrdersProps {
@@ -15,7 +15,7 @@ interface MobileVendorOrdersProps {
   isLoading: boolean;
   onRefresh: () => void;
   onPackReady: (ord: any) => Promise<void>;
-  onConfirmDispatch: (order: any, waybill: string, driverPhone: string) => Promise<void>;
+  onConfirmDispatch: (order: any, waybill: string, driverPhone: string, preDispatchProofUrl?: string) => Promise<void>;
   onOpenWaybill?: (order: any) => void;
   isUpdatingStatus: boolean;
 }
@@ -27,14 +27,16 @@ export default function MobileVendorOrders({
   onPackReady,
   onConfirmDispatch,
   onOpenWaybill,
-  isUpdatingStatus
+  isUpdatingStatus,
 }: MobileVendorOrdersProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'dispatched' | 'delivered'>('all');
-  
-  // Dispatch Modal State
+
+  // Dispatch Bottom Sheet State (includes Pre-Dispatch Photo Proof)
   const [dispatchModalOrder, setDispatchModalOrder] = useState<any | null>(null);
   const [waybillInput, setWaybillInput] = useState('');
   const [driverPhoneInput, setDriverPhoneInput] = useState('');
+  const [preDispatchProofUrl, setPreDispatchProofUrl] = useState('');
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [dispatchError, setDispatchError] = useState('');
 
   const toPackCount = vendorOrders.filter((o: any) => o.trackingStage <= 2).length;
@@ -52,7 +54,30 @@ export default function MobileVendorOrders({
     setDispatchModalOrder(ord);
     setWaybillInput(ord.waybillNumber || ord.trackingDetails?.waybillNumber || '');
     setDriverPhoneInput(ord.driverPhone || ord.trackingDetails?.driverPhone || '');
+    setPreDispatchProofUrl(ord.preDispatchProofUrl || '');
     setDispatchError('');
+  };
+
+  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingProof(true);
+    setDispatchError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setPreDispatchProofUrl(data.url);
+      } else {
+        setDispatchError(data.error || 'Could not upload proof photo.');
+      }
+    } catch {
+      setDispatchError('Upload failed. Please try again.');
+    } finally {
+      setIsUploadingProof(false);
+    }
   };
 
   const handleModalSubmit = async (e: React.FormEvent) => {
@@ -62,57 +87,56 @@ export default function MobileVendorOrders({
     const driverPhone = driverPhoneInput.trim();
 
     if (!waybill && !driverPhone) {
-      setDispatchError('Please enter at least a Waybill / Tracking Number or Driver Phone Number.');
+      setDispatchError('Enter a waybill / tracking code or rider phone number.');
       return;
     }
 
     setDispatchError('');
-    await onConfirmDispatch(dispatchModalOrder, waybill, driverPhone);
+    await onConfirmDispatch(dispatchModalOrder, waybill, driverPhone, preDispatchProofUrl || undefined);
     setDispatchModalOrder(null);
   };
 
   return (
-    <div className="space-y-4 animate-fadeIn pb-16 select-none">
-      
-      {/* 1. Header with Refresh */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 animate-fadeIn pb-6 select-none">
+      {/* 1. Native App Screen Header */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-            Store Orders
-          </h2>
-          <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-            Fulfillment & Escrow Payouts
-          </span>
+          <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+            Orders
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] font-light">
+            Fulfillment &amp; escrow payouts
+          </p>
         </div>
 
         <button
           type="button"
           onClick={onRefresh}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-all cursor-pointer shrink-0"
+          className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center active:scale-95 transition-transform cursor-pointer"
+          aria-label="Refresh orders"
         >
-          <RefreshCw className={`h-3.5 w-3.5 text-[var(--gold-accent)] ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin text-[var(--gold-accent)]' : ''}`} />
         </button>
       </div>
 
-      {/* 2. Horizontal Filter Segmented Bar (Non-overflowing, clean wrap/scroll) */}
-      <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] overflow-x-auto no-scrollbar font-mono-luxury text-xs">
+      {/* 2. Native iOS Segmented Control */}
+      <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
         {[
           { id: 'all', label: `All (${vendorOrders.length})` },
-          { id: 'pending', label: `To Pack (${toPackCount})` },
-          { id: 'dispatched', label: `Dispatched (${dispatchedCount})` },
-          { id: 'delivered', label: `Delivered (${deliveredCount})` },
+          { id: 'pending', label: `Pack (${toPackCount})` },
+          { id: 'dispatched', label: `Sent (${dispatchedCount})` },
+          { id: 'delivered', label: `Done (${deliveredCount})` },
         ].map((tab) => {
-          const isChosen = activeTab === tab.id;
+          const active = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3 py-2 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                isChosen
-                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              className={`py-2 px-1 rounded-xl text-[11px] font-mono-luxury transition-all cursor-pointer truncate ${
+                active
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                  : 'text-[var(--text-muted)]'
               }`}
             >
               {tab.label}
@@ -121,378 +145,372 @@ export default function MobileVendorOrders({
         })}
       </div>
 
-      {/* 3. Orders List */}
+      {/* 3. Orders Feed */}
       {isLoading ? (
-        <VendorLuxuryLoader label="Loading Customer Orders..." />
+        <VendorLuxuryLoader label="Loading Orders..." />
       ) : filteredOrders.length === 0 ? (
-        <div className="p-12 rounded-3xl surface-card text-center space-y-3 border border-[var(--border-subtle)]">
-          <Package className="h-8 w-8 text-[var(--gold-accent)] mx-auto opacity-50" />
-          <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
-            No Orders Found
+        <div className="p-10 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-2.5">
+          <Package className="h-7 w-7 text-[var(--text-muted)] mx-auto" strokeWidth={1.5} />
+          <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+            No Orders Here
           </h3>
-          <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
+          <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto">
             {activeTab === 'all'
-              ? 'New orders containing your brand products will appear here instantly.'
-              : `No orders currently in the ${activeTab} stage.`}
+              ? 'New paid orders will show up here immediately with live SMS & push activity.'
+              : `No orders currently in this stage.`}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredOrders.map((ord: any) => (
-            <div
-              key={ord.id}
-              className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm"
-            >
-              {/* Order Top Meta */}
-              <div className="flex items-start justify-between gap-2 border-b border-[var(--border-subtle)] pb-2.5">
-                <div>
-                  <span className="font-editorial text-base font-bold text-[var(--gold-accent)] block">
-                    {ord.orderNumber}
-                  </span>
-                  <span className="text-[10px] text-[var(--text-muted)] font-mono-luxury block">
-                    {ord.date || 'Recent'}
-                  </span>
-                </div>
+        <div className="space-y-3.5">
+          {filteredOrders.map((ord: any) => {
+            const stageLabel =
+              ord.trackingStage === 4
+                ? 'Delivered'
+                : ord.trackingStage === 3
+                ? 'In Transit'
+                : ord.trackingStage === 2
+                ? 'Packed'
+                : 'Escrow Secured';
+            const stageDot =
+              ord.trackingStage === 4
+                ? 'bg-emerald-500'
+                : ord.trackingStage === 3
+                ? 'bg-[var(--gold-accent)]'
+                : ord.trackingStage === 2
+                ? 'bg-amber-500'
+                : 'bg-sky-500';
 
-                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-mono-luxury font-bold uppercase border shrink-0 ${
-                  ord.trackingStage === 4
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : ord.trackingStage === 3
-                    ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30'
-                    : ord.trackingStage === 2
-                    ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                }`}>
-                  {ord.trackingStage === 4 ? '● Delivered' : ord.trackingStage === 3 ? '● Dispatched' : ord.trackingStage === 2 ? '● Packing' : '● Escrow Secured'}
-                </span>
-              </div>
-
-              {/* Customer Contact Bar */}
-              <div className="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury">
-                <div className="flex items-center gap-2 min-w-0">
-                  <User className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
-                  <span className="font-bold text-[var(--text-primary)] truncate">{ord.customerName}</span>
-                </div>
-
-                {ord.customerPhone && (
-                  <a
-                    href={`tel:${ord.customerPhone}`}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] text-[var(--gold-accent)] font-bold shrink-0 active:scale-95"
-                  >
-                    <Phone className="h-3 w-3" />
-                    <span>Call</span>
-                  </a>
-                )}
-              </div>
-
-              {/* Items in package */}
-              <div className="space-y-2">
-                <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold block">
-                  Items in Package ({ord.items.length}):
-                </span>
-
-                {ord.items.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-3 p-2.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-                    <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
-                      <Image
-                        src={item.imageUrl || '/images/no-product.svg'}
-                        alt={item.productName}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
+            return (
+              <article
+                key={ord.id}
+                className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden shadow-xs"
+              >
+                {/* Top Order Strip */}
+                <div className="px-4 py-3.5 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2">
+                  <div>
+                    <div className="font-editorial text-lg text-[var(--text-primary)] leading-tight">
+                      {ord.orderNumber}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">{item.productName}</h4>
-                      <div className="text-[10px] font-mono-luxury text-[var(--text-secondary)] flex items-center gap-1.5 flex-wrap mt-0.5">
-                        <span>Size: <strong className="text-[var(--gold-accent)]">{item.size || 'M'}</strong></span>
-                        <span>·</span>
-                        <span className="flex items-center gap-1">
-                          <span>Color:</span>
-                          <span
-                            className="inline-block h-2 w-2 rounded-full border border-white/20 shadow-xs shrink-0"
-                            style={{ backgroundColor: item.colorHex || (typeof item.color === 'string' && item.color.startsWith('#') ? item.color : '#111111') }}
-                          />
-                          <strong className="text-[var(--text-primary)]">{item.colorName || item.color || 'Standard'}</strong>
-                        </span>
-                        <span>·</span>
-                        <span>Qty: <strong className="text-[var(--gold-accent)]">{item.quantity || 1}</strong></span>
+                    <span className="text-[11px] text-[var(--text-muted)] font-light">
+                      {ord.date || 'Recent'}
+                    </span>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury text-[var(--text-primary)]">
+                    <span className={`h-1.5 w-1.5 rounded-full ${stageDot}`} />
+                    <span>{stageLabel}</span>
+                  </span>
+                </div>
+
+                {/* Buyer Strip */}
+                <div className="px-4 py-2.5 bg-[var(--bg-primary)]/50 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" strokeWidth={1.7} />
+                    <span className="text-xs font-medium text-[var(--text-primary)] truncate">
+                      {ord.customerName}
+                    </span>
+                  </div>
+                  {ord.customerPhone && (
+                    <a
+                      href={`tel:${ord.customerPhone}`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury text-[var(--text-primary)] active:scale-95 shrink-0"
+                    >
+                      <Phone className="h-3 w-3 text-[var(--gold-accent)]" />
+                      <span>Call</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Ordered Items */}
+                <div className="divide-y divide-[var(--border-subtle)]">
+                  {(ord.items || []).map((item: any, idx: number) => (
+                    <div key={idx} className="px-4 py-3 flex items-center gap-3">
+                      <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-zinc-900 shrink-0 border border-[var(--border-subtle)]">
+                        <Image
+                          src={item.imageUrl || '/images/no-product.svg'}
+                          alt={item.productName || 'Piece'}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
                       </div>
-                      <div className="text-[11px] font-mono-luxury text-[var(--gold-accent)] font-bold">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+                          {item.productName}
+                        </div>
+                        <div className="text-[11px] text-[var(--text-muted)] font-light flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <span>Size {item.size || 'M'}</span>
+                          <span>·</span>
+                          <span className="inline-flex items-center gap-1">
+                            <span
+                              className="inline-block h-2 w-2 rounded-full border border-black/15 dark:border-white/20"
+                              style={{
+                                backgroundColor:
+                                  item.colorHex ||
+                                  (typeof item.color === 'string' && item.color.startsWith('#') ? item.color : '#111111'),
+                              }}
+                            />
+                            <span>{item.colorName || item.color || 'Standard'}</span>
+                          </span>
+                          <span>·</span>
+                          <span>Qty {item.quantity || 1}</span>
+                        </div>
+                      </div>
+                      <div className="font-editorial text-sm text-[var(--text-primary)] shrink-0">
                         ₦{(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString()}
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {/* Delivery, Tracking & Escrow Summary */}
+                <div className="px-4 py-3 bg-[var(--bg-primary)]/40 border-t border-[var(--border-subtle)] space-y-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--text-muted)]">Destination</span>
+                    <span className="text-[var(--text-primary)] text-right truncate max-w-[65%]">
+                      {ord.deliveryAddress}
+                    </span>
                   </div>
-                ))}
-              </div>
-
-              {/* Dedicated Logistics & Pickup Dispatch Hub Ribbon */}
-              <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-2">
-                <div className="flex items-center justify-between flex-wrap gap-1.5">
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono-luxury font-bold uppercase flex items-center gap-1 ${
-                    ord.deliveryMethod === 'park_pickup'
-                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                      : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  }`}>
-                    {ord.deliveryMethod === 'park_pickup' ? <Truck className="h-3 w-3" /> : <Truck className="h-3 w-3" />}
-                    <span>{ord.deliveryMethod === 'park_pickup' ? 'Park Waybill' : 'Door Delivery'}</span>
-                  </span>
-
-                  <span className="text-[11px] font-mono-luxury font-bold text-[var(--text-primary)]">
-                    Courier: <span className="text-[var(--gold-accent)]">{ord.courierName || 'GIG Logistics'}</span>
-                  </span>
-                </div>
-
-                <div className="text-[10px] font-mono-luxury pt-1 border-t border-[var(--border-subtle)]/60">
-                  <div className="p-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between">
-                    <span className="text-[var(--text-muted)] text-[9px]">Waybill / Tracking:</span>
-                    <span className="font-bold text-[var(--gold-accent)]">{ord.waybillNumber || ord.trackingDetails?.waybillNumber || 'Pending'}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[var(--text-muted)]">
+                      {ord.deliveryMethod === 'park_pickup' ? 'Park Waybill' : 'Courier'}
+                    </span>
+                    <span className="text-[var(--text-primary)] font-mono-luxury text-[11px]">
+                      {ord.courierName || 'Dispatch'}
+                      {(ord.waybillNumber || ord.trackingDetails?.waybillNumber)
+                        ? ` · ${ord.waybillNumber || ord.trackingDetails?.waybillNumber}`
+                        : ''}
+                    </span>
                   </div>
-                </div>
-
-                {ord.instructions && (
-                  <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)] leading-tight">
-                    {ord.instructions}
-                  </p>
-                )}
-              </div>
-
-              {/* Payout & Delivery Breakdown */}
-              <div className="p-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-1.5 text-xs font-mono-luxury">
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[var(--text-secondary)]">Destination:</span>
-                  <span className="font-bold text-[var(--text-primary)] text-right truncate max-w-[180px]">{ord.deliveryAddress}</span>
-                </div>
-                {ord.deliveryMethod === 'park_pickup' && (
-                  <div className="flex items-center justify-between text-[11px] text-amber-400">
-                    <span>Delivery Mode:</span>
-                    <span className="font-bold truncate max-w-[170px]">Motor Park Waybill</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-[var(--text-secondary)]">Delivery Method / Fee:</span>
-                  <span className="text-[var(--gold-accent)] font-bold">
-                    {ord.deliveryMethod === 'park_pickup' ? 'Pay on Collection' : `₦${Number(ord.vendorDeliveryFee || 0).toLocaleString()}`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)]">
-                  <span className="text-[var(--text-primary)] font-bold">Your Escrow Payout:</span>
-                  <span className="font-editorial text-base font-bold text-emerald-400">
-                    ₦{Number(ord.totalPayout || 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Courier, Tracking Number & Driver details if dispatched */}
-              {ord.trackingStage >= 3 && (
-                <div className="p-3 rounded-2xl bg-[var(--gold-subtle)]/30 border border-[var(--gold-accent)]/30 space-y-2 text-[11px] font-mono-luxury text-[var(--text-primary)]">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
-                      <span>Transporter: <strong className="text-[var(--text-primary)]">{ord.courierName}</strong></span>
+                  {(ord.driverPhone || ord.trackingDetails?.driverPhone) && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[var(--text-muted)]">Rider Contact</span>
+                      <a
+                        href={`tel:${ord.driverPhone || ord.trackingDetails?.driverPhone}`}
+                        className="text-[var(--gold-accent)] font-mono-luxury text-[11px]"
+                      >
+                        {ord.driverPhone || ord.trackingDetails?.driverPhone}
+                      </a>
                     </div>
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold uppercase border border-emerald-500/30">
-                      In Transit
+                  )}
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-[var(--border-subtle)]">
+                    <span className="text-[var(--text-secondary)]">Your Escrow Payout</span>
+                    <span className="font-editorial text-lg text-emerald-500">
+                      ₦{Number(ord.totalPayout || 0).toLocaleString()}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-1.5 pt-1.5 border-t border-[var(--border-subtle)]/50">
-                    {(ord.waybillNumber || ord.trackingDetails?.waybillNumber) && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[var(--text-muted)] text-[10px]">Waybill / Tracking:</span>
-                        <strong className="text-[var(--gold-accent)] font-mono">
-                          {ord.waybillNumber || ord.trackingDetails?.waybillNumber}
-                        </strong>
+                  {ord.instructions && (
+                    <p className="text-[11px] text-[var(--text-muted)] font-light leading-relaxed pt-1">
+                      {ord.instructions}
+                    </p>
+                  )}
+
+                  {ord.trackingStage >= 4 &&
+                    ord.customer_measurements?.reviews &&
+                    ord.customer_measurements.reviews.length > 0 && (
+                      <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-1 mt-1">
+                        <div className="flex items-center justify-between text-[10px] font-mono-luxury text-[var(--gold-accent)]">
+                          <span className="inline-flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-current" /> Buyer Review
+                          </span>
+                          <span>{ord.customer_measurements.reviews[0].rating}.0 ★</span>
+                        </div>
+                        <p className="text-[11px] text-[var(--text-secondary)] italic">
+                          &quot;{ord.customer_measurements.reviews[0].comment}&quot;
+                        </p>
                       </div>
                     )}
-                    {(ord.driverPhone || ord.trackingDetails?.driverPhone) && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-[var(--text-muted)] text-[10px]">Driver / Rider Phone:</span>
-                        <a
-                          href={`tel:${ord.driverPhone || ord.trackingDetails?.driverPhone}`}
-                          className="text-[var(--gold-accent)] font-bold flex items-center gap-1 hover:underline"
-                        >
-                          <Phone className="h-3 w-3" />
-                          <span>{ord.driverPhone || ord.trackingDetails?.driverPhone}</span>
-                        </a>
-                      </div>
-                    )}
-                  </div>
                 </div>
-              )}
 
-              {/* Customer Fit Review if Delivered */}
-              {ord.trackingStage >= 4 && ord.customer_measurements?.reviews && ord.customer_measurements.reviews.length > 0 && (
-                <div className="p-3 rounded-2xl bg-[var(--gold-accent)]/[0.04] border border-[var(--gold-accent)]/30 space-y-1 text-xs font-mono-luxury">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[var(--gold-accent)] font-bold flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-current text-[var(--gold-accent)]" />
-                      <span>Client Review</span>
-                    </span>
-                    <span className="text-[9px] text-amber-400 font-bold">
-                      {ord.customer_measurements.reviews[0].rating}.0 ★
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[var(--text-primary)] italic">
-                    &quot;{ord.customer_measurements.reviews[0].comment}&quot;
-                  </p>
+                {/* Action Footer */}
+                <div className="px-4 py-3 border-t border-[var(--border-subtle)] flex items-center gap-2">
+                  {onOpenWaybill && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenWaybill(ord)}
+                      className="h-10 px-3.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[11px] font-mono-luxury inline-flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
+                    >
+                      <Printer className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                      <span>Waybill</span>
+                    </button>
+                  )}
+
+                  {ord.trackingStage === 1 && (
+                    <button
+                      type="button"
+                      onClick={() => onPackReady(ord)}
+                      disabled={isUpdatingStatus}
+                      className="flex-1 h-10 px-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer disabled:opacity-50"
+                    >
+                      <PackageCheck className="h-4 w-4" />
+                      <span>Mark Packed &amp; Ready</span>
+                    </button>
+                  )}
+
+                  {ord.trackingStage === 2 && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDispatch(ord)}
+                      className="flex-1 h-10 px-4 rounded-full bg-[var(--gold-accent)] text-black text-[11px] font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                    >
+                      <Truck className="h-4 w-4" />
+                      <span>Dispatch Order</span>
+                    </button>
+                  )}
+
+                  {ord.trackingStage === 3 && (
+                    <div className="flex-1 h-10 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-emerald-500 text-[11px] font-mono-luxury flex items-center justify-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>In Transit</span>
+                    </div>
+                  )}
+
+                  {ord.trackingStage === 4 && (
+                    <div className="flex-1 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[11px] font-mono-luxury flex items-center justify-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      <span>Delivered &amp; Settled</span>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              {/* Action Fulfillment Buttons */}
-              <div className="pt-1 space-y-2">
-                {onOpenWaybill && (
-                  <button
-                    type="button"
-                    onClick={() => onOpenWaybill(ord)}
-                    className="w-full py-2.5 rounded-full surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
-                  >
-                    <Printer className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                    <span>Print Shipping Waybill</span>
-                  </button>
-                )}
-
-                {ord.trackingStage === 1 && (
-                  <button
-                    type="button"
-                    onClick={() => onPackReady(ord)}
-                    disabled={isUpdatingStatus}
-                    className="w-full py-3 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform cursor-pointer disabled:opacity-50"
-                  >
-                    <PackageCheck className="h-4 w-4" />
-                    <span>
-                      {ord.deliveryMethod === 'park_pickup'
-                        ? 'Mark Ready for Motor Park'
-                        : ord.courierServiceType === 'pickup'
-                        ? 'Mark Ready for Courier Pickup'
-                        : 'Mark Ready for Station Drop-off'}
-                    </span>
-                  </button>
-                )}
-
-                {ord.trackingStage === 2 && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenDispatch(ord)}
-                    className="w-full py-3 rounded-full bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform cursor-pointer"
-                  >
-                    <Truck className="h-4 w-4" />
-                    <span>Dispatch / Driver Waybill</span>
-                  </button>
-                )}
-
-                {ord.trackingStage === 3 && (
-                  <div className="py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-center text-xs font-mono-luxury font-bold flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>In Transit with Courier</span>
-                  </div>
-                )}
-
-                {ord.trackingStage === 4 && (
-                  <div className="py-2 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-center text-xs font-mono-luxury font-bold flex items-center justify-center gap-1.5">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>Delivered & Settled in Escrow</span>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          ))}
+              </article>
+            );
+          })}
         </div>
       )}
 
-      {/* Mobile Dispatch Modal Bottom Sheet */}
-      {dispatchModalOrder && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn">
-          <div className="surface-card rounded-t-3xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full border border-[var(--border-subtle)] space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
-              <div className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-xl bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center shrink-0">
-                  <Truck className="h-4 w-4" />
-                </div>
+      {/* Native Slide-Up Dispatch Bottom Sheet (With Pre-Dispatch Photo Proof) */}
+      {typeof document !== 'undefined' &&
+        dispatchModalOrder &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[80] bg-black/65 backdrop-blur-md flex items-end justify-center animate-fadeIn"
+            onClick={() => setDispatchModalOrder(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              data-lenis-prevent="true"
+              className="w-full max-w-lg rounded-t-[30px] bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-4 shadow-2xl max-h-[88vh] overflow-y-auto"
+            >
+              <div className="flex justify-center">
+                <span className="h-1 w-10 rounded-full bg-[var(--border-hover)]" />
+              </div>
+
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
-                    Dispatch {dispatchModalOrder.orderNumber}
+                  <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--gold-accent)]">
+                    Dispatch Package
+                  </span>
+                  <h3 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+                    {dispatchModalOrder.orderNumber}
                   </h3>
-                  <span className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                    Customer receives live driver SMS & waybill
-                  </span>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDispatchModalOrder(null)}
-                className="p-1 rounded-full text-[var(--text-muted)] hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleModalSubmit} className="space-y-3 text-xs font-mono-luxury">
-              {dispatchError && (
-                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-1.5 font-bold">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>{dispatchError}</span>
-                </div>
-              )}
-
-              <div>
-                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Waybill / Tracking No (For Courier or Bus):
-                  <span className="text-[10px] text-[var(--text-muted)] font-normal normal-case ml-1">
-                    (Required if no driver phone)
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  value={waybillInput}
-                  onChange={(e) => { setWaybillInput(e.target.value); setDispatchError(''); }}
-                  placeholder="e.g. GIG-1234 or PARK-LAGOS-01"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Dispatch Rider / Driver Phone Number:
-                  <span className="text-[10px] text-[var(--text-muted)] font-normal normal-case ml-1">
-                    (Optional if tracking code is entered)
-                  </span>
-                </label>
-                <input
-                  type="tel"
-                  value={driverPhoneInput}
-                  onChange={(e) => { setDriverPhoneInput(e.target.value); setDispatchError(''); }}
-                  placeholder="e.g. 08012345678"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
-                />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  Customer will receive this number to contact the rider directly upon arrival.
-                </p>
-              </div>
-
-              <div className="pt-2 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setDispatchModalOrder(null)}
-                  className="flex-1 py-3 rounded-full surface-card border border-[var(--border-subtle)] uppercase font-bold text-[var(--text-primary)]"
+                  className="h-8 w-8 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)] cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUpdatingStatus}
-                  className="flex-1 py-3 rounded-full bg-[var(--gold-accent)] text-black uppercase font-bold shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  {isUpdatingStatus ? <Sparkles className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  <span>Confirm</span>
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
+              <form onSubmit={handleModalSubmit} className="space-y-3.5 text-xs">
+                {dispatchError && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-500 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{dispatchError}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                    Waybill / Tracking Number
+                  </label>
+                  <input
+                    type="text"
+                    value={waybillInput}
+                    onChange={(e) => {
+                      setWaybillInput(e.target.value);
+                      setDispatchError('');
+                    }}
+                    placeholder="e.g. GIG-918239 or PARK-01"
+                    className="w-full h-11 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                    Rider / Driver Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={driverPhoneInput}
+                    onChange={(e) => {
+                      setDriverPhoneInput(e.target.value);
+                      setDispatchError('');
+                    }}
+                    placeholder="e.g. 08012345678"
+                    className="w-full h-11 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                </div>
+
+                {/* Finished Piece Pre-Dispatch Proof */}
+                <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] flex items-center gap-1.5">
+                      <Camera className="h-3.5 w-3.5" />
+                      <span>Finished Piece Proof (Optional)</span>
+                    </span>
+                    {preDispatchProofUrl && (
+                      <span className="text-[10px] text-emerald-500">Attached</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] font-light">
+                    Snap a quick photo before sealing — protects your escrow payout against disputes.
+                  </p>
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury text-[var(--text-primary)] cursor-pointer">
+                    {isUploadingProof ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--gold-accent)]" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                        <span>{preDispatchProofUrl ? 'Replace Proof Photo' : 'Attach Proof Photo'}</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*,video/mp4,video/quicktime"
+                      onChange={handleProofUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="pt-2 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setDispatchModalOrder(null)}
+                    className="flex-1 h-11 rounded-full bg-[var(--bg-secondary)] text-[var(--text-primary)] text-xs font-mono-luxury uppercase cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingStatus || isUploadingProof}
+                    className="flex-1 h-11 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isUpdatingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    <span>Confirm Dispatch</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

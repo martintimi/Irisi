@@ -132,19 +132,19 @@ export default function VendorPlusPage() {
   const isPlus = Boolean(vendorPlan?.isPlus);
 
   return (
-    <div className="p-6 sm:p-10 max-w-5xl mx-auto space-y-8 pb-24">
+    <div className="px-0.5 sm:px-6 md:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-8 md:pb-24">
       {/* Header */}
-      <div className="border-b border-[var(--border-subtle)] pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] text-[11px] font-mono-luxury uppercase tracking-widest">
+      <div className="md:border-b md:border-[var(--border-subtle)] md:pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] text-[11px] font-mono-luxury uppercase tracking-widest">
             <Crown className="h-3.5 w-3.5" />
             <span>Merchant Plans &amp; Fees</span>
           </div>
-          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)]">
-            ÌRÍSÍ Plus Membership
+          <h1 className="font-editorial text-[26px] sm:text-4xl font-normal text-[var(--text-primary)] leading-tight">
+            ÌRÍSÍ Plus
           </h1>
-          <p className="text-xs text-[var(--text-secondary)] font-light max-w-xl">
-            Grow faster with a clean zero-competitor brand storefront, lower order commission, unlimited uploads, and live Lookbook Stories.
+          <p className="text-xs text-[var(--text-muted)] font-light max-w-xl">
+            Clean white-label storefront, lower commission, unlimited listings, and 48h Lookbook Stories.
           </p>
         </div>
 

@@ -112,16 +112,13 @@ export default function MobileVendorDirectSales({
   return (
     <div className="space-y-4 animate-fadeIn pb-20 select-none">
       
-      {/* 1. Top Header */}
+      {/* 1. Native Screen Header */}
       <div>
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20 mb-1">
-          <span>Social DM Assistant</span>
-        </div>
-        <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-          Direct Sales & Lookbook
-        </h2>
-        <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-          Convert WhatsApp & Instagram DMs with 3D fitting links.
+        <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+          Direct Sales POS
+        </h1>
+        <p className="text-xs text-[var(--text-muted)] font-light">
+          Share escrow checkout links for WhatsApp &amp; IG DMs
         </p>
       </div>
 

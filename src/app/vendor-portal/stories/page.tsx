@@ -159,19 +159,16 @@ export default function VendorStoriesPage() {
   };
 
   return (
-    <div className="p-6 sm:p-10 max-w-4xl mx-auto space-y-8 animate-fadeIn pb-24">
-      <div className="border-b border-[var(--border-subtle)] pb-6">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-[var(--gold-accent)] animate-ping" />
-          <span className="text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)]">
-            Live Brand Stories · 48h Feed
-          </span>
-        </div>
-        <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)] mt-1">
-          Post Lookbook Drop Story
+    <div className="px-0.5 sm:px-6 md:p-8 max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fadeIn pb-8 md:pb-24">
+      <div className="md:border-b md:border-[var(--border-subtle)] md:pb-6">
+        <span className="hidden md:inline-flex items-center gap-2 text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)]">
+          Live Brand Stories · 48h Feed
+        </span>
+        <h1 className="font-editorial text-[26px] sm:text-4xl font-normal text-[var(--text-primary)] leading-tight md:mt-1">
+          Lookbook Stories
         </h1>
-        <p className="text-xs text-[var(--text-secondary)] font-light mt-1">
-          Share new arrivals, behind-the-scenes workshop clips, or restock teasers directly to shoppers and your followers.
+        <p className="text-xs text-[var(--text-muted)] font-light mt-0.5">
+          Post a 48h photo or clip &amp; alert your followers automatically.
         </p>
       </div>
 

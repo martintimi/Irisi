@@ -395,7 +395,7 @@ export default function VendorOrdersPage() {
     }
   };
 
-  const handleMobileConfirmDispatch = async (ord: any, waybill: string, driverPhone: string) => {
+  const handleMobileConfirmDispatch = async (ord: any, waybill: string, driverPhone: string, proofUrl?: string) => {
     const orderNumberOrId = ord.orderNumber || ord.id;
     const activeVendorId = getActiveVendorId();
     const targetVendorId = ord.items?.[0]?.vendorId || activeVendorId;
@@ -426,6 +426,7 @@ export default function VendorOrdersPage() {
           trackingStage: 3,
           waybillNumber: waybill.trim(),
           driverPhone: driverPhone.trim(),
+          preDispatchProofUrl: proofUrl || undefined,
           vendorId: targetVendorId
         })
       });

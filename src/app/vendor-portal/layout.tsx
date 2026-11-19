@@ -232,74 +232,102 @@ export default function VendorPortalLayout({
     },
   ];
 
-  // Mobile Studio Hub Grid Tiles (everything beyond the 4 primary bottom tabs)
-  const studioGridItems = [
+  // Mobile Studio Hub — Quiet-Luxury Monochrome iOS Grouped Sections (Zero Rainbow Boxes)
+  const studioGroups: Array<{
+    title: string;
+    items: Array<{
+      label: string;
+      sub: string;
+      href?: string;
+      external?: boolean;
+      badge?: string;
+      action?: () => void;
+      icon: any;
+    }>;
+  }> = [
     {
-      label: 'Stories',
-      sub: '48h Lookbook',
-      href: '/vendor-portal/stories',
-      icon: Camera,
-      accent: 'text-amber-500 bg-amber-500/15 border-amber-500/25',
+      title: 'Growth & Showcase',
+      items: [
+        {
+          label: 'Lookbook Stories',
+          sub: 'Post 48h drops & alert followers',
+          href: '/vendor-portal/stories',
+          icon: Camera,
+        },
+        {
+          label: 'ÌRÍSÍ Plus & Plan',
+          sub: 'Commission rates & white-label store',
+          href: '/vendor-portal/plus',
+          badge: 'Plus',
+          icon: Crown,
+        },
+        {
+          label: 'Direct Sales POS',
+          sub: 'Create escrow checkout links for DMs',
+          href: '/vendor-portal/direct-sales',
+          icon: MessageSquare,
+        },
+        {
+          label: 'View Live Storefront',
+          sub: 'Open your public brand link',
+          href: `/brand/${storeSlug}`,
+          external: true,
+          icon: ExternalLink,
+        },
+      ],
     },
     {
-      label: 'ÌRÍSÍ Plus',
-      sub: 'Plan & Fees',
-      href: '/vendor-portal/plus',
-      icon: Crown,
-      accent: 'text-[var(--gold-accent)] bg-[var(--gold-subtle)] border-[var(--gold-accent)]/30',
+      title: 'Finance & Insights',
+      items: [
+        {
+          label: 'Settlements & Payouts',
+          sub: 'Escrow vault & bank account',
+          href: '/vendor-portal/settlements',
+          icon: DollarSign,
+        },
+        {
+          label: 'Sales & Analytics',
+          sub: 'Revenue, AOV & ledger export',
+          href: '/vendor-portal/reports',
+          icon: BarChart3,
+        },
+        {
+          label: 'Client Reviews',
+          sub: 'Verified ratings & fit scores',
+          href: '/vendor-portal/reviews',
+          icon: Star,
+        },
+      ],
     },
     {
-      label: 'Payouts',
-      sub: 'Escrow & Bank',
-      href: '/vendor-portal/settlements',
-      icon: DollarSign,
-      accent: 'text-emerald-500 bg-emerald-500/15 border-emerald-500/25',
-    },
-    {
-      label: 'Analytics',
-      sub: 'Sales Reports',
-      href: '/vendor-portal/reports',
-      icon: BarChart3,
-      accent: 'text-sky-500 bg-sky-500/15 border-sky-500/25',
-    },
-    {
-      label: 'Direct POS',
-      sub: 'DM Checkout',
-      href: '/vendor-portal/direct-sales',
-      icon: MessageSquare,
-      accent: 'text-violet-500 bg-violet-500/15 border-violet-500/25',
-    },
-    {
-      label: 'Reviews',
-      sub: 'Buyer Ratings',
-      href: '/vendor-portal/reviews',
-      icon: Star,
-      accent: 'text-amber-400 bg-amber-400/15 border-amber-400/25',
-    },
-    {
-      label: 'Profile',
-      sub: 'Brand & Bank',
-      href: '/vendor-portal/atelier',
-      icon: Building,
-      accent: 'text-[var(--text-primary)] bg-[var(--bg-secondary)] border-[var(--border-subtle)]',
-    },
-    {
-      label: 'Live Store',
-      sub: 'View Shop',
-      href: `/brand/${storeSlug}`,
-      icon: ExternalLink,
-      external: true,
-      accent: 'text-teal-500 bg-teal-500/15 border-teal-500/25',
-    },
-    {
-      label: 'Tour Guide',
-      sub: 'Quick Help',
-      action: () => {
-        setIsStudioSheetOpen(false);
-        setShowTour(true);
-      },
-      icon: HelpCircle,
-      accent: 'text-pink-500 bg-pink-500/15 border-pink-500/25',
+      title: 'Atelier & Support',
+      items: [
+        {
+          label: 'Store Profile & Hubs',
+          sub: 'Logo, bio, socials & dispatch city',
+          href: '/vendor-portal/atelier',
+          icon: Building,
+        },
+        {
+          label: 'Interactive Tour',
+          sub: 'Quick walkthrough of your studio',
+          action: () => {
+            setIsStudioSheetOpen(false);
+            setShowTour(true);
+          },
+          icon: HelpCircle,
+        },
+        {
+          label: 'Vendor Support (WhatsApp)',
+          sub: 'Chat directly with ÌRÍSÍ concierge',
+          action: () => {
+            setIsStudioSheetOpen(false);
+            openVendorWhatsAppSupport();
+          },
+          external: true,
+          icon: ShieldCheck,
+        },
+      ],
     },
   ];
 
@@ -715,21 +743,21 @@ export default function VendorPortalLayout({
                 </button>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="divide-y divide-[var(--border-subtle)] rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] overflow-hidden">
                 <Link
                   href="/vendor-portal/publish"
                   onClick={() => setIsQuickCreateOpen(false)}
-                  className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 flex items-center justify-between gap-3 active:scale-[0.98] transition-all"
+                  className="px-4 py-4 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-12 w-12 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] flex items-center justify-center shrink-0">
-                      <UploadCloud className="h-5 w-5" />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center shrink-0">
+                      <UploadCloud className="h-[18px] w-[18px]" strokeWidth={1.65} />
                     </div>
-                    <div>
-                      <div className="font-editorial text-lg text-[var(--text-primary)]">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-[var(--text-primary)]">
                         Publish New Piece
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] font-light">
+                      <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
                         Ready-to-Ship or Made-to-Order catalog listing
                       </p>
                     </div>
@@ -740,17 +768,17 @@ export default function VendorPortalLayout({
                 <Link
                   href="/vendor-portal/stories"
                   onClick={() => setIsQuickCreateOpen(false)}
-                  className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 flex items-center justify-between gap-3 active:scale-[0.98] transition-all"
+                  className="px-4 py-4 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 flex items-center justify-center shrink-0">
-                      <Camera className="h-5 w-5" />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="h-10 w-10 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--gold-accent)] flex items-center justify-center shrink-0">
+                      <Camera className="h-[18px] w-[18px]" strokeWidth={1.65} />
                     </div>
-                    <div>
-                      <div className="font-editorial text-lg text-[var(--text-primary)]">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-[var(--text-primary)]">
                         Post 48h Lookbook Story
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] font-light">
+                      <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
                         Share a photo or clip &amp; alert your followers
                       </p>
                     </div>
@@ -832,84 +860,91 @@ export default function VendorPortalLayout({
                 </button>
               </div>
 
-              {/* App Icon Launcher Grid (3 Columns — Feels Exactly Like iOS/Android App Hub) */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-4">
-                <div className="grid grid-cols-3 gap-2.5">
-                  {studioGridItems.map((tile) => {
-                    const Icon = tile.icon;
-                    const isActiveTile = tile.href && pathname === tile.href;
-                    const inner = (
-                      <div
-                        className={`p-3 rounded-2xl border flex flex-col items-center text-center gap-2 transition-all active:scale-95 ${
-                          isActiveTile
-                            ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/50'
-                            : 'bg-[var(--bg-primary)] border-[var(--border-subtle)]'
-                        }`}
-                      >
-                        <div className={`h-10 w-10 rounded-xl border flex items-center justify-center ${tile.accent}`}>
-                          <Icon className="h-[18px] w-[18px]" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="text-[11px] font-medium text-[var(--text-primary)] leading-tight">
-                            {tile.label}
+              {/* Quiet-Luxury Native iOS Grouped List Sections (Zero Noisy Colors) */}
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-5 bg-[var(--bg-primary)]">
+                {studioGroups.map((group) => (
+                  <div key={group.title} className="space-y-1.5">
+                    <div className="px-2 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                      {group.title}
+                    </div>
+                    <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActiveRow = item.href && pathname === item.href;
+                        const rowInner = (
+                          <div
+                            className={`px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors ${
+                              isActiveRow ? 'bg-[var(--gold-accent)]/[0.06]' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <Icon
+                                className={`h-[18px] w-[18px] shrink-0 ${
+                                  isActiveRow || item.badge
+                                    ? 'text-[var(--gold-accent)]'
+                                    : 'text-[var(--text-primary)]'
+                                }`}
+                                strokeWidth={1.65}
+                              />
+                              <div className="min-w-0">
+                                <div className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-snug">
+                                  {item.label}
+                                </div>
+                                <div className="text-[11px] text-[var(--text-muted)] font-light truncate leading-snug">
+                                  {item.sub}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              {item.badge && (
+                                <span className="px-2 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[10px] font-mono-luxury text-[var(--gold-accent)]">
+                                  {item.badge}
+                                </span>
+                              )}
+                              <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70" strokeWidth={1.6} />
+                            </div>
                           </div>
-                          <div className="text-[9px] font-mono-luxury text-[var(--text-muted)] leading-tight">
-                            {tile.sub}
-                          </div>
-                        </div>
-                      </div>
-                    );
+                        );
 
-                    if (tile.action) {
-                      return (
-                        <button
-                          key={tile.label}
-                          type="button"
-                          onClick={tile.action}
-                          className="cursor-pointer"
-                        >
-                          {inner}
-                        </button>
-                      );
-                    }
+                        if (item.action) {
+                          return (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={item.action}
+                              className="w-full text-left cursor-pointer block"
+                            >
+                              {rowInner}
+                            </button>
+                          );
+                        }
 
-                    return (
-                      <Link
-                        key={tile.label}
-                        href={tile.href!}
-                        target={tile.external ? '_blank' : undefined}
-                        onClick={() => setIsStudioSheetOpen(false)}
-                      >
-                        {inner}
-                      </Link>
-                    );
-                  })}
-                </div>
+                        return (
+                          <Link
+                            key={item.label}
+                            href={item.href!}
+                            target={item.external ? '_blank' : undefined}
+                            onClick={() => setIsStudioSheetOpen(false)}
+                            className="block"
+                          >
+                            {rowInner}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
 
-                {/* Quick Support + Sign Out Actions */}
-                <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsStudioSheetOpen(false);
-                      openVendorWhatsAppSupport();
-                    }}
-                    className="w-full px-4 py-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-mono-luxury flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
-                  >
-                    <span className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>Chat ÌRÍSÍ Vendor Support (WhatsApp)</span>
-                    </span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
-
+                {/* Clean Sign Out Row */}
+                <div className="pt-1 pb-2">
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full px-4 py-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-500 text-xs font-mono-luxury flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-transform"
+                    className="w-full py-3.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-rose-500 text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-2 active:bg-rose-500/10 transition-colors cursor-pointer"
                   >
-                    <LogOut className="h-4 w-4" />
-                    <span>Sign Out of Seller Account</span>
+                    <LogOut className="h-4 w-4" strokeWidth={1.7} />
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>
