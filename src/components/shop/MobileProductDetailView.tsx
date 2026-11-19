@@ -1063,26 +1063,36 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
           </div>
         )}
 
-        {/* 6. NATIONWIDE COURIER & MOTOR PARK DELIVERY INFO */}
+        {/* 6. FULFILLMENT & DELIVERY INFO (Supports Ready-to-Ship & Made-to-Order) */}
         <div className="p-4 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2.5 text-xs font-mono-luxury shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-bold text-[var(--text-primary)]">
-              <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
-              <span className="uppercase tracking-wider">Nationwide Delivery</span>
+          {(product as any).fulfillmentType === 'made_to_order' && (
+            <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-[11px] leading-snug">
+              Handcrafted to Order · Production takes <strong>{(product as any).productionLeadTime || '5–7 business days'}</strong> before dispatch. Protected by 100% Escrow &amp; pre-dispatch photo proof.
             </div>
-            <span className="text-[10px] text-emerald-400 font-bold">
-              Dispatches in {product.dispatchDays || '1-2 business days'}
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[var(--text-primary)]">
+              <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
+              <span className="uppercase tracking-wider">Courier &amp; Hub Delivery</span>
+            </div>
+            <span className="text-[10px] text-emerald-500">
+              {(product as any).fulfillmentType === 'made_to_order'
+                ? `Ships in ${(product as any).productionLeadTime || '5-7 business days'}`
+                : `Dispatches in ${product.dispatchDays || '1-2 business days'}`}
             </span>
           </div>
 
           <p className="text-[11px] text-[var(--text-secondary)] font-light leading-relaxed">
-            Live courier rates calculated at checkout based on your destination. Doorstep delivery (GIG, Fez, Red Star) &amp; Motor Park Waybills supported across Nigeria.
+            Live delivery rates calculated at checkout for doorstep courier or hub pickup. Every order includes a 48-hour escrow inspection window.
           </p>
 
-          <div className="pt-1 flex items-center gap-1.5 text-[10px] text-[var(--gold-accent)] font-medium">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span>Ships directly from {product.vendorCity ? `${product.vendorCity}, ` : ''}{product.vendorState || 'Nigeria'}</span>
-          </div>
+          {(product.vendorCity || product.vendorState) && (
+            <div className="pt-1 flex items-center gap-1.5 text-[10px] text-[var(--gold-accent)]">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span>Ships directly from {[product.vendorCity, product.vendorState].filter(Boolean).join(', ')}</span>
+            </div>
+          )}
         </div>
 
         {/* 7. EXPANDABLE CUSTOMER REVIEWS ACCORDION */}

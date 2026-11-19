@@ -38,7 +38,7 @@ const DEFAULT_EDITORIAL_SLIDES: EditorialSlide[] = [
     id: 'slide-agbada',
     title: 'Bespoke Royal Heritage Agbada',
     categoryName: 'Men & Unisex Native',
-    designerName: 'Sartorial Lagos',
+    designerName: 'Sartorial House',
     imageUrl: '/images/products/BlackAgbada.jpg',
     description: 'Hand-tailored wool drape structured for distinguished ceremonies and royal occasions.',
     linkUrl: '/shop'
@@ -49,14 +49,14 @@ const DEFAULT_EDITORIAL_SLIDES: EditorialSlide[] = [
     categoryName: "Women's Couture & Silks",
     designerName: 'Arike Brand',
     imageUrl: '/images/editorial/female_dress.jpg',
-    description: 'Flowing rich-auntie silk Bubu dresses with vibrant African motifs and fluid silhouette.',
+    description: 'Flowing rich-auntie silk Bubu dresses with vibrant artisan motifs and fluid silhouette.',
     linkUrl: '/shop'
   },
   {
     id: 'slide-slides',
     title: 'Handcrafted Cowhide Leather Slides',
     categoryName: 'Footwear & Slides',
-    designerName: 'Kano Artisan Footwear',
+    designerName: 'Savanna Artisan Footwear',
     imageUrl: '/images/products/UnisexSlides.jpg',
     description: 'Authentic cowhide leather slides with ergonomic shock-absorbing footbed and weather-sealed edges.',
     linkUrl: '/shop'
@@ -83,7 +83,7 @@ const DEFAULT_EDITORIAL_SLIDES: EditorialSlide[] = [
     id: 'slide-cap1',
     title: 'Royal Velvet Embroidered Fila Cap',
     categoryName: 'Native Headwear',
-    designerName: 'Sartorial Lagos',
+    designerName: 'Sartorial House',
     imageUrl: '/images/products/Cap1.png',
     description: 'Hand-tailored royal cotton velvet Fila cap with traditional geometric chest embroidery.',
     linkUrl: '/shop'
@@ -110,7 +110,7 @@ const DEFAULT_EDITORIAL_SLIDES: EditorialSlide[] = [
     id: 'slide-smart-shoes',
     title: 'Smart Shoes & Luxury Loafers',
     categoryName: 'Shoes & Footwear',
-    designerName: 'Kano Artisan Footwear',
+    designerName: 'Savanna Artisan Footwear',
     imageUrl: '/images/products/BlackSmartShoes.jpg',
     description: 'Hand-burnished leather loafers, Italian-cut dress shoes, and contemporary luxury footwear.',
     linkUrl: '/shop'
@@ -159,9 +159,9 @@ export default function AmbientScreenSaver() {
       id: `live-prod-${p.id || idx}`,
       title: p.name || 'Contemporary Fashion Drop',
       categoryName: catName,
-      designerName: p.vendorName || p.vendor_name || 'Verified Nigerian Designer',
+      designerName: p.vendorName || p.vendor_name || 'Verified Independent Designer',
       imageUrl: finalImg,
-      description: p.description || p.fitNotes || 'Handcrafted contemporary Nigerian design available for immediate delivery.',
+      description: p.description || p.fitNotes || 'Handcrafted contemporary luxury design available for immediate delivery.',
       linkUrl: `/shop/${p.id}`
     };
   }, []);

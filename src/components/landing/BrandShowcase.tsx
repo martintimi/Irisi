@@ -54,13 +54,13 @@ export default function BrandShowcase() {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--badge-bg)] text-[var(--gold-accent)] text-xs font-mono-luxury uppercase tracking-widest font-bold">
               <Store className="h-3.5 w-3.5" />
-              <span>VERIFIED NIGERIAN BRANDS</span>
+              <span>VERIFIED FASHION BRANDS</span>
             </div>
             <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl font-normal text-[var(--text-primary)]">
               Partner Designers & Houses
             </h2>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light max-w-xl">
-              Verified independent fashion designers, artisanal footwear houses, and fine jewelry brands across Nigeria.
+              Verified independent fashion designers, artisanal footwear houses, and fine jewelry brands.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export default function BrandShowcase() {
             href="/vendors"
             className="inline-flex items-center gap-2 text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)] hover:underline font-bold"
           >
-            <span>Are you a Nigerian brand? Join Us</span>
+            <span>Are you an independent brand? Join Us</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>

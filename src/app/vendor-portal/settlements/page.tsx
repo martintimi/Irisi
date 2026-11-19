@@ -69,7 +69,7 @@ export default function VendorSettlementsPage() {
               Settlements & Merchant Treasury
             </h1>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-              Automated payouts wired directly into your verified Nigerian commercial bank account with 0% platform promo fee.
+              Automated payouts wired directly into your verified bank account with transparent settlement tracking.
             </p>
           </div>
 

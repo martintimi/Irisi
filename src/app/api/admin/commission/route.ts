@@ -1,94 +1,89 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { normalizeBillingConfig } from '@/lib/config/platformBilling';
+import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
 
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_COMMISSION_CONFIG = {
-  commissionPercent: 0,
-  isEnabled: false,
-  updatedAt: new Date().toISOString()
-};
-
-// GET: Retrieve the platform commission rate (defaults to 0%)
+// GET: Retrieve live platform billing, Free Launch Kill-Switch, Plus price & commission rates
 export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from('vendors')
-      .select('id, bio')
-      .eq('id', 'admin-platform-commission')
-      .single();
-
-    if (!error && data && data.bio) {
-      try {
-        const parsed = JSON.parse(data.bio);
-        return NextResponse.json({
-          success: true,
-          config: {
-            ...DEFAULT_COMMISSION_CONFIG,
-            ...parsed,
-            commissionPercent: Number(parsed.commissionPercent || 0),
-            isEnabled: Boolean(parsed.isEnabled)
-          }
-        }, {
-          headers: { 'Cache-Control': 'no-store, max-age=0' }
-        });
-      } catch (e) {
-        console.warn('Failed to parse commission config json:', e);
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      config: DEFAULT_COMMISSION_CONFIG
-    }, {
-      headers: { 'Cache-Control': 'no-store, max-age=0' }
-    });
-  } catch (err: any) {
-    console.error('Error fetching commission settings:', err);
-    return NextResponse.json({
-      success: true,
-      config: DEFAULT_COMMISSION_CONFIG
-    });
-  }
+  const config = await fetchLivePlatformBillingConfig();
+  return NextResponse.json(
+    { success: true, config },
+    { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+  );
 }
 
-// POST: Save new commission rate configured by Super Admin
+// POST: Save updated billing rules from Super Admin (anytime, live globally)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const rawPercent = Number(body?.commissionPercent ?? 0);
-    const isEnabled = Boolean(body?.isEnabled);
+    const existing = await fetchLivePlatformBillingConfig();
 
-    // Keep commission between 0% and 50% max for safety
-    const commissionPercent = Math.max(0, Math.min(50, isNaN(rawPercent) ? 0 : rawPercent));
+    const freeLaunchMode =
+      typeof body?.freeLaunchMode === 'boolean'
+        ? body.freeLaunchMode
+        : typeof body?.isEnabled === 'boolean'
+        ? !body.isEnabled
+        : existing.freeLaunchMode;
 
-    const newConfig = {
-      commissionPercent,
-      isEnabled,
-      updatedAt: new Date().toISOString()
-    };
+    const newConfig = normalizeBillingConfig({
+      ...existing,
+      freeLaunchMode,
+      isEnabled: !freeLaunchMode,
+      freeTierCommissionPercent:
+        body?.freeTierCommissionPercent !== undefined
+          ? Number(body.freeTierCommissionPercent)
+          : body?.commissionPercent !== undefined
+          ? Number(body.commissionPercent)
+          : existing.freeTierCommissionPercent,
+      plusTierCommissionPercent:
+        body?.plusTierCommissionPercent !== undefined
+          ? Number(body.plusTierCommissionPercent)
+          : existing.plusTierCommissionPercent,
+      plusMonthlyPriceNgn:
+        body?.plusMonthlyPriceNgn !== undefined
+          ? Number(body.plusMonthlyPriceNgn)
+          : existing.plusMonthlyPriceNgn,
+      freeTierProductLimit:
+        body?.freeTierProductLimit !== undefined
+          ? Number(body.freeTierProductLimit)
+          : existing.freeTierProductLimit,
+      requirePlusForStorefront:
+        typeof body?.requirePlusForStorefront === 'boolean'
+          ? body.requirePlusForStorefront
+          : existing.requirePlusForStorefront,
+      updatedAt: new Date().toISOString(),
+    });
 
-    // Persist to Supabase so all serverless routes and frontend immediately see it
-    const { error: dbError } = await supabase
+    const adminClient = createAdminClient();
+    const { error: dbError } = await adminClient
       .from('vendors')
       .upsert({
         id: 'admin-platform-commission',
-        brand_name: 'Platform Commission Settings',
-        bio: JSON.stringify(newConfig)
-      });
+        brand_name: 'Platform Billing & Commission Settings',
+        bio: JSON.stringify(newConfig),
+      }, { onConflict: 'id' });
 
     if (dbError) {
-      console.error('Failed to save commission config to Supabase:', dbError);
+      console.error('Failed to save platform billing config:', dbError);
       return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
     }
 
+    const modeSummary = newConfig.freeLaunchMode
+      ? 'Global Free Launch Period ACTIVE (0% commission · Free Plus access)'
+      : `Billing LIVE: Free ${newConfig.freeTierCommissionPercent}% | Plus ₦${newConfig.plusMonthlyPriceNgn.toLocaleString()}/mo (${newConfig.plusTierCommissionPercent}%)`;
+
     return NextResponse.json({
       success: true,
-      message: `Platform commission set to ${commissionPercent}% (${isEnabled ? 'Active' : 'Inactive'}).`,
-      config: newConfig
+      message: modeSummary,
+      config: newConfig,
     });
   } catch (err: any) {
-    console.error('Error saving commission setting:', err);
-    return NextResponse.json({ success: false, error: err?.message || 'Server error' }, { status: 500 });
+    console.error('Error saving platform billing setting:', err);
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Server error' },
+      { status: 500 }
+    );
   }
 }

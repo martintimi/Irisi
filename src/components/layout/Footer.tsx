@@ -38,7 +38,7 @@ export default function Footer() {
                 Doorstep Nationwide Delivery
               </h4>
               <p className="text-xs text-[var(--text-secondary)] mt-1 font-light leading-relaxed">
-                Direct doorstep delivery from each verified designer across all 36 Nigerian states.
+                Direct doorstep delivery from each verified designer straight to your location.
               </p>
             </div>
           </div>
@@ -49,7 +49,7 @@ export default function Footer() {
             </div>
             <div>
               <h4 className="text-xs font-mono-luxury uppercase tracking-wider font-bold text-[var(--text-primary)]">
-                Authentic Nigerian Craft
+                Authentic Craftsmanship
               </h4>
               <p className="text-xs text-[var(--text-secondary)] mt-1 font-light leading-relaxed">
                 Direct partnerships with verified boutiques, fashion houses, footwear artisans, and jewelry brands.
@@ -69,7 +69,7 @@ export default function Footer() {
               <BrandWordmark size="md" />
             </div>
             <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed max-w-xs">
-              Nigeria&apos;s premier multi-brand haute couture and ready-to-wear fashion marketplace.
+              A premier multi-brand haute couture and ready-to-wear fashion marketplace.
             </p>
           </div>
 
@@ -79,7 +79,7 @@ export default function Footer() {
             </h5>
             <ul className="space-y-2 text-xs text-[var(--text-secondary)]">
               <li><Link href="/shop" className="hover:text-[var(--text-primary)] transition-colors">Senator & Native Sets</Link></li>
-              <li><Link href="/shop" className="hover:text-[var(--text-primary)] transition-colors">Nigerian Streetwear & Tees</Link></li>
+              <li><Link href="/shop" className="hover:text-[var(--text-primary)] transition-colors">Streetwear & Graphic Tees</Link></li>
               <li><Link href="/shop" className="hover:text-[var(--text-primary)] transition-colors">Handcrafted Shoes & Bags</Link></li>
               <li><Link href="/shop" className="hover:text-[var(--text-primary)] transition-colors">Fine Jewelry & Statement Accents</Link></li>
             </ul>
@@ -112,7 +112,14 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <span className="text-[11px] text-[var(--text-muted)]">All 36 States · Nationwide Delivery</span>
+                <Link href="/returns" className="hover:text-[var(--text-primary)] transition-colors">
+                  Returns &amp; Escrow Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-[var(--text-primary)] transition-colors">
+                  Terms &amp; Privacy
+                </Link>
               </li>
             </ul>
           </div>
@@ -124,7 +131,7 @@ export default function Footer() {
             © {new Date().getFullYear()} ÌRÍSÍ. All rights reserved.
           </div>
           <div className="mt-2 sm:mt-0">
-            Appearance & Presence · Crafted for Nigerian Luxury
+            Appearance & Presence · Crafted for Modern Luxury
           </div>
         </div>
       </div>

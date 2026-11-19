@@ -1,10 +1,7 @@
 'use client';
 
 import React from 'react';
-import {
-  TrendingUp, Download, ArrowUpRight, DollarSign,
-  Package, ShieldCheck, CheckCircle2, Award
-} from 'lucide-react';
+import { Download, Package, TrendingUp } from 'lucide-react';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
 
 interface MobileVendorReportsProps {
@@ -22,143 +19,117 @@ export default function MobileVendorReports({
   isLoading,
   totalRevenue,
   totalPiecesSold,
-  averageOrderValue
+  averageOrderValue,
 }: MobileVendorReportsProps) {
   if (isLoading) {
-    return <VendorLuxuryLoader label="Generating Store Financial Analytics..." />;
+    return <VendorLuxuryLoader label="Loading Analytics..." />;
   }
 
   return (
-    <div className="space-y-4 animate-fadeIn pb-16 select-none">
-      
-      {/* 1. Header with Export */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 animate-fadeIn pb-6 select-none">
+      {/* 1. Native Header */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-            Sales & Analytics
-          </h2>
-          <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-            Revenue, AOV & Settlement Ledger
-          </span>
+          <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+            Analytics
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] font-light">
+            Revenue, average order &amp; ledger
+          </p>
         </div>
 
         <button
           type="button"
           onClick={() => alert('Monthly statement exported to CSV!')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury font-bold text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-all cursor-pointer shrink-0"
+          className="h-9 px-3.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[11px] font-mono-luxury text-[var(--text-primary)] inline-flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
         >
           <Download className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
           <span>Export</span>
         </button>
       </div>
 
-      {/* 2. 2x2 Metric Grid */}
-      <div className="grid grid-cols-2 gap-2.5 font-mono-luxury">
-        
-        {/* Metric 1: Total Volume */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Total Sales</span>
-          <div className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-none">
-            ₦{totalRevenue.toLocaleString()}
-          </div>
-          <div className="text-[9px] text-emerald-400 flex items-center gap-1 pt-0.5 font-bold">
-            <TrendingUp className="h-2.5 w-2.5" />
-            <span>{totalPiecesSold} Piece{totalPiecesSold === 1 ? '' : 's'} Sold</span>
-          </div>
-        </div>
-
-        {/* Metric 2: Average Order Value */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Average Order</span>
-          <div className="font-editorial text-2xl font-bold text-[var(--gold-accent)] leading-none">
-            ₦{averageOrderValue.toLocaleString()}
-          </div>
-          <div className="text-[9px] text-[var(--text-secondary)] pt-0.5 truncate">
-            {products.length} Active Catalog Pieces
-          </div>
-        </div>
-
-        {/* Metric 3: Quality Rating */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Client Rating</span>
-          <div className="font-editorial text-2xl font-bold text-emerald-400 leading-none">5.0 / 5.0</div>
-          <div className="text-[9px] text-[var(--text-secondary)] pt-0.5">
-            100% On-Time Fulfillment
-          </div>
-        </div>
-
-        {/* Metric 4: Platform Fee */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Platform Fee</span>
-          <div className="font-editorial text-2xl font-bold text-emerald-400 leading-none">0%</div>
-          <div className="text-[9px] text-[var(--gold-accent)] pt-0.5 font-bold">
-            Promo Retained 100%
-          </div>
-        </div>
-
-      </div>
-
-      {/* 3. Live Order Fulfillment Ledger List (Mobile Clean Cards instead of broken table) */}
-      <div className="space-y-3 pt-1">
+      {/* 2. Hero Revenue Card */}
+      <section className="rounded-[26px] bg-[#0D0D10] text-white p-5 space-y-4 border border-white/10 shadow-[0_18px_45px_rgba(0,0,0,0.16)]">
         <div className="flex items-center justify-between">
-          <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
-            Fulfillment Ledger ({orders.length})
-          </h3>
-          <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)]">
-            Verified Escrow
+          <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[#E6C367]">
+            Total Gross Volume
+          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-mono-luxury text-emerald-400">
+            <TrendingUp className="h-3 w-3" />
+            <span>{totalPiecesSold} Sold</span>
           </span>
         </div>
 
+        <div className="font-editorial text-[38px] font-normal tracking-tight text-white leading-none">
+          ₦{totalRevenue.toLocaleString()}
+        </div>
+
+        <div className="grid grid-cols-3 divide-x divide-white/10 pt-3 border-t border-white/10 text-center">
+          <div className="pr-2">
+            <div className="font-editorial text-lg text-white">₦{averageOrderValue.toLocaleString()}</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-zinc-400">Avg Order</span>
+          </div>
+          <div className="px-2">
+            <div className="font-editorial text-lg text-[#E6C367]">{products.length}</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-zinc-400">Listings</span>
+          </div>
+          <div className="pl-2">
+            <div className="font-editorial text-lg text-emerald-400">0%</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-zinc-400">Launch Fee</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Grouped Fulfillment Ledger */}
+      <section className="space-y-2">
+        <div className="px-1 flex items-center justify-between">
+          <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            Fulfillment Ledger ({orders.length})
+          </span>
+          <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)]">Escrow Verified</span>
+        </div>
+
         {orders.length === 0 ? (
-          <div className="p-8 rounded-3xl surface-card border border-[var(--border-subtle)] text-center space-y-2.5">
-            <Package className="h-8 w-8 text-[var(--gold-accent)] mx-auto opacity-50" />
-            <h4 className="font-editorial text-base font-bold text-[var(--text-primary)]">
-              No Ledger Records Yet
+          <div className="p-8 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-2">
+            <Package className="h-7 w-7 text-[var(--text-muted)] mx-auto" strokeWidth={1.5} />
+            <h4 className="font-editorial text-lg font-normal text-[var(--text-primary)]">
+              No Ledger Entries Yet
             </h4>
-            <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
-              Completed customer orders will generate transparent financial line items here.
+            <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto">
+              Completed orders generate transparent revenue entries here automatically.
             </p>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
             {orders.map((row, idx) => {
-              const rowSubtotal = (row.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-              const rowPayout = rowSubtotal;
+              const rowSubtotal = (row.items || []).reduce(
+                (s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1),
+                0
+              );
 
               return (
-                <div
-                  key={idx}
-                  className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2 shadow-sm"
-                >
-                  <div className="flex items-center justify-between text-xs font-mono-luxury border-b border-[var(--border-subtle)] pb-2">
-                    <span className="font-bold text-[var(--gold-accent)]">{row.orderNumber}</span>
-                    <span className="text-[10px] text-[var(--text-muted)]">{row.date || 'Recent'}</span>
+                <div key={idx} className="px-4 py-3.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+                      {row.orderNumber}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-muted)] font-light truncate mt-0.5">
+                      {row.customerName} · {row.items?.length || 1} item(s) · {row.date || 'Recent'}
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs font-mono-luxury">
-                    <span className="font-bold text-[var(--text-primary)]">{row.customerName}</span>
-                    <span className="text-[11px] text-[var(--text-secondary)]">{row.items?.length || 1} Item(s)</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs font-mono-luxury pt-1 border-t border-[var(--border-subtle)]">
-                    <div>
-                      <span className="text-[10px] text-[var(--text-muted)] block">Gross: ₦{rowSubtotal.toLocaleString()}</span>
-                      <span className="text-[10px] text-emerald-400 font-bold">Fee: ₦0 (0%)</span>
+                  <div className="text-right shrink-0">
+                    <div className="font-editorial text-base text-emerald-500">
+                      ₦{rowSubtotal.toLocaleString()}
                     </div>
-                    <div className="text-right">
-                      <span className="text-[9px] text-[var(--text-muted)] uppercase block">Escrow Payout</span>
-                      <span className="font-editorial text-base font-bold text-emerald-400">
-                        ₦{rowPayout.toLocaleString()}
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-mono-luxury text-[var(--text-muted)]">Fee ₦0</span>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
-
+      </section>
     </div>
   );
 }

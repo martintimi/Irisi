@@ -11,12 +11,12 @@ export default function KineticMarquee() {
   const x2 = useTransform(smoothScroll, [0, 1], ['-30%', '0%']);
 
   const row1 = [
-    'BESPOKE NIGERIAN TAILORING',
+    'BESPOKE NATIVE TAILORING',
     'VERIFIED INDEPENDENT BRANDS',
     'SENATOR & NATIVE SETS',
     'HAND-DYED ADIRE SILK',
-    'CONTEMPORARY NIGERIAN STREETWEAR',
-    'HANDCRAFTED NIGERIAN LEATHER'
+    'CONTEMPORARY STREETWEAR',
+    'HANDCRAFTED ARTISAN LEATHER'
   ];
 
   const row2 = [

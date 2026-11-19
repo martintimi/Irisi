@@ -747,20 +747,31 @@ export default function ProductDetailPage() {
             </div>
           )}
 
-          {/* NATIONWIDE COURIER & MOTOR PARK DELIVERY INFO */}
+          {/* COURIER, MADE-TO-ORDER & ESCROW PROTECTION INFO */}
           <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 text-xs font-mono-luxury shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-bold text-[var(--text-primary)]">
-                <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
-                <span className="uppercase tracking-wider">Nationwide Courier &amp; Waybill</span>
+            {(product as any).fulfillmentType === 'made_to_order' && (
+              <div className="px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-300 text-xs leading-relaxed">
+                Handcrafted to Order · Production takes <strong>{(product as any).productionLeadTime || '5–7 business days'}</strong> before dispatch. Includes pre-dispatch photo proof &amp; 100% Escrow Buyer Protection.
               </div>
-              <span className="text-[10px] text-emerald-400 font-bold">
-                Dispatches in {product.dispatchDays || '1-2 business days'}
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[var(--text-primary)]">
+                <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
+                <span className="uppercase tracking-wider">Courier &amp; Hub Delivery</span>
+              </div>
+              <span className="text-[10px] text-emerald-500">
+                {(product as any).fulfillmentType === 'made_to_order'
+                  ? `Ships in ${(product as any).productionLeadTime || '5-7 business days'}`
+                  : `Dispatches in ${product.dispatchDays || '1-2 business days'}`}
               </span>
             </div>
 
             <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
-              Live courier delivery rates calculated dynamically at checkout based on your delivery address. Verified doorstep delivery (GIG Logistics, Fez, Red Star) and Motor Park Waybills supported nationwide.
+              Live courier rates calculated at checkout for doorstep delivery or hub pickup. Every order is protected by a 48-hour escrow inspection window —{' '}
+              <Link href="/returns" className="text-[var(--gold-accent)] underline">
+                Read Return &amp; Escrow Policy
+              </Link>.
             </p>
 
             <div className="flex items-center gap-2 text-xs text-[var(--gold-accent)] font-medium pt-1">

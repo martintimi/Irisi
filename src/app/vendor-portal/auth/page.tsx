@@ -15,6 +15,7 @@ import { signUpVendor, signInVendor, verifyOtpCode, resendOtpCode, requestPasswo
 import { isBoutiqueVendor, VendorSpecialty } from '@/types';
 import BrandWordmark from '@/components/common/BrandWordmark';
 import { NIGERIAN_STATES } from '@/lib/data/nigeriaLocations';
+import { AFRICAN_COUNTRIES, getCountryByCodeOrName, getStatesForCountry } from '@/lib/data/africanLocations';
 import SearchableCitySelect from '@/components/common/SearchableCitySelect';
 import EmailDomainSuggestions from '@/components/common/EmailDomainSuggestions';
 import { NIGERIAN_BANKS, getBankCodeByName } from '@/lib/data/nigerianBanks';
@@ -22,20 +23,20 @@ import { NIGERIAN_BANKS, getBankCodeByName } from '@/lib/data/nigerianBanks';
 const vendorEditorialSlides = [
   {
     image: '/images/products/BlackSenator.jpg',
-    title: 'Nigerian Fashion Boutiques & Ateliers',
-    subtitle: 'From ready-to-wear streetwear and boutique collections to bespoke native tailoring across Lagos, Abuja, and Port Harcourt.',
+    title: 'Independent Fashion Boutiques & Ateliers',
+    subtitle: 'From ready-to-wear streetwear and boutique collections to bespoke native tailoring and artisanal footwear.',
     tag: 'Merchant Growth'
   },
   {
     image: '/images/products/BlackAgbada.jpg',
     title: 'Zero-Return High Fashion',
-    subtitle: 'Sell your native pieces directly to verified Nigerian shoppers with secured escrow settlements.',
+    subtitle: 'Sell your pieces directly to verified shoppers with secured escrow settlements.',
     tag: 'Escrow Protected'
   },
   {
     image: '/images/no-product.svg',
     title: 'Ready-to-Wear Drops',
-    subtitle: 'Boutiques and streetwear labels sell directly to verified Nigerian shoppers with nationwide delivery.',
+    subtitle: 'Boutiques and streetwear labels sell directly to verified shoppers with reliable doorstep delivery.',
     tag: 'Streetwear & Denim'
   },
   {
@@ -107,6 +108,7 @@ function VendorAuthPageContent() {
     phone: '',
     password: '',
     confirmPassword: '',
+    country: 'Nigeria',
     state: 'Lagos',
     city: 'Ikeja (Allen / Opebi / GRA / Alausa)',
     address: '',
@@ -920,7 +922,7 @@ function VendorAuthPageContent() {
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
               <span>0% Merchant Fee · Verified Bank Escrow</span>
             </span>
-            <span>LAGOS · NIGERIA</span>
+            <span>VERIFIED MERCHANT PORTAL</span>
           </div>
         </div>
       </div>
@@ -1009,7 +1011,7 @@ function VendorAuthPageContent() {
               {authMode === 'verify_otp'
                 ? `Enter the confirmation code sent to ${pendingEmail || regForm.email}.`
                 : authMode === 'forgot_password'
-                ? 'Enter your registered business email or Nigerian phone number to receive a recovery code.'
+                ? 'Enter your registered business email or phone number to receive a recovery code.'
                 : authMode === 'reset_password'
                 ? `Enter the recovery code sent to ${recoveryInfo?.maskedEmail || 'your registered email'} and choose your new password.`
                 : authMode === 'register'
@@ -1218,13 +1220,13 @@ function VendorAuthPageContent() {
                     required
                     value={recoveryIdentifier}
                     onChange={(e) => setRecoveryIdentifier(e.target.value)}
-                    placeholder="contact@brand.ng or 08012*****"
+                    placeholder="contact@yourbrand.com or phone number"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
                   />
                 </div>
                 <EmailDomainSuggestions email={recoveryIdentifier} onSelectDomain={(full) => setRecoveryIdentifier(full)} />
                 <p className="text-[11px] text-[var(--text-muted)] font-mono-luxury mt-1.5">
-                  Enter your registered business email or Nigerian phone number.
+                  Enter your registered business email or phone number.
                 </p>
               </div>
 
@@ -1819,26 +1821,56 @@ function VendorAuthPageContent() {
                   <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
                     WhatsApp / Phone Line
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                  <div className="flex items-stretch rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] focus-within:border-[var(--gold-accent)] overflow-hidden">
+                    <span className="px-3 flex items-center bg-[var(--bg-primary)] border-r border-[var(--border-subtle)] text-[11px] font-mono-luxury text-[var(--gold-accent)] shrink-0">
+                      {getCountryByCodeOrName(regForm.country || 'Nigeria').dialCode}
+                    </span>
                     <input
                       type="tel"
                       required
                       value={regForm.phone}
                       onChange={(e) => setRegForm({ ...regForm, phone: e.target.value })}
-                      placeholder="08012*****"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-mono-luxury"
+                      placeholder={getCountryByCodeOrName(regForm.country || 'Nigeria').phonePlaceholder || '801 234 5678'}
+                      className="flex-1 min-w-0 px-3 py-2.5 bg-transparent text-xs text-[var(--text-primary)] focus:outline-none font-mono-luxury"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Location: State & City Combobox */}
+              {/* Location: African Country, State & City Combobox */}
               <div className="space-y-3 pt-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
                     <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
-                      State / Region
+                      Country
+                    </label>
+                    <select
+                      value={regForm.country || 'Nigeria'}
+                      onChange={(e) => {
+                        const newCountry = e.target.value;
+                        const states = getStatesForCountry(newCountry);
+                        const firstState = states[0] || '';
+                        setRegForm((prev) => ({
+                          ...prev,
+                          country: newCountry,
+                          state: firstState,
+                          city: '',
+                          location: [prev.address, firstState, newCountry].filter(Boolean).join(', '),
+                        }));
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                    >
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
+                      {getCountryByCodeOrName(regForm.country || 'Nigeria').stateLabel}
                     </label>
                     <select
                       value={regForm.state}
@@ -1848,12 +1880,12 @@ function VendorAuthPageContent() {
                           ...prev,
                           state: newState,
                           city: '',
-                          location: [prev.address, newState].filter(Boolean).join(', '),
+                          location: [prev.address, newState, prev.country].filter(Boolean).join(', '),
                         }));
                       }}
                       className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
                     >
-                      {NIGERIAN_STATES.map((st) => (
+                      {getStatesForCountry(regForm.country || 'Nigeria').map((st) => (
                         <option key={st} value={st}>{st}</option>
                       ))}
                     </select>
@@ -1861,20 +1893,37 @@ function VendorAuthPageContent() {
 
                   <div>
                     <label className="block text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-secondary)] mb-1 font-bold">
-                      City / Neighborhood
+                      City / Area
                     </label>
-                    <SearchableCitySelect
-                      state={regForm.state}
-                      value={regForm.city}
-                      onChange={(newCity) => {
-                        setRegForm((prev) => ({
-                          ...prev,
-                          city: newCity,
-                          location: [prev.address, newCity, prev.state].filter(Boolean).join(', '),
-                        }));
-                      }}
-                      placeholder={`Search or type city in ${regForm.state}...`}
-                    />
+                    {(regForm.country === 'Nigeria' || !regForm.country) ? (
+                      <SearchableCitySelect
+                        state={regForm.state}
+                        value={regForm.city}
+                        onChange={(newCity) => {
+                          setRegForm((prev) => ({
+                            ...prev,
+                            city: newCity,
+                            location: [prev.address, newCity, prev.state, prev.country].filter(Boolean).join(', '),
+                          }));
+                        }}
+                        placeholder={`Search or type city in ${regForm.state}...`}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={regForm.city}
+                        onChange={(e) => {
+                          const newCity = e.target.value;
+                          setRegForm((prev) => ({
+                            ...prev,
+                            city: newCity,
+                            location: [prev.address, newCity, prev.state, prev.country].filter(Boolean).join(', '),
+                          }));
+                        }}
+                        placeholder="e.g. City or Town"
+                        className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                      />
+                    )}
                   </div>
                 </div>
 

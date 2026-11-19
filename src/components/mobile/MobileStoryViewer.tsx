@@ -216,13 +216,25 @@ export default function MobileStoryViewer({
         </div>
       </div>
 
-      {/* ── STORY IMAGE ── */}
+      {/* ── STORY MEDIA (PHOTO OR VIDEO) ── */}
       <div className="relative flex-1 w-full overflow-hidden">
-        <Image
-          src={currentPost.mediaUrl}
-          alt={currentPost.caption}
-          fill unoptimized priority className="object-cover"
-        />
+        {currentPost.mediaType === 'video' || /\.(mp4|webm|mov)(\?|$)/i.test(currentPost.mediaUrl || '') ? (
+          <video
+            key={currentPost.mediaUrl}
+            src={currentPost.mediaUrl}
+            autoPlay
+            playsInline
+            muted
+            loop
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image
+            src={currentPost.mediaUrl}
+            alt={currentPost.caption}
+            fill unoptimized priority className="object-cover"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
         {/* Tap zones: left 1/3 = prev, right 1/3 = next, middle = pause (no-op) */}
@@ -254,7 +266,7 @@ export default function MobileStoryViewer({
                 <span className="text-[9px] text-[var(--gold-accent)] font-mono-luxury uppercase font-bold flex items-center gap-1">
                   <Sparkles className="h-2.5 w-2.5 fill-current" /> Featured Drop
                 </span>
-                <h4 className="text-xs font-bold text-white line-clamp-1">{currentPost.taggedProductName}</h4>
+                <h4 className="text-xs font-medium text-white line-clamp-1">{currentPost.taggedProductName}</h4>
                 <p className="text-xs text-[var(--gold-accent)] font-bold">
                   ₦{Number(currentPost.taggedProductPrice || 0).toLocaleString()}
                 </p>

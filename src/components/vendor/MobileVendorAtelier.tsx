@@ -133,16 +133,13 @@ export default function MobileVendorAtelier({
         </div>
       )}
 
-      {/* 1. Header */}
+      {/* 1. Native Screen Header */}
       <div>
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20 mb-1">
-          <span>{isBoutique ? 'Boutique Store' : 'Atelier Profile'}</span>
-        </div>
-        <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-          Store Profile & Logistics
-        </h2>
-        <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-          Configure identity, location, and delivery zone fees.
+        <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+          Store Profile
+        </h1>
+        <p className="text-xs text-[var(--text-muted)] font-light">
+          Brand identity, socials &amp; dispatch hub
         </p>
       </div>
 

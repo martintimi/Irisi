@@ -80,15 +80,15 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`relative text-sm tracking-wider uppercase font-semibold transition-all py-1.5 ${
+                  className={`relative text-sm tracking-wider uppercase font-normal transition-all py-1.5 ${
                     isActive
-                      ? 'text-[var(--text-primary)] font-bold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2.5px] after:bg-[var(--text-primary)]'
+                      ? 'text-[var(--text-primary)] font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1.5px] after:bg-[var(--text-primary)]'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <span>{link.label}</span>
                   {link.badge && (
-                    <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-mono-luxury bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 font-bold">
+                    <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-mono-luxury bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 font-normal">
                       {link.badge}
                     </span>
                   )}
@@ -143,7 +143,7 @@ export default function Navbar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.96 }}
                   transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl surface-card border border-[var(--border-subtle)] shadow-2xl p-4 space-y-3 z-50"
+                  className="fixed inset-x-3 top-16 sm:inset-auto sm:absolute sm:right-0 sm:top-auto sm:mt-2 sm:w-96 rounded-3xl sm:rounded-2xl surface-card border border-[var(--border-subtle)] shadow-2xl p-4 space-y-3 z-50"
                 >
                   <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
                     <div className="flex items-center gap-1.5">

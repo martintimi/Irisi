@@ -9,6 +9,7 @@ import {
   ChevronRight, Sun, Moon, ArrowUpRight
 } from 'lucide-react';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
+import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
 
 export default function MobileHomeView() {
   const {
@@ -506,7 +507,7 @@ export default function MobileHomeView() {
             tag: 'TRADITIONAL & NATIVE',
             title: 'ROYAL 3-PIECE AGBADA',
             subtitle: 'WEDDINGS & CELEBRATIONS',
-            highlight: 'EMBROIDERED NIGERIAN ROBES',
+            highlight: 'EMBROIDERED CEREMONIAL ROBES',
             image: 'https://res.cloudinary.com/dvnj8idde/image/upload/v1789123515/veyra_categories/agbadaformen.jpg',
             link: '/shop?gender=men&category=agbada',
           },
@@ -644,21 +645,21 @@ export default function MobileHomeView() {
     {
       id: 'at-1',
       name: 'Atelier Sovereign',
-      origin: 'Lagos',
+      origin: 'Verified Atelier',
       focus: 'Bespoke Ceremonial Agbada',
       image: '/images/products/BlackAgbada.jpg',
     },
     {
       id: 'at-2',
       name: 'Urban Archive',
-      origin: 'Yaba',
+      origin: 'Verified Streetwear',
       focus: '480GSM Heavyweight Streetwear',
       image: '/images/no-product.svg',
     },
     {
       id: 'at-3',
-      name: 'Kano Leather Studio',
-      origin: 'Kano',
+      name: 'Savanna Leather Studio',
+      origin: 'Artisan Leathercraft',
       focus: 'Handcrafted Calfskin Footwear',
       image: '/images/products/UnisexSlides.jpg',
     },
@@ -850,7 +851,7 @@ export default function MobileHomeView() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="font-sans font-black text-[25px] tracking-tight uppercase text-black dark:text-white leading-none">
+            <span className="font-editorial font-normal text-[24px] tracking-[0.14em] uppercase text-black dark:text-white leading-none">
               ÌRÍSÍ
             </span>
           </Link>
@@ -896,10 +897,10 @@ export default function MobileHomeView() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-2.5 px-2 text-[12px] font-bold uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+                className={`py-2.5 px-2 text-[11px] uppercase tracking-wider whitespace-nowrap border-b-2 transition-all cursor-pointer ${
                   isActive
-                    ? 'border-black dark:border-white text-black dark:text-white'
-                    : 'border-transparent text-neutral-500 hover:text-black dark:hover:text-white'
+                    ? 'border-black dark:border-white text-black dark:text-white font-medium'
+                    : 'border-transparent text-neutral-500 font-normal hover:text-black dark:hover:text-white'
                 }`}
               >
                 {tab.label}
@@ -925,6 +926,9 @@ export default function MobileHomeView() {
           </div>
         </div>
       </header>
+
+      {/* ── 3B. LIVE 48H BRAND DROP STORIES ── */}
+      <MobileStoriesRow onOpenQuickBuy={(prod) => setQuickBuyProduct(prod)} />
 
       {/* ── 4. FULL-BLEED EDGE-TO-EDGE HERO BANNER (ROTATING SLIDESHOW) ── */}
       <section className="relative w-full aspect-[4/5] max-h-[520px] bg-black overflow-hidden select-none">
@@ -958,7 +962,7 @@ export default function MobileHomeView() {
                   {slide.subtitle}
                 </span>
 
-                <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight leading-none drop-shadow-[0_4px_14px_rgba(0,0,0,1)]">
+                <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-white uppercase tracking-wide leading-none drop-shadow-[0_4px_14px_rgba(0,0,0,1)]">
                   {slide.title}
                 </h1>
 
@@ -1000,11 +1004,11 @@ export default function MobileHomeView() {
       {/* ── 5. SECONDARY HIGH-CONTRAST ANNOUNCEMENT BAR ──────── */}
       <section className="bg-black text-white px-4 py-3 border-y border-neutral-800 flex items-center justify-between">
         <div className="text-left">
-          <span className="text-[11px] font-black uppercase tracking-wider block leading-none">
+          <span className="text-[11px] font-medium uppercase tracking-wider block leading-none">
             NEW ARRIVALS · READY TO SHIP
           </span>
           <span className="text-[9px] text-neutral-400 tracking-tight">
-            Direct courier delivery & waybill across all 36 states
+            Direct doorstep &amp; hub courier delivery
           </span>
         </div>
 
@@ -1020,7 +1024,7 @@ export default function MobileHomeView() {
       {/* ── 6. SHOP BY CATEGORY (DYNAMICALLY FILTERED BY TAB) ─── */}
       <section className="px-4 pt-8 space-y-3">
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
-          <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
+          <h2 className="font-editorial text-lg font-normal uppercase tracking-wider text-black dark:text-white">
             Shop by Category · {activeTab.toUpperCase()}
           </h2>
           <Link
@@ -1050,7 +1054,7 @@ export default function MobileHomeView() {
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
 
               <div className="absolute bottom-3 inset-x-3 text-left z-10">
-                <h3 className="text-xs font-black uppercase text-white leading-tight drop-shadow-sm">
+                <h3 className="text-xs font-normal uppercase tracking-wide text-white leading-tight drop-shadow-sm">
                   {cat.title}
                 </h3>
                 <span className="text-[9px] font-medium text-neutral-300 block truncate drop-shadow-sm mt-0.5">
@@ -1069,7 +1073,7 @@ export default function MobileHomeView() {
       <section className="px-4 pt-10 space-y-3">
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2">
           <div>
-            <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
+            <h2 className="font-editorial text-lg font-normal uppercase tracking-wider text-black dark:text-white">
               Trending Pieces
             </h2>
             <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
@@ -1220,7 +1224,7 @@ export default function MobileHomeView() {
               Featured Brands & Stores
             </h2>
             <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-              Verified Independent Nigerian Fashion Brands
+              Verified Independent Fashion Brands
             </span>
           </div>
           <Link href="/vendors" className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white flex items-center gap-0.5">

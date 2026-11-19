@@ -293,7 +293,7 @@ export default function WhatsAppConciergeWidget() {
         whileDrag={{ scale: 1.08 }}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        className="fixed top-0 left-0 z-40 touch-none cursor-grab active:cursor-grabbing select-none"
+        className={`fixed top-0 left-0 z-40 touch-none cursor-grab active:cursor-grabbing select-none ${isVendorMode ? "hidden md:block" : ""}`}
       >
         <button
           type="button"

@@ -4,13 +4,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  TrendingUp, PackageCheck, DollarSign, Sparkles,
-  Plus, ExternalLink, ShieldCheck, ShoppingBag,
-  Scissors, AlertTriangle, AlertCircle, Clock,
-  ArrowRight, Store, Copy, Check, Share2, Banknote, Lock,
-  Gem, Footprints, Shirt, Crown, CheckCircle2
+  PackageCheck, DollarSign, Plus, ExternalLink, ShieldCheck,
+  AlertTriangle, AlertCircle, Clock, ArrowRight, Store, Copy,
+  Check, Lock, CheckCircle2, Camera, ChevronRight, Share2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
 
 interface MobileVendorOverviewProps {
   vendorProfile: any;
@@ -29,8 +28,6 @@ interface MobileVendorOverviewProps {
   onEditProduct?: (product: any) => void;
 }
 
-import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
-
 export default function MobileVendorOverview({
   vendorProfile,
   dbProducts,
@@ -40,7 +37,7 @@ export default function MobileVendorOverview({
   activeEscrowBalance = 0,
   settledPayouts = 0,
   recentOrders = [],
-  onEditProduct
+  onEditProduct,
 }: MobileVendorOverviewProps) {
   const [copied, setCopied] = useState(false);
   const isBoutique = isBoutiqueVendor(vendorProfile);
@@ -52,7 +49,6 @@ export default function MobileVendorOverview({
   const isPendingReview = !isVerified && !isRejected && profileStatus?.isProfileSaved;
   const isProfileIncomplete = !isVerified && !isRejected && profileStatus && !profileStatus.isProfileSaved;
 
-  // Post-approval setup checklist for Founding Brands (Logo, Bio, Dispatch Hub & Payout Bank Account)
   const missingLogo = !vendorProfile?.logoUrl || !vendorProfile.logoUrl.trim();
   const missingBio = !vendorProfile?.bio || !vendorProfile.bio.trim();
   const missingHub = !vendorProfile?.location || !vendorProfile.location.trim();
@@ -65,490 +61,495 @@ export default function MobileVendorOverview({
     vendorProfile.accountNumber.trim().length < 10;
 
   const brandName = vendorProfile?.brandName || 'Atelier';
-  const storeUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/brand/${encodeURIComponent(brandName)}`
-    : `https://veyra.ng/brand/${encodeURIComponent(brandName)}`;
+  const storeSlug = encodeURIComponent(vendorProfile?.id || brandName);
+  const storeUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/brand/${storeSlug}`
+      : `https://irisimi.ng/brand/${storeSlug}`;
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(storeUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-      confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+      setTimeout(() => setCopied(false), 2400);
+      confetti({ particleCount: 30, spread: 45, origin: { y: 0.7 } });
     }
   };
 
   return (
-    <div className="space-y-4 animate-fadeIn pb-16 select-none">
-      
-      {/* 1. Status Notification Alerts if needed */}
+    <div className="space-y-5 animate-fadeIn pb-6 select-none">
+      {/* 1. Native Status Banners (Only shown when action is needed) */}
       {isRejected && (
-        <div className="p-4 rounded-2xl surface-card border border-rose-500/30 space-y-2">
-          <div className="flex items-center gap-2 text-rose-400">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
-            <span className="text-[11px] font-mono-luxury font-bold uppercase tracking-wider text-rose-400">Profile Returned for Correction</span>
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-2.5">
+          <div className="flex items-center gap-2 text-rose-500">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="text-[11px] font-mono-luxury uppercase tracking-wider">
+              Profile Needs Update
+            </span>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-            {profileStatus.rejectionReason ? `Admin Feedback: "${profileStatus.rejectionReason}"` : 'Please review your store bio, turnaround times, or delivery zone rates and resubmit.'}
+          <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed">
+            {profileStatus?.rejectionReason
+              ? `Admin note: "${profileStatus.rejectionReason}"`
+              : 'Please review your store bio, turnaround times, or dispatch hub and resubmit.'}
           </p>
           <Link
             href="/vendor-portal/atelier"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-mono-luxury uppercase font-bold mt-1 shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-500 text-white text-[11px] font-mono-luxury uppercase tracking-wider"
           >
-            <span>Update Store Details</span>
+            <span>Update Profile</span>
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       )}
 
       {isProfileIncomplete && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-          <div className="flex items-center gap-2 text-amber-400">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span className="text-[11px] font-mono-luxury font-bold uppercase">Setup Required</span>
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-[var(--text-primary)]">Finish Store Setup</div>
+              <p className="text-[11px] text-[var(--text-secondary)] font-light">
+                Complete your brand details to start publishing pieces.
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-            Complete your brand profile & contacts to activate verified ready-to-wear drops.
-          </p>
           <Link
             href="/vendor-portal/atelier"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500 text-black text-[11px] font-mono-luxury uppercase font-bold mt-1"
+            className="px-3.5 py-1.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury uppercase shrink-0"
           >
-            <span>Complete Profile</span>
-            <ArrowRight className="h-3 w-3" />
+            Setup
           </Link>
         </div>
       )}
 
       {isPendingReview && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <Clock className="h-4 w-4 text-amber-400 animate-pulse shrink-0" />
-            <div>
-              <span className="text-[11px] font-mono-luxury font-bold text-amber-400 uppercase block">Under Review</span>
-              <span className="text-[10px] text-[var(--text-secondary)]">Super Admin is verifying your store.</span>
+        <div className="px-4 py-3 rounded-2xl bg-[var(--bg-surface)] border border-amber-500/30 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-[var(--text-primary)]">Verification In Progress</div>
+              <span className="text-[11px] text-[var(--text-muted)] font-light block truncate">
+                Our team is reviewing your store profile.
+              </span>
             </div>
           </div>
           <Link
             href="/vendor-portal/atelier"
-            className="px-3 py-1 rounded-full surface-card border border-amber-500/30 text-amber-400 text-[10px] font-mono-luxury font-bold uppercase shrink-0"
+            className="text-[11px] font-mono-luxury text-[var(--gold-accent)] shrink-0"
           >
             View
           </Link>
         </div>
       )}
 
-      {/* POST-APPROVAL STORE PROFILE & PAYOUT BANKING CHECKLIST (MOBILE) */}
-      {isVerified && (needsStoreProfile || needsBankSetup) && (
-        <div className="p-4 rounded-3xl surface-card border border-[var(--gold-accent)]/40 bg-gradient-to-br from-[var(--gold-subtle)]/30 to-transparent space-y-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-            <div>
-              <span className="text-[9px] font-mono-luxury font-bold uppercase tracking-wider text-[var(--gold-accent)] block">
-                Action Required · Store &amp; Payout Setup
-              </span>
-              <h3 className="font-editorial text-base font-bold text-[var(--text-primary)] leading-tight">
-                Finish Setting Up Your Storefront
-              </h3>
-            </div>
-          </div>
+      {/* 2. Signature Native Wallet Hero Card (Replaces Repetitive Web Header Box) */}
+      <section className="relative rounded-[26px] bg-[#0D0D10] text-white p-5 overflow-hidden shadow-[0_18px_45px_rgba(0,0,0,0.18)] border border-white/10">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full opacity-35"
+          style={{
+            background: 'radial-gradient(circle, rgba(230, 195, 103, 0.45), transparent 70%)',
+          }}
+        />
 
-          <div className="space-y-2.5">
-            {/* Step 1: Store Profile */}
-            <div className={`p-3 rounded-2xl border space-y-2 ${needsStoreProfile ? 'bg-[var(--bg-primary)] border-amber-500/40' : 'bg-emerald-500/5 border-emerald-500/30'}`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-mono-luxury font-bold uppercase text-[var(--text-primary)] flex items-center gap-1.5">
-                  <Store className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                  <span>1. Store Profile</span>
-                </span>
-                {needsStoreProfile ? (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[9px] font-mono-luxury font-bold uppercase">
-                    {[missingLogo && 'Logo', missingBio && 'Bio', missingHub && 'Hub'].filter(Boolean).join(' + ')} Needed
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono-luxury font-bold uppercase flex items-center gap-1">
-                    <CheckCircle2 className="h-2.5 w-2.5" /> Done
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                Upload your <strong>Logo</strong>, <strong>Bio</strong> &amp; confirm your <strong>Dispatch Hub</strong>. (Your social media handles from your application are already filled in!).
-              </p>
-              <Link
-                href="/vendor-portal/atelier"
-                className="w-full py-2 px-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-1.5"
-              >
-                <span>{needsStoreProfile ? 'Complete Store Profile' : 'Edit Store Profile'}</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-
-            {/* Step 2: Settlement Banking */}
-            <div className={`p-3 rounded-2xl border space-y-2 ${needsBankSetup ? 'bg-[var(--bg-primary)] border-amber-500/40' : 'bg-emerald-500/5 border-emerald-500/30'}`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-mono-luxury font-bold uppercase text-[var(--text-primary)] flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>2. Settlement Banking</span>
-                </span>
-                {needsBankSetup ? (
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[9px] font-mono-luxury font-bold uppercase">
-                    Bank Missing
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] font-mono-luxury font-bold uppercase flex items-center gap-1">
-                    <CheckCircle2 className="h-2.5 w-2.5" /> Connected
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                Add your <strong>Bank Name &amp; 10-Digit Account Number</strong> so you can receive payouts when orders are delivered.
-              </p>
-              <Link
-                href="/vendor-portal/settlements"
-                className="w-full py-2 px-3 rounded-xl bg-emerald-500 text-black text-[10px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-1.5"
-              >
-                <span>{needsBankSetup ? 'Add Payout Bank Account' : 'Manage Payout Bank'}</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Welcome & Brand Card */}
-      <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm relative overflow-hidden">
-        <div className="flex items-start justify-between gap-2 relative z-10">
-          <div>
-            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[9px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20 mb-1.5">
-              {specialty === 'caps' || specialty === 'wigs' ? (
-                <Crown className="h-3 w-3" />
-              ) : specialty === 'accessories' || specialty === 'perfume' ? (
-                <Sparkles className="h-3 w-3" />
-              ) : specialty === 'jewelry' ? (
-                <Gem className="h-3 w-3" />
-              ) : specialty === 'footwear' ? (
-                <Footprints className="h-3 w-3" />
-              ) : specialty === 'native_tailoring' ? (
-                <Scissors className="h-3 w-3" />
-              ) : specialty === 'streetwear' || specialty === 'apparel' ? (
-                <Shirt className="h-3 w-3" />
-              ) : isBoutique ? (
-                <ShoppingBag className="h-3 w-3" />
-              ) : (
-                <Scissors className="h-3 w-3" />
-              )}
-              <span>{specialtyInfo.badge}</span>
-            </div>
-            <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-              {vendorProfile.designerName || vendorProfile.brandName}
-            </h2>
-            <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)] block mt-0.5">
-              {vendorProfile.location || 'Lagos, Nigeria'}
+        {/* Top Meta Row */}
+        <div className="relative z-10 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[#E6C367] truncate">
+              {specialtyInfo.badge}
             </span>
           </div>
-
-          <span className={`px-2.5 py-1 rounded-full text-[9px] font-mono-luxury font-bold uppercase border shrink-0 ${
-            isVerified ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-          }`}>
-            {isVerified ? '● Verified' : '● In Review'}
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono-luxury shrink-0 ${
+              isVerified
+                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${isVerified ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            {isVerified ? 'Verified' : 'In Review'}
           </span>
         </div>
 
-        {/* Quick Action Chips */}
-        <div className="grid grid-cols-2 gap-2 pt-1 relative z-10">
-          {isVerified ? (
-            <Link
-              href="/vendor-portal/publish"
-              className="py-2.5 px-3 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-[10px] font-bold shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>+ Add New Drop</span>
-            </Link>
-          ) : (
-            <Link
-              href="/vendor-portal/atelier"
-              className="py-2.5 px-3 rounded-2xl bg-[var(--bg-secondary)] border border-amber-500/30 text-amber-400 font-mono-luxury uppercase text-[10px] font-bold shadow-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
-            >
-              <Lock className="h-3 w-3 text-amber-400" />
-              <span>Verify Store to Drop</span>
-            </Link>
-          )}
+        {/* Main Escrow Balance */}
+        <div className="relative z-10 mt-4 flex items-end justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.16em] text-zinc-400 block">
+              Active Escrow Balance
+            </span>
+            <div className="font-editorial text-[38px] font-normal tracking-tight text-white leading-none mt-1">
+              ₦{activeEscrowBalance.toLocaleString()}
+            </div>
+            <div className="flex items-center gap-2 mt-2 text-[11px] font-mono-luxury text-zinc-400">
+              <span>Settled: ₦{settledPayouts.toLocaleString()}</span>
+              <span>·</span>
+              <span className="text-emerald-400">T+0 Auto-Payout</span>
+            </div>
+          </div>
+
           <Link
-            href="/vendor-portal/orders"
-            className="py-2.5 px-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-[10px] font-bold flex items-center justify-center gap-1.5 hover:border-[var(--gold-accent)] active:scale-95 transition-transform"
+            href="/vendor-portal/settlements"
+            className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/10 text-[10px] font-mono-luxury uppercase tracking-wider text-white shrink-0 active:scale-95 transition-transform"
           >
-            <PackageCheck className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-            <span>Pack Orders ({pendingOrdersCount})</span>
+            Payouts ›
           </Link>
         </div>
 
-        {/* Background glow */}
-        <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-[var(--gold-accent)]/5 rounded-full blur-2xl pointer-events-none" />
-      </div>
-
-      {/* 3. 2x2 Compact Metric Grid Connected to Real Endpoints */}
-      <div className="grid grid-cols-2 gap-2.5 font-mono-luxury">
-        
-        {/* Metric 1: Live Drops */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Live Drops</span>
-          <div className="font-editorial text-2xl font-normal text-[var(--gold-accent)] leading-none">{dbProducts.length}</div>
-          <div className="text-[9px] text-emerald-400 flex items-center gap-1 pt-0.5">
-            <TrendingUp className="h-2.5 w-2.5" />
-            <span>Active in catalog</span>
-          </div>
+        {/* Hairline + Location & Fee Footer */}
+        <div className="relative z-10 mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400 font-light">
+          <span className="truncate max-w-[65%]">
+            {vendorProfile?.location || 'Dispatch hub not configured'}
+          </span>
+          <span className="text-[#E6C367] font-mono-luxury text-[10px] uppercase tracking-wider shrink-0">
+            0% Launch Fee
+          </span>
         </div>
+      </section>
 
-        {/* Metric 2: Orders to Pack */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Orders to Pack</span>
-          <div className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-none">{pendingOrdersCount}</div>
-          <div className="text-[9px] text-[var(--text-secondary)] pt-0.5">
-            {pendingOrdersCount === 0 ? 'Queue is clear' : 'Awaiting dispatch'}
+      {/* 3. Native iOS Circular Quick-Action Bar (Monochrome & Clean) */}
+      <section className="grid grid-cols-4 gap-2">
+        {isVerified ? (
+          <Link
+            href="/vendor-portal/publish"
+            className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
+          >
+            <div className="h-12 w-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center shadow-sm">
+              <Plus className="h-5 w-5" strokeWidth={1.8} />
+            </div>
+            <span className="text-[11px] text-[var(--text-primary)] font-normal">Add Drop</span>
+          </Link>
+        ) : (
+          <Link
+            href="/vendor-portal/atelier"
+            className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
+          >
+            <div className="h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-amber-500/40 text-amber-500 flex items-center justify-center">
+              <Lock className="h-[18px] w-[18px]" strokeWidth={1.7} />
+            </div>
+            <span className="text-[11px] text-[var(--text-primary)] font-normal">Verify</span>
+          </Link>
+        )}
+
+        <Link
+          href="/vendor-portal/stories"
+          className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
+        >
+          <div className="h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center">
+            <Camera className="h-[19px] w-[19px]" strokeWidth={1.65} />
           </div>
-        </div>
+          <span className="text-[11px] text-[var(--text-primary)] font-normal">Story</span>
+        </Link>
 
-        {/* Metric 3: Total Stock Units */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Stock Units</span>
-          <div className="font-editorial text-2xl font-normal text-emerald-400 leading-none">{totalLiveInventory}</div>
-          <div className="text-[9px] text-[var(--text-secondary)] pt-0.5 truncate">
-            Across {dbProducts.length} piece{dbProducts.length === 1 ? '' : 's'}
+        <Link
+          href="/vendor-portal/orders"
+          className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
+        >
+          <div className="relative h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center">
+            <PackageCheck className="h-[19px] w-[19px]" strokeWidth={1.65} />
+            {pendingOrdersCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] px-1 rounded-full bg-[var(--gold-accent)] text-black text-[10px] font-mono-luxury flex items-center justify-center">
+                {pendingOrdersCount}
+              </span>
+            )}
           </div>
-        </div>
+          <span className="text-[11px] text-[var(--text-primary)] font-normal">Orders</span>
+        </Link>
 
-        {/* Metric 4: Escrow Settlement */}
-        <div className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
-          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Active Escrow</span>
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform cursor-pointer"
+        >
+          <div
+            className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors ${
+              copied
+                ? 'bg-emerald-500 border-emerald-500 text-black'
+                : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+            }`}
+          >
+            {copied ? (
+              <Check className="h-[19px] w-[19px]" strokeWidth={2} />
+            ) : (
+              <Share2 className="h-[18px] w-[18px]" strokeWidth={1.65} />
+            )}
+          </div>
+          <span className="text-[11px] text-[var(--text-primary)] font-normal">
+            {copied ? 'Copied' : 'Share'}
+          </span>
+        </button>
+      </section>
+
+      {/* 4. Unified 3-Column Hairline KPI Strip (Replaces Boxy 2x2 Grid) */}
+      <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] grid grid-cols-3 divide-x divide-[var(--border-subtle)] py-3.5">
+        <Link href="/vendor-portal/products" className="px-3 text-center active:opacity-70">
+          <div className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-none">
+            {dbProducts.length}
+          </div>
+          <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mt-1.5 block">
+            Live Drops
+          </span>
+        </Link>
+
+        <Link href="/vendor-portal/orders" className="px-3 text-center active:opacity-70">
           <div className="font-editorial text-2xl font-normal text-[var(--gold-accent)] leading-none">
-            ₦{activeEscrowBalance.toLocaleString()}
+            {pendingOrdersCount}
           </div>
-          <div className="text-[9px] text-emerald-400 pt-0.5 font-bold">
-            Auto-Settles T+0
+          <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mt-1.5 block">
+            To Pack
+          </span>
+        </Link>
+
+        <Link href="/vendor-portal/products" className="px-3 text-center active:opacity-70">
+          <div className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-none">
+            {totalLiveInventory}
           </div>
-        </div>
+          <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mt-1.5 block">
+            In Stock
+          </span>
+        </Link>
+      </section>
 
-      </div>
+      {/* 5. Post-Approval Setup Checklist (Only shown if profile/bank still incomplete) */}
+      {isVerified && (needsStoreProfile || needsBankSetup) && (
+        <section className="space-y-2">
+          <div className="px-1 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--gold-accent)]">
+            Finish Store Setup
+          </div>
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            <Link
+              href="/vendor-portal/atelier"
+              className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Store className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.65} />
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">Store Profile</div>
+                  <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
+                    {needsStoreProfile
+                      ? `Add ${[missingLogo && 'Logo', missingBio && 'Bio', missingHub && 'Hub'].filter(Boolean).join(', ')}`
+                      : 'Logo, bio & dispatch hub ready'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {needsStoreProfile ? (
+                  <span className="text-[10px] font-mono-luxury text-amber-500">Required</span>
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                )}
+                <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" />
+              </div>
+            </Link>
 
-      {/* 4. Live Incoming Orders Section (If Any) */}
+            <Link
+              href="/vendor-portal/settlements"
+              className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <DollarSign className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.65} />
+                <div className="min-w-0">
+                  <div className="text-[13px] font-medium text-[var(--text-primary)]">Payout Bank Account</div>
+                  <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
+                    {needsBankSetup ? 'Connect 10-digit bank account for payouts' : 'Connected for T+0 escrow payout'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {needsBankSetup ? (
+                  <span className="text-[10px] font-mono-luxury text-rose-500">Missing</span>
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                )}
+                <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" />
+              </div>
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* 6. Recent Patron Orders (Native Grouped iOS List) */}
       {recentOrders.length > 0 && (
-        <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm text-xs font-mono-luxury">
-          <div className="flex items-center justify-between">
-            <span className="text-xs uppercase font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-              <PackageCheck className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-              <span>Incoming Patron Orders ({recentOrders.length})</span>
+        <section className="space-y-2">
+          <div className="px-1 flex items-center justify-between">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Recent Orders ({recentOrders.length})
             </span>
             <Link
               href="/vendor-portal/orders"
-              className="text-[10px] text-[var(--gold-accent)] uppercase font-bold hover:underline"
+              className="text-[11px] font-mono-luxury text-[var(--gold-accent)]"
             >
-              View All
+              See All
             </Link>
           </div>
 
-          <div className="space-y-2">
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
             {recentOrders.slice(0, 3).map((ord: any, idx: number) => {
-              const rowSubtotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
+              const rowSubtotal = (ord.items || []).reduce(
+                (s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1),
+                0
+              );
               const isSettled = ord.trackingStage >= 4;
 
               return (
-                <div
+                <Link
                   key={ord.id || ord.orderNumber || idx}
-                  className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between"
+                  href="/vendor-portal/orders"
+                  className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors"
                 >
-                  <div>
-                    <span className="font-bold text-[var(--gold-accent)] block text-xs">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
                       {ord.orderNumber}
-                    </span>
-                    <span className="text-[10px] text-[var(--text-muted)]">
+                    </div>
+                    <div className="text-[11px] text-[var(--text-muted)] font-light truncate mt-0.5">
                       {ord.customerName} · {ord.date || 'Recent'}
-                    </span>
+                    </div>
                   </div>
 
-                  <div className="text-right">
-                    <span className="font-editorial font-bold text-sm text-[var(--text-primary)] block">
-                      ₦{rowSubtotal.toLocaleString()}
-                    </span>
-                    <span className={`text-[8px] uppercase font-bold px-1.5 py-0.5 rounded-full inline-block ${
-                      isSettled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                    }`}>
-                      {isSettled ? 'Settled' : 'In Escrow'}
-                    </span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="text-right">
+                      <div className="font-editorial text-base text-[var(--text-primary)] leading-tight">
+                        ₦{rowSubtotal.toLocaleString()}
+                      </div>
+                      <span
+                        className={`text-[10px] font-mono-luxury ${
+                          isSettled ? 'text-emerald-500' : 'text-[var(--gold-accent)]'
+                        }`}
+                      >
+                        {isSettled ? 'Settled' : 'In Escrow'}
+                      </span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/60" />
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* 5. Storefront Link Sharing Card */}
-      <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-2.5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)]" />
-            <span className="text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)]">
-              Your Boutique Link
-            </span>
+      {/* 7. Storefront Link Compact Bar */}
+      <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono-luxury uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            <ShieldCheck className="h-3 w-3 text-[var(--gold-accent)]" />
+            <span>Your Storefront Link</span>
           </div>
-          <span className="text-[9px] font-mono-luxury font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10">
-            0% Fee
-          </span>
+          <div className="text-xs font-mono-luxury text-[var(--text-primary)] truncate mt-0.5 select-all">
+            {storeUrl.replace(/^https?:\/\//, '')}
+          </div>
         </div>
 
-        <p className="text-[11px] text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-          Share in your Instagram bio or WhatsApp to take verified orders:
-        </p>
-
-        <div className="flex items-center gap-2">
-          <div className="flex-1 p-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury text-[var(--text-muted)] truncate select-all">
-            {storeUrl}
-          </div>
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={handleCopyLink}
-            className={`p-2.5 rounded-xl border text-xs font-mono-luxury font-bold transition-all cursor-pointer shrink-0 ${
-              copied
-                ? 'bg-emerald-500 text-black border-emerald-500'
-                : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-primary)] hover:border-[var(--gold-accent)]'
-            }`}
-            title="Copy link"
+            className="h-9 w-9 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-primary)] active:scale-95 cursor-pointer"
+            aria-label="Copy storefront link"
           >
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
           </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="py-2 px-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury uppercase font-bold text-[var(--text-primary)] flex items-center justify-center gap-1.5"
-          >
-            <Share2 className="h-3 w-3 text-[var(--gold-accent)]" />
-            <span>{copied ? 'Link Copied!' : 'Copy Link'}</span>
-          </button>
-
           <Link
-            href={`/brand/${encodeURIComponent(brandName)}`}
+            href={`/brand/${storeSlug}`}
             target="_blank"
-            className="py-2 px-3 rounded-xl bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-1.5 shadow-sm"
+            className="h-9 px-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury inline-flex items-center gap-1 active:scale-95"
           >
-            <span>Preview Store</span>
+            <span>Open</span>
             <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
-      </div>
+      </section>
 
-      {/* 6. Live Product Drops List */}
-      <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between">
-          <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
-            Live Product Drops ({dbProducts.length})
-          </h3>
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/vendor-portal/products"
-              className="text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold hover:underline"
-            >
-              Manage ({dbProducts.length})
-            </Link>
-            <Link
-              href="/vendor-portal/publish"
-              className="text-[11px] font-mono-luxury uppercase text-[var(--text-primary)] font-bold hover:underline"
-            >
-              + Add
-            </Link>
-          </div>
+      {/* 8. Live Catalog Snapshot (Native iOS Grouped Rows — Tap Any Piece to Edit) */}
+      <section className="space-y-2">
+        <div className="px-1 flex items-center justify-between">
+          <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            Catalog ({dbProducts.length})
+          </span>
+          <Link
+            href="/vendor-portal/products"
+            className="text-[11px] font-mono-luxury text-[var(--gold-accent)]"
+          >
+            Manage All
+          </Link>
         </div>
 
         {dbProducts.length === 0 ? (
-          <div className="p-8 rounded-3xl surface-card border border-[var(--border-subtle)] text-center space-y-2.5">
-            <Store className="h-8 w-8 text-[var(--gold-accent)] mx-auto opacity-50" />
-            <h4 className="font-editorial text-base font-bold text-[var(--text-primary)]">
-              No Product Drops Yet
-            </h4>
-            <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
-              Upload your first ready-to-wear piece or bespoke design to start receiving patron orders.
-            </p>
+          <div className="p-8 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-3">
+            <Store className="h-7 w-7 text-[var(--text-muted)] mx-auto" strokeWidth={1.5} />
+            <div className="space-y-1">
+              <h4 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                No Listings Yet
+              </h4>
+              <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto">
+                Publish your first ready-to-ship or made-to-order piece to start taking escrow orders.
+              </p>
+            </div>
             <Link
               href="/vendor-portal/publish"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury uppercase font-bold shadow-md mt-1"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Add First Piece</span>
+              <span>Publish First Piece</span>
             </Link>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {dbProducts.slice(0, 4).map((piece, i) => (
-              <div
-                key={piece.id || i}
-                onClick={() => onEditProduct?.(piece)}
-                className="p-3 rounded-2xl surface-card border border-[var(--border-subtle)] flex items-center justify-between gap-3 hover:border-[var(--gold-accent)]/50 transition-all shadow-sm cursor-pointer active:scale-[0.99]"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
-                    <Image
-                      src={piece.imageUrl || piece.image_url || (Array.isArray(piece.images) && piece.images[0]) || '/images/no-product.svg'}
-                      alt={piece.name}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">
-                      {piece.name}
-                    </h4>
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono-luxury text-[var(--text-secondary)] mt-0.5 flex-wrap">
-                      <span className="text-[var(--gold-accent)] uppercase font-bold truncate">{piece.category || 'Ready-to-Wear'}</span>
-                      <span>·</span>
-                      <span className={piece.stockQuantity === 0 ? 'text-rose-400 font-bold' : piece.stockQuantity <= 3 ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>
-                        {piece.stockQuantity === 0 ? '0 Left' : `${piece.stockQuantity ?? 0} Left`}
-                      </span>
-                      <span>·</span>
-                      <span className="text-[var(--text-primary)] font-bold">{piece.unitsSold ?? 0} Sold</span>
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            {dbProducts.slice(0, 4).map((piece, i) => {
+              const qty = Number(piece.stockQuantity ?? 0);
+              return (
+                <button
+                  key={piece.id || i}
+                  type="button"
+                  onClick={() => onEditProduct?.(piece)}
+                  className="w-full text-left px-3.5 py-3 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-zinc-900 shrink-0 border border-[var(--border-subtle)]">
+                      <Image
+                        src={
+                          piece.imageUrl ||
+                          piece.image_url ||
+                          (Array.isArray(piece.images) && piece.images[0]) ||
+                          '/images/no-product.svg'
+                        }
+                        alt={piece.name}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+                        {piece.name}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] font-light mt-0.5">
+                        <span
+                          className={`inline-block h-1.5 w-1.5 rounded-full ${
+                            qty === 0 ? 'bg-rose-500' : qty <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                        />
+                        <span>{qty === 0 ? 'Sold out' : `${qty} left`}</span>
+                        <span>·</span>
+                        <span>{piece.unitsSold ?? 0} sold</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="text-right shrink-0">
-                  <div className="font-editorial font-bold text-sm text-[var(--text-primary)]">
-                    ₦{Number(piece.price || 0).toLocaleString()}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <div className="font-editorial text-base text-[var(--text-primary)]">
+                        ₦{Number(piece.price || 0).toLocaleString()}
+                      </div>
+                      <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)]">Edit</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/60" />
                   </div>
-                  {piece.stockQuantity === 0 ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 text-[9px] font-mono-luxury uppercase font-bold border border-rose-500/30">
-                      🔴 Sold Out
-                    </span>
-                  ) : piece.stockQuantity <= 3 ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[9px] font-mono-luxury uppercase font-bold border border-amber-500/30 animate-pulse">
-                      ⚠️ Only {piece.stockQuantity} Left
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-mono-luxury uppercase text-emerald-400 font-bold">
-                      Active · {piece.stockQuantity} in Stock
-                    </span>
-                  )}
-                  <div className="text-[9px] text-[var(--gold-accent)] font-mono-luxury mt-0.5 font-bold">
-                    Tap to Edit ✏️
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div className="pt-2">
-              <Link
-                href="/vendor-portal/products"
-                className="w-full py-3 px-4 rounded-2xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-center text-xs font-mono-luxury font-bold text-[var(--gold-accent)] uppercase flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <span>Open Full Catalog & Stock Manager ({dbProducts.length})</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
+                </button>
+              );
+            })}
           </div>
         )}
-      </div>
-
+      </section>
     </div>
   );
 }

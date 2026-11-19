@@ -70,7 +70,7 @@ export default function VendorsPage() {
       <div className="text-center max-w-3xl mx-auto space-y-4 pt-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--badge-bg)] border border-[var(--border-subtle)] text-[var(--gold-accent)] text-xs font-mono-luxury uppercase tracking-widest font-bold">
           <Store className="h-3.5 w-3.5" />
-          <span>VERIFIED NIGERIAN FASHION HOUSES</span>
+          <span>VERIFIED FASHION HOUSES</span>
         </div>
 
         <h1 className="font-editorial text-3xl sm:text-5xl font-bold text-[var(--text-primary)] leading-tight">
@@ -78,7 +78,7 @@ export default function VendorsPage() {
         </h1>
 
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl mx-auto">
-          Explore verified fashion boutiques, shoe artisans, jewelry designers, and streetwear labels across Nigeria. Every brand is verified for authenticity and craftsmanship.
+          Explore verified fashion boutiques, shoe artisans, jewelry designers, and streetwear labels. Every brand is verified for authenticity and craftsmanship.
         </p>
       </div>
 
@@ -90,7 +90,7 @@ export default function VendorsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search ateliers by name, aesthetic, or city (e.g. Lagos, Yaba, Native)..."
+            placeholder="Search brands by name, style, or city..."
             className="w-full pl-11 pr-4 py-3 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--gold-accent)] transition-all"
           />
         </div>
@@ -190,7 +190,7 @@ export default function VendorsPage() {
                         </Link>
                         <div className="flex items-center gap-1 text-[11px] font-mono-luxury text-[var(--text-muted)] mt-0.5">
                           <MapPin className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
-                          <span>{atelier.location || 'Nigeria'}</span>
+                          <span>{atelier.location || 'Verified Studio'}</span>
                         </div>
                       </div>
                     </div>
@@ -209,7 +209,7 @@ export default function VendorsPage() {
 
                   {/* Brand Description */}
                   <p className="text-xs text-[var(--text-secondary)] font-light leading-relaxed line-clamp-3">
-                    {atelier.desc || 'Verified Nigerian fashion house offering bespoke craftsmanship and luxury ready-to-wear pieces.'}
+                    {atelier.desc || 'Verified fashion house offering bespoke craftsmanship and luxury ready-to-wear pieces.'}
                   </p>
                 </div>
 
@@ -242,7 +242,7 @@ export default function VendorsPage() {
             <span>FASHION DESIGNER PORTAL</span>
           </div>
           <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-            Are you an independent Nigerian designer?
+            Are you an independent designer?
           </h3>
           <p className="text-xs text-[var(--text-secondary)] font-light max-w-lg">
             Showcase your collections to shoppers with verified measurements, escrow protection, and door-to-door courier dispatches.

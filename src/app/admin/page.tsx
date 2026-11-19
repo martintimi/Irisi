@@ -31,7 +31,7 @@ const adminEditorialSlides = [
   {
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1600&auto=format&fit=crop',
     title: 'Executive Platform Governance',
-    subtitle: 'Master control for Nigerian brand verifications, catalog curation, and marketplace operations.',
+    subtitle: 'Master control for verified brand approvals, catalog curation, and marketplace operations.',
     tag: 'Platform Control'
   },
   {
@@ -137,27 +137,60 @@ export default function SuperAdminPage() {
       .catch(() => {});
   }, []);
 
-  // Platform Commission & Fee Setting State
-  const [commissionConfig, setCommissionConfig] = useState<{ commissionPercent: number; isEnabled: boolean }>({
+  // Platform Monetization, Free Launch Kill-Switch & ÌRÍSÍ Plus Settings
+  const [commissionConfig, setCommissionConfig] = useState<{
+    commissionPercent: number;
+    isEnabled: boolean;
+    freeLaunchMode: boolean;
+    freeTierCommissionPercent: number;
+    plusTierCommissionPercent: number;
+    plusMonthlyPriceNgn: number;
+    freeTierProductLimit: number;
+    requirePlusForStorefront: boolean;
+  }>({
     commissionPercent: 0,
     isEnabled: false,
+    freeLaunchMode: true,
+    freeTierCommissionPercent: 8,
+    plusTierCommissionPercent: 5,
+    plusMonthlyPriceNgn: 5000,
+    freeTierProductLimit: 12,
+    requirePlusForStorefront: false,
   });
-  const [commissionInput, setCommissionInput] = useState<string>('0');
+  const [commissionInput, setCommissionInput] = useState<string>('8');
+  const [plusCommissionInput, setPlusCommissionInput] = useState<string>('5');
+  const [plusPriceInput, setPlusPriceInput] = useState<string>('5000');
+  const [freeProductLimitInput, setFreeProductLimitInput] = useState<string>('12');
+  const [freeLaunchModeInput, setFreeLaunchModeInput] = useState<boolean>(true);
+  const [requirePlusStorefrontInput, setRequirePlusStorefrontInput] = useState<boolean>(false);
   const [commissionEnabledInput, setCommissionEnabledInput] = useState<boolean>(false);
   const [isSavingCommission, setIsSavingCommission] = useState<boolean>(false);
 
-  // Fetch live platform commission rate from server API
+  // Fetch live platform billing & monetization config from server API
   useEffect(() => {
     fetch('/api/admin/commission')
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data?.config) {
+          const cfg = data.config;
+          const freeLaunch = typeof cfg.freeLaunchMode === 'boolean' ? cfg.freeLaunchMode : !cfg.isEnabled;
           setCommissionConfig({
-            commissionPercent: Number(data.config.commissionPercent || 0),
-            isEnabled: Boolean(data.config.isEnabled),
+            commissionPercent: Number(cfg.commissionPercent || 0),
+            isEnabled: Boolean(cfg.isEnabled),
+            freeLaunchMode: freeLaunch,
+            freeTierCommissionPercent: Number(cfg.freeTierCommissionPercent ?? 8),
+            plusTierCommissionPercent: Number(cfg.plusTierCommissionPercent ?? 5),
+            plusMonthlyPriceNgn: Number(cfg.plusMonthlyPriceNgn ?? 5000),
+            freeTierProductLimit: Number(cfg.freeTierProductLimit ?? 12),
+            requirePlusForStorefront: Boolean(cfg.requirePlusForStorefront),
           });
-          setCommissionInput(String(data.config.commissionPercent || 0));
-          setCommissionEnabledInput(Boolean(data.config.isEnabled));
+          setCommissionInput(String(cfg.freeTierCommissionPercent ?? 8));
+          setPlusCommissionInput(String(cfg.plusTierCommissionPercent ?? 5));
+          setPlusPriceInput(String(cfg.plusMonthlyPriceNgn ?? 5000));
+          setFreeProductLimitInput(String(cfg.freeTierProductLimit ?? 12));
+          setFreeLaunchModeInput(freeLaunch);
+          setRequirePlusStorefrontInput(Boolean(cfg.requirePlusForStorefront));
+          setCommissionEnabledInput(!freeLaunch);
         }
       })
       .catch((err) => console.error('Error fetching commission config:', err));
@@ -593,6 +626,81 @@ export default function SuperAdminPage() {
       setActionLoadingId(null);
     }
   };
+
+  // Helper: Resolve all vendors involved in an order with live contact info (WhatsApp & Email)
+  const getOrderVendors = useCallback((ord: any) => {
+    const vendorMap = new Map<string, {
+      vendorId: string;
+      brandName: string;
+      email: string;
+      phone: string;
+      whatsapp: string;
+      itemCount: number;
+      subtotal: number;
+      items: string[];
+    }>();
+
+    const items = Array.isArray(ord?.items) ? ord.items : [];
+    const pkgs = ord?.vendorPackages || ord?.customer_measurements?.vendorPackages || {};
+
+    const matchDbVendor = (rawId: string, rawName: string) => {
+      const cleanId = (rawId || '').toLowerCase().trim();
+      const slugId = cleanId.replace(/[^a-z0-9]/g, '');
+      const cleanName = (rawName || '').toLowerCase().trim();
+      const slugName = cleanName.replace(/[^a-z0-9]/g, '');
+
+      return vendors.find((v: any) => {
+        const vId = String(v.id || '').toLowerCase().trim();
+        const vName = String(v.name || '').toLowerCase().trim();
+        return (
+          (cleanId && vId === cleanId) ||
+          (slugId && vId.replace(/[^a-z0-9]/g, '') === slugId) ||
+          (cleanName && vName === cleanName) ||
+          (slugName && vName.replace(/[^a-z0-9]/g, '') === slugName)
+        );
+      });
+    };
+
+    for (const item of items) {
+      const rawId = String(item.vendorId || item.vendor_id || '').trim();
+      const rawName = String(item.vendorName || item.vendor_name || '').trim();
+      const matched = matchDbVendor(rawId, rawName);
+      const key = (matched?.id || rawId || rawName || 'unknown-vendor').toLowerCase();
+
+      const existing = vendorMap.get(key);
+      const qty = Number(item.quantity || 1);
+      const lineTotal = Number(item.price || 0) * qty;
+      const itemLabel = item.productName || item.name || 'Item';
+
+      if (existing) {
+        existing.itemCount += qty;
+        existing.subtotal += lineTotal;
+        if (!existing.items.includes(itemLabel)) existing.items.push(itemLabel);
+      } else {
+        const pkgInfo = pkgs[rawId] || pkgs[matched?.id || ''] || Object.values(pkgs).find((p: any) =>
+          String(p?.vendorId || '').toLowerCase() === key
+        );
+        const rawEmail = matched?.email && matched.email !== 'N/A' ? matched.email : '';
+        const rawPhone = matched?.phone && matched.phone !== 'N/A' ? matched.phone : '';
+        const rawWa = matched?.socialLinks?.whatsapp && matched.socialLinks.whatsapp !== 'N/A'
+          ? matched.socialLinks.whatsapp
+          : rawPhone;
+
+        vendorMap.set(key, {
+          vendorId: matched?.id || rawId || key,
+          brandName: matched?.name || rawName || pkgInfo?.vendorName || (rawId ? rawId.replace(/-/g, ' ') : 'Unassigned Vendor'),
+          email: rawEmail,
+          phone: rawPhone,
+          whatsapp: rawWa,
+          itemCount: qty,
+          subtotal: lineTotal,
+          items: [itemLabel],
+        });
+      }
+    }
+
+    return Array.from(vendorMap.values());
+  }, [vendors]);
 
   // Derived Financial Calculations directly from real database orders with isolated vendor settlement
   const financialStats = useMemo(() => {
@@ -1953,27 +2061,118 @@ export default function SuperAdminPage() {
 
                         {/* Customer & Delivery Details */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono-luxury text-[var(--text-secondary)]">
-                          <div>
+                          <div className="space-y-1">
                             <span className="text-[10px] uppercase text-[var(--text-muted)] block">Customer:</span>
                             <strong className="text-[var(--text-primary)]">{ord.customerName}</strong>
                             <div className="text-[11px] text-[var(--text-muted)]">{ord.customerPhone}</div>
                             <div className="text-[11px] text-[var(--text-muted)] truncate">{ord.customerEmail}</div>
+                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                              {ord.customerPhone && (
+                                <a
+                                  href={generateWhatsAppUrl(ord.customerPhone, `Hi ${ord.customerName || 'there'}, this is ÌRÍSÍ Support regarding your order ${ord.orderNumber}.`) }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] hover:bg-emerald-500 hover:text-black transition-colors"
+                                >
+                                  <MessageCircle className="h-2.5 w-2.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              )}
+                              {ord.customerEmail && (
+                                <a
+                                  href={`mailto:${ord.customerEmail}?subject=${encodeURIComponent(`ÌRÍSÍ Order ${ord.orderNumber}`)}`}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-secondary)] text-[10px] hover:border-[var(--gold-accent)] hover:text-[var(--text-primary)] transition-colors"
+                                >
+                                  <Mail className="h-2.5 w-2.5" />
+                                  <span>Email</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
 
                           <div>
                             <span className="text-[10px] uppercase text-[var(--text-muted)] block">Delivery Destination:</span>
                             <strong className="text-[var(--text-primary)]">{ord.deliveryAddress}</strong>
-                            <div className="text-[11px] text-[var(--gold-accent)] font-bold">
+                            <div className="text-[11px] text-[var(--gold-accent)]">
                               City: {ord.deliveryCity || 'Lagos'}{ord.deliveryState ? ` • State: ${ord.deliveryState}` : ''}
                             </div>
                           </div>
 
                           <div>
                             <span className="text-[10px] uppercase text-[var(--text-muted)] block">Fulfillment / Courier:</span>
-                            <strong className="text-emerald-400">{ord.trackingDetails?.courierName || 'Shipbubble Live Dispatch'}</strong>
+                            <strong className="text-emerald-500">{ord.trackingDetails?.courierName || 'Shipbubble Live Dispatch'}</strong>
                             <div className="text-[11px] text-[var(--text-muted)]">Waybill: {ord.trackingDetails?.waybillNumber || 'Assigned on dispatch'}</div>
                           </div>
                         </div>
+
+                        {/* Vendors Bought From + Instant WhatsApp & Email Actions */}
+                        {(() => {
+                          const orderVendors = getOrderVendors(ord);
+                          if (orderVendors.length === 0) return null;
+                          return (
+                            <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] flex items-center gap-1.5">
+                                  <Store className="h-3.5 w-3.5" />
+                                  <span>Vendor{orderVendors.length > 1 ? 's' : ''} Bought From ({orderVendors.length})</span>
+                                </span>
+                                <span className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
+                                  Quick Admin Outreach
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                {orderVendors.map((v) => (
+                                  <div
+                                    key={v.vendorId}
+                                    className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-medium text-[var(--text-primary)] truncate">
+                                        {v.brandName}
+                                      </div>
+                                      <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate">
+                                        {v.itemCount} item{v.itemCount > 1 ? 's' : ''} · ₦{v.subtotal.toLocaleString()}
+                                        {v.phone ? ` · ${v.phone}` : ''}
+                                      </div>
+                                      {v.email && (
+                                        <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate">
+                                          {v.email}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {v.whatsapp ? (
+                                        <a
+                                          href={generateWhatsAppUrl(
+                                            v.whatsapp,
+                                            `Hello ${v.brandName}, this is ÌRÍSÍ Admin regarding Order ${ord.orderNumber} (Customer: ${ord.customerName || 'Shopper'}). Please confirm fulfillment status.`
+                                          )}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono-luxury uppercase hover:bg-emerald-500 hover:text-black transition-colors"
+                                        >
+                                          <MessageCircle className="h-3 w-3" />
+                                          <span>WhatsApp</span>
+                                        </a>
+                                      ) : (
+                                        <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] px-2">No Phone</span>
+                                      )}
+                                      {v.email && (
+                                        <a
+                                          href={`mailto:${v.email}?subject=${encodeURIComponent(`ÌRÍSÍ Admin — Order ${ord.orderNumber} (${v.brandName})`)}&body=${encodeURIComponent(`Hello ${v.brandName},\n\nWe are reaching out regarding Order ${ord.orderNumber} placed by ${ord.customerName || 'a shopper'}.\n\nBest regards,\nÌRÍSÍ Operations`)}`}
+                                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase hover:bg-[var(--gold-accent)] hover:text-black transition-colors"
+                                        >
+                                          <Mail className="h-3 w-3" />
+                                          <span>Mail</span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Items Preview */}
                         <div className="pt-2 flex items-center gap-3 overflow-x-auto pb-1">
@@ -1983,8 +2182,11 @@ export default function SuperAdminPage() {
                                 <Image src={item.imageUrl || '/images/no-product.svg'} alt="" fill unoptimized className="object-cover" />
                               </div>
                               <div className="text-[11px] font-mono-luxury min-w-[120px]">
-                                <div className="font-bold text-[var(--text-primary)] truncate">{item.productName}</div>
+                                <div className="font-medium text-[var(--text-primary)] truncate">{item.productName}</div>
                                 <div className="text-[var(--text-muted)]">{item.size} • ₦{Number(item.price).toLocaleString()}</div>
+                                {(item.vendorName || item.vendorId) && (
+                                  <div className="text-[10px] text-[var(--gold-accent)] truncate">By {item.vendorName || item.vendorId}</div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -2062,7 +2264,7 @@ export default function SuperAdminPage() {
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-                    Manage multi-vendor door pickups, interstate motor park hubs, waybills, and delivery exceptions across all 36 states.
+                    Manage multi-vendor door pickups, interstate motor park hubs, waybills, and delivery exceptions across all regions.
                   </p>
                 </div>
 
@@ -3136,55 +3338,112 @@ export default function SuperAdminPage() {
                 </div>
               </div>
 
-              {/* Platform Fee & Commission Configuration Panel */}
-              <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
+              {/* Platform Monetization, Global Free Launch Kill-Switch & ÌRÍSÍ Plus Control Panel */}
+              <div className="p-6 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Wallet className="h-5 w-5 text-[var(--gold-accent)]" />
-                      <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
-                        Platform Commission & Fee Configuration
+                      <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                        Global Free Launch Switch, Commission &amp; ÌRÍSÍ Plus Pricing
                       </h3>
                     </div>
                     <p className="text-xs text-[var(--text-secondary)] font-mono-luxury max-w-2xl">
-                      Configure the platform fee percentage deducted on garment sales. Currently set to <strong className="text-[var(--gold-accent)]">{commissionConfig.isEnabled ? `${commissionConfig.commissionPercent}%` : '0% (Disabled)'}</strong>. Vendors receive {100 - (commissionConfig.isEnabled ? commissionConfig.commissionPercent : 0)}% of sales. When you are ready to start charging fees, set your rate below and save.
+                      {commissionConfig.freeLaunchMode
+                        ? 'Launch Free Period is ON globally — all brands enjoy 0% commission and full Plus access. Switch it OFF anytime to activate per-order commissions & Plus subscriptions.'
+                        : `Billing is LIVE globally — Free tier: ${commissionConfig.freeTierCommissionPercent}% (max ${commissionConfig.freeTierProductLimit} items) · ÌRÍSÍ Plus: ₦${commissionConfig.plusMonthlyPriceNgn.toLocaleString()}/mo (${commissionConfig.plusTierCommissionPercent}% commission).`}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={commissionEnabledInput}
-                        onChange={(e) => setCommissionEnabledInput(e.target.checked)}
-                        className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
-                      />
-                      <span className="text-xs font-mono-luxury font-bold text-[var(--text-primary)]">
-                        {commissionEnabledInput ? 'Fee Charging Active' : 'Fee Disabled (0%)'}
-                      </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !freeLaunchModeInput;
+                      setFreeLaunchModeInput(next);
+                      setCommissionEnabledInput(!next);
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider border transition-all cursor-pointer shrink-0 ${
+                      freeLaunchModeInput
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40'
+                    }`}
+                  >
+                    {freeLaunchModeInput ? 'Free Launch Trial: ON (0%)' : 'Free Launch Trial: OFF (Billing Active)'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-3 border-t border-[var(--border-subtle)]">
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      ÌRÍSÍ Plus Price (₦ / month)
                     </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="500"
+                      value={plusPriceInput}
+                      onChange={(e) => setPlusPriceInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      Free Tier Commission (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="40"
+                      step="0.5"
+                      value={commissionInput}
+                      onChange={(e) => setCommissionInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      ÌRÍSÍ Plus Commission (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="40"
+                      step="0.5"
+                      value={plusCommissionInput}
+                      onChange={(e) => setPlusCommissionInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block mb-1">
+                      Free Tier Max Products
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={freeProductLimitInput}
+                      onChange={(e) => setFreeProductLimitInput(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
-                  <div className="w-full sm:w-auto flex items-center gap-2">
-                    <span className="text-xs font-mono-luxury text-[var(--text-secondary)] shrink-0">
-                      Platform Fee Percentage (%):
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--border-subtle)]">
+                  <label className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--text-secondary)] cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={requirePlusStorefrontInput}
+                      onChange={(e) => setRequirePlusStorefrontInput(e.target.checked)}
+                      className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
+                    />
+                    <span>
+                      Lock Unpaid Storefront Links After Free Trial (Keep UNCHECKED for Option B: Free keeps basic storefront; Check for Option A: hard paywall)
                     </span>
-                    <div className="relative w-32">
-                      <input
-                        type="number"
-                        min="0"
-                        max="50"
-                        step="0.5"
-                        value={commissionInput}
-                        onChange={(e) => setCommissionInput(e.target.value)}
-                        placeholder="0"
-                        className="w-full pl-3 pr-8 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
-                      />
-                      <span className="absolute right-3 top-2.5 text-xs text-[var(--text-muted)] font-mono-luxury font-bold">%</span>
-                    </div>
-                  </div>
+                  </label>
 
                   <button
                     type="button"
@@ -3195,31 +3454,43 @@ export default function SuperAdminPage() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            commissionPercent: Number(commissionInput || 0),
-                            isEnabled: commissionEnabledInput,
+                            freeLaunchMode: freeLaunchModeInput,
+                            isEnabled: !freeLaunchModeInput,
+                            freeTierCommissionPercent: Number(commissionInput || 0),
+                            plusTierCommissionPercent: Number(plusCommissionInput || 0),
+                            plusMonthlyPriceNgn: Number(plusPriceInput || 0),
+                            freeTierProductLimit: Number(freeProductLimitInput || 12),
+                            requirePlusForStorefront: requirePlusStorefrontInput,
                           }),
                         });
                         const data = await res.json();
-                        if (res.ok && data.success) {
+                        if (res.ok && data.success && data.config) {
+                          const cfg = data.config;
                           setCommissionConfig({
-                            commissionPercent: Number(data.config.commissionPercent || 0),
-                            isEnabled: Boolean(data.config.isEnabled),
+                            commissionPercent: Number(cfg.commissionPercent || 0),
+                            isEnabled: Boolean(cfg.isEnabled),
+                            freeLaunchMode: Boolean(cfg.freeLaunchMode),
+                            freeTierCommissionPercent: Number(cfg.freeTierCommissionPercent ?? 8),
+                            plusTierCommissionPercent: Number(cfg.plusTierCommissionPercent ?? 5),
+                            plusMonthlyPriceNgn: Number(cfg.plusMonthlyPriceNgn ?? 5000),
+                            freeTierProductLimit: Number(cfg.freeTierProductLimit ?? 12),
+                            requirePlusForStorefront: Boolean(cfg.requirePlusForStorefront),
                           });
                           confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
-                          setActionSuccessMsg(`Platform commission rate updated to ${data.config.commissionPercent}% (${data.config.isEnabled ? 'Active' : 'Disabled'})!`);
-                          setTimeout(() => setActionSuccessMsg(''), 4000);
+                          setActionSuccessMsg(data.message || 'Platform billing settings updated!');
+                          setTimeout(() => setActionSuccessMsg(''), 4500);
                         }
                       } catch (err) {
-                        console.error('Failed to update commission rate:', err);
+                        console.error('Failed to update billing settings:', err);
                       } finally {
                         setIsSavingCommission(false);
                       }
                     }}
                     disabled={isSavingCommission}
-                    className="w-full sm:w-auto px-5 py-2 rounded-full bg-[var(--gold-accent)] hover:bg-[#d8b357] text-black text-xs font-mono-luxury font-bold uppercase transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-[var(--gold-accent)] hover:bg-[#d8b357] text-black text-xs font-mono-luxury uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
                   >
                     {isSavingCommission ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    <span>Save Fee Setting</span>
+                    <span>Save Billing Rules</span>
                   </button>
                 </div>
               </div>
@@ -3232,7 +3503,7 @@ export default function SuperAdminPage() {
                       Vendor Payout Balances & Settlement Accounts
                     </h3>
                     <span className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                      Pending escrow vs settled payouts mapped to verified Nigerian bank accounts • Click any brand to view payout statement
+                      Pending escrow vs settled payouts mapped to verified merchant bank accounts • Click any brand to view payout statement
                     </span>
                   </div>
 
@@ -3462,7 +3733,7 @@ export default function SuperAdminPage() {
                     Verified Shoppers Directory
                   </h1>
                   <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-                    Directory of buyers across Nigeria • Click on any shopper to see their complete purchase history and spent totals.
+                    Directory of verified shoppers • Click on any shopper to inspect purchase history, spend totals, and abandoned cart recovery.
                   </p>
                 </div>
 
@@ -3943,6 +4214,60 @@ export default function SuperAdminPage() {
                 </div>
               </div>
             </div>
+
+            {/* Vendors Bought From (Direct Admin Contact) */}
+            {(() => {
+              const modalVendors = getOrderVendors(selectedOrderModal);
+              if (modalVendors.length === 0) return null;
+              return (
+                <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2.5">
+                  <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5" />
+                    <span>Vendor{modalVendors.length > 1 ? 's' : ''} on This Order ({modalVendors.length})</span>
+                  </span>
+                  <div className="space-y-2">
+                    {modalVendors.map((v) => (
+                      <div
+                        key={v.vendorId}
+                        className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono-luxury"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[var(--text-primary)] font-medium">{v.brandName}</div>
+                          <div className="text-[10px] text-[var(--text-muted)] truncate">
+                            {v.phone || 'No phone'} {v.email ? `· ${v.email}` : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {v.whatsapp && (
+                            <a
+                              href={generateWhatsAppUrl(
+                                v.whatsapp,
+                                `Hello ${v.brandName}, this is ÌRÍSÍ Admin regarding Order ${selectedOrderModal.orderNumber}.`
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 text-[10px] uppercase hover:bg-emerald-500 hover:text-black transition-colors"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+                          {v.email && (
+                            <a
+                              href={`mailto:${v.email}?subject=${encodeURIComponent(`ÌRÍSÍ Order ${selectedOrderModal.orderNumber}`)}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[var(--gold-accent)] text-[10px] uppercase hover:bg-[var(--gold-accent)] hover:text-black transition-colors"
+                            >
+                              <Mail className="h-3 w-3" />
+                              <span>Email</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Items List */}
             <div className="space-y-3">

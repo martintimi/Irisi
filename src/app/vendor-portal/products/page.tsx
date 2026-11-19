@@ -174,7 +174,170 @@ export default function VendorProductsCatalogPage() {
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fadeIn max-w-7xl pb-20">
+    <>
+      {/* 1. NATIVE MOBILE APP CATALOG VIEW (< md) */}
+      <div className="md:hidden space-y-4 animate-fadeIn pb-6 select-none">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+              Catalog
+            </h1>
+            <p className="text-xs text-[var(--text-muted)] font-light">
+              {stats.totalProducts} listing{stats.totalProducts === 1 ? '' : 's'} · {stats.totalStockUnits} unit{stats.totalStockUnits === 1 ? '' : 's'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={loadVendorProducts}
+              className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center active:scale-95 cursor-pointer"
+              aria-label="Refresh catalog"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <Link
+              href="/vendor-portal/publish"
+              className="h-9 px-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury inline-flex items-center gap-1 active:scale-95"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Native iOS Search Pill */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search pieces or category..."
+            className="w-full h-11 pl-10 pr-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--gold-accent)] focus:outline-none"
+          />
+        </div>
+
+        {/* Unified 4-Column Hairline Stock Strip */}
+        <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] grid grid-cols-4 divide-x divide-[var(--border-subtle)] py-3 text-center">
+          <div className="px-1">
+            <div className="font-editorial text-xl text-[var(--text-primary)] leading-none">{stats.totalProducts}</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-[var(--text-muted)] mt-1 block">Drops</span>
+          </div>
+          <div className="px-1">
+            <div className="font-editorial text-xl text-emerald-500 leading-none">{stats.totalStockUnits}</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-[var(--text-muted)] mt-1 block">Units</span>
+          </div>
+          <div className="px-1">
+            <div className="font-editorial text-xl text-amber-500 leading-none">{stats.lowStockCount}</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-[var(--text-muted)] mt-1 block">Low</span>
+          </div>
+          <div className="px-1">
+            <div className="font-editorial text-xl text-rose-500 leading-none">{stats.soldOutCount}</div>
+            <span className="text-[9px] font-mono-luxury uppercase text-[var(--text-muted)] mt-1 block">Out</span>
+          </div>
+        </div>
+
+        {/* Native Segmented Stock Filter */}
+        <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'in_stock', label: 'In Stock' },
+            { id: 'low_stock', label: 'Low' },
+            { id: 'sold_out', label: 'Sold Out' },
+          ].map((tab) => {
+            const active = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setStatusFilter(tab.id as any)}
+                className={`py-2 rounded-xl text-[11px] font-mono-luxury transition-all cursor-pointer ${
+                  active
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                    : 'text-[var(--text-muted)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Grouped Native Product List */}
+        {filteredProducts.length === 0 ? (
+          <div className="p-10 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-2.5">
+            <Package className="h-7 w-7 text-[var(--text-muted)] mx-auto" strokeWidth={1.5} />
+            <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">No Matching Pieces</h3>
+            <p className="text-xs text-[var(--text-muted)] font-light">
+              {products.length === 0 ? 'Tap the gold + button below to publish your first drop.' : 'Try clearing your search or filter.'}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            {filteredProducts.map((piece) => {
+              const qty =
+                typeof piece.stockQuantity === 'number'
+                  ? piece.stockQuantity
+                  : typeof piece.stock_quantity === 'number'
+                  ? piece.stock_quantity
+                  : 0;
+              const isMto = piece.fulfillmentType === 'made_to_order';
+
+              return (
+                <div
+                  key={piece.id}
+                  onClick={() => handleOpenEdit(piece)}
+                  className="px-3.5 py-3 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative h-14 w-14 rounded-xl overflow-hidden bg-zinc-900 shrink-0 border border-[var(--border-subtle)]">
+                      <Image
+                        src={piece.imageUrl || piece.image_url || (Array.isArray(piece.images) && piece.images[0]) || '/images/no-product.svg'}
+                        alt={piece.name}
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
+                        {piece.name}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] font-light mt-0.5 flex-wrap">
+                        <span
+                          className={`inline-block h-1.5 w-1.5 rounded-full ${
+                            qty === 0 ? 'bg-rose-500' : qty <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                        />
+                        <span>{qty === 0 ? 'Sold out' : `${qty} left`}</span>
+                        {isMto && (
+                          <>
+                            <span>·</span>
+                            <span className="text-[var(--gold-accent)]">Made to Order</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <div className="font-editorial text-base text-[var(--text-primary)]">
+                        ₦{Number(piece.price || 0).toLocaleString()}
+                      </div>
+                      <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)]">Edit</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/60" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 2. DESKTOP CATALOG VIEW (md+) */}
+      <div className="hidden md:block space-y-6 sm:space-y-8 animate-fadeIn max-w-7xl pb-20">
       
       {/* 1. Header & Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -500,7 +663,9 @@ export default function VendorProductsCatalogPage() {
         </div>
       )}
 
-      {/* 5. Interactive Edit Product Modal */}
+      </div>
+
+      {/* 5. Interactive Edit Product Modal (Shared Mobile & Desktop) */}
       <EditProductModal
         product={selectedProduct}
         isOpen={isEditModalOpen}
@@ -511,7 +676,6 @@ export default function VendorProductsCatalogPage() {
         onProductUpdated={handleProductUpdated}
         onProductDeleted={handleProductDeleted}
       />
-
-    </div>
+    </>
   );
 }

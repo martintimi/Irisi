@@ -106,6 +106,8 @@ export interface Product {
   stockQuantity?: number;
   sizeStock?: Record<string, number>;
   weightKg?: number;
+  fulfillmentType?: 'ready_to_ship' | 'made_to_order';
+  productionLeadTime?: string;
 }
 
 export type VendorSpecialty =
@@ -141,6 +143,7 @@ export interface Vendor {
 }
 
 export interface VendorProfile {
+  id?: string;
   brandName: string;
   designerName: string;
   contactPerson: string;
@@ -393,13 +396,16 @@ export interface NotificationItem {
 export interface VendorStory {
   id: string;
   vendorId: string;
+  vendorSlug?: string;
   vendorName: string;
   vendorAvatar: string;
   mediaUrl: string;
+  mediaType?: 'image' | 'video';
   caption: string;
   taggedProductId?: string;
   taggedProductName?: string;
   taggedProductPrice?: number;
   taggedProductImage?: string;
   createdAt: string;
+  expiresAt?: string;
 }

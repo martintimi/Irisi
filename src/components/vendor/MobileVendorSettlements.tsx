@@ -2,9 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  ShieldCheck, CheckCircle2, Clock, ArrowUpRight,
-  Download, Copy, Check, Sparkles, Building2, Banknote,
-  ChevronRight, RefreshCw, AlertCircle, Edit3, X, Loader2
+  ShieldCheck, CheckCircle2, Download, Copy, Check,
+  Building2, Banknote, RefreshCw, Edit3, X, Loader2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
@@ -23,17 +22,18 @@ export default function MobileVendorSettlements({
   orders,
   isLoading,
   vendorProfile,
-  onRefresh
+  onRefresh,
 }: MobileVendorSettlementsProps) {
   const { setVendorProfile } = useStore();
   const [filterTab, setFilterTab] = useState<'all' | 'escrow' | 'settled'>('all');
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Bank editing & Paystack resolution state
   const [isEditingBank, setIsEditingBank] = useState(false);
   const [editBankName, setEditBankName] = useState(vendorProfile?.bankName || '');
-  const [editBankCode, setEditBankCode] = useState(() => vendorProfile?.bankName ? getBankCodeByName(vendorProfile.bankName) : '');
+  const [editBankCode, setEditBankCode] = useState(() =>
+    vendorProfile?.bankName ? getBankCodeByName(vendorProfile.bankName) : ''
+  );
   const [editAccountNumber, setEditAccountNumber] = useState(vendorProfile?.accountNumber || '');
   const [editAccountName, setEditAccountName] = useState(vendorProfile?.accountName || '');
   const [isResolving, setIsResolving] = useState(false);
@@ -47,7 +47,9 @@ export default function MobileVendorSettlements({
     setIsResolving(true);
     setResolveError('');
     try {
-      const res = await fetch(`/api/bank/resolve?account_number=${encodeURIComponent(cleanNum)}&bank_code=${encodeURIComponent(bCode)}`);
+      const res = await fetch(
+        `/api/bank/resolve?account_number=${encodeURIComponent(cleanNum)}&bank_code=${encodeURIComponent(bCode)}`
+      );
       const data = await res.json();
       if (data.success && data.accountName) {
         setEditAccountName(data.accountName);
@@ -67,7 +69,7 @@ export default function MobileVendorSettlements({
 
   const handleSaveBank = async () => {
     if (editAccountNumber.length !== 10 || !editAccountName) {
-      setResolveError('Please provide a valid 10-digit NUBAN account number.');
+      setResolveError('Please provide a valid 10-digit account number.');
       return;
     }
     setIsSavingBank(true);
@@ -82,7 +84,7 @@ export default function MobileVendorSettlements({
           specialty: vendorProfile.specialty || vendorProfile.vendorSpecialty,
           vendorSpecialty: vendorProfile.specialty || vendorProfile.vendorSpecialty,
           vendorType: vendorProfile.vendorType,
-        })
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -93,9 +95,9 @@ export default function MobileVendorSettlements({
           accountName: editAccountName,
         });
         setIsEditingBank(false);
-        setToastMessage('Settlement bank account updated successfully!');
+        setToastMessage('Payout bank account updated!');
         setTimeout(() => setToastMessage(null), 4000);
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+        confetti({ particleCount: 40, spread: 55, origin: { y: 0.6 } });
       } else {
         setResolveError(data.error || 'Failed to update bank details.');
       }
@@ -108,19 +110,25 @@ export default function MobileVendorSettlements({
 
   const totalEscrowLocked = useMemo(() => {
     return orders
-      .filter(o => o.trackingStage < 4)
+      .filter((o) => o.trackingStage < 4)
       .reduce((sum, ord) => {
-        const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
+        const itemsTotal = (ord.items || []).reduce(
+          (s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1),
+          0
+        );
         return sum + itemsTotal;
       }, 0);
   }, [orders]);
 
-  const completedOrders = useMemo(() => orders.filter(o => o.trackingStage >= 4), [orders]);
-  const inEscrowOrders = useMemo(() => orders.filter(o => o.trackingStage < 4), [orders]);
+  const completedOrders = useMemo(() => orders.filter((o) => o.trackingStage >= 4), [orders]);
+  const inEscrowOrders = useMemo(() => orders.filter((o) => o.trackingStage < 4), [orders]);
 
   const totalSettled = useMemo(() => {
     return completedOrders.reduce((sum, ord) => {
-      const itemsTotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
+      const itemsTotal = (ord.items || []).reduce(
+        (s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1),
+        0
+      );
       return sum + itemsTotal;
     }, 0);
   }, [completedOrders]);
@@ -137,400 +145,329 @@ export default function MobileVendorSettlements({
       navigator.clipboard.writeText(acc);
       setCopiedAccount(true);
       setTimeout(() => setCopiedAccount(false), 2000);
-      confetti({ particleCount: 30, spread: 50, origin: { y: 0.6 } });
     }
   };
 
   const handleDownloadAdvice = () => {
-    setToastMessage('Payout Ledger & Advice downloaded successfully!');
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    setToastMessage('Payout statement downloaded!');
+    confetti({ particleCount: 35, spread: 50, origin: { y: 0.6 } });
     setTimeout(() => setToastMessage(null), 4000);
   };
 
   if (isLoading) {
-    return <VendorLuxuryLoader label="Loading Treasury Balances & Payouts..." />;
+    return <VendorLuxuryLoader label="Loading Payouts..." />;
   }
 
   return (
-    <div className="space-y-4 animate-fadeIn pb-24 select-none">
-      
-      {/* 1. Header */}
-      <div className="flex items-start justify-between gap-3">
+    <div className="space-y-5 animate-fadeIn pb-6 select-none">
+      {/* 1. Native Screen Header */}
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase font-bold border border-[var(--gold-accent)]/20 mb-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Treasury & Bank Payouts</span>
-          </div>
-          <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)] leading-tight">
-            Settlement Ledger
-          </h2>
-          <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
-            Instant T+0 bank payouts wired upon delivery.
+          <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
+            Payouts &amp; Escrow
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] font-light">
+            T+0 bank settlements upon verified delivery
           </p>
         </div>
 
         <button
           type="button"
           onClick={onRefresh}
-          className="p-2 rounded-2xl surface-card border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer shrink-0 active:scale-95"
-          title="Refresh Treasury"
+          className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center active:scale-95 cursor-pointer shrink-0"
+          aria-label="Refresh payouts"
         >
           <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Toast Alert */}
       {toastMessage && (
-        <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-xs font-mono-luxury font-bold flex items-center gap-2 animate-fadeIn">
+        <div className="px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-xs flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* 2. Top Treasury Metrics (Grid 2-cols) */}
-      <div className="grid grid-cols-2 gap-2.5">
-        
-        {/* Active Escrow */}
-        <div className="p-3.5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-1.5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] font-mono-luxury tracking-wider">
+      {/* 2. Signature Obsidian Wallet Summary Card */}
+      <section className="rounded-[26px] bg-[#0D0D10] text-white p-5 space-y-4 border border-white/10 shadow-[0_18px_45px_rgba(0,0,0,0.16)]">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[#E6C367]">
+            Escrow Vault
+          </span>
+          <span className="inline-flex items-center gap-1 text-[10px] font-mono-luxury text-emerald-400">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>0% Launch Fee</span>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-white/10">
+          <div className="pr-3">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-zinc-400 block">
               Active Escrow
             </span>
-            <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-          </div>
-          <div className="font-editorial text-xl font-bold text-[var(--gold-accent)] leading-none">
-            ₦{totalEscrowLocked.toLocaleString()}
-          </div>
-          <p className="text-[9px] font-mono-luxury text-amber-400 font-bold leading-tight">
-            Auto-Releases on Delivery
-          </p>
-        </div>
-
-        {/* Settled Payouts */}
-        <div className="p-3.5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-1.5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] uppercase font-bold text-[var(--text-muted)] font-mono-luxury tracking-wider">
-              Settled Bank
-            </span>
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          </div>
-          <div className="font-editorial text-xl font-bold text-[var(--text-primary)] leading-none">
-            ₦{totalSettled.toLocaleString()}
-          </div>
-          <p className="text-[9px] font-mono-luxury text-[var(--text-secondary)] leading-tight">
-            {completedOrders.length} Order(s) Paid Out
-          </p>
-        </div>
-
-      </div>
-
-      {/* Promo Fee Banner */}
-      <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 flex items-center justify-between text-xs font-mono-luxury">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-          <span className="text-[11px] text-[var(--text-primary)] font-bold">
-            Platform Fee: <strong className="text-emerald-400">0% Special Rate</strong>
-          </span>
-        </div>
-        <span className="text-[10px] text-emerald-400 font-bold uppercase bg-emerald-500/10 px-2 py-0.5 rounded-full">
-          Verified Store
-        </span>
-      </div>
-
-      {/* 3. Verified Payout Bank Destination Card */}
-      <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm text-xs font-mono-luxury">
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase font-bold text-[var(--text-primary)] flex items-center gap-1.5">
-            <Building2 className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-            <span>Settlement Bank Account</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[9px] font-bold">
-              Verified
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditingBank(!isEditingBank);
-                setResolveError('');
-              }}
-              className="px-2.5 py-1 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] text-[var(--gold-accent)] font-bold flex items-center gap-1 cursor-pointer hover:border-[var(--gold-accent)] transition-all"
-            >
-              {isEditingBank ? <X className="h-3 w-3" /> : <Edit3 className="h-3 w-3" />}
-              <span>{isEditingBank ? 'Cancel' : 'Edit Bank'}</span>
-            </button>
-          </div>
-        </div>
-
-        {isEditingBank ? (
-          <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/30 space-y-3 animate-fadeIn">
-            <div className="text-[10px] uppercase font-bold text-[var(--gold-accent)]">
-              Update Settlement Bank
+            <div className="font-editorial text-3xl font-normal text-white mt-1 leading-none">
+              ₦{totalEscrowLocked.toLocaleString()}
             </div>
+            <span className="text-[10px] text-zinc-400 font-light mt-1.5 block">
+              {inEscrowOrders.length} pending delivery
+            </span>
+          </div>
 
-            <div>
-              <label className="block text-[10px] uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                Select Bank
-              </label>
-              <select
-                value={editBankName}
-                onChange={(e) => {
-                  const bName = e.target.value;
-                  const code = getBankCodeByName(bName);
-                  setEditBankName(bName);
-                  setEditBankCode(code);
-                  if (editAccountNumber.length === 10) {
-                    resolveAccount(editAccountNumber, code);
-                  }
-                }}
-                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
-              >
-                {NIGERIAN_BANKS.map((b) => (
-                  <option key={b.code} value={b.name}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+          <div className="pl-4">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-zinc-400 block">
+              Settled to Bank
+            </span>
+            <div className="font-editorial text-3xl font-normal text-emerald-400 mt-1 leading-none">
+              ₦{totalSettled.toLocaleString()}
             </div>
+            <span className="text-[10px] text-zinc-400 font-light mt-1.5 block">
+              {completedOrders.length} paid out
+            </span>
+          </div>
+        </div>
+      </section>
 
-            <div>
-              <label className="block text-[10px] uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                10-Digit NUBAN Account Number
-              </label>
-              <div className="relative">
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={10}
-                  value={editAccountNumber}
+      {/* 3. Settlement Bank Account Card (Apple Wallet Style) */}
+      <section className="space-y-2">
+        <div className="px-1 flex items-center justify-between">
+          <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            Payout Destination
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditingBank(!isEditingBank);
+              setResolveError('');
+            }}
+            className="text-[11px] font-mono-luxury text-[var(--gold-accent)] inline-flex items-center gap-1 cursor-pointer"
+          >
+            {isEditingBank ? <X className="h-3 w-3" /> : <Edit3 className="h-3 w-3" />}
+            <span>{isEditingBank ? 'Cancel' : 'Edit Bank'}</span>
+          </button>
+        </div>
+
+        <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
+          {isEditingBank ? (
+            <div className="p-4 space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                  Bank
+                </label>
+                <select
+                  value={editBankName}
                   onChange={(e) => {
-                    const cleanNum = e.target.value.replace(/[^0-9]/g, '');
-                    setEditAccountNumber(cleanNum);
-                    if (cleanNum.length === 10) {
-                      resolveAccount(cleanNum, editBankCode);
-                    } else {
-                      setIsVerified(false);
-                      setResolveError('');
+                    const bName = e.target.value;
+                    const code = getBankCodeByName(bName);
+                    setEditBankName(bName);
+                    setEditBankCode(code);
+                    if (editAccountNumber.length === 10) {
+                      resolveAccount(editAccountNumber, code);
                     }
                   }}
-                  placeholder="0123456789"
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono font-bold tracking-wider focus:border-[var(--gold-accent)] focus:outline-none"
-                />
-                {isResolving && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
-                  </div>
-                )}
+                  className="w-full h-10 px-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                >
+                  {NIGERIAN_BANKS.map((b) => (
+                    <option key={b.code} value={b.name}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[10px] uppercase text-[var(--text-secondary)] font-bold">
-                  Verified Account Holder Name
+              <div>
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                  10-Digit Account Number
                 </label>
-                {isVerified && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-                    <CheckCircle2 className="h-3 w-3" /> Verified
-                  </span>
-                )}
+                <div className="relative">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={editAccountNumber}
+                    onChange={(e) => {
+                      const cleanNum = e.target.value.replace(/[^0-9]/g, '');
+                      setEditAccountNumber(cleanNum);
+                      if (cleanNum.length === 10) {
+                        resolveAccount(cleanNum, editBankCode);
+                      } else {
+                        setIsVerified(false);
+                        setResolveError('');
+                      }
+                    }}
+                    placeholder="0123456789"
+                    className="w-full h-10 px-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] font-mono-luxury tracking-wider focus:border-[var(--gold-accent)] focus:outline-none"
+                  />
+                  {isResolving && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                  )}
+                </div>
               </div>
-              <input
-                type="text"
-                value={editAccountName}
-                onChange={(e) => setEditAccountName(e.target.value.toUpperCase())}
-                placeholder={isResolving ? 'Verifying account holder...' : 'Enter or confirm account name'}
-                className={`w-full px-3 py-2 rounded-xl bg-[var(--bg-secondary)] border text-xs uppercase font-bold tracking-wide focus:outline-none ${
-                  isVerified
-                    ? 'border-emerald-500/50 text-emerald-300 bg-emerald-950/10'
-                    : 'border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)]'
-                }`}
-              />
-              {resolveError && (
-                <p className="mt-1 text-[10px] text-amber-400 font-mono-luxury">
-                  ⚠ {resolveError}
-                </p>
-              )}
-            </div>
 
-            <button
-              type="button"
-              disabled={isSavingBank || isResolving || editAccountNumber.length !== 10}
-              onClick={handleSaveBank}
-              className="w-full py-2.5 rounded-xl bg-[var(--gold-accent)] text-black uppercase font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer hover:opacity-90 disabled:opacity-50 transition-all"
-            >
-              {isSavingBank ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Saving Settlement Account...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4" />
-                  <span>Save & Verify Settlement Account</span>
-                </>
-              )}
-            </button>
-          </div>
-        ) : (
-          <div className="p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-[var(--text-secondary)] uppercase">Bank Name:</span>
-              <strong className="text-[var(--text-primary)]">
-                {vendorProfile?.accountNumber ? (vendorProfile?.bankName || 'Not Configured') : 'Not Configured'}
-              </strong>
-            </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                    Account Name
+                  </label>
+                  {isVerified && (
+                    <span className="text-[10px] text-emerald-500 inline-flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> Verified
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={editAccountName}
+                  onChange={(e) => setEditAccountName(e.target.value.toUpperCase())}
+                  placeholder={isResolving ? 'Verifying...' : 'Account holder name'}
+                  className="w-full h-10 px-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs uppercase text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                />
+                {resolveError && <p className="mt-1 text-[11px] text-amber-500">{resolveError}</p>}
+              </div>
 
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-[var(--text-secondary)] uppercase">NUBAN Account:</span>
-              <div className="flex items-center gap-1.5">
-                {vendorProfile?.accountNumber ? (
-                  <>
-                    <strong className="text-[var(--gold-accent)] font-mono tracking-wider">
-                      {vendorProfile.accountNumber}
-                    </strong>
-                    <button
-                      type="button"
-                      onClick={handleCopyAccount}
-                      className="p-1 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-white cursor-pointer"
-                    >
-                      {copiedAccount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                    </button>
-                  </>
-                ) : (
-                  <span className="text-amber-400 font-mono text-[10px] uppercase font-bold">
-                    No Account Linked
-                  </span>
-                )}
+              <button
+                type="button"
+                disabled={isSavingBank || isResolving || editAccountNumber.length !== 10}
+                onClick={handleSaveBank}
+                className="w-full h-10 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isSavingBank ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                <span>{isSavingBank ? 'Saving...' : 'Save Bank Account'}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)] text-xs">
+              <div className="px-4 py-3 flex items-center justify-between gap-2">
+                <span className="text-[var(--text-muted)] flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5" strokeWidth={1.6} />
+                  <span>Bank</span>
+                </span>
+                <span className="font-medium text-[var(--text-primary)]">
+                  {vendorProfile?.accountNumber ? vendorProfile?.bankName || 'Not Configured' : 'Not Configured'}
+                </span>
+              </div>
+
+              <div className="px-4 py-3 flex items-center justify-between gap-2">
+                <span className="text-[var(--text-muted)]">Account No</span>
+                <div className="flex items-center gap-1.5">
+                  {vendorProfile?.accountNumber ? (
+                    <>
+                      <span className="font-mono-luxury text-[var(--gold-accent)] tracking-wider">
+                        {vendorProfile.accountNumber}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyAccount}
+                        className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                      >
+                        {copiedAccount ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-amber-500 text-[11px]">Not Linked</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-4 py-3 flex items-center justify-between gap-2">
+                <span className="text-[var(--text-muted)]">Account Name</span>
+                <span className="text-[var(--text-primary)] truncate max-w-[60%] uppercase text-[11px]">
+                  {vendorProfile?.accountNumber
+                    ? vendorProfile?.accountName || vendorProfile?.brandName || 'Verified Merchant'
+                    : 'Pending Setup'}
+                </span>
               </div>
             </div>
+          )}
+        </div>
 
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-[var(--text-secondary)] uppercase">Account Name:</span>
-              <strong className="text-[var(--text-primary)] uppercase truncate max-w-[180px]">
-                {vendorProfile?.accountNumber ? (vendorProfile?.accountName || vendorProfile?.brandName || 'Verified Merchant') : 'Pending Setup'}
-              </strong>
-            </div>
-          </div>
-        )}
-
-        {/* Download Payout Advice Action */}
         <button
           type="button"
           onClick={handleDownloadAdvice}
-          className="w-full py-3 rounded-2xl bg-[var(--text-primary)] text-[var(--bg-primary)] uppercase font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer hover:opacity-90 active:scale-98 transition-all"
+          className="w-full h-11 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] cursor-pointer"
         >
           <Download className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
           <span>Download Payout Statement</span>
         </button>
-      </div>
+      </section>
 
-      {/* 4. Filterable Payout Ledger */}
-      <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between">
-          <span className="text-xs uppercase font-bold text-[var(--text-primary)] font-mono-luxury">
+      {/* 4. Payout History Ledger */}
+      <section className="space-y-3">
+        <div className="px-1 flex items-center justify-between">
+          <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Payout History ({filteredOrders.length})
           </span>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury">
-          <button
-            type="button"
-            onClick={() => setFilterTab('all')}
-            className={`flex-1 py-2 rounded-xl text-center font-bold uppercase text-[10px] transition-all cursor-pointer ${
-              filterTab === 'all'
-                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
-          >
-            All ({orders.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab('escrow')}
-            className={`flex-1 py-2 rounded-xl text-center font-bold uppercase text-[10px] transition-all cursor-pointer ${
-              filterTab === 'escrow'
-                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
-          >
-            In Escrow ({inEscrowOrders.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab('settled')}
-            className={`flex-1 py-2 rounded-xl text-center font-bold uppercase text-[10px] transition-all cursor-pointer ${
-              filterTab === 'settled'
-                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
-          >
-            Settled ({completedOrders.length})
-          </button>
+        {/* Native iOS Segmented Control */}
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+          {[
+            { id: 'all', label: `All (${orders.length})` },
+            { id: 'escrow', label: `Escrow (${inEscrowOrders.length})` },
+            { id: 'settled', label: `Settled (${completedOrders.length})` },
+          ].map((tab) => {
+            const active = filterTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilterTab(tab.id as any)}
+                className={`py-2 rounded-xl text-[11px] font-mono-luxury transition-all cursor-pointer ${
+                  active
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                    : 'text-[var(--text-muted)]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Orders Payout Cards */}
         {filteredOrders.length === 0 ? (
-          <div className="p-8 rounded-3xl surface-card text-center space-y-2 border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-muted)]">
-            <Banknote className="h-8 w-8 text-[var(--gold-accent)] mx-auto opacity-50 mb-1" />
-            <p>No transactions in this category.</p>
+          <div className="p-8 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-2">
+            <Banknote className="h-7 w-7 text-[var(--text-muted)] mx-auto" strokeWidth={1.5} />
+            <p className="text-xs text-[var(--text-muted)] font-light">No transactions in this filter.</p>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
             {filteredOrders.map((ord, idx) => {
-              const rowSubtotal = (ord.items || []).reduce((s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1), 0);
-              const rowPayout = rowSubtotal;
+              const rowPayout = (ord.items || []).reduce(
+                (s: number, i: any) => s + (Number(i.price) || 0) * (i.quantity || 1),
+                0
+              );
               const isSettled = ord.trackingStage >= 4;
 
               return (
-                <div
-                  key={ord.id || ord.orderNumber || idx}
-                  className="p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2 shadow-sm text-xs font-mono-luxury"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-[var(--gold-accent)] text-xs block">
+                <div key={ord.id || ord.orderNumber || idx} className="px-4 py-3.5 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-medium text-[var(--text-primary)] truncate">
                         {ord.orderNumber}
-                      </span>
-                      <span className="text-[10px] text-[var(--text-muted)]">
+                      </div>
+                      <div className="text-[11px] text-[var(--text-muted)] font-light truncate">
                         {ord.customerName} · {ord.date || 'Recent'}
-                      </span>
+                      </div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="font-bold text-sm text-[var(--text-primary)] font-editorial">
+                    <div className="text-right shrink-0">
+                      <div className="font-editorial text-base text-[var(--text-primary)]">
                         ₦{rowPayout.toLocaleString()}
                       </div>
-                      <span className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
-                        isSettled
-                          ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                      }`}>
-                        {isSettled ? 'Paid Out to Bank' : 'Locked in Escrow'}
+                      <span
+                        className={`text-[10px] font-mono-luxury ${
+                          isSettled ? 'text-emerald-500' : 'text-[var(--gold-accent)]'
+                        }`}
+                      >
+                        {isSettled ? 'Paid Out' : 'In Escrow'}
                       </span>
                     </div>
                   </div>
-
-                  {/* Items summary */}
-                  {ord.items && ord.items.length > 0 && (
-                    <div className="pt-1.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-[10px] text-[var(--text-secondary)]">
-                      <span className="truncate max-w-[200px]">
-                        {ord.items.map((it: any) => `${it.productName || it.name} (${it.size || 'M'})`).join(', ')}
-                      </span>
-                      <span className="text-emerald-400 font-bold shrink-0">
-                        {isSettled ? 'Transferred' : 'Stage ' + (ord.trackingStage || 1)}
-                      </span>
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
-      </div>
-
+      </section>
     </div>
   );
 }

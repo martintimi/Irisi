@@ -51,6 +51,67 @@ export default function TrackOrderPage() {
 
   // Rating & Review State
   const [activeReviewVendor, setActiveReviewVendor] = useState<{ vendorId: string; vendorName: string; productId: string; productName: string } | null>(null);
+
+  // 48-Hour Escrow Dispute / Issue Report State
+  const [disputeVendor, setDisputeVendor] = useState<{ vendorId: string; vendorName: string } | null>(null);
+  const [disputeReason, setDisputeReason] = useState('Wrong item / color / size sent');
+  const [disputeDetails, setDisputeDetails] = useState('');
+  const [disputeProofUrls, setDisputeProofUrls] = useState<string[]>([]);
+  const [isUploadingDisputeProof, setIsUploadingDisputeProof] = useState(false);
+  const [isSubmittingDispute, setIsSubmittingDispute] = useState(false);
+
+  const handleDisputePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingDisputeProof(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setDisputeProofUrls((prev) => [...prev, data.url]);
+      }
+    } catch {} finally {
+      setIsUploadingDisputeProof(false);
+    }
+  };
+
+  const handleSubmitDispute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disputeVendor || !searchedOrder) return;
+    setIsSubmittingDispute(true);
+    const resolvedOrderNo = searchedOrder.order_number || searchedOrder.orderNumber;
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: resolvedOrderNo,
+          orderId: searchedOrder.id,
+          vendorId: disputeVendor.vendorId,
+          action: 'open_dispute',
+          disputeReason,
+          disputeDetails,
+          disputeProofUrls,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToastMessage('Dispute opened! Escrow payout is frozen while our team reviews within 24-48h.');
+        setDisputeVendor(null);
+        setDisputeDetails('');
+        setDisputeProofUrls([]);
+        await fetchOrderFromDb(resolvedOrderNo);
+      } else {
+        setToastMessage(data.error || 'Could not submit dispute.');
+      }
+    } catch {
+      setToastMessage('Network error submitting dispute.');
+    } finally {
+      setIsSubmittingDispute(false);
+    }
+  };
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewFit, setReviewFit] = useState('true_to_size');
   const [reviewComment, setReviewComment] = useState('');
@@ -176,6 +237,7 @@ export default function TrackOrderPage() {
       packageWeightKg: number;
       packageDimensions: string;
       instructions: string;
+      preDispatchProofUrl?: string;
       lastUpdated: string;
       subtotal: number;
     }>();
@@ -222,6 +284,7 @@ export default function TrackOrderPage() {
           packageWeightKg: pkgInfo?.packageWeightKg || 1.1,
           packageDimensions: pkgInfo?.packageDimensions || '35×25×6cm',
           instructions: pkgInfo?.instructions || '',
+          preDispatchProofUrl: pkgInfo?.preDispatchProofUrl || '',
           lastUpdated: pkgInfo?.lastUpdated || '',
           subtotal: 0,
         });
@@ -737,15 +800,36 @@ export default function TrackOrderPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {pkg.preDispatchProofUrl && (
+                        <a
+                          href={pkg.preDispatchProofUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3.5 py-2 rounded-full border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] text-[11px] font-mono-luxury uppercase hover:bg-[var(--gold-subtle)] transition-all shrink-0"
+                        >
+                          View Pre-Dispatch Proof
+                        </a>
+                      )}
+
                       {isDispatched && !isDelivered && (
                         <button
                           type="button"
                           onClick={() => handleConfirmReceivedPackage(pkg.vendorId, pkg.vendorName)}
                           disabled={releasingPackageId === pkg.vendorId}
-                          className="px-5 py-2 rounded-full bg-emerald-500 text-black text-xs font-mono-luxury uppercase font-bold hover:bg-emerald-400 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
+                          className="px-5 py-2 rounded-full bg-emerald-500 text-black text-xs font-mono-luxury uppercase hover:bg-emerald-400 transition-all shadow-md shrink-0 cursor-pointer disabled:opacity-50"
                         >
-                          {releasingPackageId === pkg.vendorId ? 'Releasing...' : 'Confirm Received (Release Escrow)'}
+                          {releasingPackageId === pkg.vendorId ? 'Releasing...' : 'Approve Delivery (Release Escrow)'}
+                        </button>
+                      )}
+
+                      {(isDispatched || isDelivered) && searchedOrder?.status !== 'disputed' && pkg.packageStatus !== 'disputed' && (
+                        <button
+                          type="button"
+                          onClick={() => setDisputeVendor({ vendorId: pkg.vendorId, vendorName: pkg.vendorName })}
+                          className="px-4 py-2 rounded-full border border-rose-500/40 text-rose-500 text-[11px] font-mono-luxury uppercase hover:bg-rose-500/10 transition-all shrink-0 cursor-pointer"
+                        >
+                          Report Issue (48h)
                         </button>
                       )}
 
@@ -898,6 +982,97 @@ export default function TrackOrderPage() {
                 >
                   {isSubmittingReview ? <Sparkles className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4 text-white" />}
                   <span>Submit Review</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 48-Hour Escrow Dispute & Return Request Modal */}
+      {disputeVendor && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-3xl surface-card border border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+                  Report an Issue · Freeze Escrow
+                </h3>
+                <p className="text-[11px] font-mono-luxury text-[var(--text-muted)] mt-0.5">
+                  Package from {disputeVendor.vendorName} · Protected under our{' '}
+                  <Link href="/returns" className="text-[var(--gold-accent)] underline">Return Policy</Link>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDisputeVendor(null)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitDispute} className="space-y-4 text-xs font-mono-luxury">
+              <div>
+                <label className="block uppercase text-[10px] text-[var(--text-secondary)] mb-1">
+                  Reason for Issue *
+                </label>
+                <select
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                >
+                  <option value="Wrong item / color / size sent">Wrong item / color / size sent</option>
+                  <option value="Damaged or defective on arrival">Damaged or defective on arrival</option>
+                  <option value="Item differs significantly from photos">Item differs significantly from photos</option>
+                  <option value="Order not received / late dispatch">Order not received / late dispatch</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block uppercase text-[10px] text-[var(--text-secondary)] mb-1">
+                  Describe What Happened *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={disputeDetails}
+                  onChange={(e) => setDisputeDetails(e.target.value)}
+                  placeholder="Explain the issue clearly so our resolution team can review within 24–48 hours..."
+                  className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block uppercase text-[10px] text-[var(--text-secondary)]">
+                  Attach Photo / Unboxing Proof
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,video/mp4,video/quicktime"
+                  onChange={handleDisputePhotoUpload}
+                  className="block w-full text-[11px] text-[var(--text-secondary)] file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:uppercase file:bg-rose-500/10 file:text-rose-500 cursor-pointer"
+                />
+                {isUploadingDisputeProof && <p className="text-[10px] text-[var(--gold-accent)]">Uploading proof...</p>}
+                {disputeProofUrls.length > 0 && (
+                  <p className="text-[10px] text-emerald-500">✓ {disputeProofUrls.length} proof file(s) attached</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDisputeVendor(null)}
+                  className="flex-1 py-3 rounded-full border border-[var(--border-subtle)] uppercase text-[var(--text-primary)] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingDispute || isUploadingDisputeProof}
+                  className="flex-1 py-3 rounded-full bg-rose-600 text-white uppercase hover:bg-rose-500 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingDispute ? 'Freezing Escrow...' : 'Freeze Escrow & Submit'}
                 </button>
               </div>
             </form>

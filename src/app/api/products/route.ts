@@ -4,6 +4,10 @@ import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 import { sendNewDropNotificationEmail } from '@/lib/services/emailService';
+import { parseProductMetaFromTags, encodeProductMetaIntoTags } from '@/lib/utils/productMetadata';
+import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
+import { isVendorPlusActive } from '@/lib/config/platformBilling';
+import { apiProductsCache, PRODUCTS_CACHE_TTL_MS as CACHE_TTL_MS, invalidateProductsCache } from '@/lib/cache/productsCache';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -14,16 +18,7 @@ const NIGERIAN_STATES = [
 
 
 
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-const apiProductsCache = new Map<string, CacheEntry>();
-const CACHE_TTL_MS = 60000; // 60 seconds (cleared automatically on new uploads)
-
-export function invalidateProductsCache() {
-  apiProductsCache.clear();
-}
+// Cache managed in @/lib/cache/productsCache
 
 export async function GET(request: Request) {
   try {
@@ -382,7 +377,8 @@ export async function GET(request: Request) {
       const subcatTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('subcat:'));
       const resolvedSubCategory = (p as any).subcategory || (p as any).sub_category || (subcatTag ? subcatTag.replace(/^subcat:/, '') : undefined);
 
-      // Filter out internal system tags (video:, img:, color_img:, ships_from:, subcat:) from public customer tags
+      const productMeta = parseProductMetaFromTags(rawTags);
+      // Filter out internal system tags (video:, img:, color_img:, ships_from:, subcat:, __*) from public customer tags
       const cleanTags = rawTags.filter(
         (t: string) =>
           typeof t === 'string' &&
@@ -390,7 +386,8 @@ export async function GET(request: Request) {
           !t.startsWith('img:') &&
           !t.startsWith('color_img:') &&
           !t.startsWith('ships_from:') &&
-          !t.startsWith('subcat:')
+          !t.startsWith('subcat:') &&
+          !t.startsWith('__')
       );
 
       return {
@@ -414,6 +411,8 @@ export async function GET(request: Request) {
         stockQuantity: pVariants.length > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50),
         unitsSold: soldMap.get(p.id) || 0,
         isCustomizable: Boolean((p as any).is_customizable),
+        fulfillmentType: productMeta.fulfillmentType,
+        productionLeadTime: productMeta.productionLeadTime,
         vendorId: p.vendor_id,
         vendor_id: p.vendor_id,
         shipsFrom: shipsFromLocation,
@@ -518,6 +517,30 @@ export async function POST(request: Request) {
             : 'Your store profile is under review. Product publishing will be unlocked once approved by Super Admin.';
           return NextResponse.json({ error: reason }, { status: 403 });
         }
+
+        // Enforce Free Tier product limit once Global Free Launch Period is turned OFF
+        const billingConfig = await fetchLivePlatformBillingConfig();
+        let vendorBioObj: Record<string, any> = {};
+        if (vendorRecord.bio && vendorRecord.bio.startsWith('{')) {
+          try { vendorBioObj = JSON.parse(vendorRecord.bio); } catch {}
+        }
+        if (!billingConfig.freeLaunchMode && !isVendorPlusActive(vendorBioObj, billingConfig)) {
+          const { count: existingCount } = await supabase
+            .from('products')
+            .select('id', { count: 'exact', head: true })
+            .eq('vendor_id', vendorRecord.id)
+            .eq('is_published', true);
+          const incomingCount = Array.isArray(body.items) && body.items.length > 0 ? body.items.length : 1;
+          if ((existingCount || 0) + incomingCount > billingConfig.freeTierProductLimit) {
+            return NextResponse.json(
+              {
+                error: `Free tier allows up to ${billingConfig.freeTierProductLimit} live products. Upgrade to ÌRÍSÍ Plus (₦${billingConfig.plusMonthlyPriceNgn.toLocaleString()}/month) for unlimited uploads, lower commission (${billingConfig.plusTierCommissionPercent}%), and Stories.`,
+                requiresPlus: true,
+              },
+              { status: 403 }
+            );
+          }
+        }
       }
     }
 
@@ -527,9 +550,13 @@ export async function POST(request: Request) {
         const pId = `prod-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`;
         const normalizedBatchColors = parseAndNormalizeColors(item.colors);
         const colorsList = normalizedBatchColors.map((c) => c.name);
-        const tagsList = Array.isArray(item.tags)
-          ? item.tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
-          : ['Ready-to-Wear'];
+        const tagsList = encodeProductMetaIntoTags(
+          Array.isArray(item.tags)
+            ? item.tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
+            : ['Ready-to-Wear'],
+          item.fulfillmentType,
+          item.productionLeadTime
+        );
 
         const subcatToSave = item.subcategory || item.subCategory;
         if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
@@ -688,9 +715,13 @@ export async function POST(request: Request) {
     const normalizedColorsList = parseAndNormalizeColors(colors);
     const colorsList = normalizedColorsList.map((c) => c.name);
 
-    const tagsList = Array.isArray(tags)
-      ? tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
-      : [];
+    const tagsList = encodeProductMetaIntoTags(
+      Array.isArray(tags)
+        ? tags.map((t: any) => typeof t === 'string' ? t.replace(/^#/, '') : String(t))
+        : [],
+      body.fulfillmentType,
+      body.productionLeadTime
+    );
 
     const subcatToSave = body.subcategory || body.subCategory;
     if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
