@@ -313,6 +313,8 @@ export default function ComingSoonPage() {
   const [vendorStatus, setVendorStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [vendorMessage, setVendorMessage] = useState('');
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [termsErrorHighlight, setTermsErrorHighlight] = useState(false);
+  const termsBoxRef = useRef<HTMLDivElement>(null);
 
   // Merch Priority Reservation Modal
   const [isMerchModalOpen, setIsMerchModalOpen] = useState(false);
@@ -719,10 +721,13 @@ export default function ComingSoonPage() {
     }
 
     if (!vendorForm.agreedToTerms) {
-      setVendorMessage('Please read and accept the ÌRÍSÍ Merchant Rules & Escrow Policy before submitting.');
+      setVendorMessage('You must accept the ÌRÍSÍ Terms & Conditions and Return Policy before submitting your application.');
       setVendorStatus('error');
+      setTermsErrorHighlight(true);
+      termsBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    setTermsErrorHighlight(false);
 
     const activeSocialLinks = vendorForm.socialLinks.filter(
       (s) => s.handle && s.handle.trim().length > 0
@@ -1443,7 +1448,7 @@ export default function ComingSoonPage() {
                   </button>
                 </div>
               ) : (
-                <form id="founding-brand-form" onSubmit={handleVendorSubmit} className="space-y-7">
+                <form id="founding-brand-form" noValidate onSubmit={handleVendorSubmit} className="space-y-7">
                   {/* ── SECTION 01: BRAND IDENTITY ── */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
@@ -1989,11 +1994,24 @@ export default function ComingSoonPage() {
                           </Link>
                         </div>
 
+                        <div
+                          ref={termsBoxRef}
+                          className={`rounded-xl p-2 -m-2 transition-all ${
+                            termsErrorHighlight && !vendorForm.agreedToTerms
+                              ? 'bg-rose-500/15 ring-1 ring-rose-500/60'
+                              : ''
+                          }`}
+                        >
                         <button
                           type="button"
-                          onClick={() =>
-                            setVendorForm({ ...vendorForm, agreedToTerms: !vendorForm.agreedToTerms })
-                          }
+                          onClick={() => {
+                            const nextVal = !vendorForm.agreedToTerms;
+                            setVendorForm({ ...vendorForm, agreedToTerms: nextVal });
+                            if (nextVal) {
+                              setTermsErrorHighlight(false);
+                              setVendorMessage('');
+                            }
+                          }}
                           className="w-full flex items-start gap-3 text-left group cursor-pointer"
                         >
                           <span
@@ -2011,6 +2029,12 @@ export default function ComingSoonPage() {
                             and confirm all items listed are authentic. *
                           </span>
                         </button>
+                        {termsErrorHighlight && !vendorForm.agreedToTerms && (
+                          <p className="text-[11px] text-rose-400 mt-2 pl-8">
+                            Please tick the box above to accept the Terms &amp; Conditions before submitting.
+                          </p>
+                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2026,7 +2050,14 @@ export default function ComingSoonPage() {
 
             {/* Sticky Bottom Submit Footer */}
             {vendorStatus !== 'success' && (
-              <div className="relative z-10 px-5 sm:px-8 py-4 border-t border-white/[0.08] bg-[#0B0B0E]/95 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+              <div className="relative z-10 px-5 sm:px-8 py-4 border-t border-white/[0.08] bg-[#0B0B0E]/95 backdrop-blur-md space-y-3 shrink-0">
+                {vendorMessage && vendorStatus === 'error' && (
+                  <div className="px-3.5 py-2.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-xs text-rose-300 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-rose-400 shrink-0" />
+                    <span>{vendorMessage}</span>
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-light">
                   <ShieldCheck className="w-4 h-4 text-[#E6C367] shrink-0" />
                   <span>Reviewed within 48 hours · Zero upfront fee</span>
@@ -2049,6 +2080,7 @@ export default function ComingSoonPage() {
                     </>
                   )}
                 </button>
+                </div>
               </div>
             )}
           </div>

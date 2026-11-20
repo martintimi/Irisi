@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
-  User, Sparkles, Bookmark, Package, Store, MapPin,
-  Phone, ShieldCheck, LogOut, Check, ChevronRight,
-  ArrowRight, ShoppingBag, ArrowLeft, Ruler, Truck, Loader2,
-  Settings, KeyRound, HelpCircle, Star, Lightbulb, ExternalLink, Eye
+  Heart, Package, Store, MapPin, Phone, ShieldCheck, LogOut,
+  Check, ChevronRight, ArrowRight, ArrowLeft, Ruler, Truck,
+  KeyRound, HelpCircle, Star, Lightbulb, ExternalLink, Eye,
+  Sun, Moon, FileText, RotateCcw, Lock, ShoppingBag, UserMinus
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,6 +17,8 @@ import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
 import FaqHelpModal from '@/components/profile/FaqHelpModal';
 import RateAppModal from '@/components/profile/RateAppModal';
 import HelpImproveModal from '@/components/profile/HelpImproveModal';
+import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
+import { getConciergeConfig, generateWhatsAppUrl } from '@/lib/config/concierge';
 
 export default function MobileProfileView() {
   const router = useRouter();
@@ -28,19 +30,22 @@ export default function MobileProfileView() {
     vault,
     userOrders,
     followedVendors,
+    toggleFollowVendor,
     toggleVaultItem,
-    setOutfitItem,
+    theme,
+    toggleTheme,
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'vault' | 'orders' | 'brands' | 'settings'>('profile');
+  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'brands' | 'settings'>('orders');
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState(bodyProfile.deliveryAddress || '');
   const [city, setCity] = useState(bodyProfile.city || '');
-  const [state, setState] = useState(bodyProfile.state || 'Lagos');
+  const [state, setState] = useState(bodyProfile.state || '');
   const [phone, setPhone] = useState(bodyProfile.phone || userAuth.phone || '');
+  const [savedToast, setSavedToast] = useState(false);
 
-  // Settings & Patron Support Modals State
+  // Settings & Support Modals
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [isFaqOpen, setIsFaqOpen] = useState(false);
   const [isRateAppOpen, setIsRateAppOpen] = useState(false);
@@ -49,14 +54,35 @@ export default function MobileProfileView() {
   const [liveOrders, setLiveOrders] = useState<any[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
-  // Fetch live orders from PostgreSQL database
+  // One-time cleanup: clear legacy pre-seeded fake defaults ['moji-wears', 'arike-brand'] so shoppers ONLY see brands they actually followed
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const cleaned = localStorage.getItem('irisi_cleaned_default_follows_v1');
+      if (!cleaned) {
+        const list = Array.isArray(followedVendors) ? followedVendors : [];
+        if (list.length === 2 && list.includes('moji-wears') && list.includes('arike-brand')) {
+          toggleFollowVendor('moji-wears');
+          toggleFollowVendor('arike-brand');
+        }
+        localStorage.setItem('irisi_cleaned_default_follows_v1', '1');
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch live orders from PostgreSQL
   useEffect(() => {
     async function loadOrders() {
+      const userEmail = userAuth?.email || bodyProfile?.email || '';
+      const userPhone = userAuth?.phone || bodyProfile?.phone || '';
+      if (!userEmail && !userPhone) {
+        setLiveOrders([]);
+        return;
+      }
+
       setIsLoadingOrders(true);
       try {
-        const userEmail = userAuth?.email || bodyProfile?.email || '';
-        const userPhone = userAuth?.phone || bodyProfile?.phone || '';
-        
         let fetched: any[] = [];
         if (userEmail) {
           const res = await fetch(`/api/orders?email=${encodeURIComponent(userEmail)}`);
@@ -65,23 +91,22 @@ export default function MobileProfileView() {
             fetched = data.orders;
           }
         }
-        
-        // If 0 orders found with email query, filter all orders strictly by current user's email or phone
+
         if (fetched.length === 0 && (userEmail || userPhone)) {
           const resAll = await fetch('/api/orders');
           const dataAll = await resAll.json();
           if (dataAll.success && Array.isArray(dataAll.orders)) {
-            const matched = dataAll.orders.filter((o: any) => {
+            const cleanPhone = userPhone.replace(/\D/g, '');
+            fetched = dataAll.orders.filter((o: any) => {
               const oEmail = (o.customerEmail || '').toLowerCase().trim();
               const oPhone = (o.customerPhone || '').replace(/\D/g, '');
-              const cleanPhone = userPhone.replace(/\D/g, '');
-              return (userEmail && oEmail === userEmail.toLowerCase().trim()) ||
-                     (cleanPhone && cleanPhone.length >= 7 && oPhone.includes(cleanPhone));
+              return (
+                (userEmail && oEmail === userEmail.toLowerCase().trim()) ||
+                (cleanPhone && cleanPhone.length >= 7 && oPhone.includes(cleanPhone))
+              );
             });
-            fetched = matched;
           }
         }
-
         setLiveOrders(fetched);
       } catch (err) {
         console.error('Failed to load orders on mobile profile:', err);
@@ -93,23 +118,24 @@ export default function MobileProfileView() {
     loadOrders();
   }, [userAuth?.email, userAuth?.phone, bodyProfile?.email, bodyProfile?.phone]);
 
-  // Combine live orders with store orders (deduplicated & strictly user-scoped)
+  // Deduplicated, user-scoped orders
   const effectiveOrders = useMemo(() => {
     const userEmail = (userAuth?.email || bodyProfile?.email || '').toLowerCase().trim();
     const userPhone = (userAuth?.phone || bodyProfile?.phone || '').replace(/\D/g, '');
 
     const map = new Map<string, any>();
-    
-    // Only include local store orders if they strictly belong to the current authenticated user
+
     userOrders.forEach((o: any) => {
       const oEmail = (o.customerEmail || o.customer_email || '').toLowerCase().trim();
       const oPhone = (o.customerPhone || o.customer_phone || '').replace(/\D/g, '');
-      const belongsToUser = !userEmail && !userPhone
-        ? false
-        : (userEmail && oEmail && oEmail === userEmail) || (userPhone && userPhone.length >= 7 && oPhone.includes(userPhone));
+      const belongsToUser =
+        !userEmail && !userPhone
+          ? false
+          : (userEmail && oEmail && oEmail === userEmail) ||
+            (userPhone && userPhone.length >= 7 && oPhone.includes(userPhone));
 
-      if (belongsToUser) {
-        if (o.orderNumber || o.id) map.set(o.orderNumber || o.id, o);
+      if (belongsToUser && (o.orderNumber || o.id)) {
+        map.set(o.orderNumber || o.id, o);
       }
     });
 
@@ -118,24 +144,23 @@ export default function MobileProfileView() {
     });
 
     return Array.from(map.values()).sort((a, b) => {
-      const stageB = Number(b.trackingStage ?? (b.status === 'delivered' ? 4 : b.status === 'dispatched' ? 3 : (b.status === 'packing' || b.status === 'ready') ? 2 : 1));
-      const stageA = Number(a.trackingStage ?? (a.status === 'delivered' ? 4 : a.status === 'dispatched' ? 3 : (a.status === 'packing' || a.status === 'ready') ? 2 : 1));
-      if (stageB !== stageA) return stageB - stageA;
       const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime();
       const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime();
       return timeB - timeA;
     });
   }, [userOrders, liveOrders, userAuth?.email, bodyProfile?.email, userAuth?.phone, bodyProfile?.phone]);
 
+  const cleanFollowedBrands = useMemo(
+    () => Array.from(new Set((followedVendors || []).map((v) => String(v || '').trim()).filter(Boolean))),
+    [followedVendors]
+  );
+
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    setBodyProfile({
-      deliveryAddress,
-      city,
-      state,
-      phone,
-    });
+    setBodyProfile({ deliveryAddress, city, state, phone });
     setIsEditingAddress(false);
+    setSavedToast(true);
+    setTimeout(() => setSavedToast(false), 2500);
   };
 
   const handleLogout = () => {
@@ -150,649 +175,763 @@ export default function MobileProfileView() {
     router.push('/');
   };
 
+  const openWhatsAppConcierge = () => {
+    const cfg = getConciergeConfig();
+    const url = generateWhatsAppUrl(
+      cfg.whatsappNumber,
+      `Hi ÌRÍSÍ Concierge, I need assistance with my account (${userAuth.email || 'Shopper'}).`
+    );
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const displayName = userAuth.name || bodyProfile.name || (userAuth.email ? userAuth.email.split('@')[0] : 'ÌRÍSÍ Member');
+  const displayInitial = displayName.trim().charAt(0).toUpperCase() || 'Ì';
+
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-36 select-none animate-fadeIn">
-      {/* 1. TOP APP BAR */}
-      <div className="sticky top-0 z-30 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-32 select-none animate-fadeIn">
+      {/* 1. Native Sticky Top Header */}
+      <header className="sticky top-0 z-30 h-14 px-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={() => router.back()}
-            className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white"
-            aria-label="Back"
+            className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center active:scale-95 transition-transform shrink-0 cursor-pointer"
+            aria-label="Go back"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div>
-            <h1 className="font-editorial text-xl font-bold text-[var(--text-primary)] leading-tight">
-              Patron Profile
-            </h1>
-            <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)] font-bold">
-              Account & Sizing Profile
-            </span>
+          <h1 className="font-editorial text-[20px] font-normal text-[var(--text-primary)] leading-tight truncate">
+            My Account
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <ShopperNotificationBell compact />
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center active:scale-95 cursor-pointer"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-300" /> : <Moon className="h-4 w-4 text-zinc-500" />}
+          </button>
+        </div>
+      </header>
+
+      <div className="px-4 py-4 space-y-5">
+        {savedToast && (
+          <div className="px-4 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-500 flex items-center gap-2">
+            <Check className="h-4 w-4 shrink-0" />
+            <span>Delivery details saved.</span>
           </div>
-        </div>
+        )}
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`p-2 rounded-full surface-card border transition-all cursor-pointer ${
-              activeTab === 'settings'
-                ? 'border-[var(--gold-accent)] text-[var(--gold-accent)] bg-[var(--gold-subtle)]'
-                : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white'
-            }`}
-            title="Settings & Support"
-            aria-label="Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
+        {/* 2. Signature Obsidian Member Card (Matches Vendor Portal Hero Aesthetic) */}
+        <section className="relative rounded-[26px] bg-[#0D0D10] text-white p-5 overflow-hidden shadow-[0_16px_40px_rgba(0,0,0,0.18)] border border-white/10">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full opacity-35"
+            style={{
+              background: 'radial-gradient(circle, rgba(230, 195, 103, 0.45), transparent 70%)',
+            }}
+          />
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-            title="Sign Out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-5">
-        
-        {/* 2. PATRON IDENTITY CARD */}
-        <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] shadow-sm space-y-4">
-          <div className="flex items-center gap-3.5">
-            <div className="relative h-16 w-16 rounded-full overflow-hidden bg-[var(--gold-subtle)] border-2 border-[var(--gold-accent)] flex items-center justify-center text-xl font-bold text-[var(--gold-accent)] font-mono-luxury shrink-0">
-              {userAuth.name ? userAuth.name.charAt(0).toUpperCase() : 'Ì'}
+          <div className="relative z-10 flex items-center gap-3.5">
+            <div className="h-14 w-14 rounded-full bg-white/10 border border-[#E6C367]/50 flex items-center justify-center font-editorial text-2xl text-[#E6C367] shrink-0">
+              {displayInitial}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h2 className="font-editorial text-xl font-bold text-[var(--text-primary)] truncate">
-                  {userAuth.name || bodyProfile.name || 'Ìrísí Patron'}
+              <div className="flex items-center gap-2">
+                <h2 className="font-editorial text-2xl font-normal text-white truncate leading-tight">
+                  {displayName}
                 </h2>
-                <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
               </div>
-              <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] truncate">
-                {userAuth.email || 'Verified Patron'}
+              <p className="text-xs text-zinc-400 font-light truncate mt-0.5">
+                {userAuth.email || 'Sign in to sync orders & follows'}
               </p>
-              <span className="inline-block mt-1 px-2.5 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/30 text-[9px] font-mono-luxury font-bold uppercase">
-                Ìrísí Black Patron
-              </span>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono-luxury text-emerald-300">
+                <ShieldCheck className="h-3 w-3" />
+                <span>Escrow Protected Member</span>
+              </div>
             </div>
           </div>
 
-          {/* Sizing Profile Status Pill */}
-          <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center">
-                <Ruler className="h-4 w-4" />
-              </div>
-              <div>
-                <span className="font-bold text-xs font-mono-luxury text-[var(--text-primary)] block">
-                  Saved Sizing Profile
-                </span>
-                <span className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                  Preferred Size: {bodyProfile.preferredSize || 'M'} · {bodyProfile.gender || 'Men'}
-                </span>
-              </div>
-            </div>
-
+          <div className="relative z-10 mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400">
+            <span className="truncate">
+              Preferred Fit: <span className="text-white">{bodyProfile.preferredSize || 'M'}</span>
+              {bodyProfile.city ? ` · ${bodyProfile.city}` : ''}
+            </span>
             <button
               type="button"
-              onClick={() => setActiveTab('profile')}
-              className="px-3.5 py-1.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-[10px] font-bold shadow-md active:scale-95 transition-transform cursor-pointer"
+              onClick={() => setActiveTab('settings')}
+              className="text-[10px] font-mono-luxury uppercase tracking-wider text-[#E6C367] shrink-0 cursor-pointer"
             >
-              View Sizes
+              Edit Profile ›
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* 3. NAVIGATION PILLS */}
-        <div className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury">
+        {/* 3. Unified 3-Column Hairline KPI Strip */}
+        <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] grid grid-cols-3 divide-x divide-[var(--border-subtle)] py-3.5">
+          <button type="button" onClick={() => setActiveTab('orders')} className="px-3 text-center active:opacity-70 cursor-pointer">
+            <div className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-none">
+              {effectiveOrders.length}
+            </div>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mt-1.5 block">
+              Orders
+            </span>
+          </button>
+
+          <button type="button" onClick={() => setActiveTab('wishlist')} className="px-3 text-center active:opacity-70 cursor-pointer">
+            <div className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-none">
+              {vault.length}
+            </div>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mt-1.5 block">
+              Wishlist
+            </span>
+          </button>
+
+          <button type="button" onClick={() => setActiveTab('brands')} className="px-3 text-center active:opacity-70 cursor-pointer">
+            <div className="font-editorial text-2xl font-normal text-[var(--gold-accent)] leading-none">
+              {cleanFollowedBrands.length}
+            </div>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] mt-1.5 block">
+              Following
+            </span>
+          </button>
+        </section>
+
+        {/* 4. Native iOS Segmented Tab Bar */}
+        <div className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
           {[
-            { id: 'profile', label: 'My Sizes', icon: Ruler },
-            { id: 'vault', label: `Vault (${vault.length})`, icon: Bookmark },
-            { id: 'orders', label: `Orders (${effectiveOrders.length})`, icon: Package },
-            { id: 'brands', label: 'Ateliers', icon: Store },
-            { id: 'settings', label: 'Settings', icon: Settings },
+            { id: 'orders', label: 'Orders' },
+            { id: 'wishlist', label: 'Wishlist' },
+            { id: 'brands', label: 'Brands' },
+            { id: 'settings', label: 'Settings' },
           ].map((tab) => {
-            const Icon = tab.icon;
-            const isChosen = activeTab === tab.id;
+            const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-2 px-1 rounded-xl font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                  isChosen
-                    ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                className={`py-2 px-1 rounded-xl text-[11px] font-mono-luxury transition-all cursor-pointer truncate ${
+                  active
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                    : 'text-[var(--text-muted)]'
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="text-[9px] uppercase tracking-wider truncate">{tab.label}</span>
+                {tab.label}
               </button>
             );
           })}
         </div>
 
-        {/* 4. TAB CONTENTS */}
-        
-        {/* Tab 1: Sizing Profile & Address */}
-        {activeTab === 'profile' && (
-          <div className="space-y-4">
-            
-            {/* Preferred Size & Measurements */}
-            <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3">
-              <span className="text-xs font-mono-luxury uppercase font-bold text-[var(--text-primary)] block">
-                Preferred Garment Size:
-              </span>
-              <div className="grid grid-cols-5 gap-2">
-                {['S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
-                  const isSel = (bodyProfile.preferredSize || 'M') === sz;
+        {/* ======================================================== */}
+        {/* TAB 1: ORDERS */}
+        {/* ======================================================== */}
+        {activeTab === 'orders' && (
+          <section className="space-y-3 animate-fadeIn">
+            {isLoadingOrders && effectiveOrders.length === 0 ? (
+              <LuxuryLoader fullScreen={false} label="Ì R Í S Í" sublabel="Loading your orders..." />
+            ) : effectiveOrders.length === 0 ? (
+              <div className="py-12 px-6 rounded-[22px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-4">
+                <div className="h-14 w-14 mx-auto rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
+                  <Package className="h-6 w-6" strokeWidth={1.4} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                    No Orders Yet
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto">
+                    Orders you place from verified brands appear here with live delivery tracking and escrow protection.
+                  </p>
+                </div>
+                <Link
+                  href="/shop"
+                  className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider"
+                >
+                  <span>Explore Shop</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {effectiveOrders.map((order) => {
+                  const stage = Number(
+                    order.trackingStage ??
+                      (order.status === 'delivered'
+                        ? 4
+                        : order.status === 'dispatched'
+                        ? 3
+                        : order.status === 'packing' || order.status === 'ready'
+                        ? 2
+                        : 1)
+                  );
+                  const statusLabel =
+                    stage >= 4
+                      ? 'Delivered'
+                      : stage === 3
+                      ? 'In Transit'
+                      : stage === 2
+                      ? 'Packed'
+                      : 'Escrow Secured';
+
                   return (
-                    <button
-                      key={sz}
-                      type="button"
-                      onClick={() => setBodyProfile({ preferredSize: sz as 'S' | 'M' | 'L' | 'XL' | 'XXL' })}
-                      className={`py-2.5 rounded-2xl text-xs font-mono-luxury font-bold uppercase transition-all cursor-pointer ${
-                        isSel
-                          ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-md'
-                          : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:text-[var(--text-primary)]'
-                      }`}
+                    <article
+                      key={order.id || order.orderNumber}
+                      className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden"
                     >
-                      {sz}
-                    </button>
+                      <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2">
+                        <div>
+                          <div className="font-editorial text-base text-[var(--text-primary)]">
+                            {order.orderNumber || order.id}
+                          </div>
+                          <span className="text-[11px] text-[var(--text-muted)] font-light">
+                            {order.date || 'Recent'}
+                          </span>
+                        </div>
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-mono-luxury border ${
+                            stage >= 4
+                              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500'
+                              : stage === 3
+                              ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/30 text-[var(--gold-accent)]'
+                              : 'bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]'
+                          }`}
+                        >
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      {order.items && order.items.length > 0 && (
+                        <div className="divide-y divide-[var(--border-subtle)]">
+                          {order.items.slice(0, 3).map((item: any, idx: number) => (
+                            <div key={idx} className="px-4 py-2.5 flex items-center gap-3">
+                              <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-zinc-900 border border-[var(--border-subtle)] shrink-0">
+                                <Image
+                                  src={item.imageUrl || '/images/no-product.svg'}
+                                  alt={item.productName || 'Piece'}
+                                  fill
+                                  unoptimized
+                                  className="object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-medium text-[var(--text-primary)] truncate">
+                                  {item.productName || item.name || 'Piece'}
+                                </div>
+                                <div className="text-[11px] text-[var(--text-muted)] font-light">
+                                  {item.size ? `Size ${item.size} · ` : ''}Qty {item.quantity || 1}
+                                </div>
+                              </div>
+                              <div className="font-editorial text-sm text-[var(--text-primary)] shrink-0">
+                                ₦{Number(item.price || 0).toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/40 flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] block">
+                            Total Paid
+                          </span>
+                          <span className="font-editorial text-lg text-[var(--text-primary)]">
+                            ₦{Number(order.totalAmount || 0).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <Link
+                          href={`/track-order?orderNumber=${encodeURIComponent(order.orderNumber || order.id)}`}
+                          className="h-9 px-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury uppercase tracking-wider inline-flex items-center gap-1.5 active:scale-95"
+                        >
+                          <Truck className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                          <span>{stage >= 4 ? 'Receipt' : 'Track'}</span>
+                        </Link>
+                      </div>
+                    </article>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Delivery Address Card */}
-            <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
-                  Default Delivery Location:
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingAddress(!isEditingAddress)}
-                  className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold uppercase underline"
-                >
-                  {isEditingAddress ? 'Cancel' : 'Edit Address'}
-                </button>
-              </div>
-
-              {isEditingAddress ? (
-                <form onSubmit={handleSaveAddress} className="space-y-3 text-xs font-mono-luxury">
-                  <div>
-                    <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-                      Phone Number (For Courier)
-                    </label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="08012345678"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-                      City / Area
-                    </label>
-                    <input
-                      type="text"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="City or Town"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-                      Street Address
-                    </label>
-                    <input
-                      type="text"
-                      value={deliveryAddress}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      placeholder="House / flat number, street name, and landmark"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-3 rounded-xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold shadow-md"
-                  >
-                    Save Delivery Details
-                  </button>
-                </form>
-              ) : (
-                <div className="space-y-1.5 text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  <div className="flex items-center gap-1.5 text-[var(--text-primary)] font-bold">
-                    <MapPin className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                    <span>{bodyProfile.deliveryAddress || 'No default street address saved.'}</span>
-                  </div>
-                  <div className="text-[11px] pl-5">
-                    {bodyProfile.city ? `${bodyProfile.city}, ` : ''}{bodyProfile.state || 'Lagos State'}
-                  </div>
-                  {bodyProfile.phone && (
-                    <div className="flex items-center gap-1.5 text-[11px] pl-5 text-[var(--text-muted)]">
-                      <Phone className="h-3 w-3" />
-                      <span>{bodyProfile.phone}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Vendor Portal Link if user is vendor */}
-            {userAuth.userType === 'vendor' && (
-              <Link
-                href="/vendor"
-                className="block p-4 rounded-3xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/50 text-[var(--gold-accent)] font-mono-luxury uppercase text-xs font-bold text-center shadow-lg"
-              >
-                <span>Go to Designer Vendor Portal →</span>
-              </Link>
             )}
-
-          </div>
+          </section>
         )}
 
-        {/* Tab 2: Vault Saved Items */}
-        {activeTab === 'vault' && (
-          <div className="space-y-4">
+        {/* ======================================================== */}
+        {/* TAB 2: WISHLIST (Previously "Vault") */}
+        {/* ======================================================== */}
+        {activeTab === 'wishlist' && (
+          <section className="space-y-3 animate-fadeIn">
             {vault.length === 0 ? (
-              <div className="p-10 rounded-3xl surface-card text-center space-y-3 border border-[var(--border-subtle)]">
-                <Bookmark className="h-8 w-8 mx-auto text-[var(--gold-accent)] opacity-60" />
-                <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">Your Vault is Empty</h3>
-                <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  Save pieces from the feed or boutique drops to preview them here anytime.
-                </p>
+              <div className="py-12 px-6 rounded-[22px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-4">
+                <div className="h-14 w-14 mx-auto rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
+                  <Heart className="h-6 w-6" strokeWidth={1.4} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                    Your Wishlist is Empty
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto">
+                    Tap the heart on any piece while browsing Shop to save it here for later.
+                  </p>
+                </div>
+                <Link
+                  href="/shop"
+                  className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider"
+                >
+                  <span>Browse Shop</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {vault.map((product) => (
                   <div
                     key={product.id}
-                    className="p-3 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-2 shadow-sm"
+                    className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden flex flex-col"
                   >
-                    <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/40">
-                      <Image
-                        src={product.imageUrl || '/images/no-product.svg'}
-                        alt={product.name}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-[var(--text-primary)] truncate">{product.name}</h4>
-                      <div className="font-mono-luxury text-xs font-bold text-[var(--gold-accent)]">
-                        ₦{Number(product.price || 0).toLocaleString()}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 pt-1">
-                      <Link
-                        href={`/shop/${product.id}`}
-                        className="py-1.5 px-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[9px] font-mono-luxury uppercase font-bold text-[var(--text-primary)] hover:text-[var(--gold-accent)] flex items-center justify-center gap-0.5 transition-colors"
-                      >
-                        <Eye className="h-2.5 w-2.5" />
-                        <span>View</span>
+                    <div className="relative aspect-[4/5] w-full bg-zinc-900">
+                      <Link href={`/shop/${product.id}`} className="block w-full h-full">
+                        <Image
+                          src={product.imageUrl || '/images/no-product.svg'}
+                          alt={product.name}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
                       </Link>
-
                       <button
                         type="button"
-                        onClick={() => setQuickBuyProduct(product)}
-                        className="py-1.5 px-1 rounded-lg bg-[var(--gold-accent)] text-black text-[9px] font-mono-luxury uppercase font-bold flex items-center justify-center gap-0.5"
+                        onClick={() => toggleVaultItem(product)}
+                        className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/55 backdrop-blur-md text-rose-400 flex items-center justify-center active:scale-90 cursor-pointer"
+                        aria-label="Remove from wishlist"
                       >
-                        <span>Buy</span>
+                        <Heart className="h-3.5 w-3.5 fill-current" />
                       </button>
+                    </div>
+
+                    <div className="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="text-xs font-medium text-[var(--text-primary)] line-clamp-1">
+                          {product.name}
+                        </div>
+                        <div className="font-editorial text-base text-[var(--text-primary)] mt-0.5">
+                          ₦{Number(product.price || 0).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                        <Link
+                          href={`/shop/${product.id}`}
+                          className="h-8 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury text-[var(--text-primary)] flex items-center justify-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          <span>View</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setQuickBuyProduct(product)}
+                          className="h-8 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <ShoppingBag className="h-3 w-3" />
+                          <span>Bag</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </section>
         )}
 
-        {/* Tab 3: Order History */}
-        {activeTab === 'orders' && (
-          <div className="space-y-4">
-            {isLoadingOrders && effectiveOrders.length === 0 ? (
-              <LuxuryLoader
-                fullScreen={false}
-                label="Ì R Í S Í"
-                sublabel="Loading Your Live Orders..."
-              />
-            ) : effectiveOrders.length === 0 ? (
-              <div className="p-10 rounded-3xl surface-card text-center space-y-3 border border-[var(--border-subtle)]">
-                <Package className="h-8 w-8 mx-auto text-[var(--gold-accent)] opacity-60" />
-                <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">No Active Orders</h3>
-                <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  Once you order from Nigerian ateliers, track live waybills and courier dispatch here.
-                </p>
+        {/* ======================================================== */}
+        {/* TAB 3: FOLLOWED BRANDS (Strictly Vendors Actually Followed!) */}
+        {/* ======================================================== */}
+        {activeTab === 'brands' && (
+          <section className="space-y-3 animate-fadeIn">
+            {cleanFollowedBrands.length === 0 ? (
+              <div className="py-12 px-6 rounded-[22px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-4">
+                <div className="h-14 w-14 mx-auto rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)]">
+                  <Store className="h-6 w-6" strokeWidth={1.4} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
+                    No Followed Brands Yet
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto">
+                    Tap Follow on any brand or 24h story on Shop to receive instant alerts when they post new drops.
+                  </p>
+                </div>
                 <Link
                   href="/shop"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase font-bold shadow-md mt-1"
+                  className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider"
                 >
-                  <span>Shop Catalog</span>
+                  <span>Discover Brands</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
-                {effectiveOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 transition-all shadow-sm space-y-3"
-                  >
-                    <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
-                      <div>
-                        <span className="font-editorial text-sm font-bold text-[var(--gold-accent)] block">
-                          {order.orderNumber || order.id}
-                        </span>
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono-luxury">
-                          {order.date || (order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent')}
-                        </span>
-                      </div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono-luxury font-bold uppercase capitalize">
-                        {(order.status || 'Escrow Secured').replace(/_/g, ' ')}
-                      </span>
-                    </div>
-
-                    {/* Order items preview */}
-                    {order.items && order.items.length > 0 && (
-                      <div className="space-y-2 py-1">
-                        {order.items.slice(0, 3).map((item: any, itemIdx: number) => (
-                          <div key={itemIdx} className="flex items-center gap-2.5">
-                            <div className="relative h-11 w-11 rounded-lg overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
-                              <Image
-                                src={item.imageUrl || '/images/no-product.svg'}
-                                alt={item.productName || 'Garment'}
-                                fill
-                                unoptimized
-                                className="object-cover"
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h5 className="text-xs font-bold text-[var(--text-primary)] truncate">
-                                {item.productName || item.name || 'Garment Piece'}
-                              </h5>
-                              <span className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                                {item.size ? `Size: ${item.size} · ` : ''}Qty: {item.quantity || 1} · ₦{Number(item.price || 0).toLocaleString()}
-                              </span>
-                            </div>
+              <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+                {cleanFollowedBrands.map((vId) => {
+                  const displayBrand = vId.replace(/-/g, ' ');
+                  const initial = displayBrand.trim().charAt(0).toUpperCase() || 'B';
+                  return (
+                    <div
+                      key={vId}
+                      className="px-4 py-3.5 flex items-center justify-between gap-3"
+                    >
+                      <Link
+                        href={`/brand/${encodeURIComponent(vId)}`}
+                        className="flex items-center gap-3 min-w-0 flex-1 active:opacity-75"
+                      >
+                        <div className="h-10 w-10 rounded-full bg-[var(--bg-primary)] border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] flex items-center justify-center font-editorial text-lg shrink-0">
+                          {initial}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13.5px] font-medium text-[var(--text-primary)] capitalize truncate">
+                            {displayBrand}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                          <span className="text-[10px] font-mono-luxury text-emerald-500">
+                            Following · Alerts Active
+                          </span>
+                        </div>
+                      </Link>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)] text-xs font-mono-luxury">
-                      <div>
-                        <span className="text-[10px] text-[var(--text-muted)] uppercase block">Total</span>
-                        <span className="font-bold text-[var(--text-primary)]">₦{Number(order.totalAmount || 0).toLocaleString()}</span>
-                      </div>
-
-                      {order.status?.toLowerCase() !== 'delivered' && (order.trackingStage ?? 1) < 4 ? (
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <Link
-                          href={`/track-order?orderNumber=${encodeURIComponent(order.orderNumber || order.id)}`}
-                          className="px-3 py-1.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[10px] font-mono-luxury uppercase font-bold flex items-center gap-1 shadow-md active:scale-95 transition-transform"
+                          href={`/brand/${encodeURIComponent(vId)}`}
+                          className="h-8 px-3 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury text-[var(--text-primary)] inline-flex items-center"
                         >
-                          <Truck className="h-3 w-3" />
-                          <span>Track Order</span>
-                          <ChevronRight className="h-3 w-3" />
+                          Visit
                         </Link>
-                      ) : (
-                        <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono-luxury font-bold uppercase flex items-center gap-1">
-                          <Check className="h-3 w-3" />
-                          <span>Delivered</span>
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleFollowVendor(vId)}
+                          className="h-8 w-8 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-rose-500 flex items-center justify-center cursor-pointer"
+                          aria-label={`Unfollow ${displayBrand}`}
+                          title="Unfollow brand"
+                        >
+                          <UserMinus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB 4: SETTINGS & PREFERENCES (Quiet-Luxury Monochrome iOS Lists) */}
+        {/* ======================================================== */}
+        {activeTab === 'settings' && (
+          <section className="space-y-5 animate-fadeIn">
+            {/* Group 1: Sizing & Delivery */}
+            <div className="space-y-2">
+              <div className="px-1 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Fit &amp; Delivery
+              </div>
+              <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+                {/* Preferred Size */}
+                <div className="p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-primary)]">
+                      <Ruler className="h-4 w-4 text-[var(--gold-accent)]" strokeWidth={1.65} />
+                      <span>Preferred Garment Size</span>
+                    </div>
+                    <span className="text-[11px] font-mono-luxury text-[var(--gold-accent)]">
+                      {bodyProfile.preferredSize || 'M'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {(['S', 'M', 'L', 'XL', 'XXL'] as const).map((sz) => {
+                      const active = (bodyProfile.preferredSize || 'M') === sz;
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => setBodyProfile({ preferredSize: sz })}
+                          className={`h-9 rounded-xl text-xs font-mono-luxury transition-all cursor-pointer ${
+                            active
+                              ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
+                              : 'bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-primary)]">
+                      <MapPin className="h-4 w-4 text-[var(--gold-accent)]" strokeWidth={1.65} />
+                      <span>Default Delivery Address</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingAddress((v) => !v)}
+                      className="text-[11px] font-mono-luxury text-[var(--gold-accent)] cursor-pointer"
+                    >
+                      {isEditingAddress ? 'Cancel' : 'Edit'}
+                    </button>
+                  </div>
+
+                  {isEditingAddress ? (
+                    <form onSubmit={handleSaveAddress} className="space-y-2.5 pt-1">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Phone number for courier"
+                        className="w-full h-10 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="City / Area"
+                          className="w-full h-10 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                        />
+                        <input
+                          type="text"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="State / Region"
+                          className="w-full h-10 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Street address & landmark"
+                        className="w-full h-10 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        className="w-full h-10 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider cursor-pointer"
+                      >
+                        Save Address
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="text-xs text-[var(--text-secondary)] font-light space-y-0.5 pl-6">
+                      <p className="text-[var(--text-primary)]">
+                        {bodyProfile.deliveryAddress || 'No street address saved yet'}
+                      </p>
+                      {(bodyProfile.city || bodyProfile.state || bodyProfile.phone) && (
+                        <p className="text-[11px] text-[var(--text-muted)]">
+                          {[bodyProfile.city, bodyProfile.state, bodyProfile.phone].filter(Boolean).join(' · ')}
+                        </p>
                       )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 4: Followed Ateliers */}
-        {activeTab === 'brands' && (
-          <div className="space-y-4">
-            {followedVendors.length === 0 ? (
-              <div className="p-10 rounded-3xl surface-card text-center space-y-3 border border-[var(--border-subtle)]">
-                <Store className="h-8 w-8 mx-auto text-[var(--gold-accent)] opacity-60" />
-                <h3 className="font-editorial text-lg font-bold text-[var(--text-primary)]">No Followed Brands</h3>
-                <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-                  Follow designers from the home feed or lookbooks to get notified of new ready-to-wear drops.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {followedVendors.map((vId) => (
-                  <Link
-                    key={vId}
-                    href={`/brand/${encodeURIComponent(vId)}`}
-                    className="flex items-center justify-between p-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] flex items-center justify-center font-bold text-xs font-mono-luxury">
-                        <Store className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <span className="font-bold text-xs font-mono-luxury text-[var(--text-primary)] block capitalize">
-                          {vId.replace(/-/g, ' ')}
-                        </span>
-                        <span className="text-[9px] font-mono-luxury text-emerald-400 font-bold uppercase">
-                          Verified Atelier
-                        </span>
-                      </div>
-                    </div>
-
-                    <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" />
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 5: Settings & Support */}
-        {activeTab === 'settings' && (
-          <div className="space-y-4 animate-fadeIn">
-            
-            {/* Patron Security & Auth Card */}
-            <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3">
-              <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block tracking-wider">
-                Security & Authentication
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsChangePasswordOpen(true)}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 active:scale-[0.99] transition-all text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] flex items-center justify-center shrink-0">
-                    <KeyRound className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[var(--text-primary)]">
-                      Change Password
-                    </h4>
-                    <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Update your Supabase authentication password
-                    </p>
-                  </div>
+                  )}
                 </div>
-                <ChevronRight className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-              </button>
+              </div>
             </div>
 
-            {/* Help & Support Card */}
-            <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3">
-              <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block tracking-wider">
-                Patron Care & Knowledge Base
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsFaqOpen(true)}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 active:scale-[0.99] transition-all text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
-                    <HelpCircle className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[var(--text-primary)]">
-                      Need Help / FAQ Topics
-                    </h4>
-                    <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Escrow protection, nationwide delivery, shoes, bags & boutique sizing
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-              </button>
-
-              <a
-                href="https://wa.me/2348120000000?text=Hello%20%C3%8Cr%C3%ADs%C3%AD%20Concierge,%20I%20need%20assistance%20with%20my%20order"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-emerald-500/50 active:scale-[0.99] transition-all text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Phone className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[var(--text-primary)]">
-                      WhatsApp Luxury Concierge
-                    </h4>
-                    <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Instant direct chat with fashion, shoe & accessory stylists
-                    </p>
-                  </div>
-                </div>
-                <ExternalLink className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
-              </a>
-            </div>
-
-            {/* App Experience & Feedback Card */}
-            <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3">
-              <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold block tracking-wider">
-                Feedback & Community
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsRateAppOpen(true)}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 active:scale-[0.99] transition-all text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[var(--gold-accent)] flex items-center justify-center shrink-0">
-                    <Star className="h-4 w-4 fill-current" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[var(--text-primary)]">
-                      Rate This App
-                    </h4>
-                    <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Give 5 stars & help spotlight Nigerian designers
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsHelpImproveOpen(true)}
-                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50 active:scale-[0.99] transition-all text-left cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
-                    <Lightbulb className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[var(--text-primary)]">
-                      Help Improve This App
-                    </h4>
-                    <p className="text-[10px] font-mono-luxury text-[var(--text-secondary)]">
-                      Report bugs or share feature ideas with our team
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
-              </button>
-            </div>
-
-            {/* Quick Delivery Address Review */}
-            <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono-luxury uppercase text-[var(--text-secondary)] font-bold">
-                  Saved Delivery Address
-                </span>
+            {/* Group 2: Account & Preferences */}
+            <div className="space-y-2">
+              <div className="px-1 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Account &amp; Appearance
+              </div>
+              <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveTab('profile');
-                    setIsEditingAddress(true);
-                  }}
-                  className="text-[10px] font-mono-luxury text-[var(--gold-accent)] font-bold uppercase underline"
+                  onClick={toggleTheme}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] cursor-pointer"
                 >
-                  Edit Sizing & Address
+                  <div className="flex items-center gap-3 min-w-0">
+                    {theme === 'dark' ? (
+                      <Sun className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    ) : (
+                      <Moon className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-[13px] text-[var(--text-primary)]">Appearance</div>
+                      <p className="text-[11px] text-[var(--text-muted)] font-light">
+                        Currently {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-mono-luxury text-[var(--gold-accent)] shrink-0">Switch</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordOpen(true)}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <KeyRound className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <div className="min-w-0">
+                      <div className="text-[13px] text-[var(--text-primary)]">Change Password</div>
+                      <p className="text-[11px] text-[var(--text-muted)] font-light">
+                        Update your account password securely
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </button>
+
+                {userAuth.userType === 'vendor' && (
+                  <Link
+                    href="/vendor-portal"
+                    className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Store className="h-[18px] w-[18px] text-[var(--gold-accent)] shrink-0" strokeWidth={1.6} />
+                      <div className="min-w-0">
+                        <div className="text-[13px] text-[var(--text-primary)]">Open Vendor Studio</div>
+                        <p className="text-[11px] text-[var(--text-muted)] font-light">
+                          Manage your storefront, stories &amp; orders
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                  </Link>
+                )}
               </div>
-              <p className="text-xs font-mono-luxury text-[var(--text-primary)]">
-                {bodyProfile.deliveryAddress || 'No default delivery address set yet.'}
-              </p>
-              <p className="text-[11px] font-mono-luxury text-[var(--text-muted)]">
-                {bodyProfile.city || 'Lagos'}, {bodyProfile.state || 'Lagos State'} {bodyProfile.phone ? `· ${bodyProfile.phone}` : ''}
-              </p>
             </div>
 
-            {/* Sign Out Button */}
+            {/* Group 3: Support, Feedback & Legal */}
+            <div className="space-y-2">
+              <div className="px-1 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Support &amp; Policies
+              </div>
+              <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setIsFaqOpen(true)}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <HelpCircle className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <div className="min-w-0">
+                      <div className="text-[13px] text-[var(--text-primary)]">Help &amp; FAQ</div>
+                      <p className="text-[11px] text-[var(--text-muted)] font-light">
+                        Escrow protection, delivery &amp; sizing answers
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={openWhatsAppConcierge}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Phone className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <div className="min-w-0">
+                      <div className="text-[13px] text-[var(--text-primary)]">WhatsApp Concierge</div>
+                      <p className="text-[11px] text-[var(--text-muted)] font-light">
+                        Chat directly with our support team
+                      </p>
+                    </div>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRateAppOpen(true)}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Star className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <div className="min-w-0">
+                      <div className="text-[13px] text-[var(--text-primary)]">Rate ÌRÍSÍ</div>
+                      <p className="text-[11px] text-[var(--text-muted)] font-light">
+                        Share your shopping experience
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsHelpImproveOpen(true)}
+                  className="w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Lightbulb className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <div className="min-w-0">
+                      <div className="text-[13px] text-[var(--text-primary)]">Share Feedback</div>
+                      <p className="text-[11px] text-[var(--text-muted)] font-light">
+                        Suggest features or report an issue
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </button>
+
+                <Link
+                  href="/returns"
+                  className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <RotateCcw className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <span className="text-[13px] text-[var(--text-primary)]">Return &amp; Escrow Policy</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </Link>
+
+                <Link
+                  href="/terms"
+                  className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <span className="text-[13px] text-[var(--text-primary)]">Terms &amp; Conditions</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </Link>
+
+                <Link
+                  href="/privacy"
+                  className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Lock className="h-[18px] w-[18px] text-[var(--text-primary)] shrink-0" strokeWidth={1.6} />
+                    <span className="text-[13px] text-[var(--text-primary)]">Privacy Policy</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70 shrink-0" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Clean Sign Out Row */}
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full py-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono-luxury text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-rose-500/20 transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-rose-500 text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-2 active:bg-rose-500/10 transition-colors cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
-              <span>Sign Out of Ìrísí Account</span>
+              <span>Sign Out</span>
             </button>
-
-            {/* App version footer */}
-            <div className="text-center pt-2 pb-4">
-              <p className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase tracking-widest">
-                Ìrísí Platform v2.4.0
-              </p>
-            </div>
-
-          </div>
+          </section>
         )}
-
       </div>
 
-      {/* Settings & Support Modals */}
+      {/* Modals */}
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
         userEmail={userAuth.email || bodyProfile.email || ''}
       />
-      <FaqHelpModal
-        isOpen={isFaqOpen}
-        onClose={() => setIsFaqOpen(false)}
-      />
+      <FaqHelpModal isOpen={isFaqOpen} onClose={() => setIsFaqOpen(false)} />
       <RateAppModal
         isOpen={isRateAppOpen}
         onClose={() => setIsRateAppOpen(false)}
@@ -805,15 +944,12 @@ export default function MobileProfileView() {
         userEmail={userAuth.email}
         userName={userAuth.name}
       />
-
-      {/* Quick Buy Drawer */}
       {quickBuyProduct && (
         <MobileQuickBuyDrawer
           product={quickBuyProduct}
           onClose={() => setQuickBuyProduct(null)}
         />
       )}
-
     </div>
   );
 }

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import {
   X, ShoppingBag, Plus, Check, Sparkles,
-  Volume2, VolumeX, ChevronLeft, ChevronRight, Eye
+  Volume2, VolumeX, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { VendorStory, StoryTextOverlay } from '@/types';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
@@ -16,9 +16,43 @@ interface StoryViewerProps {
   initialIndex: number;
   onClose: () => void;
   onShopLook: (product: any) => void;
+  onStoryViewed?: (storyId: string) => void;
+}
+
+interface ReactionParticle {
+  id: number;
+  emoji: string;
+  leftPct: number;
+  driftX: number;
+  delayMs: number;
+  sizePx: number;
+  animClass: string;
 }
 
 const REACTION_EMOJIS = ['🔥', '❤️', '😍', '👏', '✨'];
+
+const REACTION_STYLE_MAP: Record<string, { animClass: string; tintGradient: string }> = {
+  '🔥': {
+    animClass: 'irisi-react-fire',
+    tintGradient: 'radial-gradient(circle at 50% 90%, rgba(249, 115, 22, 0.55), transparent 65%)',
+  },
+  '❤️': {
+    animClass: 'irisi-react-heart',
+    tintGradient: 'radial-gradient(circle at 50% 85%, rgba(244, 63, 94, 0.5), transparent 65%)',
+  },
+  '😍': {
+    animClass: 'irisi-react-pop',
+    tintGradient: 'radial-gradient(circle at 50% 85%, rgba(251, 146, 60, 0.45), transparent 65%)',
+  },
+  '👏': {
+    animClass: 'irisi-react-pop',
+    tintGradient: 'radial-gradient(circle at 50% 85%, rgba(250, 204, 21, 0.45), transparent 65%)',
+  },
+  '✨': {
+    animClass: 'irisi-react-sparkle',
+    tintGradient: 'radial-gradient(circle at 50% 85%, rgba(230, 195, 103, 0.55), transparent 65%)',
+  },
+};
 
 function groupByVendor(stories: VendorStory[]) {
   const order: string[] = [];
@@ -61,6 +95,7 @@ export default function MobileStoryViewer({
   initialIndex,
   onClose,
   onShopLook,
+  onStoryViewed,
 }: StoryViewerProps) {
   const { isFollowingVendor, toggleFollowVendor, allProducts, userAuth } = useStore();
   const [mounted, setMounted] = useState(false);
@@ -85,12 +120,18 @@ export default function MobileStoryViewer({
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
-  // Live reaction state per storyId
+  // Swipe-Down-to-Close mobile touch gesture state
+  const [swipeOffsetY, setSwipeOffsetY] = useState(0);
+  const [isSwipingDown, setIsSwipingDown] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  // Live reaction state + Instagram multi-particle bursts
   const [myReactions, setMyReactions] = useState<Record<string, string | null>>({});
   const [liveCounts, setLiveCounts] = useState<
-    Record<string, { viewCount: number; reactions: Record<string, number>; totalReactions: number }>
+    Record<string, { reactions: Record<string, number>; totalReactions: number }>
   >({});
-  const [floatingBursts, setFloatingBursts] = useState<Array<{ id: number; emoji: string }>>([]);
+  const [particles, setParticles] = useState<ReactionParticle[]>([]);
+  const [tintFlash, setTintFlash] = useState<{ id: number; gradient: string } | null>(null);
 
   const viewedIdsRef = useRef<Set<string>>(new Set());
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -142,7 +183,7 @@ export default function MobileStoryViewer({
     }
   }, [currentPostIdx, currentVendorIdx, vendorGroups]);
 
-  // Keyboard navigation on Desktop (ArrowLeft, ArrowRight, Escape, Space)
+  // Keyboard navigation on Desktop
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') safeClose();
@@ -157,10 +198,14 @@ export default function MobileStoryViewer({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [advanceForward, goBack, safeClose]);
 
-  // Record a live View once per storyId
+  // Silently record view for vendor insights & mark ring as viewed locally (views are NEVER shown to shoppers)
   useEffect(() => {
-    if (!currentPost?.id || viewedIdsRef.current.has(currentPost.id)) return;
+    if (!currentPost?.id) return;
+    onStoryViewed?.(currentPost.id);
+
+    if (viewedIdsRef.current.has(currentPost.id)) return;
     viewedIdsRef.current.add(currentPost.id);
+
     const viewerKey = getOrCreateViewerKey(userAuth?.email);
     const viewerName = userAuth?.name || (userAuth?.email ? userAuth.email.split('@')[0] : 'Shopper');
 
@@ -180,7 +225,6 @@ export default function MobileStoryViewer({
           setLiveCounts((prev) => ({
             ...prev,
             [currentPost.id]: {
-              viewCount: data.viewCount,
               reactions: data.reactions || {},
               totalReactions: data.totalReactions || 0,
             },
@@ -191,13 +235,13 @@ export default function MobileStoryViewer({
         }
       })
       .catch(() => {});
-  }, [currentPost?.id, userAuth?.email, userAuth?.name]);
+  }, [currentPost?.id, userAuth?.email, userAuth?.name, onStoryViewed]);
 
-  // Pause/play video when press-and-hold changes & fallback to muted if mobile browser blocks unmuted autoplay
+  // Pause/play video when press-and-hold or swipe changes
   useEffect(() => {
     if (!isVideo || !videoRef.current) return;
     const vid = videoRef.current;
-    if (isPaused) {
+    if (isPaused || isSwipingDown) {
       vid.pause();
     } else {
       vid.play().catch(() => {
@@ -208,9 +252,9 @@ export default function MobileStoryViewer({
         }
       });
     }
-  }, [isPaused, isVideo, currentPost?.mediaUrl]);
+  }, [isPaused, isSwipingDown, isVideo, currentPost?.mediaUrl]);
 
-  // Auto-progress timer for PHOTO stories (5.5s). Video stories sync directly to <video> onTimeUpdate (up to 30s).
+  // Photo story auto-advance timer (5.5s) — pauses smoothly without resetting progress
   useEffect(() => {
     setProgress(0);
     if (isVideo) return;
@@ -236,17 +280,79 @@ export default function MobileStoryViewer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentVendorIdx, currentPostIdx, isVideo]);
 
+  // Mobile Swipe-Down-To-Close Touch Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - touchStartRef.current.x;
+    const dy = e.touches[0].clientY - touchStartRef.current.y;
+
+    // Activate downward dismiss gesture when pulling clearly downward
+    if (dy > 14 && dy > Math.abs(dx) * 1.15) {
+      setIsSwipingDown(true);
+      setIsPaused(true);
+      setSwipeOffsetY(Math.min(340, dy));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartRef.current) return;
+    const elapsed = Math.max(1, Date.now() - touchStartRef.current.time);
+    const velocity = swipeOffsetY / elapsed; // px per ms
+
+    if (isSwipingDown && (swipeOffsetY > 95 || (swipeOffsetY > 45 && velocity > 0.45))) {
+      setSwipeOffsetY(520);
+      setTimeout(() => safeClose(), 120);
+    } else {
+      setSwipeOffsetY(0);
+      setIsSwipingDown(false);
+      setIsPaused(false);
+    }
+    touchStartRef.current = null;
+  };
+
+  // Spawn Instagram-Style Choreographed Multi-Particle Emoji Animation
+  const triggerEmojiShower = (emoji: string) => {
+    const cfg = REACTION_STYLE_MAP[emoji] || REACTION_STYLE_MAP['✨'];
+    const baseId = Date.now() + Math.random();
+
+    const batch: ReactionParticle[] = Array.from({ length: 8 }).map((_, idx) => ({
+      id: baseId + idx,
+      emoji,
+      leftPct: 16 + idx * 9.5 + (Math.random() * 8 - 4),
+      driftX: Math.round((Math.random() - 0.5) * 90),
+      delayMs: idx * 55,
+      sizePx: idx % 3 === 0 ? 44 : idx % 2 === 0 ? 34 : 26,
+      animClass: cfg.animClass,
+    }));
+
+    setParticles((prev) => [...prev, ...batch]);
+    setTintFlash({ id: baseId, gradient: cfg.tintGradient });
+
+    setTimeout(() => {
+      const ids = new Set(batch.map((b) => b.id));
+      setParticles((prev) => prev.filter((p) => !ids.has(p.id)));
+    }, 1750);
+
+    setTimeout(() => {
+      setTintFlash((curr) => (curr?.id === baseId ? null : curr));
+    }, 800);
+  };
+
   const handleReact = async (emoji: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!currentPost?.id) return;
 
-    const burstId = Date.now() + Math.random();
-    setFloatingBursts((prev) => [...prev, { id: burstId, emoji }]);
-    setTimeout(() => {
-      setFloatingBursts((prev) => prev.filter((b) => b.id !== burstId));
-    }, 950);
+    triggerEmojiShower(emoji);
 
-    // Optimistic toggle
     setMyReactions((prev) => ({
       ...prev,
       [currentPost.id]: prev[currentPost.id] === emoji ? null : emoji,
@@ -273,7 +379,6 @@ export default function MobileStoryViewer({
         setLiveCounts((prev) => ({
           ...prev,
           [currentPost.id]: {
-            viewCount: data.viewCount,
             reactions: data.reactions || {},
             totalReactions: data.totalReactions || 0,
           },
@@ -306,7 +411,6 @@ export default function MobileStoryViewer({
   if (!mounted || !currentPost) return null;
 
   const activeCounts = liveCounts[currentPost.id] || {
-    viewCount: currentPost.viewCount || 0,
     reactions: currentPost.reactions || {},
     totalReactions: currentPost.totalReactions || 0,
   };
@@ -337,12 +441,16 @@ export default function MobileStoryViewer({
   const canGoNext =
     currentPostIdx < (currentGroup?.posts.length ?? 0) - 1 || currentVendorIdx < vendorGroups.length - 1;
 
+  const dragScale = swipeOffsetY > 0 ? Math.max(0.88, 1 - swipeOffsetY / 1400) : 1;
+  const backdropAlpha = swipeOffsetY > 0 ? Math.max(0.2, 0.92 - swipeOffsetY / 450) : 0.92;
+
   return createPortal(
     <div
-      className="fixed inset-0 z-[90] bg-black/95 md:bg-black/85 md:backdrop-blur-2xl flex items-center justify-center select-none"
+      className="fixed inset-0 z-[90] md:backdrop-blur-2xl flex items-center justify-center select-none transition-colors"
+      style={{ backgroundColor: `rgba(0, 0, 0, ${backdropAlpha})` }}
       onClick={safeClose}
     >
-      {/* Desktop Left Navigation Arrow */}
+      {/* Desktop Left Arrow */}
       {canGoPrev && (
         <button
           type="button"
@@ -357,7 +465,7 @@ export default function MobileStoryViewer({
         </button>
       )}
 
-      {/* Desktop Right Navigation Arrow */}
+      {/* Desktop Right Arrow */}
       {canGoNext && (
         <button
           type="button"
@@ -372,17 +480,29 @@ export default function MobileStoryViewer({
         </button>
       )}
 
-      {/* Main 9:16 Story Frame (Full-screen on Mobile, Sleek Centered Cinema Card on Desktop) */}
+      {/* Main 9:16 Story Frame with Smooth Swipe-Down-to-Close */}
       <div
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onPointerDown={() => setIsPaused(true)}
         onPointerUp={() => setIsPaused(false)}
         onPointerLeave={() => setIsPaused(false)}
+        style={{
+          transform: `translateY(${swipeOffsetY}px) scale(${dragScale})`,
+          borderRadius: swipeOffsetY > 10 ? '28px' : undefined,
+          transition: isSwipingDown ? 'none' : 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 200ms',
+        }}
         className="relative w-full h-full md:w-[410px] md:h-[88vh] md:max-h-[780px] md:rounded-[28px] bg-black flex flex-col overflow-hidden md:border md:border-white/15 md:shadow-[0_32px_90px_rgba(0,0,0,0.85)]"
       >
-        {/* TOP OVERLAY: Progress Segments + Brand Header */}
-        <div className="absolute top-0 inset-x-0 z-30 px-3.5 pt-[calc(0.85rem+env(safe-area-inset-top))] md:pt-3.5 pb-6 bg-gradient-to-b from-black/80 via-black/35 to-transparent space-y-2.5">
-          {/* Progress segments */}
+        {/* Subtle Swipe-Down Pill Indicator on Mobile */}
+        <div className="md:hidden absolute top-1.5 inset-x-0 z-40 flex justify-center pointer-events-none">
+          <span className="h-1 w-9 rounded-full bg-white/30" />
+        </div>
+
+        {/* TOP OVERLAY: Progress Segments + Brand Header (NO View Count Shown to Shoppers!) */}
+        <div className="absolute top-0 inset-x-0 z-30 px-3.5 pt-[calc(0.95rem+env(safe-area-inset-top))] md:pt-3.5 pb-6 bg-gradient-to-b from-black/80 via-black/35 to-transparent space-y-2.5">
           <div className="flex items-center gap-1">
             {currentGroup.posts.map((_, idx) => (
               <div key={idx} className="h-[2.5px] flex-1 bg-white/25 rounded-full overflow-hidden">
@@ -401,7 +521,6 @@ export default function MobileStoryViewer({
             ))}
           </div>
 
-          {/* Brand Row */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative h-9 w-9 rounded-full overflow-hidden border border-[#E6C367]/80 shrink-0">
@@ -415,12 +534,8 @@ export default function MobileStoryViewer({
               </div>
               <div className="min-w-0">
                 <span className="text-xs font-medium text-white block truncate">{currentPost.vendorName}</span>
-                <span className="text-[10px] text-white/70 flex items-center gap-1.5">
-                  <span>{formatAge(currentPost.createdAt)}</span>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-0.5">
-                    <Eye className="h-2.5 w-2.5" /> {Math.max(1, activeCounts.viewCount)}
-                  </span>
+                <span className="text-[10px] text-white/70 block">
+                  {formatAge(currentPost.createdAt)}
                 </span>
               </div>
             </div>
@@ -481,7 +596,7 @@ export default function MobileStoryViewer({
           </div>
         </div>
 
-        {/* MEDIA CANVAS (Full-bleed Photo or 30s Video + Vendor Text Overlays) */}
+        {/* MEDIA CANVAS */}
         <div className="relative flex-1 w-full h-full overflow-hidden bg-black">
           {isVideo ? (
             <video
@@ -516,7 +631,7 @@ export default function MobileStoryViewer({
             />
           )}
 
-          {/* Render Vendor's Custom Instagram-Style Text Overlays */}
+          {/* Vendor Custom Text Overlays */}
           {Array.isArray(currentPost.textOverlays) &&
             currentPost.textOverlays.map((ov) => (
               <div
@@ -533,25 +648,42 @@ export default function MobileStoryViewer({
               </div>
             ))}
 
-          {/* Floating Reaction Burst Animations */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-28 z-30 flex justify-center">
-            {floatingBursts.map((b) => (
+          {/* Reaction Ambient Screen Glow Flash */}
+          {tintFlash && (
+            <div
+              key={tintFlash.id}
+              style={{ background: tintFlash.gradient }}
+              className="irisi-tint-flash pointer-events-none absolute inset-0 z-20"
+            />
+          )}
+
+          {/* Instagram-Style Choreographed Multi-Particle Emoji Shower */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-24 top-16 z-30 overflow-hidden">
+            {particles.map((p) => (
               <span
-                key={b.id}
-                className="text-4xl animate-bounce drop-shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+                key={p.id}
+                className={`absolute bottom-0 drop-shadow-[0_6px_18px_rgba(0,0,0,0.65)] ${p.animClass}`}
+                style={
+                  {
+                    left: `${p.leftPct}%`,
+                    fontSize: `${p.sizePx}px`,
+                    animationDelay: `${p.delayMs}ms`,
+                    '--drift-x': `${p.driftX}px`,
+                  } as React.CSSProperties
+                }
               >
-                {b.emoji}
+                {p.emoji}
               </span>
             ))}
           </div>
 
-          {/* Tap Zones: Left 30% Back · Right 35% Next */}
+          {/* Tap Zones */}
           <div className="absolute inset-0 flex z-10">
             <div
               className="w-[30%] h-full cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                goBack();
+                if (!isSwipingDown) goBack();
               }}
             />
             <div className="w-[35%] h-full" />
@@ -559,7 +691,7 @@ export default function MobileStoryViewer({
               className="w-[35%] h-full cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                advanceForward();
+                if (!isSwipingDown) advanceForward();
               }}
             />
           </div>
@@ -568,6 +700,7 @@ export default function MobileStoryViewer({
         {/* BOTTOM OVERLAY: Caption + Tagged Product + Shopper Reaction Dock */}
         <div
           onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
           className="absolute bottom-0 inset-x-0 z-30 px-4 pb-[calc(1.2rem+env(safe-area-inset-bottom))] md:pb-5 pt-10 space-y-3 bg-gradient-to-t from-black/95 via-black/65 to-transparent"
         >
           {currentPost.caption && (

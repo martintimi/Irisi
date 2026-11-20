@@ -14,6 +14,9 @@ import {
   sendVendorPayoutReleasedSms,
 } from '@/lib/services/smsService';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
@@ -190,12 +193,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    // Always use adminClient in POST so guest & authenticated checkout orders never fail under RLS
     const adminClient = createAdminClient();
-    let supabase = adminClient;
-    try {
-      const client = await createClient();
-      if (client) supabase = client;
-    } catch (_) {}
+    const supabase = adminClient;
 
     const orderNumber = body.orderNumber || `#VY-ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     const orderId = body.id || `ord-${Date.now()}`;
@@ -756,21 +756,22 @@ export async function PATCH(request: Request) {
     const headerVendorId = request.headers.get('x-vendor-id');
     const targetVendorId = (vendorId || headerVendorId || '').toLowerCase().trim();
 
+    // Always use adminClient in PATCH so vendor status updates & shopper email resolution never fail under RLS
     const adminClient = createAdminClient();
-    let supabase = adminClient;
-    try {
-      const client = await createClient();
-      if (client) supabase = client;
-    } catch (_) {}
+    const supabase = adminClient;
 
-    let query = supabase.from('orders').select('*');
+    let existingOrder: any = null;
+    let fetchErr: any = null;
     if (orderNumber) {
-      query = query.eq('order_number', orderNumber);
-    } else {
-      query = query.eq('id', orderId);
+      const resByNum = await supabase.from('orders').select('*, order_items(*)').eq('order_number', orderNumber).maybeSingle();
+      existingOrder = resByNum.data;
+      fetchErr = resByNum.error;
     }
-
-    const { data: existingOrder, error: fetchErr } = await query.maybeSingle();
+    if (!existingOrder && orderId) {
+      const resById = await supabase.from('orders').select('*, order_items(*)').eq('id', orderId).maybeSingle();
+      existingOrder = resById.data;
+      fetchErr = resById.error;
+    }
     if (fetchErr || !existingOrder) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
@@ -1002,13 +1003,85 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
 
-    // Dispatch automated lifecycle email alerts (Packaging, Dispatch, Delivery, Settlement)
+    // Dispatch automated lifecycle email alerts (Packaging, Dispatch, Delivery, Settlement) + live in-app shopper alert
     try {
       const patchEmailPromises: Promise<any>[] = [];
       const stageNum = Number(trackingStage || 1);
       const pkgForVendor = existingVendorPackages[targetVendorId] ||
         (matchedVendorKey ? existingVendorPackages[matchedVendorKey] : null) ||
         Object.values(existingVendorPackages)[0] || {};
+
+      // Robustly resolve shopper email (orders.customer_email -> customer_measurements -> body -> profiles -> auth.users)
+      let resolvedCustomerEmail = (
+        existingOrder.customer_email ||
+        existingMeasurements.customerEmail ||
+        existingMeasurements.email ||
+        body.customerEmail ||
+        ''
+      ).toLowerCase().trim();
+
+      if (!resolvedCustomerEmail || !resolvedCustomerEmail.includes('@')) {
+        try {
+          if (existingOrder.user_id) {
+            const { data: prof } = await adminClient
+              .from('profiles')
+              .select('email')
+              .eq('id', existingOrder.user_id)
+              .maybeSingle();
+            if (prof?.email) resolvedCustomerEmail = prof.email.toLowerCase().trim();
+            if (!resolvedCustomerEmail || !resolvedCustomerEmail.includes('@')) {
+              const { data: authUser } = await adminClient.auth.admin.getUserById(existingOrder.user_id);
+              if (authUser?.user?.email) resolvedCustomerEmail = authUser.user.email.toLowerCase().trim();
+            }
+          }
+          if ((!resolvedCustomerEmail || !resolvedCustomerEmail.includes('@')) && existingOrder.customer_phone) {
+            const { data: profByPhone } = await adminClient
+              .from('profiles')
+              .select('email')
+              .eq('phone', existingOrder.customer_phone)
+              .limit(1)
+              .maybeSingle();
+            if (profByPhone?.email) resolvedCustomerEmail = profByPhone.email.toLowerCase().trim();
+          }
+        } catch {}
+      }
+
+      // Resolve human-friendly Brand Name for emails & notifications
+      let resolvedBrandName = (pkgForVendor as any).vendorName || '';
+      const lookupVendorKey = matchedVendorKey || targetVendorId || '';
+      if (!resolvedBrandName && lookupVendorKey && lookupVendorKey !== 'all') {
+        try {
+          const { data: vRow } = await adminClient
+            .from('vendors')
+            .select('brand_name')
+            .eq('id', lookupVendorKey)
+            .maybeSingle();
+          if (vRow?.brand_name) resolvedBrandName = vRow.brand_name;
+        } catch {}
+      }
+      resolvedBrandName = resolvedBrandName || (lookupVendorKey ? lookupVendorKey.replace(/-/g, ' ') : 'Your Brand');
+
+      // Helper to also persist a live in-app Shopper Order Alert (rings/chimes shopper bell in real-time)
+      const saveShopperOrderAlert = async (alertKind: string, titleText: string, messageText: string) => {
+        if (!resolvedCustomerEmail) return;
+        try {
+          await adminClient.from('notifications').insert({
+            title: `ORDER_ALERT:${resolvedCustomerEmail}`,
+            message: JSON.stringify({
+              kind: alertKind,
+              customerEmail: resolvedCustomerEmail,
+              orderNumber: existingOrder.order_number,
+              vendorName: resolvedBrandName,
+              title: titleText,
+              message: messageText,
+              createdAt: new Date().toISOString(),
+            }),
+            type: 'shopper_order_alert',
+            read: false,
+            action_url: `/track-order?orderNumber=${encodeURIComponent(existingOrder.order_number)}`,
+          });
+        } catch {}
+      };
 
       // Stage 3: Dispatched with waybill & rider details
       if (status === 'dispatched' || stageNum === 3) {
@@ -1024,22 +1097,31 @@ export async function PATCH(request: Request) {
           );
         }
       }
-      if ((status === 'dispatched' || stageNum === 3) && existingOrder.customer_email) {
-        console.log(`[Orders PATCH] 🚚 Queuing dispatch notification email to customer ${existingOrder.customer_email}`);
+      if ((status === 'dispatched' || stageNum === 3) && resolvedCustomerEmail) {
+        const waybillTxt = waybillNumber || (pkgForVendor as any).waybillNumber || '';
+        const driverTxt = driverPhone || (pkgForVendor as any).driverPhone || '';
+        console.log(`[Orders PATCH] 🚚 Queuing dispatch notification email to customer ${resolvedCustomerEmail}`);
+        patchEmailPromises.push(
+          saveShopperOrderAlert(
+            'order_dispatched',
+            `Order ${existingOrder.order_number} Dispatched`,
+            `${resolvedBrandName} handed off your package for delivery${waybillTxt ? ` (Waybill: ${waybillTxt})` : ''}. Tap to track live.`
+          )
+        );
         patchEmailPromises.push(
           sendDispatchNotificationEmail({
             orderNumber: existingOrder.order_number,
             customerName: existingOrder.customer_name,
-            customerEmail: existingOrder.customer_email,
+            customerEmail: resolvedCustomerEmail,
             deliveryAddress: existingOrder.delivery_address,
             items: existingOrder.order_items || sourceItems || [],
             totalAmount: Number(existingOrder.total_amount || 0),
             shippingFee: Number(existingOrder.shipping_fee || 0),
-            driverPhone: driverPhone || (pkgForVendor as any).driverPhone || '',
-            waybillNumber: waybillNumber || (pkgForVendor as any).waybillNumber || '',
-            vendorName: (pkgForVendor as any).vendorName || targetVendorId || 'Store Merchant'
+            driverPhone: driverTxt,
+            waybillNumber: waybillTxt,
+            vendorName: resolvedBrandName
           }).then(res => {
-            console.log(`[Dispatch Email] ✅ Sent to customer ${existingOrder.customer_email}:`, res);
+            console.log(`[Dispatch Email] ✅ Sent to customer ${resolvedCustomerEmail}:`, res);
             return res;
           }).catch(e => {
             console.error('[Dispatch Email] ❌ Failed:', e);
@@ -1048,20 +1130,27 @@ export async function PATCH(request: Request) {
         );
       }
       // Stage 2: Packaged & quality-checked
-      else if ((status === 'packing' || stageNum === 2) && existingOrder.customer_email) {
-        console.log(`[Orders PATCH] 📦 Queuing order packed email to customer ${existingOrder.customer_email}`);
+      else if ((status === 'packing' || stageNum === 2) && resolvedCustomerEmail) {
+        console.log(`[Orders PATCH] 📦 Queuing order packed email to customer ${resolvedCustomerEmail}`);
+        patchEmailPromises.push(
+          saveShopperOrderAlert(
+            'order_packed',
+            `Order ${existingOrder.order_number} Packed & Ready`,
+            `${resolvedBrandName} finished inspecting and sealing your order. Courier dispatch is next.`
+          )
+        );
         patchEmailPromises.push(
           sendOrderPackedEmail({
             orderNumber: existingOrder.order_number,
             customerName: existingOrder.customer_name,
-            customerEmail: existingOrder.customer_email,
+            customerEmail: resolvedCustomerEmail,
             deliveryAddress: existingOrder.delivery_address,
             items: existingOrder.order_items || sourceItems || [],
             totalAmount: Number(existingOrder.total_amount || 0),
             shippingFee: Number(existingOrder.shipping_fee || 0),
-            vendorName: (pkgForVendor as any).vendorName || targetVendorId || 'Store Merchant'
+            vendorName: resolvedBrandName
           }).then(res => {
-            console.log(`[Packed Email] ✅ Sent to customer ${existingOrder.customer_email}:`, res);
+            console.log(`[Packed Email] ✅ Sent to customer ${resolvedCustomerEmail}:`, res);
             return res;
           }).catch(e => {
             console.error('[Packed Email] ❌ Failed:', e);
@@ -1080,21 +1169,28 @@ export async function PATCH(request: Request) {
             }).catch((e) => ({ success: false, error: e?.message }))
           );
         }
-        // Customer email: order delivered confirmation
-        if (existingOrder.customer_email) {
-          console.log(`[Orders PATCH] ✅ Queuing order delivered email to customer ${existingOrder.customer_email}`);
+        // Customer email & live alert: order delivered confirmation
+        if (resolvedCustomerEmail) {
+          console.log(`[Orders PATCH] ✅ Queuing order delivered email to customer ${resolvedCustomerEmail}`);
+          patchEmailPromises.push(
+            saveShopperOrderAlert(
+              'order_delivered',
+              `Order ${existingOrder.order_number} Delivered`,
+              `Your package from ${resolvedBrandName} has arrived. Inspect your pieces & confirm receipt.`
+            )
+          );
           patchEmailPromises.push(
             sendOrderDeliveredCustomerEmail({
               orderNumber: existingOrder.order_number,
               customerName: existingOrder.customer_name,
-              customerEmail: existingOrder.customer_email,
+              customerEmail: resolvedCustomerEmail,
               deliveryAddress: existingOrder.delivery_address,
               items: existingOrder.order_items || sourceItems || [],
               totalAmount: Number(existingOrder.total_amount || 0),
               shippingFee: Number(existingOrder.shipping_fee || 0),
-              vendorName: (pkgForVendor as any).vendorName || targetVendorId || 'Store Merchant'
+              vendorName: resolvedBrandName
             }).then(res => {
-              console.log(`[Delivered Customer Email] ✅ Sent to ${existingOrder.customer_email}:`, res);
+              console.log(`[Delivered Customer Email] ✅ Sent to ${resolvedCustomerEmail}:`, res);
               return res;
             }).catch(e => {
               console.error('[Delivered Customer Email] ❌ Failed:', e);
@@ -1106,7 +1202,6 @@ export async function PATCH(request: Request) {
         // Vendor email: payment settlement released
         const vIdToNotify = targetVendorId || (allVendorIds.size === 1 ? Array.from(allVendorIds)[0] : '');
         if (vIdToNotify) {
-          const adminClient = createAdminClient();
           const { data: vRecord } = await adminClient
             .from('vendors')
             .select('id, brand_name, designer_name, email, phone, bank_name, account_number')

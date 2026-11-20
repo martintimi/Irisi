@@ -69,19 +69,48 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, notifications: [] });
     }
 
-    const { data: alertRows, error } = await adminClient
-      .from('notifications')
-      .select('id, title, message, action_url, created_at')
-      .eq('type', 'follower_alert')
-      .order('created_at', { ascending: false })
-      .limit(80);
+    const [{ data: alertRows, error }, { data: orderAlertRows }] = await Promise.all([
+      adminClient
+        .from('notifications')
+        .select('id, title, message, action_url, created_at')
+        .eq('type', 'follower_alert')
+        .order('created_at', { ascending: false })
+        .limit(80),
+      shopperEmail
+        ? adminClient
+            .from('notifications')
+            .select('id, title, message, action_url, created_at')
+            .eq('type', 'shopper_order_alert')
+            .eq('title', `ORDER_ALERT:${shopperEmail}`)
+            .order('created_at', { ascending: false })
+            .limit(30)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
 
-    if (error) {
+    if (error && (!orderAlertRows || orderAlertRows.length === 0)) {
       return NextResponse.json({ success: true, notifications: [] });
     }
 
     const cutoff = Date.now() - ALERT_WINDOW_MS;
     const matched: any[] = [];
+
+    // 1. Live Order Status Updates (Packed / Dispatched / Delivered)
+    for (const row of orderAlertRows || []) {
+      const createdMs = new Date(row.created_at).getTime();
+      if (Number.isFinite(createdMs) && createdMs < cutoff) continue;
+      try {
+        const parsed = JSON.parse(row.message || '{}');
+        matched.push({
+          id: `order-alert-${row.id}`,
+          kind: parsed.kind || 'order_status',
+          vendorName: parsed.vendorName || 'ÌRÍSÍ',
+          title: parsed.title || `Order ${parsed.orderNumber || ''} Updated`,
+          message: parsed.message || 'Tap to track your order live.',
+          actionUrl: row.action_url || '/track-order',
+          createdAt: parsed.createdAt || row.created_at,
+        });
+      } catch {}
+    }
 
     for (const row of alertRows || []) {
       const createdMs = new Date(row.created_at).getTime();
@@ -120,8 +149,10 @@ export async function GET(request: Request) {
       } catch {}
     }
 
+    matched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
     return NextResponse.json(
-      { success: true, notifications: matched.slice(0, 30) },
+      { success: true, notifications: matched.slice(0, 35) },
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     );
   } catch (err: any) {
