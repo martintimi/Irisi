@@ -9,6 +9,7 @@ import {
   X, Star, AlertCircle, Printer, Camera
 } from 'lucide-react';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
+import OrderStatusAnimation from './OrderStatusAnimation';
 
 interface MobileVendorOrdersProps {
   vendorOrders: any[];
@@ -201,6 +202,14 @@ export default function MobileVendorOrders({
                     <span>{stageLabel}</span>
                   </span>
                 </div>
+
+                {/* Live Animated Visual Status Scene (Needs Action / Packed / Rider In Transit / Delivered Seal) */}
+                <OrderStatusAnimation
+                  trackingStage={ord.trackingStage}
+                  deliveryMethod={ord.deliveryMethod}
+                  courierName={ord.courierName}
+                  compact
+                />
 
                 {/* Buyer Strip */}
                 <div className="px-4 py-2.5 bg-[var(--bg-primary)]/50 border-b border-[var(--border-subtle)] flex items-center justify-between gap-2">

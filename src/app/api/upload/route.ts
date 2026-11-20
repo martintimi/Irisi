@@ -8,7 +8,6 @@ import path from 'path';
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dvnj8idde';
 const apiKey = process.env.CLOUDINARY_API_KEY || '652888692395159';
 const apiSecret = process.env.CLOUDINARY_API_SECRET || '0exFgmDJX6tVL7HEH6LNrfsvGpk';
-const cloudinaryUrl = process.env.CLOUDINARY_URL || 'cloudinary://652888692395159:0exFgmDJX6tVL7HEH6LNrfsvGpk@dvnj8idde';
 
 cloudinary.config({
   cloud_name: cloudName,
@@ -17,6 +16,8 @@ cloudinary.config({
   secure: true,
 });
 const hasCloudinary = true;
+
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
@@ -27,11 +28,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Read bytes
     const bytes = await file.arrayBuffer();
     let buffer: any = Buffer.from(bytes);
 
-    const isVideo = file.type.startsWith('video/') || file.name.endsWith('.mp4') || file.name.endsWith('.webm') || file.name.endsWith('.mov');
+    const isVideo =
+      file.type.startsWith('video/') ||
+      /\.(mp4|webm|mov|m4v)$/i.test(file.name || '');
 
     let mimeType = file.type || (isVideo ? 'video/mp4' : 'image/jpeg');
 
@@ -42,20 +44,33 @@ export async function POST(request: Request) {
     }
 
     const shouldTrim = data.get('trim') === 'true';
+    const rawFolder = String(data.get('folder') || 'veyra_drops').replace(/[^a-z0-9_-]/gi, '') || 'veyra_drops';
+    const isStoryUpload = rawFolder === 'irisi_stories';
+    const maxDurationParam = Number(data.get('maxDuration') || (isStoryUpload ? 30 : shouldTrim ? 10 : 0));
 
-    // 1. Cloudinary Upload (Direct high-speed CDN video streaming)
+    // 1. Cloudinary Upload (Direct high-speed CDN image & compressed video streaming)
     if (hasCloudinary) {
       const uploadResult: any = await new Promise((resolve, reject) => {
         cloudinary.uploader.upload_stream(
           {
             resource_type: isVideo ? 'video' : 'image',
-            folder: 'veyra_drops',
-            // eager_async: re-encode to mp4 in background — response returns immediately
-            // without waiting for transcoding (avoids serverless timeout on large videos)
-            ...(isVideo ? {
-              eager: [{ format: 'mp4', quality: 'auto' }],
-              eager_async: true,
-            } : {}),
+            folder: rawFolder,
+            ...(isVideo
+              ? {
+                  // Compress story videos to sleek 720p vertical H.264 to save bandwidth & storage quota
+                  eager: [
+                    isStoryUpload
+                      ? { format: 'mp4', width: 720, crop: 'limit', quality: 'auto:good', video_codec: 'auto' }
+                      : { format: 'mp4', quality: 'auto' },
+                  ],
+                  eager_async: true,
+                }
+              : isStoryUpload
+              ? {
+                  quality: 'auto:good',
+                  fetch_format: 'auto',
+                }
+              : {}),
           },
           (error, result) => {
             if (error) reject(error);
@@ -65,21 +80,27 @@ export async function POST(request: Request) {
       });
 
       let finalUrl = uploadResult.secure_url || uploadResult.url;
-      if (isVideo && shouldTrim && finalUrl && finalUrl.includes('/upload/')) {
-        finalUrl = finalUrl.replace('/upload/', '/upload/so_0,eo_10/');
+      if (isVideo && finalUrl && finalUrl.includes('/upload/')) {
+        if (isStoryUpload) {
+          const cap = maxDurationParam > 0 ? Math.min(30, maxDurationParam) : 30;
+          finalUrl = finalUrl.replace('/upload/', `/upload/so_0,eo_${cap},w_720,c_limit,q_auto:good/`);
+        } else if (shouldTrim) {
+          finalUrl = finalUrl.replace('/upload/', '/upload/so_0,eo_10/');
+        }
       }
 
       return NextResponse.json({
         success: true,
         url: finalUrl,
         publicId: uploadResult.public_id,
+        resourceType: isVideo ? 'video' : 'image',
+        duration: typeof uploadResult.duration === 'number' ? Math.round(uploadResult.duration) : undefined,
         fileName: file.name,
         fileSize: file.size,
       });
     }
 
-    // 2. Fallback: Save binary file to local disk (public/images/products/uploaded)
-    // Never return base64 strings to prevent database egress exhaustion
+    // 2. Fallback: Save binary file to local disk
     const rawExt = file.name ? path.extname(file.name).replace('.', '') : '';
     const ext = rawExt || (isVideo ? 'mp4' : mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg');
     const safeName = `upload-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
@@ -95,6 +116,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       url: finalUrl,
+      resourceType: isVideo ? 'video' : 'image',
       fileName: file.name,
       fileSize: file.size,
     });

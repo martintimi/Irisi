@@ -21,6 +21,8 @@ import { compressImage, compressImageToFile } from '@/lib/utils/imageUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
 import { trimVideoInBrowser } from '@/lib/utils/clientVideoTrimmer';
 import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
+import { matchesVendorSpecialtyCategory, getSpecialtyFocusLabel } from '@/lib/utils/vendorCategoryMatcher';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 // Standard Apparel Colors Palette for Boutiques & Designers
 const STANDARD_COLORS = STANDARD_FASHION_COLORS;
@@ -159,7 +161,8 @@ export default function PublishGarmentPage() {
     city?: string;
     state?: string;
   } | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(() => !getVendorCache('global', 'publish_profile_status'));
+  const [showAllDepartments, setShowAllDepartments] = useState(vendorSpecialty === 'multi_department');
 
   // Multi-Hub Dispatch Origin (only active if vendor has 2 dispatch hubs)
   const [shipsFrom, setShipsFrom] = useState('');
@@ -317,10 +320,15 @@ export default function PublishGarmentPage() {
   const [createdProductId, setCreatedProductId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Check vendor verification status on mount
+  // Check vendor verification status on mount (instant hydrate from cache!)
   const checkVerification = useCallback(async () => {
+    const cachedStatus = getVendorCache<any>('global', 'publish_profile_status');
+    if (cachedStatus) {
+      setProfileStatus(cachedStatus);
+      setIsLoadingAuth(false);
+    }
     try {
-      setIsLoadingAuth(true);
+      if (!cachedStatus) setIsLoadingAuth(true);
       const res = await vendorFetch('/api/vendor/profile');
       const data = await res.json();
       if (res.ok && data.success && data.vendor) {
@@ -337,7 +345,7 @@ export default function PublishGarmentPage() {
         const primaryHub = v.city && v.state ? `${v.city}, ${v.state}` : v.city || v.location || '';
         setShipsFrom(primaryHub);
 
-        setProfileStatus({
+        const nextStatus = {
           isProfileSaved: !!v.isProfileSaved,
           isVerified: verified,
           approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
@@ -347,7 +355,9 @@ export default function PublishGarmentPage() {
           secondaryState: v.secondaryState || '',
           city: v.city || '',
           state: v.state || ''
-        });
+        };
+        setProfileStatus(nextStatus);
+        setVendorCache('global', 'publish_profile_status', nextStatus);
 
         if (spec === 'perfume') {
           setCatFilterTab('perfume');
@@ -1173,9 +1183,11 @@ export default function PublishGarmentPage() {
   }, [rawCategoryList, isBoutique, vendorSpecialty]);
 
   const filteredCategoryList = useMemo(() => {
+    if (!showAllDepartments && vendorSpecialty !== 'multi_department') {
+      const focused = rawCategoryList.filter((c) => matchesVendorSpecialtyCategory(c, vendorSpecialty));
+      if (focused.length > 0) return focused;
+    }
     return currentCategoryList.filter(c => {
-      if (vendorSpecialty === 'perfume') return c.group === 'perfume';
-      if (vendorSpecialty === 'wigs') return c.group === 'wigs';
       if (catFilterTab === 'all') return true;
       if (catFilterTab === 'apparel') return c.group === 'apparel' || c.group === 'clothing' || (!isBoutique && c.group === 'native');
       if (catFilterTab === 'footwear') return c.group === 'footwear';
@@ -1184,7 +1196,7 @@ export default function PublishGarmentPage() {
       if (catFilterTab === 'wigs') return c.group === 'wigs';
       return c.group === catFilterTab;
     });
-  }, [currentCategoryList, catFilterTab, isBoutique, vendorSpecialty]);
+  }, [rawCategoryList, currentCategoryList, catFilterTab, isBoutique, vendorSpecialty, showAllDepartments]);
   const enabledSizes = Object.keys(sizeStock).filter(s => sizeStock[s]?.enabled);
 
   const totalStockCount = Object.values(sizeStock)
@@ -2039,8 +2051,30 @@ export default function PublishGarmentPage() {
                 </span>
               </div>
 
-              {/* Category Segment Tabs with Lucide Icons (hidden when vendor is strictly perfume or wigs) */}
-              {vendorSpecialty !== 'perfume' && vendorSpecialty !== 'wigs' && (
+              {/* Smart Specialty Focus Banner + Optional All-Departments Toggle */}
+              {vendorSpecialty !== 'multi_department' && (
+                <div className="mb-3 px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between gap-3 flex-wrap">
+                  <span className="text-[11px] font-mono-luxury text-[var(--text-secondary)]">
+                    {showAllDepartments
+                      ? 'Showing all marketplace departments'
+                      : `Store focus: ${getSpecialtyFocusLabel(vendorSpecialty)}`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !showAllDepartments;
+                      setShowAllDepartments(next);
+                      if (next) setCatFilterTab('all');
+                    }}
+                    className="text-[11px] font-mono-luxury text-[var(--gold-accent)] hover:underline cursor-pointer"
+                  >
+                    {showAllDepartments ? 'Focus on my specialty' : '+ Selling outside your specialty? Show all'}
+                  </button>
+                </div>
+              )}
+
+              {/* Category Segment Tabs (only shown when multi-department or vendor expanded all departments) */}
+              {(showAllDepartments || vendorSpecialty === 'multi_department') && (
                 <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-none pb-1">
                   {[
                     { id: 'all', label: 'All Categories', icon: Layers, allowed: true },

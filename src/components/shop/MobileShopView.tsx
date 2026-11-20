@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
+import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
 import MobileProductSlider from '@/components/shop/MobileProductSlider';
 import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
 
@@ -325,9 +326,20 @@ export default function MobileShopView() {
   return (
     <div className="md:hidden pb-28 bg-[var(--bg-primary)] text-[var(--text-primary)] min-h-screen">
 
-      {/* STORIES ROW */}
-      <div className="pt-4 pb-3 border-b border-[var(--border-subtle)]">
-        <MobileStoriesRow />
+      {/* MOBILE SHOP HEADER + 24H STORIES ROW */}
+      <div className="pt-2 pb-3 border-b border-[var(--border-subtle)] space-y-2.5">
+        <div className="px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-editorial text-xl font-normal tracking-wide text-[var(--text-primary)]">
+              Shop
+            </span>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--gold-accent)]">
+              · Stories &amp; Drops
+            </span>
+          </div>
+          <ShopperNotificationBell compact />
+        </div>
+        <MobileStoriesRow variant="mobile" onOpenQuickBuy={(prod) => setQuickBuyProduct(prod)} />
       </div>
 
       {/* HEADER ROW: title + refine */}

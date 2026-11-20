@@ -31,7 +31,7 @@ const CLAUSES = [
     num: '04',
     tag: 'Commission & ÌRÍSÍ Plus',
     title: 'Transparent Fees & Membership Tiers',
-    body: 'Platform commissions apply strictly to completed, escrow-released sales — never to cancelled or refunded orders. During promotional launch periods, founding brands enjoy 0% commission. Optional ÌRÍSÍ Plus memberships unlock lower sales commission, unlimited catalog listings, a clean white-label storefront link, and live 48-hour Lookbook Stories.',
+    body: 'Platform commissions apply strictly to completed, escrow-released sales — never to cancelled or refunded orders. During promotional launch periods, founding brands enjoy 0% commission. Optional ÌRÍSÍ Plus memberships unlock lower sales commission, unlimited catalog listings, a clean white-label storefront link, and live 24-hour Lookbook Stories.',
   },
   {
     num: '05',

@@ -1,6 +1,6 @@
 'use client';
 
-import { vendorFetch } from '@/lib/services/apiClient';
+import { vendorFetch, getActiveVendorId } from '@/lib/services/apiClient';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname, useRouter } from 'next/navigation';
@@ -12,14 +12,25 @@ import {
   LayoutDashboard, UploadCloud, PackageCheck, BarChart3,
   Building, MessageSquare, DollarSign, LogOut, Sun, Moon,
   ExternalLink, Sparkles, ShoppingBag, Scissors, Star, X,
-  Gem, Footprints, Shirt, Crown, Plus, Grid2X2, HelpCircle,
-  CheckCircle2, ChevronRight, Camera, ShieldCheck
+  Gem, Footprints, Shirt, Crown, Plus, Grid2X2,
+  ChevronRight, ChevronLeft, Camera, Share2
 } from 'lucide-react';
 import VendorNotificationBell from '@/components/vendor/VendorNotificationBell';
 import VendorTourGuide from '@/components/vendor/VendorTourGuide';
+import ShareStoreSheet from '@/components/vendor/ShareStoreSheet';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
-import { getConciergeConfig, generateWhatsAppUrl } from '@/lib/config/concierge';
+import { getVendorCache, getVendorCacheAgeMs, setVendorCache, clearVendorCache, hydrateVendorCacheFromSession } from '@/lib/cache/vendorPortalCache';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
+
+const STUDIO_SUB_ROUTES: Array<{ prefix: string; title: string }> = [
+  { prefix: '/vendor-portal/stories', title: 'Lookbook Stories' },
+  { prefix: '/vendor-portal/plus', title: 'ÌRÍSÍ Plus' },
+  { prefix: '/vendor-portal/settlements', title: 'Payouts & Bank' },
+  { prefix: '/vendor-portal/reports', title: 'Analytics' },
+  { prefix: '/vendor-portal/direct-sales', title: 'Direct POS' },
+  { prefix: '/vendor-portal/reviews', title: 'Client Reviews' },
+  { prefix: '/vendor-portal/atelier', title: 'Store Profile' },
+];
 
 export default function VendorPortalLayout({
   children,
@@ -39,35 +50,40 @@ export default function VendorPortalLayout({
   const [liveStatus, setLiveStatus] = useState<{
     isVerified: boolean;
     approvalStatus: string;
-  }>({
-    isVerified: false,
-    approvalStatus: 'pending',
+  }>(() => {
+    const cached = getVendorCache<{ isVerified: boolean; approvalStatus: string }>('global', 'layout_status');
+    return cached || { isVerified: false, approvalStatus: 'pending' };
   });
 
-  // Native mobile app sheets (replaces clunky web sidebar drawer on mobile)
-  const [isStudioSheetOpen, setIsStudioSheetOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    hydrateVendorCacheFromSession();
+    const cached = getVendorCache<{ isVerified: boolean; approvalStatus: string }>('global', 'layout_status');
+    if (cached) setLiveStatus(cached);
   }, []);
 
   useEffect(() => {
-    setIsStudioSheetOpen(false);
     setIsQuickCreateOpen(false);
   }, [pathname]);
 
-  useBodyScrollLock(isStudioSheetOpen || isQuickCreateOpen);
+  useBodyScrollLock(isQuickCreateOpen);
 
-  const checkVendorStatus = useCallback(async () => {
+  const checkVendorStatus = useCallback(async (force = false) => {
+    if (!force && getVendorCacheAgeMs('global', 'layout_status') < 90_000) {
+      return;
+    }
     try {
       const res = await vendorFetch('/api/vendor/profile');
       const data = await res.json();
 
       if (res.status === 403 || data.isSuspended || data.approvalStatus === 'suspended') {
         const reason = encodeURIComponent(data.suspensionReason || data.error || 'Account suspended by administration.');
+        clearVendorCache();
         vendorLogout();
         router.push(`/vendor-portal/auth?suspended=true&reason=${reason}`);
         return;
@@ -76,10 +92,16 @@ export default function VendorPortalLayout({
       if (res.ok && data.success && data.vendor) {
         const v = data.vendor;
         const verified = !!v.is_verified || !!v.isVerified;
-        setLiveStatus({
+        const statusObj = {
           isVerified: verified,
           approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
-        });
+        };
+        setLiveStatus(statusObj);
+        setVendorCache('global', 'layout_status', statusObj);
+
+        const activeVid = v.id || getActiveVendorId() || v.email || 'default';
+        setVendorCache(activeVid, 'profile_raw', v);
+
         const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
         const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
         const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
@@ -105,11 +127,15 @@ export default function VendorPortalLayout({
     } catch {}
   }, [setVendorProfile, vendorLogout, router]);
 
+  // Run once on mount (NOT on every route transition!) — instant navigation between tabs
   useEffect(() => {
-    checkVendorStatus();
-  }, [pathname, checkVendorStatus]);
+    if (pathname === '/vendor-portal/auth') return;
+    checkVendorStatus(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
+    if (pathname === '/vendor-portal/auth') return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
     try {
       const chanId = `vendor-live-status-sync-${Math.random().toString(36).slice(2, 8)}`;
@@ -125,7 +151,7 @@ export default function VendorPortalLayout({
               !updated.email ||
               updated.email.toLowerCase() === vendorProfile.email.toLowerCase()
             ) {
-              checkVendorStatus();
+              checkVendorStatus(true);
             }
           }
         )
@@ -141,7 +167,7 @@ export default function VendorPortalLayout({
         } catch {}
       }
     };
-  }, [vendorProfile.email, checkVendorStatus]);
+  }, [vendorProfile.email, checkVendorStatus, pathname]);
 
   if (pathname === '/vendor-portal/auth') {
     return <>{children}</>;
@@ -151,7 +177,14 @@ export default function VendorPortalLayout({
   const specialty = getVendorSpecialty(vendorProfile);
   const specialtyInfo = getVendorSpecialtyInfo(specialty, isBoutique);
   const storeSlug = encodeURIComponent(vendorProfile.id || vendorProfile.brandName || 'store');
+  const storeUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/brand/${storeSlug}`
+      : `https://irisimi.ng/brand/${storeSlug}`;
   const brandInitial = (vendorProfile.brandName || 'I').trim().charAt(0).toUpperCase();
+
+  const activeStudioSubRoute = STUDIO_SUB_ROUTES.find((r) => pathname.startsWith(r.prefix)) || null;
+  const isStudioTabActive = pathname === '/vendor-portal/studio' || Boolean(activeStudioSubRoute);
 
   const navItems = [
     {
@@ -232,187 +265,87 @@ export default function VendorPortalLayout({
     },
   ];
 
-  // Mobile Studio Hub — Quiet-Luxury Monochrome iOS Grouped Sections (Zero Rainbow Boxes)
-  const studioGroups: Array<{
-    title: string;
-    items: Array<{
-      label: string;
-      sub: string;
-      href?: string;
-      external?: boolean;
-      badge?: string;
-      action?: () => void;
-      icon: any;
-    }>;
-  }> = [
-    {
-      title: 'Growth & Showcase',
-      items: [
-        {
-          label: 'Lookbook Stories',
-          sub: 'Post 48h drops & alert followers',
-          href: '/vendor-portal/stories',
-          icon: Camera,
-        },
-        {
-          label: 'ÌRÍSÍ Plus & Plan',
-          sub: 'Commission rates & white-label store',
-          href: '/vendor-portal/plus',
-          badge: 'Plus',
-          icon: Crown,
-        },
-        {
-          label: 'Direct Sales POS',
-          sub: 'Create escrow checkout links for DMs',
-          href: '/vendor-portal/direct-sales',
-          icon: MessageSquare,
-        },
-        {
-          label: 'View Live Storefront',
-          sub: 'Open your public brand link',
-          href: `/brand/${storeSlug}`,
-          external: true,
-          icon: ExternalLink,
-        },
-      ],
-    },
-    {
-      title: 'Finance & Insights',
-      items: [
-        {
-          label: 'Settlements & Payouts',
-          sub: 'Escrow vault & bank account',
-          href: '/vendor-portal/settlements',
-          icon: DollarSign,
-        },
-        {
-          label: 'Sales & Analytics',
-          sub: 'Revenue, AOV & ledger export',
-          href: '/vendor-portal/reports',
-          icon: BarChart3,
-        },
-        {
-          label: 'Client Reviews',
-          sub: 'Verified ratings & fit scores',
-          href: '/vendor-portal/reviews',
-          icon: Star,
-        },
-      ],
-    },
-    {
-      title: 'Atelier & Support',
-      items: [
-        {
-          label: 'Store Profile & Hubs',
-          sub: 'Logo, bio, socials & dispatch city',
-          href: '/vendor-portal/atelier',
-          icon: Building,
-        },
-        {
-          label: 'Interactive Tour',
-          sub: 'Quick walkthrough of your studio',
-          action: () => {
-            setIsStudioSheetOpen(false);
-            setShowTour(true);
-          },
-          icon: HelpCircle,
-        },
-        {
-          label: 'Vendor Support (WhatsApp)',
-          sub: 'Chat directly with ÌRÍSÍ concierge',
-          action: () => {
-            setIsStudioSheetOpen(false);
-            openVendorWhatsAppSupport();
-          },
-          external: true,
-          icon: ShieldCheck,
-        },
-      ],
-    },
-  ];
-
-  const isStudioRouteActive = [
-    '/vendor-portal/stories',
-    '/vendor-portal/plus',
-    '/vendor-portal/settlements',
-    '/vendor-portal/reports',
-    '/vendor-portal/direct-sales',
-    '/vendor-portal/reviews',
-    '/vendor-portal/atelier',
-  ].some((r) => pathname.startsWith(r));
-
   const handleLogout = () => {
+    clearVendorCache();
     vendorLogout();
     router.push('/vendor-portal/auth');
-  };
-
-  const openVendorWhatsAppSupport = () => {
-    const cfg = getConciergeConfig();
-    const url = generateWhatsAppUrl(
-      cfg.whatsappNumber,
-      `Hi ÌRÍSÍ Vendor Support, I'm reaching out from ${vendorProfile.brandName || 'my store'} (${vendorProfile.email || ''}).`
-    );
-    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors flex flex-col">
       {/* ======================================================== */}
-      {/* 1A. MOBILE NATIVE APP TOP HEADER (< md) — ZERO HAMBURGER */}
+      {/* 1A. MOBILE NATIVE APP TOP HEADER (< md) */}
       {/* ======================================================== */}
       <header className="md:hidden sticky top-0 z-30 h-14 px-4 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/90 backdrop-blur-xl flex items-center justify-between gap-3">
-        {/* Left: Brand Avatar + Name + Live Status Dot */}
-        <Link
-          href="/vendor-portal/atelier"
-          className="flex items-center gap-2.5 min-w-0 flex-1 active:opacity-80 transition-opacity"
-        >
-          <div className="relative h-9 w-9 rounded-full overflow-hidden border border-[var(--gold-accent)]/40 bg-[var(--gold-subtle)] flex items-center justify-center shrink-0">
-            {vendorProfile.logoUrl ? (
-              <Image
-                src={vendorProfile.logoUrl}
-                alt={vendorProfile.brandName}
-                fill
-                unoptimized
-                className="object-cover"
-              />
-            ) : (
-              <span className="font-editorial text-base text-[var(--gold-accent)]">
-                {brandInitial}
-              </span>
-            )}
-            <span
-              className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-[var(--bg-primary)] ${
-                liveStatus.isVerified
-                  ? 'bg-emerald-500'
-                  : liveStatus.approvalStatus === 'rejected'
-                  ? 'bg-rose-500'
-                  : 'bg-amber-500'
-              }`}
-            />
+        {/* Left: Native "← Studio" Back Pill on Studio sub-pages, OR Brand Identity on root tabs */}
+        {activeStudioSubRoute ? (
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <Link
+              href="/vendor-portal/studio"
+              className="inline-flex items-center gap-1 pr-2.5 pl-1.5 py-1.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] active:scale-95 transition-transform shrink-0"
+              aria-label="Back to Studio menu"
+            >
+              <ChevronLeft className="h-4 w-4 text-[var(--gold-accent)]" />
+              <span>Studio</span>
+            </Link>
+            <span className="font-editorial text-[17px] font-normal text-[var(--text-primary)] truncate">
+              {activeStudioSubRoute.title}
+            </span>
           </div>
-
-          <div className="min-w-0">
-            <div className="font-editorial text-[17px] font-normal text-[var(--text-primary)] truncate leading-tight">
-              {vendorProfile.brandName || 'My Brand'}
-            </div>
-            <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate leading-tight flex items-center gap-1">
-              <span>{liveStatus.isVerified ? 'Verified Seller' : 'Pending Review'}</span>
-              <span>·</span>
-              <span className="text-[var(--gold-accent)]">Studio</span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Right: Compact Native App Icon Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        ) : (
           <Link
-            href={`/brand/${storeSlug}`}
-            target="_blank"
-            className="h-9 w-9 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center justify-center active:scale-95 transition-all"
-            aria-label="Open live storefront"
+            href="/vendor-portal/atelier"
+            className="flex items-center gap-2.5 min-w-0 flex-1 active:opacity-80 transition-opacity"
           >
-            <ExternalLink className="h-4 w-4" />
+            <div className="relative h-9 w-9 rounded-full overflow-hidden border border-[var(--gold-accent)]/40 bg-[var(--gold-subtle)] flex items-center justify-center shrink-0">
+              {vendorProfile.logoUrl ? (
+                <Image
+                  src={vendorProfile.logoUrl}
+                  alt={vendorProfile.brandName}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              ) : (
+                <span className="font-editorial text-base text-[var(--gold-accent)]">
+                  {brandInitial}
+                </span>
+              )}
+              <span
+                className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-[var(--bg-primary)] ${
+                  liveStatus.isVerified
+                    ? 'bg-emerald-500'
+                    : liveStatus.approvalStatus === 'rejected'
+                    ? 'bg-rose-500'
+                    : 'bg-amber-500'
+                }`}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <div className="font-editorial text-[17px] font-normal text-[var(--text-primary)] truncate leading-tight">
+                {vendorProfile.brandName || 'My Brand'}
+              </div>
+              <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate leading-tight flex items-center gap-1">
+                <span>{liveStatus.isVerified ? 'Verified Seller' : 'Pending Review'}</span>
+                <span>·</span>
+                <span className="text-[var(--gold-accent)]">Studio</span>
+              </div>
+            </div>
           </Link>
+        )}
+
+        {/* Right: Share Store + Theme Toggle + Notifications */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            className="h-9 w-9 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--gold-accent)] flex items-center justify-center active:scale-95 transition-all cursor-pointer"
+            aria-label="Share your storefront link"
+            title="Share Storefront Link"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
 
           <button
             type="button"
@@ -482,6 +415,15 @@ export default function VendorPortalLayout({
 
           <VendorNotificationBell />
 
+          <button
+            type="button"
+            onClick={() => setIsShareOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[var(--bg-surface)] hover:bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase text-[var(--text-primary)] transition-all cursor-pointer"
+          >
+            <Share2 className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+            <span>Share Store</span>
+          </button>
+
           <Link
             href={`/brand/${storeSlug}`}
             target="_blank"
@@ -519,7 +461,6 @@ export default function VendorPortalLayout({
       {/* 2. BODY LAYOUT (DESKTOP SIDEBAR + ACTIVE PAGE CONTENT) */}
       {/* ======================================================== */}
       <div className="flex-1 flex">
-        {/* Desktop-Only Left Sidebar (Mobile uses Native Bottom Tab Dock + App Sheets) */}
         <aside className="hidden md:flex w-72 border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] flex-col justify-between p-6 shrink-0 sticky top-[60px] h-[calc(100vh-60px)] self-start overflow-y-auto">
           <div className="space-y-5">
             <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">
@@ -615,7 +556,6 @@ export default function VendorPortalLayout({
           </div>
         </aside>
 
-        {/* Main Content Area (Extra pb-28 on mobile for clean clearance above Native Bottom Tab Dock) */}
         <main className="flex-1 p-3.5 sm:p-8 lg:p-12 pb-28 md:pb-12 overflow-y-auto min-w-0">
           {children}
         </main>
@@ -659,10 +599,7 @@ export default function VendorPortalLayout({
           <div className="flex flex-col items-center justify-end pb-1.5 h-full">
             <button
               type="button"
-              onClick={() => {
-                setIsStudioSheetOpen(false);
-                setIsQuickCreateOpen((prev) => !prev);
-              }}
+              onClick={() => setIsQuickCreateOpen((prev) => !prev)}
               className={`-mt-6 h-[52px] w-[52px] rounded-full bg-gradient-to-tr from-[#B89035] via-[#E6C367] to-[#F5E6B8] text-black shadow-[0_8px_24px_rgba(196,151,46,0.45)] ring-4 ring-[var(--bg-surface)] flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${
                 isQuickCreateOpen ? 'rotate-45' : ''
               }`}
@@ -688,27 +625,21 @@ export default function VendorPortalLayout({
             <span className="text-[10px] font-mono-luxury tracking-wide">Catalog</span>
           </Link>
 
-          {/* Tab 5: Studio Hub Sheet */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsQuickCreateOpen(false);
-              setIsStudioSheetOpen((prev) => !prev);
-            }}
-            className={`flex flex-col items-center justify-center gap-1 h-full transition-colors cursor-pointer ${
-              isStudioSheetOpen || isStudioRouteActive
-                ? 'text-[var(--gold-accent)]'
-                : 'text-[var(--text-muted)]'
+          {/* Tab 5: Real Studio Hub Route (preserves Back button history from all Studio sub-pages!) */}
+          <Link
+            href="/vendor-portal/studio"
+            className={`flex flex-col items-center justify-center gap-1 h-full transition-colors ${
+              isStudioTabActive ? 'text-[var(--gold-accent)]' : 'text-[var(--text-muted)]'
             }`}
           >
-            <Grid2X2 className="h-[20px] w-[20px]" strokeWidth={isStudioSheetOpen || isStudioRouteActive ? 2.1 : 1.7} />
+            <Grid2X2 className="h-[20px] w-[20px]" strokeWidth={isStudioTabActive ? 2.1 : 1.7} />
             <span className="text-[10px] font-mono-luxury tracking-wide">Studio</span>
-          </button>
+          </Link>
         </div>
       </nav>
 
       {/* ======================================================== */}
-      {/* 4A. MOBILE NATIVE QUICK-CREATE SHEET (FAB +) */}
+      {/* 4. MOBILE NATIVE QUICK-CREATE SHEET (FAB +) */}
       {/* ======================================================== */}
       {mounted &&
         isQuickCreateOpen &&
@@ -776,10 +707,10 @@ export default function VendorPortalLayout({
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-[var(--text-primary)]">
-                        Post 48h Lookbook Story
+                        Post 24h Lookbook Story
                       </div>
                       <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
-                        Share a photo or clip &amp; alert your followers
+                        Multi-slide photos or clips with text overlays
                       </p>
                     </div>
                   </div>
@@ -791,169 +722,15 @@ export default function VendorPortalLayout({
           document.body
         )}
 
-      {/* ======================================================== */}
-      {/* 4B. MOBILE NATIVE STUDIO APP LAUNCHER SHEET */}
-      {/* ======================================================== */}
-      {mounted &&
-        isStudioSheetOpen &&
-        createPortal(
-          <div
-            className="md:hidden fixed inset-0 z-[75] flex flex-col justify-end bg-black/60 backdrop-blur-md animate-fadeIn"
-            onClick={() => setIsStudioSheetOpen(false)}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              data-lenis-prevent="true"
-              className="w-full max-h-[86vh] rounded-t-[30px] bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] flex flex-col overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.45)]"
-            >
-              {/* Drag Handle */}
-              <div className="pt-3 pb-1 flex justify-center shrink-0">
-                <span className="h-1 w-10 rounded-full bg-[var(--border-hover)]" />
-              </div>
-
-              {/* Brand Identity Summary Header */}
-              <div className="px-5 pt-2 pb-4 border-b border-[var(--border-subtle)] flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative h-11 w-11 rounded-2xl overflow-hidden bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 flex items-center justify-center shrink-0">
-                    {vendorProfile.logoUrl ? (
-                      <Image
-                        src={vendorProfile.logoUrl}
-                        alt={vendorProfile.brandName}
-                        fill
-                        unoptimized
-                        className="object-cover"
-                      />
-                    ) : (
-                      <span className="font-editorial text-xl text-[var(--gold-accent)]">
-                        {brandInitial}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-editorial text-xl font-normal text-[var(--text-primary)] truncate">
-                      {vendorProfile.brandName}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[10px] font-mono-luxury">
-                      <span className={liveStatus.isVerified ? 'text-emerald-500 flex items-center gap-1' : 'text-amber-500'}>
-                        {liveStatus.isVerified ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3" /> Verified
-                          </>
-                        ) : (
-                          'Pending Review'
-                        )}
-                      </span>
-                      <span className="text-[var(--text-muted)]">·</span>
-                      <span className="text-[var(--gold-accent)] flex items-center gap-1">
-                        <ShieldCheck className="h-3 w-3" /> Escrow Active
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setIsStudioSheetOpen(false)}
-                  className="h-8 w-8 rounded-full bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-secondary)] shrink-0 cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Quiet-Luxury Native iOS Grouped List Sections (Zero Noisy Colors) */}
-              <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-5 bg-[var(--bg-primary)]">
-                {studioGroups.map((group) => (
-                  <div key={group.title} className="space-y-1.5">
-                    <div className="px-2 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                      {group.title}
-                    </div>
-                    <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
-                      {group.items.map((item) => {
-                        const Icon = item.icon;
-                        const isActiveRow = item.href && pathname === item.href;
-                        const rowInner = (
-                          <div
-                            className={`px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)] transition-colors ${
-                              isActiveRow ? 'bg-[var(--gold-accent)]/[0.06]' : ''
-                            }`}
-                          >
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              <Icon
-                                className={`h-[18px] w-[18px] shrink-0 ${
-                                  isActiveRow || item.badge
-                                    ? 'text-[var(--gold-accent)]'
-                                    : 'text-[var(--text-primary)]'
-                                }`}
-                                strokeWidth={1.65}
-                              />
-                              <div className="min-w-0">
-                                <div className="text-[13px] font-medium text-[var(--text-primary)] truncate leading-snug">
-                                  {item.label}
-                                </div>
-                                <div className="text-[11px] text-[var(--text-muted)] font-light truncate leading-snug">
-                                  {item.sub}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                              {item.badge && (
-                                <span className="px-2 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[10px] font-mono-luxury text-[var(--gold-accent)]">
-                                  {item.badge}
-                                </span>
-                              )}
-                              <ChevronRight className="h-4 w-4 text-[var(--text-muted)]/70" strokeWidth={1.6} />
-                            </div>
-                          </div>
-                        );
-
-                        if (item.action) {
-                          return (
-                            <button
-                              key={item.label}
-                              type="button"
-                              onClick={item.action}
-                              className="w-full text-left cursor-pointer block"
-                            >
-                              {rowInner}
-                            </button>
-                          );
-                        }
-
-                        return (
-                          <Link
-                            key={item.label}
-                            href={item.href!}
-                            target={item.external ? '_blank' : undefined}
-                            onClick={() => setIsStudioSheetOpen(false)}
-                            className="block"
-                          >
-                            {rowInner}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Clean Sign Out Row */}
-                <div className="pt-1 pb-2">
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full py-3.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-rose-500 text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-2 active:bg-rose-500/10 transition-colors cursor-pointer"
-                  >
-                    <LogOut className="h-4 w-4" strokeWidth={1.7} />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="h-[env(safe-area-inset-bottom)] shrink-0" />
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* Transparent Share Storefront Link Sheet */}
+      <ShareStoreSheet
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        brandName={vendorProfile.brandName || 'My Brand'}
+        logoUrl={vendorProfile.logoUrl}
+        storeSlug={storeSlug}
+        storeUrl={storeUrl}
+      />
 
       {/* Interactive Vendor Tour Guide */}
       <VendorTourGuide

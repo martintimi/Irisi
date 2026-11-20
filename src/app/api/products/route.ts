@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
@@ -848,65 +849,73 @@ export async function POST(request: Request) {
 
 
 
-    // Notify genuine followers of this specific atelier / accessories brand in background
+    // Notify genuine followers of this brand (awaited cleanly so Vercel never drops alerts!)
     try {
-      (async () => {
-        const vKey = (vendorName || body.vendorName || (typeof resolvedVendorId === 'string' ? resolvedVendorId : '') || '').toLowerCase().trim();
-        if (!vKey) return;
+      const adminClient = createAdminClient();
+      const activeVendorName = (vendorName || body.vendorName || 'Verified Brand').trim();
+      const brandSlug = activeVendorName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const canonicalVendorId = (typeof resolvedVendorId === 'string' && resolvedVendorId ? resolvedVendorId : brandSlug).toLowerCase().trim();
+      const possibleKeys = Array.from(new Set([canonicalVendorId, brandSlug, activeVendorName.toLowerCase()])).filter(Boolean);
 
-        // Query genuine followers from Supabase: vendor_followers table + notifications persistent store
+      if (canonicalVendorId) {
         const followerEmails = new Set<string>();
-
         try {
-          const { data: dbFollowers } = await supabase
-            .from('vendor_followers')
-            .select('shopper_email')
-            .eq('vendor_id', vKey);
-
-          (dbFollowers || []).forEach((f: any) => {
-            const em = (f.shopper_email || '').toLowerCase().trim();
-            if (em && em.includes('@')) followerEmails.add(em);
-          });
-        } catch (_) {}
-
-        // Fallback to notifications store
-        try {
-          const titleKey = `FOLLOW:${vKey}`;
-          const { data: noteFollowers } = await supabase
+          const { data: noteFollowers } = await adminClient
             .from('notifications')
-            .select('message')
+            .select('title, message')
             .eq('type', 'vendor_follow')
-            .eq('title', titleKey);
+            .limit(400);
 
-          (noteFollowers || []).forEach((n: any) => {
-            const em = (n.message || '').toLowerCase().trim();
-            if (em && em.includes('@')) followerEmails.add(em);
-          });
+          for (const n of noteFollowers || []) {
+            const k = (n.title || '').replace(/^FOLLOW:/i, '').toLowerCase().trim();
+            const kSlug = k.replace(/[^a-z0-9]+/g, '-');
+            if ((possibleKeys.includes(k) || possibleKeys.includes(kSlug)) && n.message && n.message.includes('@')) {
+              followerEmails.add(n.message.toLowerCase().trim());
+            }
+          }
         } catch (_) {}
 
-        if (followerEmails.size === 0) return;
+        await adminClient.from('notifications').insert({
+          title: `ALERT:${canonicalVendorId}`,
+          message: JSON.stringify({
+            kind: 'new_product',
+            vendorId: canonicalVendorId,
+            vendorSlug: brandSlug || canonicalVendorId,
+            vendorName: activeVendorName,
+            vendorAvatar: finalImage,
+            title: `${activeVendorName} dropped "${name}"`,
+            message: `New arrival now live — ₦${Number(price || 0).toLocaleString()}. Tap to view on Shop.`,
+            previewImage: finalImage,
+            targetEmails: Array.from(followerEmails),
+            createdAt: new Date().toISOString(),
+          }),
+          type: 'follower_alert',
+          read: false,
+          action_url: `/shop/${encodeURIComponent(productId)}`,
+        });
 
-        const activeVendorName = (vendorName || body.vendorName || 'Verified Brand').toUpperCase();
-
-        for (const sEmail of followerEmails) {
-          try {
-            await sendNewDropNotificationEmail({
-              customerEmail: sEmail,
-              customerName: 'Valued Client',
-              vendorName: activeVendorName,
-              product: {
-                id: productId,
-                name,
-                price: Number(price),
-                imageUrl: finalImage,
-                category,
-              }
-            });
-            await new Promise(r => setTimeout(r, 300));
-          } catch (_) {}
+        if (followerEmails.size > 0) {
+          await Promise.allSettled(
+            Array.from(followerEmails).slice(0, 35).map((sEmail) =>
+              sendNewDropNotificationEmail({
+                customerEmail: sEmail,
+                customerName: 'Valued Client',
+                vendorName: activeVendorName,
+                product: {
+                  id: productId,
+                  name,
+                  price: Number(price),
+                  imageUrl: finalImage,
+                  category,
+                },
+              })
+            )
+          );
         }
-      })().catch(e => console.warn('Follower drop alert error:', e));
-    } catch (_) {}
+      }
+    } catch (dropAlertErr) {
+      console.warn('Follower drop alert error:', dropAlertErr);
+    }
 
     return NextResponse.json({
       success: true,

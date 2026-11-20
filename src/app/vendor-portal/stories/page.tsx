@@ -2,33 +2,97 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useStore } from '@/lib/store/useStore';
-import { VendorStory } from '@/types';
+import { VendorStory, StoryTextOverlay } from '@/types';
 import {
-  Sparkles, UploadCloud, CheckCircle2, ShoppingBag, ExternalLink,
-  Tag, Loader2, Trash2, Users, Clock, Crown
+  UploadCloud, CheckCircle2, ExternalLink, Tag, Loader2, Trash2,
+  Users, Clock, Crown, Plus, Type, Eye, Heart, ChevronDown, ChevronUp,
+  X, Sparkles, RefreshCw, Move
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import Link from 'next/link';
 import { compressImageToFile } from '@/lib/utils/imageUtils';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
+
+interface DraftSlide {
+  id: string;
+  mediaUrl: string;
+  mediaPublicId?: string;
+  mediaType: 'image' | 'video';
+  durationSec?: number;
+  caption: string;
+  textOverlays: StoryTextOverlay[];
+  taggedProductId: string;
+}
+
+const TEXT_COLORS = [
+  { hex: '#ffffff', label: 'White' },
+  { hex: '#09090b', label: 'Black' },
+  { hex: '#E6C367', label: 'Gold' },
+  { hex: '#fda4af', label: 'Rose' },
+  { hex: '#6ee7b7', label: 'Emerald' },
+];
+
+const MAX_SLIDES = 5;
+const MAX_VIDEO_SECONDS = 30;
+
+function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(video.duration) ? video.duration : 0);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(0);
+    };
+    video.src = url;
+  });
+}
+
+function formatTimeRemaining(expiresAt?: string): string {
+  if (!expiresAt) return '24h left';
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  if (diffMs <= 0) return 'Expiring';
+  const hrs = Math.floor(diffMs / 3600000);
+  const mins = Math.floor((diffMs % 3600000) / 60000);
+  if (hrs >= 1) return `${hrs}h ${mins}m left`;
+  return `${Math.max(1, mins)}m left`;
+}
 
 export default function VendorStoriesPage() {
-  const { vendorProfile, allProducts, addVendorStory } = useStore();
+  const { vendorProfile, allProducts } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
-  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
-  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  // Multi-slide draft composer
+  const [slides, setSlides] = useState<DraftSlide[]>([]);
+  const [activeSlideIdx, setActiveSlideIdx] = useState(0);
+  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
+  const [draggingOverlayId, setDraggingOverlayId] = useState<string | null>(null);
+
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
-  const [caption, setCaption] = useState('');
-  const [selectedProductId, setSelectedProductId] = useState('');
   const [notifyFollowers, setNotifyFollowers] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [publishedCount, setPublishedCount] = useState(0);
   const [followersNotified, setFollowersNotified] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [requiresPlus, setRequiresPlus] = useState(false);
+
+  // Live active 24h stories & insights
   const [activeStories, setActiveStories] = useState<VendorStory[]>([]);
+  const [loadingStories, setLoadingStories] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedInsightsId, setExpandedInsightsId] = useState<string | null>(null);
+
+  const activeSlide = slides[activeSlideIdx] || null;
+  const activeOverlay =
+    activeSlide?.textOverlays.find((o) => o.id === selectedOverlayId) || null;
 
   const vendorProducts = allProducts.filter(
     (p) =>
@@ -37,60 +101,207 @@ export default function VendorStoriesPage() {
       p.vendorName === vendorProfile.brandName
   );
 
-  const vendorLookupKey = vendorProfile.id || vendorProfile.brandName?.toLowerCase().replace(/\s+/g, '-') || vendorProfile.email || '';
+  const vendorLookupKey =
+    vendorProfile.id ||
+    vendorProfile.brandName?.toLowerCase().replace(/\s+/g, '-') ||
+    vendorProfile.email ||
+    '';
 
   const loadMyStories = useCallback(async () => {
     if (!vendorLookupKey) return;
+    const cached = getVendorCache<VendorStory[]>(vendorLookupKey, 'stories');
+    if (cached) {
+      setActiveStories(cached);
+    }
+    setLoadingStories(!cached);
     try {
-      const res = await fetch(`/api/stories?vendorId=${encodeURIComponent(vendorLookupKey)}`);
+      const res = await fetch(`/api/stories?vendorId=${encodeURIComponent(vendorLookupKey)}`, {
+        headers: { 'Cache-Control': 'no-cache' },
+      });
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.stories)) {
         setActiveStories(data.stories);
+        setVendorCache(vendorLookupKey, 'stories', data.stories);
       }
-    } catch {}
+    } catch {} finally {
+      setLoadingStories(false);
+    }
   }, [vendorLookupKey]);
 
   useEffect(() => {
     loadMyStories();
   }, [loadMyStories]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const isVideo = file.type.startsWith('video/');
-      setErrorMsg('');
-      setIsUploading(true);
-      try {
-        const uploadFile = isVideo ? file : await compressImageToFile(file, 1400, 0.85);
+  const updateActiveSlide = (updater: (slide: DraftSlide) => DraftSlide) => {
+    setSlides((prev) =>
+      prev.map((s, idx) => (idx === activeSlideIdx ? updater(s) : s))
+    );
+  };
+
+  // Multi-file upload with 30s video duration guard + Cloudinary irisi_stories folder
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const remainingSlots = MAX_SLIDES - slides.length;
+    if (remainingSlots <= 0) {
+      setErrorMsg(`You can publish up to ${MAX_SLIDES} slides per story drop.`);
+      return;
+    }
+
+    const chosenFiles = Array.from(fileList).slice(0, remainingSlots);
+    setErrorMsg('');
+    setIsUploading(true);
+
+    const newSlides: DraftSlide[] = [];
+
+    try {
+      for (let i = 0; i < chosenFiles.length; i++) {
+        const file = chosenFiles[i];
+        const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+        setUploadProgressText(
+          `Uploading ${i + 1} of ${chosenFiles.length}${isVideo ? ' (video)' : ''}...`
+        );
+
+        let durationSec: number | undefined = undefined;
+        if (isVideo) {
+          const dur = await getVideoDuration(file);
+          if (dur > MAX_VIDEO_SECONDS + 0.8) {
+            setErrorMsg(
+              `"${file.name}" is ${Math.round(dur)}s long. Story videos must be ${MAX_VIDEO_SECONDS} seconds or less.`
+            );
+            continue;
+          }
+          durationSec = dur > 0 ? Math.min(MAX_VIDEO_SECONDS, Math.ceil(dur)) : MAX_VIDEO_SECONDS;
+        }
+
+        const uploadFile = isVideo ? file : await compressImageToFile(file, 1280, 0.85);
         const formData = new FormData();
         formData.append('file', uploadFile);
+        formData.append('folder', 'irisi_stories');
+        if (isVideo) {
+          formData.append('maxDuration', String(MAX_VIDEO_SECONDS));
+        }
+
         const res = await fetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok && data.url) {
-          setMediaPreview(data.url);
-          setMediaType(isVideo ? 'video' : 'image');
+          newSlides.push({
+            id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            mediaUrl: data.url,
+            mediaPublicId: data.publicId,
+            mediaType: isVideo ? 'video' : 'image',
+            durationSec: durationSec || data.duration,
+            caption: '',
+            textOverlays: [],
+            taggedProductId: '',
+          });
         } else {
-          setErrorMsg(data.error || 'Could not upload story media.');
+          setErrorMsg(data.error || `Failed to upload ${file.name}.`);
         }
-      } catch (err) {
-        console.error('Story media upload failed:', err);
-        setErrorMsg('Upload failed. Please try a smaller photo or short clip.');
-      } finally {
-        setIsUploading(false);
       }
+
+      if (newSlides.length > 0) {
+        const nextIndex = slides.length;
+        setSlides((prev) => [...prev, ...newSlides]);
+        setActiveSlideIdx(nextIndex);
+        setSelectedOverlayId(null);
+      }
+    } catch {
+      setErrorMsg('Upload failed. Please try a smaller photo or clip (max 30s).');
+    } finally {
+      setIsUploading(false);
+      setUploadProgressText('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handlePublishStory = async (e: React.FormEvent) => {
+  const handleRemoveSlide = (idx: number) => {
+    setSlides((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      setActiveSlideIdx((curr) => Math.max(0, Math.min(curr, next.length - 1)));
+      setSelectedOverlayId(null);
+      return next;
+    });
+  };
+
+  // Add Instagram-style text overlay onto active slide
+  const handleAddTextOverlay = () => {
+    if (!activeSlide) return;
+    const newOv: StoryTextOverlay = {
+      id: `txt-${Date.now()}`,
+      text: 'New Drop Live',
+      x: 50,
+      y: 50,
+      fontStyle: 'editorial',
+      color: '#ffffff',
+      bgStyle: 'dark',
+      size: 'md',
+    };
+    updateActiveSlide((s) => ({
+      ...s,
+      textOverlays: [...s.textOverlays, newOv],
+    }));
+    setSelectedOverlayId(newOv.id);
+  };
+
+  const updateSelectedOverlay = (patch: Partial<StoryTextOverlay>) => {
+    if (!selectedOverlayId) return;
+    updateActiveSlide((s) => ({
+      ...s,
+      textOverlays: s.textOverlays.map((o) =>
+        o.id === selectedOverlayId ? { ...o, ...patch } : o
+      ),
+    }));
+  };
+
+  const deleteSelectedOverlay = (id: string) => {
+    updateActiveSlide((s) => ({
+      ...s,
+      textOverlays: s.textOverlays.filter((o) => o.id !== id),
+    }));
+    if (selectedOverlayId === id) setSelectedOverlayId(null);
+  };
+
+  // Touch & Mouse Drag-to-Position on 9:16 Story Canvas
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingOverlayId || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const xPct = Math.max(10, Math.min(90, ((e.clientX - rect.left) / rect.width) * 100));
+    const yPct = Math.max(14, Math.min(78, ((e.clientY - rect.top) / rect.height) * 100));
+    updateActiveSlide((s) => ({
+      ...s,
+      textOverlays: s.textOverlays.map((o) =>
+        o.id === draggingOverlayId ? { ...o, x: Math.round(xPct), y: Math.round(yPct) } : o
+      ),
+    }));
+  };
+
+  const handlePublishAll = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mediaPreview) return;
+    if (slides.length === 0) return;
+
     setErrorMsg('');
     setRequiresPlus(false);
     setIsPublishing(true);
 
-    const taggedProd = allProducts.find((p) => p.id === selectedProductId);
-
     try {
+      const payloadSlides = slides.map((s) => {
+        const taggedProd = allProducts.find((p) => p.id === s.taggedProductId);
+        return {
+          mediaUrl: s.mediaUrl,
+          mediaPublicId: s.mediaPublicId,
+          mediaType: s.mediaType,
+          durationSec: s.durationSec,
+          caption: s.caption.trim(),
+          textOverlays: s.textOverlays.filter((o) => o.text.trim().length > 0),
+          taggedProductId: taggedProd?.id,
+          taggedProductName: taggedProd?.name,
+          taggedProductPrice: taggedProd?.price,
+          taggedProductImage: taggedProd?.imageUrl,
+        };
+      });
+
       const res = await fetch('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,14 +309,8 @@ export default function VendorStoriesPage() {
           vendorId: vendorProfile.id || vendorLookupKey,
           vendorEmail: vendorProfile.email,
           vendorName: vendorProfile.brandName || 'Verified Brand',
-          vendorAvatar: vendorProfile.logoUrl || mediaPreview,
-          mediaUrl: mediaPreview,
-          mediaType,
-          caption: caption.trim() || `New drop from ${vendorProfile.brandName}`,
-          taggedProductId: taggedProd?.id,
-          taggedProductName: taggedProd?.name,
-          taggedProductPrice: taggedProd?.price,
-          taggedProductImage: taggedProd?.imageUrl,
+          vendorAvatar: vendorProfile.logoUrl || slides[0].mediaUrl,
+          slides: payloadSlides,
           notifyFollowers,
         }),
       });
@@ -117,18 +322,21 @@ export default function VendorStoriesPage() {
         return;
       }
 
-      if (data.story) {
-        addVendorStory(data.story);
-        setActiveStories((prev) => [data.story, ...prev]);
-      }
+      const created: VendorStory[] = Array.isArray(data.stories)
+        ? data.stories
+        : data.story
+        ? [data.story]
+        : [];
+      setPublishedCount(created.length);
       setFollowersNotified(Number(data.followersNotified || 0));
+      setActiveStories((prev) => [...created.reverse(), ...prev]);
       setIsSuccess(true);
 
       confetti({
-        particleCount: 70,
-        spread: 65,
+        particleCount: 60,
+        spread: 60,
         origin: { y: 0.6 },
-        colors: ['#e6c367', '#ffffff', '#10b981'],
+        colors: ['#E6C367', '#ffffff', '#10b981'],
       });
     } catch (err: any) {
       setErrorMsg(err?.message || 'Network error while publishing story.');
@@ -149,27 +357,63 @@ export default function VendorStoriesPage() {
     }
   };
 
-  const resetForm = () => {
-    setMediaPreview(null);
-    setMediaType('image');
-    setCaption('');
-    setSelectedProductId('');
+  const resetComposer = () => {
+    setSlides([]);
+    setActiveSlideIdx(0);
+    setSelectedOverlayId(null);
     setIsSuccess(false);
     setErrorMsg('');
   };
 
+  const renderOverlayClasses = (ov: StoryTextOverlay) => {
+    const fontClass =
+      ov.fontStyle === 'editorial'
+        ? 'font-editorial italic'
+        : ov.fontStyle === 'mono'
+        ? 'font-mono-luxury uppercase tracking-wider'
+        : 'font-sans font-medium';
+    const sizeClass =
+      ov.size === 'lg' ? 'text-xl sm:text-2xl' : ov.size === 'sm' ? 'text-xs' : 'text-base';
+    const bgClass =
+      ov.bgStyle === 'light'
+        ? 'bg-white/95 shadow-md px-3 py-1 rounded-xl'
+        : ov.bgStyle === 'gold'
+        ? 'bg-[#E6C367] shadow-md px-3 py-1 rounded-xl'
+        : ov.bgStyle === 'dark'
+        ? 'bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/15'
+        : 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] px-1.5';
+
+    return `${fontClass} ${sizeClass} ${bgClass}`;
+  };
+
+  const taggedPreviewProduct = activeSlide?.taggedProductId
+    ? allProducts.find((p) => p.id === activeSlide.taggedProductId)
+    : null;
+
   return (
-    <div className="px-0.5 sm:px-6 md:p-8 max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fadeIn pb-8 md:pb-24">
-      <div className="md:border-b md:border-[var(--border-subtle)] md:pb-6">
-        <span className="hidden md:inline-flex items-center gap-2 text-xs font-mono-luxury uppercase tracking-widest text-[var(--gold-accent)]">
-          Live Brand Stories · 48h Feed
-        </span>
-        <h1 className="font-editorial text-[26px] sm:text-4xl font-normal text-[var(--text-primary)] leading-tight md:mt-1">
-          Lookbook Stories
-        </h1>
-        <p className="text-xs text-[var(--text-muted)] font-light mt-0.5">
-          Post a 48h photo or clip &amp; alert your followers automatically.
-        </p>
+    <div className="px-0.5 sm:px-6 md:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-fadeIn pb-10 md:pb-24">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 md:border-b md:border-[var(--border-subtle)] md:pb-5">
+        <div>
+          <span className="hidden md:inline-flex items-center gap-2 text-[11px] font-mono-luxury uppercase tracking-[0.2em] text-[var(--gold-accent)]">
+            24-Hour Story Studio · Auto-Clears Storage
+          </span>
+          <h1 className="font-editorial text-[26px] sm:text-4xl font-normal text-[var(--text-primary)] leading-tight md:mt-1">
+            Lookbook Stories
+          </h1>
+          <p className="text-xs text-[var(--text-muted)] font-light mt-0.5">
+            Upload up to {MAX_SLIDES} photos or clips (max {MAX_VIDEO_SECONDS}s), add text overlays, tag pieces &amp; track live views/reactions. Expires in 24h.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={loadMyStories}
+          className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center active:scale-95 cursor-pointer shrink-0"
+          aria-label="Refresh stories"
+        >
+          <RefreshCw className={`h-4 w-4 ${loadingStories ? 'animate-spin text-[var(--gold-accent)]' : ''}`} />
+        </button>
       </div>
 
       {errorMsg && (
@@ -187,204 +431,629 @@ export default function VendorStoriesPage() {
         </div>
       )}
 
+      {/* Hidden Multi-File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,video/mp4,video/quicktime,video/webm"
+        multiple
+        onChange={handleFilesSelected}
+        className="hidden"
+      />
+
       {isSuccess ? (
-        <div className="p-8 rounded-3xl surface-card border border-emerald-500/30 text-center space-y-5">
+        <div className="p-8 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center space-y-5">
           <div className="h-14 w-14 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto">
             <CheckCircle2 className="h-7 w-7" />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <h2 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
-              Story Published Live
+              {publishedCount > 1 ? `${publishedCount} Story Slides Live` : 'Story Published Live'}
             </h2>
-            <p className="text-xs text-[var(--text-secondary)] font-light">
-              Your story is now live on the discovery feed and your brand storefront for 48 hours
-              {followersNotified > 0 ? ` — ${followersNotified} follower${followersNotified > 1 ? 's' : ''} alerted.` : '.'}
+            <p className="text-xs text-[var(--text-secondary)] font-light max-w-md mx-auto">
+              Live on the Shop story rail for 24 hours (auto-deletes from storage once expired). Followers have been alerted in-app
+              {followersNotified > 0 ? ` and ${followersNotified} email follower${followersNotified > 1 ? 's' : ''} notified.` : '.'}
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
             <button
               type="button"
-              onClick={resetForm}
+              onClick={resetComposer}
               className="px-6 py-3 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider cursor-pointer"
             >
-              Post Another Story
+              Create Another Story
             </button>
             <Link
-              href="/"
+              href="/shop"
               className="px-6 py-3 rounded-full border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)] inline-flex items-center gap-1.5"
             >
-              <span>View Feed</span>
+              <span>View on Shop</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       ) : (
-        <form onSubmit={handlePublishStory} className="space-y-6">
-          <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
-                1. Story Photo or Short Clip <span className="text-rose-500">*</span>
-              </h3>
-              <span className="text-[11px] font-mono-luxury text-[var(--text-muted)]">Portrait Photo or ≤15s Video</span>
-            </div>
-
-            <div
+        <form onSubmit={handlePublishAll} className="space-y-6">
+          {/* Empty Upload Dropzone OR Interactive 9:16 Studio Editor */}
+          {slides.length === 0 ? (
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-[var(--border-subtle)] hover:border-[var(--gold-accent)] transition-all rounded-3xl p-8 text-center cursor-pointer bg-[var(--bg-primary)]/50 group"
+              disabled={isUploading}
+              className="w-full py-14 px-6 rounded-3xl bg-[var(--bg-surface)] border-2 border-dashed border-[var(--border-subtle)] hover:border-[var(--gold-accent)] transition-all flex flex-col items-center justify-center text-center gap-3 cursor-pointer"
             >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*,video/mp4,video/quicktime,video/webm"
-                className="hidden"
-              />
-
               {isUploading ? (
-                <div className="py-10 flex flex-col items-center gap-3">
-                  <Loader2 className="h-7 w-7 animate-spin text-[var(--gold-accent)]" />
-                  <span className="text-xs font-mono-luxury text-[var(--text-secondary)]">Uploading story media...</span>
-                </div>
-              ) : mediaPreview ? (
-                <div className="space-y-4">
-                  <div className="relative h-72 max-w-xs mx-auto rounded-2xl overflow-hidden shadow-xl border border-[var(--border-subtle)] bg-black">
-                    {mediaType === 'video' ? (
-                      <video src={mediaPreview} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                    ) : (
-                      <Image src={mediaPreview} alt="Story preview" fill unoptimized className="object-cover" />
-                    )}
-                  </div>
-                  <p className="text-xs font-mono-luxury text-[var(--gold-accent)]">
-                    Click to replace media
-                  </p>
-                </div>
+                <>
+                  <Loader2 className="h-9 w-9 text-[var(--gold-accent)] animate-spin" />
+                  <span className="text-xs font-mono-luxury text-[var(--gold-accent)]">
+                    {uploadProgressText || 'Uploading to Cloudinary...'}
+                  </span>
+                </>
               ) : (
-                <div className="space-y-3 py-6">
-                  <div className="h-14 w-14 rounded-2xl bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
-                    <UploadCloud className="h-7 w-7" />
+                <>
+                  <div className="h-14 w-14 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-primary)]">
+                    <UploadCloud className="h-6 w-6" strokeWidth={1.6} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-mono-luxury text-[var(--text-primary)]">
-                      Upload Lookbook Photo or Video
-                    </p>
-                    <p className="text-[11px] text-[var(--text-secondary)] font-light">
-                      New drop preview, studio fitting, or fresh stock update
+                    <div className="font-editorial text-2xl text-[var(--text-primary)]">
+                      Tap to Select Photos or Videos
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)] font-light max-w-sm">
+                      Pick 1 to {MAX_SLIDES} vertical photos or clips (up to {MAX_VIDEO_SECONDS}s per video). You can add text overlays and tag products on every slide.
                     </p>
                   </div>
-                </div>
+                  <span className="mt-1 px-5 py-2 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury uppercase tracking-wider">
+                    Choose Media
+                  </span>
+                </>
               )}
-            </div>
-          </div>
-
-          <div className="p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-5">
-            <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
-              2. Caption, Product Tag &amp; Follower Alert
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1.5">
-                  Story Caption / Drop Teaser
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="e.g. Fresh studio drop just went live — limited pieces available."
-                  className="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1.5 flex items-center gap-1.5">
-                  <Tag className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                  <span>Tag a Published Piece for 1-Tap Quick Buy</span>
-                </label>
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="w-full p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+            </button>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* LEFT: Live 9:16 Instagram Preview Canvas + Slide Filmstrip */}
+              <div className="lg:col-span-5 space-y-3 flex flex-col items-center">
+                {/* 9:16 Interactive Canvas */}
+                <div
+                  ref={canvasRef}
+                  onPointerMove={handleCanvasPointerMove}
+                  onPointerUp={() => setDraggingOverlayId(null)}
+                  onPointerLeave={() => setDraggingOverlayId(null)}
+                  onClick={() => setSelectedOverlayId(null)}
+                  className="relative w-full max-w-[300px] aspect-[9/16] rounded-[28px] overflow-hidden bg-black border border-[var(--border-subtle)] shadow-2xl touch-none select-none"
                 >
-                  <option value="">-- Select a piece to tag (Optional) --</option>
-                  {(vendorProducts.length > 0 ? vendorProducts : allProducts).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} (₦{Number(p.price || 0).toLocaleString()})
-                    </option>
+                  {/* Slide Progress Preview Bar */}
+                  <div className="absolute top-3 inset-x-3 z-20 flex items-center gap-1 pointer-events-none">
+                    {slides.map((s, idx) => (
+                      <div key={s.id} className="h-[2.5px] flex-1 rounded-full bg-white/30 overflow-hidden">
+                        <div className={`h-full bg-white ${idx <= activeSlideIdx ? 'w-full' : 'w-0'}`} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Active Slide Media */}
+                  {activeSlide?.mediaType === 'video' ? (
+                    <video
+                      key={activeSlide.mediaUrl}
+                      src={activeSlide.mediaUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    activeSlide && (
+                      <Image
+                        src={activeSlide.mediaUrl}
+                        alt="Story slide preview"
+                        fill
+                        unoptimized
+                        className="object-cover"
+                      />
+                    )
+                  )}
+
+                  {/* Draggable Text Overlays */}
+                  {activeSlide?.textOverlays.map((ov) => {
+                    const isSelected = ov.id === selectedOverlayId;
+                    return (
+                      <div
+                        key={ov.id}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setSelectedOverlayId(ov.id);
+                          setDraggingOverlayId(ov.id);
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedOverlayId(ov.id);
+                        }}
+                        style={{
+                          left: `${ov.x}%`,
+                          top: `${ov.y}%`,
+                          transform: 'translate(-50%, -50%)',
+                          color: ov.color,
+                        }}
+                        className={`absolute z-30 max-w-[84%] text-center leading-snug cursor-grab active:cursor-grabbing ${renderOverlayClasses(
+                          ov
+                        )} ${isSelected ? 'ring-2 ring-[#E6C367] ring-offset-2 ring-offset-black/40' : ''}`}
+                      >
+                        {ov.text || 'Type text...'}
+                      </div>
+                    );
+                  })}
+
+                  {/* Live Tagged Product Sticker Preview */}
+                  {taggedPreviewProduct && (
+                    <div className="absolute bottom-4 inset-x-3 z-20 p-2 rounded-2xl bg-black/60 backdrop-blur-md border border-white/20 flex items-center gap-2 pointer-events-none">
+                      <div className="relative h-8 w-8 rounded-lg overflow-hidden shrink-0">
+                        <Image
+                          src={taggedPreviewProduct.imageUrl || '/images/no-product.svg'}
+                          alt=""
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] text-white truncate">{taggedPreviewProduct.name}</div>
+                        <div className="text-[9px] text-[#E6C367] font-mono-luxury">
+                          ₦{Number(taggedPreviewProduct.price || 0).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Floating Quick Add Text Pill */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddTextOverlay();
+                    }}
+                    className="absolute top-7 right-3 z-30 px-3 py-1.5 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white text-[11px] font-mono-luxury inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                  >
+                    <Type className="h-3.5 w-3.5 text-[#E6C367]" />
+                    <span>+ Text</span>
+                  </button>
+                </div>
+
+                {/* Multi-Slide Filmstrip Queue */}
+                <div className="w-full max-w-[300px] flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                  {slides.map((s, idx) => (
+                    <div
+                      key={s.id}
+                      onClick={() => {
+                        setActiveSlideIdx(idx);
+                        setSelectedOverlayId(null);
+                      }}
+                      className={`relative h-14 w-11 rounded-xl overflow-hidden border-2 shrink-0 cursor-pointer bg-zinc-900 ${
+                        idx === activeSlideIdx
+                          ? 'border-[var(--gold-accent)]'
+                          : 'border-[var(--border-subtle)] opacity-70'
+                      }`}
+                    >
+                      {s.mediaType === 'video' ? (
+                        <video src={s.mediaUrl} muted playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <Image src={s.mediaUrl} alt="" fill unoptimized className="object-cover" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveSlide(idx);
+                        }}
+                        className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-black/80 text-white flex items-center justify-center cursor-pointer"
+                        aria-label="Remove slide"
+                      >
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
                   ))}
-                </select>
+
+                  {slides.length < MAX_SLIDES && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="h-14 w-11 rounded-xl border border-dashed border-[var(--border-hover)] hover:border-[var(--gold-accent)] flex flex-col items-center justify-center gap-0.5 text-[var(--text-muted)] hover:text-[var(--gold-accent)] shrink-0 cursor-pointer"
+                      title="Add another slide"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" />
+                          <span className="text-[8px] font-mono-luxury">Add</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <label className="flex items-center gap-2.5 text-xs text-[var(--text-secondary)] cursor-pointer select-none pt-1">
-                <input
-                  type="checkbox"
-                  checked={notifyFollowers}
-                  onChange={(e) => setNotifyFollowers(e.target.checked)}
-                  className="rounded border-[var(--border-subtle)] accent-[var(--gold-accent)]"
-                />
-                <Users className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
-                <span>Notify shoppers following my brand about this new drop</span>
-              </label>
-            </div>
-          </div>
+              {/* RIGHT: Text Overlay Controls + Caption + Tag Product + Publish */}
+              <div className="lg:col-span-7 space-y-4">
+                {/* Text Overlay Studio Panel */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Type className="h-4 w-4 text-[var(--gold-accent)]" />
+                      <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-primary)]">
+                        Text On Slide {activeSlideIdx + 1}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddTextOverlay}
+                      className="px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[11px] font-mono-luxury text-[var(--text-primary)] inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="h-3 w-3 text-[var(--gold-accent)]" />
+                      <span>Add Text</span>
+                    </button>
+                  </div>
 
-          <button
-            type="submit"
-            disabled={!mediaPreview || isPublishing || isUploading}
-            className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs tracking-wider hover:opacity-90 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            <span>{isPublishing ? 'Publishing Story...' : 'Publish Live Story (48h)'}</span>
-          </button>
+                  {activeSlide && activeSlide.textOverlays.length > 0 ? (
+                    <div className="space-y-3">
+                      {/* Selectable Text Layers */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeSlide.textOverlays.map((ov, i) => (
+                          <div
+                            key={ov.id}
+                            onClick={() => setSelectedOverlayId(ov.id)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border cursor-pointer ${
+                              ov.id === selectedOverlayId
+                                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-[var(--text-primary)]'
+                                : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                            }`}
+                          >
+                            <span className="max-w-[120px] truncate">{ov.text || `Text ${i + 1}`}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteSelectedOverlay(ov.id);
+                              }}
+                              className="opacity-70 hover:opacity-100 cursor-pointer"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {activeOverlay && (
+                        <div className="p-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-3">
+                          <input
+                            type="text"
+                            maxLength={140}
+                            value={activeOverlay.text}
+                            onChange={(e) => updateSelectedOverlay({ text: e.target.value })}
+                            placeholder="Write overlay text..."
+                            className="w-full h-10 px-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                          />
+
+                          {/* Font & Size Row */}
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="inline-flex gap-1">
+                              {(
+                                [
+                                  { id: 'editorial', label: 'Editorial' },
+                                  { id: 'sans', label: 'Modern' },
+                                  { id: 'mono', label: 'Caps' },
+                                ] as const
+                              ).map((f) => (
+                                <button
+                                  key={f.id}
+                                  type="button"
+                                  onClick={() => updateSelectedOverlay({ fontStyle: f.id })}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono-luxury cursor-pointer ${
+                                    activeOverlay.fontStyle === f.id
+                                      ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
+                                      : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)]'
+                                  }`}
+                                >
+                                  {f.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            <div className="inline-flex gap-1">
+                              {(['sm', 'md', 'lg'] as const).map((sz) => (
+                                <button
+                                  key={sz}
+                                  type="button"
+                                  onClick={() => updateSelectedOverlay({ size: sz })}
+                                  className={`w-7 h-7 rounded-lg text-[10px] font-mono-luxury uppercase cursor-pointer ${
+                                    activeOverlay.size === sz
+                                      ? 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
+                                      : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)]'
+                                  }`}
+                                >
+                                  {sz}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Color + Pill Background + Quick Position */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                            <div className="flex items-center gap-1.5">
+                              {TEXT_COLORS.map((c) => (
+                                <button
+                                  key={c.hex}
+                                  type="button"
+                                  onClick={() => updateSelectedOverlay({ color: c.hex })}
+                                  style={{ backgroundColor: c.hex }}
+                                  className={`h-6 w-6 rounded-full border cursor-pointer ${
+                                    activeOverlay.color === c.hex
+                                      ? 'ring-2 ring-[var(--gold-accent)] ring-offset-2 ring-offset-[var(--bg-primary)]'
+                                      : 'border-black/20 dark:border-white/30'
+                                  }`}
+                                  title={c.label}
+                                />
+                              ))}
+                            </div>
+
+                            <div className="inline-flex gap-1">
+                              {(['none', 'dark', 'light', 'gold'] as const).map((bg) => (
+                                <button
+                                  key={bg}
+                                  type="button"
+                                  onClick={() => updateSelectedOverlay({ bgStyle: bg })}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-mono-luxury capitalize cursor-pointer ${
+                                    activeOverlay.bgStyle === bg
+                                      ? 'bg-[var(--gold-accent)] text-black'
+                                      : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)]'
+                                  }`}
+                                >
+                                  {bg}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 text-[10px] font-mono-luxury text-[var(--text-muted)] pt-1 border-t border-[var(--border-subtle)]">
+                            <span className="inline-flex items-center gap-1">
+                              <Move className="h-3 w-3" /> Drag on preview or snap:
+                            </span>
+                            <div className="inline-flex gap-1">
+                              {[
+                                { label: 'Top', y: 24 },
+                                { label: 'Center', y: 50 },
+                                { label: 'Bottom', y: 72 },
+                              ].map((pos) => (
+                                <button
+                                  key={pos.label}
+                                  type="button"
+                                  onClick={() => updateSelectedOverlay({ x: 50, y: pos.y })}
+                                  className="px-2 py-0.5 rounded bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] cursor-pointer"
+                                >
+                                  {pos.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--text-muted)] font-light">
+                      Tap <strong>+ Add Text</strong> to place captions, prices, or drop announcements right on top of this slide.
+                    </p>
+                  )}
+                </div>
+
+                {/* Slide Caption & Product Tag */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-4">
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] block mb-1.5">
+                      Slide {activeSlideIdx + 1} Bottom Caption (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={180}
+                      value={activeSlide?.caption || ''}
+                      onChange={(e) => updateActiveSlide((s) => ({ ...s, caption: e.target.value }))}
+                      placeholder="e.g. Limited restock now available in sizes S–XXL"
+                      className="w-full h-11 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-1.5">
+                      <Tag className="h-3 w-3 text-[var(--gold-accent)]" />
+                      <span>Tag a Piece on Slide {activeSlideIdx + 1} (Optional)</span>
+                    </label>
+                    <select
+                      value={activeSlide?.taggedProductId || ''}
+                      onChange={(e) => updateActiveSlide((s) => ({ ...s, taggedProductId: e.target.value }))}
+                      className="w-full h-11 px-3.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                    >
+                      <option value="">No product tagged</option>
+                      {vendorProducts.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — ₦{Number(p.price).toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <label className="flex items-center gap-2.5 text-xs text-[var(--text-secondary)] cursor-pointer select-none pt-1">
+                    <input
+                      type="checkbox"
+                      checked={notifyFollowers}
+                      onChange={(e) => setNotifyFollowers(e.target.checked)}
+                      className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
+                    />
+                    <Users className="h-3.5 w-3.5 text-[var(--gold-accent)] shrink-0" />
+                    <span>Notify all followers immediately in-app &amp; by email</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isPublishing || isUploading || slides.length === 0}
+                    className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                  >
+                    {isPublishing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Publishing {slides.length} Slide{slides.length > 1 ? 's' : ''}...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 text-[var(--gold-accent)]" />
+                        <span>
+                          Publish {slides.length > 1 ? `All ${slides.length} Slides` : 'Story'} (24h Live)
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       )}
 
-      {/* Active Stories Manager */}
-      {activeStories.length > 0 && (
-        <div className="space-y-4 pt-4 border-t border-[var(--border-subtle)]">
-          <div className="flex items-center justify-between">
+      {/* ACTIVE 24H STORIES + LIVE VIEWS & REACTIONS INSIGHTS */}
+      <section className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
             <h2 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
-              Your Active Stories ({activeStories.length})
+              Live Stories &amp; Insights ({activeStories.length})
             </h2>
-            <span className="text-[11px] font-mono-luxury text-[var(--text-muted)] flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Auto-expires after 48h</span>
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {activeStories.map((story) => (
-              <div key={story.id} className="rounded-2xl overflow-hidden surface-card border border-[var(--border-subtle)] flex flex-col">
-                <div className="relative aspect-[3/4] bg-black">
-                  {story.mediaType === 'video' ? (
-                    <video src={story.mediaUrl} muted playsInline className="w-full h-full object-cover" />
-                  ) : (
-                    <Image src={story.mediaUrl} alt={story.caption} fill unoptimized className="object-cover" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteStory(story.id)}
-                    disabled={deletingId === story.id}
-                    className="absolute top-2 right-2 p-2 rounded-full bg-black/60 text-white hover:bg-rose-600 transition-colors cursor-pointer"
-                    aria-label="Delete story"
-                  >
-                    {deletingId === story.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
-                <div className="p-3 space-y-1">
-                  <p className="text-xs text-[var(--text-primary)] line-clamp-2 font-light">{story.caption}</p>
-                  {story.taggedProductName && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-mono-luxury text-[var(--gold-accent)] truncate max-w-full">
-                      <ShoppingBag className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{story.taggedProductName}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+            <p className="text-[11px] text-[var(--text-muted)] font-light">
+              Auto-deletes from Shop &amp; Cloudinary storage after 24 hours
+            </p>
           </div>
         </div>
-      )}
+
+        {activeStories.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center text-xs text-[var(--text-muted)] font-light">
+            No active stories right now. Publish a photo or clip above to appear on Shop for 24 hours.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {activeStories.map((st) => {
+              const reactionEntries = Object.entries(st.reactions || {}).filter(([, c]) => Number(c) > 0);
+              const isExpanded = expandedInsightsId === st.id;
+
+              return (
+                <div
+                  key={st.id}
+                  className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden"
+                >
+                  <div className="p-3.5 flex items-center gap-3.5">
+                    <div className="relative h-20 w-14 rounded-xl overflow-hidden bg-black shrink-0 border border-[var(--border-subtle)]">
+                      {st.mediaType === 'video' ? (
+                        <video src={st.mediaUrl} muted playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <Image src={st.mediaUrl} alt={st.caption || ''} fill unoptimized className="object-cover" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <p className="text-xs font-medium text-[var(--text-primary)] line-clamp-1">
+                        {st.caption || st.textOverlays?.[0]?.text || 'Lookbook Story'}
+                      </p>
+
+                      {/* Live Views & Reactions Counters */}
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono-luxury">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
+                          <Eye className="h-3 w-3 text-[var(--gold-accent)]" />
+                          <span>{st.viewCount || 0}</span>
+                        </span>
+
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)]">
+                          <Heart className="h-3 w-3 text-rose-500" />
+                          <span>{st.totalReactions || 0}</span>
+                        </span>
+
+                        <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatTimeRemaining(st.expiresAt)}</span>
+                        </span>
+                      </div>
+
+                      {/* Emoji Breakdown Pills */}
+                      {reactionEntries.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {reactionEntries.map(([emoji, count]) => (
+                            <span
+                              key={emoji}
+                              className="px-2 py-0.5 rounded-full bg-[var(--gold-subtle)] text-[11px] font-mono-luxury text-[var(--text-primary)]"
+                            >
+                              {emoji} {count}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteStory(st.id)}
+                      disabled={deletingId === st.id}
+                      className="h-8 w-8 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-rose-500/40 text-[var(--text-muted)] hover:text-rose-500 flex items-center justify-center shrink-0 cursor-pointer"
+                      title="Delete story from Shop & Cloudinary"
+                    >
+                      {deletingId === st.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Expandable Viewers & Reactions Drawer */}
+                  <div className="border-t border-[var(--border-subtle)] px-3.5 py-2 bg-[var(--bg-primary)]/40">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedInsightsId(isExpanded ? null : st.id)}
+                      className="w-full flex items-center justify-between text-[11px] font-mono-luxury text-[var(--text-secondary)] cursor-pointer"
+                    >
+                      <span>
+                        Viewers &amp; Reactions ({st.recentInteractions?.length || 0})
+                      </span>
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="pt-2.5 space-y-1.5 max-h-40 overflow-y-auto">
+                        {!st.recentInteractions || st.recentInteractions.length === 0 ? (
+                          <p className="text-[11px] text-[var(--text-muted)] font-light py-1">
+                            No shopper views or reactions yet — share your store link to drive traffic!
+                          </p>
+                        ) : (
+                          st.recentInteractions.map((inter, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between text-xs py-1 border-t border-[var(--border-subtle)]/50 first:border-0"
+                            >
+                              <span className="text-[var(--text-primary)] truncate">{inter.viewerName}</span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {inter.emoji && <span className="text-sm">{inter.emoji}</span>}
+                                <span className="text-[10px] font-mono-luxury text-[var(--text-muted)]">
+                                  {new Date(inter.viewedAt).toLocaleTimeString('en-US', {
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

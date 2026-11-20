@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendLuxuryEmail } from '@/lib/services/vendorNotificationService';
+import { buildIrisiEmailShell, buildDetailPanel } from '@/lib/services/emailTheme';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   try {
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
       (cleanedSocialLinks.find((s) => s.platform === 'instagram')?.handle || '').replace('@', '').trim() ||
       (cleanedSocialLinks[0]?.handle || '').replace('@', '').trim();
 
-    const effectiveCountry = (country || 'Nigeria').trim();
+    const effectiveCountry = (country || '').trim();
 
     const applicationData = {
       brandName: brandName.trim(),
@@ -65,12 +68,14 @@ export async function POST(request: Request) {
       country: effectiveCountry,
       state: (state || '').trim(),
       city: (city || '').trim(),
-      location: [city, state, effectiveCountry].filter(Boolean).join(', ') || 'Nigeria',
+      location: [city, state, effectiveCountry].filter(Boolean).join(', ') || 'Location provided on review',
       lookbookUrl: (lookbookUrl || '').trim(),
       stockModel: stockModel || 'in_stock',
       activePostUrl: (activePostUrl || '').trim(),
       workshopAddress: (workshopAddress || '').trim(),
-      sampleMedia: Array.isArray(sampleMedia) ? sampleMedia.filter((u: any) => typeof u === 'string' && u.startsWith('http')) : [],
+      sampleMedia: Array.isArray(sampleMedia)
+        ? sampleMedia.filter((u: any) => typeof u === 'string' && u.startsWith('http'))
+        : [],
       submittedAt: new Date().toISOString(),
     };
 
@@ -132,78 +137,119 @@ export async function POST(request: Request) {
       return map[platform] || platform.toUpperCase();
     };
 
-    const igLink = applicationData.instagramHandle
-      ? `https://instagram.com/${applicationData.instagramHandle}`
-      : null;
+    const stockModelLabel =
+      applicationData.stockModel === 'in_stock'
+        ? 'Physical Stock Ready to Ship'
+        : applicationData.stockModel === 'pre_order'
+        ? 'Made to Order / Craft-on-Order'
+        : 'Curated / Sourcing';
 
-    const founderHtml = `
-      <div style="background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 36px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
+    const socialsHtml =
+      cleanedSocialLinks.length > 0
+        ? cleanedSocialLinks
+            .map(
+              (s) =>
+                `<div style="margin-bottom:3px;"><span style="color:#9E7724; font-weight:600;">${getPlatformLabel(
+                  s.platform
+                )}:</span> <a href="${formatSocialUrl(
+                  s.platform,
+                  s.handle
+                )}" style="color:#2563EB; text-decoration:underline;">${s.handle}</a></div>`
+            )
+            .join('')
+        : applicationData.instagramHandle
+        ? `<a href="https://instagram.com/${applicationData.instagramHandle}" style="color:#2563EB; text-decoration:underline;">@${applicationData.instagramHandle}</a>`
+        : 'Not provided';
+
+    const detailRows: Array<{ label: string; value: string; highlight?: string }> = [
+      { label: 'Brand / Store', value: applicationData.brandName },
+      { label: 'Specialty', value: applicationData.specialty, highlight: '#9E7724' },
+      { label: 'Location', value: applicationData.location },
+      {
+        label: 'WhatsApp',
+        value: `<a href="${waLink}" style="color:#059669; text-decoration:underline;">${applicationData.founderPhone}</a>`,
+      },
+      { label: 'Email', value: applicationData.founderEmail },
+      { label: 'Stock Model', value: stockModelLabel },
+      { label: 'Social Channels', value: socialsHtml },
+    ];
+
+    if (applicationData.workshopAddress) {
+      detailRows.push({ label: 'Studio / Workshop', value: applicationData.workshopAddress });
+    }
+    if (applicationData.activePostUrl) {
+      detailRows.push({
+        label: 'Featured Video / Post',
+        value: `<a href="${applicationData.activePostUrl}" style="color:#2563EB; text-decoration:underline;">Open Link &rarr;</a>`,
+      });
+    }
+    if (applicationData.lookbookUrl) {
+      detailRows.push({
+        label: 'Lookbook / Catalog',
+        value: `<a href="${applicationData.lookbookUrl}" style="color:#9E7724; text-decoration:underline;">View Catalog &rarr;</a>`,
+      });
+    }
+
+    const mediaGalleryHtml =
+      applicationData.sampleMedia.length > 0
+        ? `
+          <div style="margin:16px 0 8px;">
+            <div class="irisi-muted" style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:#71717A; font-weight:600; margin-bottom:10px;">
+              Submitted Sample Pieces (${applicationData.sampleMedia.length})
+            </div>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                ${applicationData.sampleMedia
+                  .slice(0, 4)
+                  .map(
+                    (m: string) =>
+                      `<td style="padding-right:8px;"><a href="${m}"><img src="${m}" width="84" height="84" style="display:block; width:84px; height:84px; object-fit:cover; border-radius:10px; border:1px solid #E4E4E7;" /></a></td>`
+                  )
+                  .join('')}
+              </tr>
+            </table>
+          </div>`
+        : '';
+
+    const founderHtml = buildIrisiEmailShell({
+      title: `New Brand Application: ${applicationData.brandName}`,
+      eyebrow: 'FOUNDER & CURATION BOARD ALERT',
+      preheader: `${applicationData.brandName} (${applicationData.specialty}) just applied to join ÌRÍSÍ.`,
+      badge: 'New Founding Brand Applicant',
+      badgeTone: 'gold',
+      headline: applicationData.brandName,
+      bodyHtml: `
+        <p class="irisi-text" style="color:#3F3F46; font-size:14px; line-height:1.65; margin:0 0 12px;">
+          A new independent fashion brand just submitted an application to sell on ÌRÍSÍ. Review their portfolio details below or message the founder directly on WhatsApp.
+        </p>
+        ${buildDetailPanel(detailRows)}
+        ${mediaGalleryHtml}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
           <tr>
-            <td align="center" style="padding: 32px 24px 20px; border-bottom: 1px solid #f1f5f9; background: #ffffff;">
-              <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 14px; border: 1px solid #e2e8f0;" />
-              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #111827; letter-spacing: -0.5px;">ÌRÍSÍ</h1>
-              <p style="margin: 4px 0 0; font-size: 10px; color: #b89035; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Founder &amp; Curation Board Alert</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 28px 32px; background-color: #ffffff;">
-              <h2 style="color: #111827; margin: 0 0 16px; font-size: 19px; font-weight: 700;">✨ New Brand Application: ${applicationData.brandName}</h2>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; font-size: 13.5px; line-height: 1.8; color: #1f2937;">
-                <p style="margin: 0 0 8px;"><strong>Brand / Store:</strong> <span style="color: #111827; font-size: 15px; font-weight: 700;">${applicationData.brandName}</span></p>
-                <p style="margin: 0 0 8px;"><strong>Department:</strong> <span style="color: #b89035; font-weight: 600;">${applicationData.specialty}</span></p>
-                <p style="margin: 0 0 8px;"><strong>Location:</strong> ${applicationData.location}</p>
-                <p style="margin: 0 0 8px;"><strong>WhatsApp:</strong> <a href="${waLink}" style="color: #16a34a; font-weight: bold;">${applicationData.founderPhone} (Tap to Chat)</a></p>
-                <p style="margin: 0 0 8px;"><strong>Email:</strong> ${applicationData.founderEmail}</p>
-                ${
-                  cleanedSocialLinks.length > 0
-                    ? `<div style="margin: 0 0 8px;"><strong>Social Media Channels:</strong>
-                        <ul style="margin: 4px 0 0; padding-left: 18px;">
-                          ${cleanedSocialLinks
-                            .map(
-                              (s) =>
-                                `<li style="margin-bottom: 3px;">
-                                  <span style="color: #b89035; font-weight: 600;">${getPlatformLabel(s.platform)}:</span>
-                                  <a href="${formatSocialUrl(s.platform, s.handle)}" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline; margin-left: 4px;">${s.handle}</a>
-                                </li>`
-                            )
-                            .join('')}
-                        </ul>
-                      </div>`
-                    : igLink
-                    ? `<p style="margin: 0 0 8px;"><strong>Instagram:</strong> <a href="${igLink}" style="color: #0284c7;">@${applicationData.instagramHandle}</a></p>`
-                    : ''
-                }
-                <p style="margin: 0 0 8px;"><strong>Stock Model:</strong> <span style="color: ${applicationData.stockModel === 'in_stock' ? '#16a34a' : applicationData.stockModel === 'pre_order' ? '#d97706' : '#db2777'}; font-weight: 700;">${applicationData.stockModel === 'in_stock' ? '📦 Physical Stock on Ground' : applicationData.stockModel === 'pre_order' ? '✂️ Made to Order / Pre-Order' : '🤝 Sourcing / Middleman'}</span></p>
-                ${applicationData.workshopAddress ? `<p style="margin: 0 0 8px;"><strong>Workshop / Store Address:</strong> ${applicationData.workshopAddress}</p>` : ''}
-                ${applicationData.activePostUrl ? `<p style="margin: 0 0 8px;"><strong>Active Product Video / Post:</strong> <a href="${applicationData.activePostUrl}" target="_blank" style="color: #0284c7; text-decoration: underline;">${applicationData.activePostUrl}</a></p>` : ''}
-                ${applicationData.sampleMedia && applicationData.sampleMedia.length > 0 ? `
-                  <div style="margin: 12px 0 8px;">
-                    <strong>Uploaded Sample Photos (${applicationData.sampleMedia.length}):</strong>
-                    <div style="display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;">
-                      ${applicationData.sampleMedia.map((m: string) => `<a href="${m}" target="_blank"><img src="${m}" width="70" height="70" style="object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1;" /></a>`).join('')}
-                    </div>
-                  </div>
-                ` : ''}
-                ${applicationData.lookbookUrl ? `<p style="margin: 0;"><strong>Catalog:</strong> <a href="${applicationData.lookbookUrl}" style="color: #b89035;">${applicationData.lookbookUrl}</a></p>` : ''}
-              </div>
-              <div style="margin-top: 24px; text-align: center;">
-                <a href="${waLink}" style="display: inline-block; background-color: #16a34a; color: #ffffff; font-weight: 700; font-size: 13.5px; padding: 13px 28px; border-radius: 10px; text-decoration: none; box-shadow: 0 2px 8px rgba(22,163,74,0.25);">
-                  💬 Open WhatsApp Chat
-                </a>
-              </div>
+            <td align="center">
+              <a href="${getBaseUrl()}/admin" style="font-size:12px; color:#9E7724; text-decoration:underline; font-weight:600;">
+                Review &amp; Approve in Super Admin Dashboard &rarr;
+              </a>
             </td>
           </tr>
         </table>
-      </div>
-    `;
+      `,
+      ctaLabel: 'Chat Founder on WhatsApp',
+      ctaUrl: waLink,
+      ctaStyle: 'emerald',
+      supportUrl: `${getBaseUrl()}/admin`,
+      supportLabel: 'Open ÌRÍSÍ Admin Board',
+    });
 
-    sendLuxuryEmail(
-      'martintimi2443@gmail.com',
-      `🌟 Brand Application: ${applicationData.brandName}`,
-      founderHtml,
-      { fromName: 'ÌRÍSÍ Brand Relations' }
-    ).catch(() => {});
+    // CRITICAL: AWAIT email dispatch cleanly so Vercel serverless NEVER terminates the request before Resend/SMTP completes!
+    const adminInbox = (process.env.ADMIN_NOTIFICATION_EMAIL || 'martintimi2443@gmail.com').trim();
+    try {
+      await sendLuxuryEmail(adminInbox, `New Brand Application: ${applicationData.brandName}`, founderHtml, {
+        fromName: 'ÌRÍSÍ Brand Relations',
+      });
+    } catch (emailErr) {
+      console.warn('[VENDOR APPLY EMAIL WARN]', emailErr);
+    }
 
     return NextResponse.json({
       success: true,

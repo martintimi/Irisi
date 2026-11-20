@@ -393,6 +393,17 @@ export interface NotificationItem {
   actionUrl?: string;
 }
 
+export interface StoryTextOverlay {
+  id: string;
+  text: string;
+  x: number; // 0..100 (% horizontal)
+  y: number; // 0..100 (% vertical)
+  fontStyle: 'editorial' | 'sans' | 'mono';
+  color: string;
+  bgStyle: 'none' | 'dark' | 'light' | 'gold';
+  size: 'sm' | 'md' | 'lg';
+}
+
 export interface VendorStory {
   id: string;
   vendorId: string;
@@ -400,12 +411,23 @@ export interface VendorStory {
   vendorName: string;
   vendorAvatar: string;
   mediaUrl: string;
+  mediaPublicId?: string;
   mediaType?: 'image' | 'video';
+  durationSec?: number;
   caption: string;
+  textOverlays?: StoryTextOverlay[];
   taggedProductId?: string;
   taggedProductName?: string;
   taggedProductPrice?: number;
   taggedProductImage?: string;
   createdAt: string;
   expiresAt?: string;
+  viewCount?: number;
+  reactions?: Record<string, number>;
+  totalReactions?: number;
+  recentInteractions?: Array<{
+    viewerName: string;
+    emoji?: string;
+    viewedAt: string;
+  }>;
 }

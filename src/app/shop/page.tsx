@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import MarketplaceGrid from '@/components/shop/MarketplaceGrid';
 import MobileShopView from '@/components/shop/MobileShopView';
+import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
 
 export default function ShopPage() {
   return (
@@ -10,8 +11,9 @@ export default function ShopPage() {
         <MobileShopView />
       </div>
 
-      {/* 2. DESKTOP SHOP CATALOG (Full width grid with desktop filters) */}
-      <div className="hidden md:block mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      {/* 2. DESKTOP SHOP CATALOG (24h Brand Stories + Full width grid with desktop filters) */}
+      <div className="hidden md:block mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <MobileStoriesRow variant="desktop" />
         <MarketplaceGrid />
       </div>
     </Suspense>

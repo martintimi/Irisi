@@ -4,11 +4,13 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  PackageCheck, DollarSign, Plus, ExternalLink, ShieldCheck,
+  DollarSign, Plus, ExternalLink, ShieldCheck,
   AlertTriangle, AlertCircle, Clock, ArrowRight, Store, Copy,
-  Check, Lock, CheckCircle2, Camera, ChevronRight, Share2
+  Check, Lock, CheckCircle2, Camera, ChevronRight, Share2,
+  MessageSquare, BarChart3
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import ShareStoreSheet from './ShareStoreSheet';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
 
 interface MobileVendorOverviewProps {
@@ -40,6 +42,7 @@ export default function MobileVendorOverview({
   onEditProduct,
 }: MobileVendorOverviewProps) {
   const [copied, setCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const isBoutique = isBoutiqueVendor(vendorProfile);
   const specialty = getVendorSpecialty(vendorProfile);
   const specialtyInfo = getVendorSpecialtyInfo(specialty, isBoutique);
@@ -206,17 +209,17 @@ export default function MobileVendorOverview({
         </div>
       </section>
 
-      {/* 3. Native iOS Circular Quick-Action Bar (Monochrome & Clean) */}
+      {/* 3. Native iOS Circular Quick-Action Bar (Non-redundant Studio Tools — Add Drop & Orders live in Bottom Nav) */}
       <section className="grid grid-cols-4 gap-2">
         {isVerified ? (
           <Link
-            href="/vendor-portal/publish"
+            href="/vendor-portal/stories"
             className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
           >
             <div className="h-12 w-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] flex items-center justify-center shadow-sm">
-              <Plus className="h-5 w-5" strokeWidth={1.8} />
+              <Camera className="h-[19px] w-[19px]" strokeWidth={1.75} />
             </div>
-            <span className="text-[11px] text-[var(--text-primary)] font-normal">Add Drop</span>
+            <span className="text-[11px] text-[var(--text-primary)] font-normal">24h Story</span>
           </Link>
         ) : (
           <Link
@@ -231,51 +234,34 @@ export default function MobileVendorOverview({
         )}
 
         <Link
-          href="/vendor-portal/stories"
+          href="/vendor-portal/direct-sales"
           className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
         >
           <div className="h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center">
-            <Camera className="h-[19px] w-[19px]" strokeWidth={1.65} />
+            <MessageSquare className="h-[18px] w-[18px]" strokeWidth={1.65} />
           </div>
-          <span className="text-[11px] text-[var(--text-primary)] font-normal">Story</span>
+          <span className="text-[11px] text-[var(--text-primary)] font-normal">Direct POS</span>
         </Link>
 
         <Link
-          href="/vendor-portal/orders"
+          href="/vendor-portal/reports"
           className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform"
         >
-          <div className="relative h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center">
-            <PackageCheck className="h-[19px] w-[19px]" strokeWidth={1.65} />
-            {pendingOrdersCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-5 min-w-[20px] px-1 rounded-full bg-[var(--gold-accent)] text-black text-[10px] font-mono-luxury flex items-center justify-center">
-                {pendingOrdersCount}
-              </span>
-            )}
+          <div className="h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center">
+            <BarChart3 className="h-[18px] w-[18px]" strokeWidth={1.65} />
           </div>
-          <span className="text-[11px] text-[var(--text-primary)] font-normal">Orders</span>
+          <span className="text-[11px] text-[var(--text-primary)] font-normal">Analytics</span>
         </Link>
 
         <button
           type="button"
-          onClick={handleCopyLink}
+          onClick={() => setIsShareOpen(true)}
           className="flex flex-col items-center gap-1.5 py-2 active:scale-95 transition-transform cursor-pointer"
         >
-          <div
-            className={`h-12 w-12 rounded-full border flex items-center justify-center transition-colors ${
-              copied
-                ? 'bg-emerald-500 border-emerald-500 text-black'
-                : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-primary)]'
-            }`}
-          >
-            {copied ? (
-              <Check className="h-[19px] w-[19px]" strokeWidth={2} />
-            ) : (
-              <Share2 className="h-[18px] w-[18px]" strokeWidth={1.65} />
-            )}
+          <div className="h-12 w-12 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center">
+            <Share2 className="h-[18px] w-[18px]" strokeWidth={1.65} />
           </div>
-          <span className="text-[11px] text-[var(--text-primary)] font-normal">
-            {copied ? 'Copied' : 'Share'}
-          </span>
+          <span className="text-[11px] text-[var(--text-primary)] font-normal">Share Store</span>
         </button>
       </section>
 
@@ -428,35 +414,43 @@ export default function MobileVendorOverview({
       )}
 
       {/* 7. Storefront Link Compact Bar */}
-      <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono-luxury uppercase tracking-[0.16em] text-[var(--text-muted)]">
-            <ShieldCheck className="h-3 w-3 text-[var(--gold-accent)]" />
-            <span>Your Storefront Link</span>
+      <section className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] p-3.5 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono-luxury uppercase tracking-[0.16em] text-[var(--text-muted)]">
+              <ShieldCheck className="h-3 w-3 text-[var(--gold-accent)]" />
+              <span>Your Storefront Link</span>
+            </div>
+            <div className="text-xs font-mono-luxury text-[var(--text-primary)] truncate mt-0.5 select-all">
+              {storeUrl.replace(/^https?:\/\//, '')}
+            </div>
           </div>
-          <div className="text-xs font-mono-luxury text-[var(--text-primary)] truncate mt-0.5 select-all">
-            {storeUrl.replace(/^https?:\/\//, '')}
-          </div>
-        </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="h-9 w-9 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-primary)] active:scale-95 cursor-pointer"
-            aria-label="Copy storefront link"
-          >
-            {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-          </button>
-          <Link
-            href={`/brand/${storeSlug}`}
-            target="_blank"
-            className="h-9 px-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury inline-flex items-center gap-1 active:scale-95"
-          >
-            <span>Open</span>
-            <ExternalLink className="h-3 w-3" />
-          </Link>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="h-9 px-3 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] inline-flex items-center gap-1 text-[11px] font-mono-luxury text-[var(--text-primary)] active:scale-95 cursor-pointer"
+              aria-label="Copy storefront link"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              <span>{copied ? 'Copied' : 'Copy'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsShareOpen(true)}
+              className="h-9 px-3.5 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-[11px] font-mono-luxury inline-flex items-center gap-1 active:scale-95 cursor-pointer"
+            >
+              <Share2 className="h-3 w-3" />
+              <span>Share</span>
+            </button>
+          </div>
         </div>
+        {copied && (
+          <p className="text-[11px] text-emerald-500 font-light">
+            Store link copied ({storeUrl.replace(/^https?:\/\//, '')}) — paste on Instagram or WhatsApp.
+          </p>
+        )}
       </section>
 
       {/* 8. Live Catalog Snapshot (Native iOS Grouped Rows — Tap Any Piece to Edit) */}
@@ -550,6 +544,15 @@ export default function MobileVendorOverview({
           </div>
         )}
       </section>
+
+      <ShareStoreSheet
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        brandName={brandName}
+        logoUrl={vendorProfile?.logoUrl}
+        storeSlug={storeSlug}
+        storeUrl={storeUrl}
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
 import SearchableCitySelect from '@/components/common/SearchableCitySelect';
 import { compressImageToFile } from '@/lib/utils/imageUtils';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 // Vector App Logos
 const InstagramLogo = () => (
@@ -46,7 +47,8 @@ export default function VendorAtelierProfilePage() {
   const [isProfileSaved, setIsProfileSaved] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<string>('pending');
   const [rejectionReason, setRejectionReason] = useState<string>('');
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const cachedAtelier = getVendorCache<any>(getActiveVendorId() || vendorProfile.email || 'default', 'atelier_form');
+  const [isLoadingProfile, setIsLoadingProfile] = useState(() => !cachedAtelier);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -133,6 +135,15 @@ export default function VendorAtelierProfilePage() {
 
   // Fetch live vendor profile from DB endpoint on mount
   const fetchLiveProfile = useCallback(async () => {
+    const cacheVid = getActiveVendorId() || vendorProfile.email || 'default';
+    const cached = getVendorCache<any>(cacheVid, 'atelier_form');
+    if (cached?.form) {
+      setForm(cached.form);
+      setIsProfileSaved(!!cached.isProfileSaved);
+      setApprovalStatus(cached.approvalStatus || 'pending');
+      setRejectionReason(cached.rejectionReason || '');
+      setIsLoadingProfile(false);
+    }
     try {
       const res = await vendorFetch('/api/vendor/profile');
       const data = await res.json();
@@ -168,9 +179,43 @@ export default function VendorAtelierProfilePage() {
           specialty: spec
         });
 
-        setIsProfileSaved(!!v.isProfileSaved);
-        setApprovalStatus(v.approvalStatus || (v.isVerified ? 'approved' : 'pending'));
-        setRejectionReason(v.rejectionReason || '');
+        const nextSaved = !!v.isProfileSaved;
+        const nextStatus = v.approvalStatus || (v.isVerified ? 'approved' : 'pending');
+        const nextRej = v.rejectionReason || '';
+        setIsProfileSaved(nextSaved);
+        setApprovalStatus(nextStatus);
+        setRejectionReason(nextRej);
+        setVendorCache(v.id || cacheVid, 'atelier_form', {
+          form: {
+            brandName: v.brandName || v.brand_name || '',
+            designerName: v.designerName || v.designer_name || v.contact_person || '',
+            email: v.email || '',
+            phone: v.phone || '',
+            city: v.city || '',
+            state: v.state || '',
+            hasSecondaryHub: !!(v.hasSecondaryHub || (v.secondaryCity && v.secondaryState)),
+            secondaryCity: v.secondaryCity || '',
+            secondaryState: v.secondaryState || '',
+            location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : v.city || v.state || ''),
+            dispatchDays: v.dispatchDays || '1-2 business days',
+            sameCityFee: rates.sameCity !== undefined ? Number(rates.sameCity) : 1000,
+            closeHubFee: rates.closeHub !== undefined ? Number(rates.closeHub) : 2500,
+            interstateFee: rates.interstate !== undefined ? Number(rates.interstate) : 4500,
+            parkPickupFee: rates.parkPickup !== undefined ? Number(rates.parkPickup) : 1500,
+            parkPickupEnabled: rates.parkPickupEnabled !== undefined ? !!rates.parkPickupEnabled : true,
+            instagram: v.instagram || v.socialLinks?.instagram || '',
+            tiktok: v.tiktok || v.socialLinks?.tiktok || '',
+            snapchat: v.snapchat || v.socialLinks?.snapchat || '',
+            whatsapp: v.whatsapp || v.socialLinks?.whatsapp || v.phone || '',
+            bio: v.bio || '',
+            logoUrl: v.logoUrl || v.logo || '',
+            vendorType: isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer',
+            specialty: spec,
+          },
+          isProfileSaved: nextSaved,
+          approvalStatus: nextStatus,
+          rejectionReason: nextRej,
+        });
 
         // Sync to Zustand Store
         const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';

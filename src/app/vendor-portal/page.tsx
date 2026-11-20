@@ -16,6 +16,7 @@ import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import EditProductModal from '@/components/vendor/EditProductModal';
 import FirstTimeVendorModal from '@/components/vendor/FirstTimeVendorModal';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 export default function VendorOverviewPage() {
   const { vendorProfile, setVendorProfile } = useStore();
@@ -23,10 +24,14 @@ export default function VendorOverviewPage() {
   const specialty = getVendorSpecialty(vendorProfile);
   const specialtyInfo = getVendorSpecialtyInfo(specialty, isBoutique);
 
-  const [dbProducts, setDbProducts] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [reviewsData, setReviewsData] = useState<{ averageRating: number; count: number }>({ averageRating: 5.0, count: 0 });
-  const [loadingData, setLoadingData] = useState(true);
+  const initVid = getActiveVendorId() || vendorProfile.email || 'default';
+  const initCache = getVendorCache<any>(initVid, 'overview');
+  const [dbProducts, setDbProducts] = useState<any[]>(() => initCache?.products || []);
+  const [orders, setOrders] = useState<any[]>(() => initCache?.orders || []);
+  const [reviewsData, setReviewsData] = useState<{ averageRating: number; count: number }>(
+    () => initCache?.reviews || { averageRating: 5.0, count: 0 }
+  );
+  const [loadingData, setLoadingData] = useState(() => !initCache);
 
   // Edit Product Modal State
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<any | null>(null);
@@ -38,15 +43,23 @@ export default function VendorOverviewPage() {
     isVerified: boolean;
     approvalStatus: string;
     rejectionReason: string;
-  } | null>(null);
+  } | null>(() => initCache?.profileStatus || null);
 
   const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
 
   const loadVendorData = useCallback(async () => {
+    const activeVid = getActiveVendorId();
+    let currentVendorId = activeVid || vendorProfile.email || '';
+    const existingCache = getVendorCache<any>(currentVendorId || 'default', 'overview');
+    if (existingCache) {
+      setDbProducts(existingCache.products || []);
+      setOrders(existingCache.orders || []);
+      if (existingCache.reviews) setReviewsData(existingCache.reviews);
+      if (existingCache.profileStatus) setProfileStatus(existingCache.profileStatus);
+      setLoadingData(false);
+    }
     try {
-      setLoadingData(true);
-      const activeVid = getActiveVendorId();
-      let currentVendorId = activeVid || vendorProfile.email || '';
+      if (!existingCache) setLoadingData(true);
       const currentBrandName = (vendorProfile.brandName || '').toLowerCase().trim();
 
       // Parallel fetch vendor profile and orders
@@ -69,12 +82,14 @@ export default function VendorOverviewPage() {
 
           const v = profVendor;
           const verified = !!v.is_verified || !!v.isVerified;
-          setProfileStatus({
+          const nextProfStatus = {
             isProfileSaved: !!v.isProfileSaved,
             isVerified: verified,
             approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
             rejectionReason: v.rejectionReason || ''
-          });
+          };
+          setProfileStatus(nextProfStatus);
+          (profVendor as any).__computedStatus = nextProfStatus;
 
           if (v.mustSetPassword || (v.bio && typeof v.bio === 'string' && v.bio.includes('"mustSetPassword":true'))) {
             setShowFirstTimeModal(true);
@@ -143,13 +158,39 @@ export default function VendorOverviewPage() {
       }
 
       // 4. Process reviews
+      let nextReviews = { averageRating: 5.0, count: 0 };
       const revData = await resReviews.json();
       if (resReviews.ok && revData.success) {
-        setReviewsData({
+        nextReviews = {
           averageRating: revData.averageRating || 0,
           count: revData.count || (revData.reviews ? revData.reviews.length : 0)
-        });
+        };
+        setReviewsData(nextReviews);
       }
+
+      // Persist instant overview snapshot for 0ms return navigation
+      const cacheKey = currentVendorId || activeVid || vendorProfile.email || 'default';
+      const finalOrders = ordersData.success && Array.isArray(ordersData.orders) ? ordersData.orders : [];
+      const finalProducts = prodData.success && Array.isArray(prodData.products)
+        ? (currentVendorId && currentVendorId !== 'all'
+            ? prodData.products.filter((p: any) => {
+                const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
+                const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
+                const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || currentBrandName || '').toLowerCase().trim();
+                const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
+                const targetVid = currentVendorId.toLowerCase().trim();
+                return pVid === targetVid || pVid.includes(targetVid) || targetVid.includes(pVid) || (vEmail && pVid === vEmail) || (bName && (pVName.includes(bName) || bName.includes(pVName)));
+              })
+            : prodData.products)
+        : [];
+      setVendorCache(cacheKey, 'overview', {
+        products: finalProducts,
+        orders: finalOrders,
+        reviews: nextReviews,
+        profileStatus: (profVendor as any)?.__computedStatus || profileStatus,
+      });
+      setVendorCache(cacheKey, 'orders', finalOrders);
+      setVendorCache(cacheKey, 'products', finalProducts);
     } catch (err) {
       console.error('Error fetching live vendor dashboard data:', err);
     } finally {

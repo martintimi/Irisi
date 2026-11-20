@@ -23,6 +23,10 @@ export default function MobileBottomNav() {
     pathname.startsWith('/vendor') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/checkout') ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/returns') ||
+    pathname.startsWith('/coming-soon') ||
     (pathname.startsWith('/shop/') && pathname.split('/').length >= 3 && pathname.split('/')[2] !== '');
 
   // Handle Add to Bag micro-animation ("throw to bag")
