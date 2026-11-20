@@ -12,6 +12,8 @@ import {
 import MobileVendorOrders from '@/components/vendor/MobileVendorOrders';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import ShippingWaybillModal from '@/components/vendor/ShippingWaybillModal';
+import OrderStatusAnimation from '@/components/vendor/OrderStatusAnimation';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 import confetti from 'canvas-confetti';
 
 import { isBoutiqueVendor } from '@/types';
@@ -21,8 +23,11 @@ export default function VendorOrdersPage() {
   const { vendorProfile, updateOrderStatus } = useStore();
   const isBoutique = isBoutiqueVendor(vendorProfile);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'dispatched' | 'delivered'>('all');
-  const [dbOrders, setDbOrders] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedInitOrders = typeof window !== 'undefined'
+    ? getVendorCache<any[]>(localStorage.getItem('irisi_vendor_id') || localStorage.getItem('veyra_vendor_id') || vendorProfile.email || 'default', 'orders')
+    : null;
+  const [dbOrders, setDbOrders] = useState<any[]>(() => cachedInitOrders || []);
+  const [isLoading, setIsLoading] = useState(() => !cachedInitOrders);
 
   // Waybill Slip & Dispatch Modal State
   const [selectedWaybillOrder, setSelectedWaybillOrder] = useState<any | null>(null);
@@ -43,11 +48,16 @@ export default function VendorOrdersPage() {
     return vendorProfile.email || '';
   }, [vendorProfile.email]);
 
-  // Load orders strictly from live PostgreSQL DB
+  // Load orders from live PostgreSQL DB (renders cached data instantaneously while refreshing!)
   const loadVendorDbOrders = useCallback(async () => {
     const activeVendorId = getActiveVendorId();
+    const cached = getVendorCache<any[]>(activeVendorId || 'default', 'orders');
+    if (cached) {
+      setDbOrders(cached);
+      setIsLoading(false);
+    }
     try {
-      setIsLoading(true);
+      if (!cached) setIsLoading(true);
       const res = await fetch(`/api/orders?vendorId=${encodeURIComponent(activeVendorId)}`, {
         headers: {
           'x-vendor-id': activeVendorId,
@@ -57,7 +67,8 @@ export default function VendorOrdersPage() {
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
         setDbOrders(data.orders);
-      } else {
+        setVendorCache(activeVendorId || 'default', 'orders', data.orders);
+      } else if (!cached) {
         setDbOrders([]);
       }
     } catch (e) {
@@ -73,7 +84,7 @@ export default function VendorOrdersPage() {
 
     // Supabase Realtime: Updates vendor orders list live when new orders are placed or status changes
     const channel = supabase
-      .channel('vendor-orders-live-sync')
+      .channel(`vendor-orders-live-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'orders' },
@@ -553,6 +564,15 @@ export default function VendorOrdersPage() {
                     {ord.trackingStage === 4 ? 'Delivered' : ord.trackingStage === 3 ? 'Dispatched' : ord.trackingStage === 2 ? 'Packing Ready' : 'Escrow Secured'}
                   </span>
                 </div>
+              </div>
+
+              {/* Animated Visual Order Stage Strip (Rider In Transit / Needs Action / Delivered Seal) */}
+              <div className="rounded-2xl overflow-hidden border border-[var(--border-subtle)]">
+                <OrderStatusAnimation
+                  trackingStage={ord.trackingStage}
+                  deliveryMethod={ord.deliveryMethod}
+                  courierName={ord.courierName}
+                />
               </div>
 
               {/* Items bought strictly from THIS vendor */}

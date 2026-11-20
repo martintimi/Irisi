@@ -8,6 +8,7 @@ import {
   TrendingDown, Loader2, ExternalLink, CheckCircle2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 declare global {
   interface Window {
@@ -19,17 +20,24 @@ declare global {
 
 export default function VendorPlusPage() {
   const { vendorProfile } = useStore();
-  const [loading, setLoading] = useState(true);
+  const vendorKey = vendorProfile.id || vendorProfile.email || '';
+  const cachedPlan = getVendorCache<any>(vendorKey || 'default', 'plus_plan');
+  const [loading, setLoading] = useState(() => !cachedPlan);
   const [upgrading, setUpgrading] = useState(false);
-  const [billing, setBilling] = useState<any>(null);
-  const [vendorPlan, setVendorPlan] = useState<any>(null);
+  const [billing, setBilling] = useState<any>(() => cachedPlan?.billing || null);
+  const [vendorPlan, setVendorPlan] = useState<any>(() => cachedPlan?.vendorPlan || null);
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const vendorKey = vendorProfile.id || vendorProfile.email || '';
-
   const loadPlan = useCallback(async () => {
-    setLoading(true);
+    const cached = getVendorCache<any>(vendorKey || 'default', 'plus_plan');
+    if (cached) {
+      setBilling(cached.billing);
+      setVendorPlan(cached.vendorPlan);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     try {
       const qs = vendorKey ? `?vendorId=${encodeURIComponent(vendorKey)}` : '';
       const res = await fetch(`/api/vendor/subscription${qs}`);
@@ -37,6 +45,10 @@ export default function VendorPlusPage() {
       if (res.ok && data.success) {
         setBilling(data.billing);
         setVendorPlan(data.vendorPlan);
+        setVendorCache(vendorKey || 'default', 'plus_plan', {
+          billing: data.billing,
+          vendorPlan: data.vendorPlan,
+        });
       }
     } catch {} finally {
       setLoading(false);

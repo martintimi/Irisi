@@ -13,6 +13,7 @@ import {
   Layers, ChevronRight, Store, ArrowUpDown, SlidersHorizontal, Eye
 } from 'lucide-react';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 export default function VendorProductsCatalogPage() {
   const { vendorProfile } = useStore();
@@ -20,8 +21,9 @@ export default function VendorProductsCatalogPage() {
   const specialty = getVendorSpecialty(vendorProfile);
   const specialtyInfo = getVendorSpecialtyInfo(specialty, isBoutique);
 
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initCachedProducts = getVendorCache<any[]>(getActiveVendorId() || vendorProfile.email || 'default', 'products');
+  const [products, setProducts] = useState<any[]>(() => initCachedProducts || []);
+  const [isLoading, setIsLoading] = useState(() => !initCachedProducts);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'in_stock' | 'low_stock' | 'sold_out'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -32,10 +34,15 @@ export default function VendorProductsCatalogPage() {
 
   // Fetch all products for the active vendor
   const loadVendorProducts = useCallback(async () => {
+    const activeVid = getActiveVendorId();
+    let currentVendorId = activeVid || vendorProfile.email || '';
+    const cached = getVendorCache<any[]>(currentVendorId || 'default', 'products');
+    if (cached) {
+      setProducts(cached);
+      setIsLoading(false);
+    }
     try {
-      setIsLoading(true);
-      const activeVid = getActiveVendorId();
-      let currentVendorId = activeVid || vendorProfile.email || '';
+      if (!cached) setIsLoading(true);
 
       // First query vendor profile to verify active ID
       const profRes = await vendorFetch('/api/vendor/profile');
@@ -77,7 +84,8 @@ export default function VendorProductsCatalogPage() {
           : data.products;
 
         setProducts(filtered);
-      } else {
+        setVendorCache(currentVendorId || 'default', 'products', filtered);
+      } else if (!cached) {
         setProducts([]);
       }
     } catch (err) {

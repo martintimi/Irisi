@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 import tls from 'tls';
 import dns from 'dns';
 import { getBaseUrl } from '@/lib/utils/url';
+import { buildIrisiEmailShell, buildDetailPanel } from '@/lib/services/emailTheme';
 
 export interface VendorContact {
   id: string;
@@ -311,55 +312,8 @@ export async function sendLuxuryEmail(
 }
 
 /**
- * Base Luxury Email Template Wrapper
+ * Unified Luxury Email Templates (Bulletproof Light + Dark Mode, Never Shrinks)
  */
-function wrapLuxuryTemplate(title: string, bodyContent: string): string {
-  return `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${title}</title>
-    </head>
-    <body style="background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
-        <tr>
-          <td align="center">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
-              <!-- Brand Header with Official Logo -->
-              <tr>
-                <td align="center" style="background-color: #ffffff; padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9;">
-                  <img src="${BRAND_LOGO_URL}" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
-                  <h1 style="color: #111827; font-size: 24px; letter-spacing: -0.5px; margin: 0; font-weight: 800; text-transform: uppercase;">ÌRÍSÍ</h1>
-                  <p style="color: #b89035; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0; font-weight: 700;">Merchant Partner Relations</p>
-                </td>
-              </tr>
-              <!-- Email Body Content -->
-              <tr>
-                <td style="padding: 32px 32px 36px; background-color: #ffffff; color: #1e293b;">
-                  ${bodyContent}
-                  <!-- Concierge WhatsApp Support Footer -->
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top: 1px solid #f1f5f9; padding-top: 24px; margin-top: 32px;">
-                    <tr>
-                      <td align="center">
-                        <p style="color: #64748b; font-size: 11px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">We are here to support your brand's growth</p>
-                        <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: #111827; border: 1px solid #111827; color: #ffffff; padding: 12px 22px; border-radius: 10px; font-size: 12.5px; text-decoration: none; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                          💬 Chat with ÌRÍSÍ Merchant Concierge on WhatsApp &rarr;
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </body>
-    </html>
-  `;
-}
 
 // ============================================================================
 // 1. NEW ORDER RECEIVED ALERT
@@ -386,66 +340,68 @@ export async function sendVendorNewOrderNotification(params: {
   const isPark = deliveryMethod === 'park_pickup';
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/orders?tab=pending`;
 
-  const itemsHtml = items.map((it) => `
-    <tr>
-      <td style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #ffffff; font-size: 13px;">
-        <strong>${it.productName}</strong><br>
-        <span style="color: #9ca3af; font-size: 11px;">Size: ${it.size} ${it.color ? `• Color: ${it.color}` : ''} • Qty: ${it.quantity}</span>
-      </td>
-      <td align="right" style="padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #e6c367; font-weight: 700; font-size: 14px;">
-        ₦${(it.vendorPayout * it.quantity).toLocaleString()}
-      </td>
-    </tr>
-  `).join('');
+  const itemsHtml = items
+    .map(
+      (it) => `
+      <tr>
+        <td class="irisi-ink irisi-divider" style="padding:12px 0; border-bottom:1px solid #ECEAE4; color:#111114; font-size:13.5px;">
+          <div class="irisi-ink" style="font-weight:600; color:#111114;">${it.productName}</div>
+          <div class="irisi-muted" style="color:#71717A; font-size:11.5px; margin-top:2px;">
+            Size: ${it.size}${it.color ? ` &middot; ${it.color}` : ''} &middot; Qty: ${it.quantity}
+          </div>
+        </td>
+        <td align="right" style="padding:12px 0; border-bottom:1px solid #ECEAE4; color:#9E7724; font-weight:700; font-size:13.5px; white-space:nowrap;">
+          ₦${(it.vendorPayout * it.quantity).toLocaleString()}
+        </td>
+      </tr>`
+    )
+    .join('');
 
-  const bodyContent = `
-    <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #10b981; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">🎉 New Order Received!</span>
-    </div>
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">You Have a New Order, ${vendor.brandName}!</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Customer <strong>${customerName}</strong> has placed an order from your store. Payment has been received, and your payout will be credited to your account upon delivery:
+  const dest = [deliveryCity, deliveryState].filter(Boolean).join(', ') || 'See Portal';
+
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
+      <strong>${customerName}</strong> just placed a paid order from <strong>${vendor.brandName}</strong>. Payment is secured in Escrow and releases automatically upon confirmed delivery.
     </p>
 
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Order Number</td>
-          <td align="right" style="color: #ffffff; font-weight: 700; font-family: monospace; font-size: 14px;">${orderNumber}</td>
-        </tr>
-        <tr>
-          <td style="color: #9ca3af; font-size: 12px; padding-top: 8px;">Delivery Location</td>
-          <td align="right" style="color: #ffffff; font-size: 12px; padding-top: 8px;">${deliveryCity}, ${deliveryState}</td>
-        </tr>
-        <tr>
-          <td style="color: #9ca3af; font-size: 12px; padding-top: 8px;">Logistics Type</td>
-          <td align="right" style="color: #ffffff; font-size: 12px; padding-top: 8px;">${isPark ? 'Motor Park Dropoff' : 'Doorstep Courier'}</td>
-        </tr>
-      </table>
-    </div>
+    ${buildDetailPanel([
+      { label: 'Order Reference', value: orderNumber },
+      { label: 'Destination', value: dest },
+      { label: 'Delivery Method', value: isPark ? 'Pickup Hub / Waybill' : 'Doorstep Courier' },
+    ])}
 
-    <!-- Items Breakdown -->
-    <h3 style="color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px;">Items to Prepare:</h3>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 20px;">
+    <div class="irisi-muted" style="font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#71717A; font-weight:600; margin:16px 0 6px;">
+      Pieces To Prepare
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin-bottom:12px;">
       ${itemsHtml}
       <tr>
-        <td style="padding-top: 14px; color: #ffffff; font-weight: 700; font-size: 14px;">Your Net Earnings Payout:</td>
-        <td align="right" style="padding-top: 14px; color: #10b981; font-weight: 800; font-size: 18px;">₦${totalPayout.toLocaleString()}</td>
+        <td class="irisi-ink" style="padding-top:14px; color:#111114; font-weight:700; font-size:14px;">Your Net Payout</td>
+        <td align="right" style="padding-top:14px; color:#059669; font-weight:700; font-size:19px; font-family:Georgia, serif;">
+          ₦${totalPayout.toLocaleString()}
+        </td>
       </tr>
     </table>
 
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Package Order &amp; Mark Ready in Portal &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Please prepare this parcel within <strong>24 hours</strong> to maintain your high merchant dispatch score.
+    <p class="irisi-muted" style="color:#71717A; font-size:12.5px; line-height:1.55; margin:12px 0 0;">
+      Please pack and mark this parcel ready promptly to maintain your dispatch rating.
     </p>
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - New Order Alert (${orderNumber}) for ${vendor.brandName}`, wrapLuxuryTemplate('New Order Alert', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'New Order Alert',
+    eyebrow: 'MERCHANT ORDER DISPATCH',
+    preheader: `New paid order ${orderNumber} — ₦${totalPayout.toLocaleString()} payout secured in escrow.`,
+    badge: 'New Paid Order · Escrow Locked',
+    badgeTone: 'emerald',
+    headline: `You Have a New Order, ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'Open Order in Studio',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — New Order Alert (${orderNumber}) for ${vendor.brandName}`, html);
 }
 
 // ============================================================================
@@ -465,34 +421,42 @@ export async function sendVendorSettlementNotification(params: {
   const resolvedBank = bankName || vendor.bankName || 'Bank Account';
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settlements`;
 
-  const bodyContent = `
-    <div style="background-color: rgba(230, 195, 103, 0.1); border: 1px solid rgba(230, 195, 103, 0.3); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">💰 Settlement Released</span>
-    </div>
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 12px; font-weight: 600;">Payment Disbursed to ${vendor.brandName}</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Customer <strong>${customerName || 'The customer'}</strong> has confirmed delivery for Order <strong>${orderNumber}</strong>. Your payout earnings have been settled and disbursed:
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
+      <strong>${customerName || 'Your customer'}</strong> confirmed delivery for order <strong>${orderNumber}</strong>. Your escrow earnings have been released and queued for settlement.
     </p>
 
-    <!-- Amount Banner -->
-    <div style="background-color: #0c0d0e; border: 1.5px dashed #10b981; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 24px;">
-      <span style="color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 6px;">Total Settled Payout</span>
-      <span style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 800; color: #10b981; display: block;">₦${payoutAmount.toLocaleString()}</span>
-      <span style="color: #9ca3af; font-size: 12px; display: block; margin-top: 8px;">Credited to ${resolvedBank} (${maskedAcc})</span>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px;">
-        View Settlement History in Portal &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Thank you for being an exceptional merchant partner on ÌRÍSÍ. Let's keep making sales happen!
-    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="irisi-panel" style="width:100%; background-color:#F7F6F3; border:1.5px dashed #10B981; border-radius:16px; margin:18px 0 22px;">
+      <tr>
+        <td align="center" style="padding:24px 18px;">
+          <div style="font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase; color:#059669; font-weight:600; margin-bottom:8px;">
+            Total Settled Payout
+          </div>
+          <div style="font-family:Georgia, serif; font-size:34px; font-weight:400; color:#059669; line-height:1.1;">
+            ₦${payoutAmount.toLocaleString()}
+          </div>
+          <div class="irisi-muted" style="font-size:12px; color:#71717A; margin-top:8px;">
+            Credited to ${resolvedBank} (${maskedAcc})
+          </div>
+        </td>
+      </tr>
+    </table>
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - ₦${payoutAmount.toLocaleString()} Settlement Released for Order ${orderNumber}`, wrapLuxuryTemplate('Settlement Released', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Settlement Released',
+    eyebrow: 'MERCHANT TREASURY',
+    preheader: `₦${payoutAmount.toLocaleString()} settled for order ${orderNumber}.`,
+    badge: 'Escrow Payout Released',
+    badgeTone: 'emerald',
+    headline: `Payment Disbursed to ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'View Settlement Ledger',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — ₦${payoutAmount.toLocaleString()} Settled for Order ${orderNumber}`, html);
 }
 
 // ============================================================================
@@ -505,41 +469,35 @@ export async function sendVendorWeeklyWishesNotification(params: {
   const { vendor, portalUrl } = params;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
-  const bodyContent = `
-    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Wishing You a High-Sales &amp; Profitable Week, ${vendor.brandName}! ✨</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0 0 20px;">
-      As a new week kicks off, we want to celebrate your hustle and the dedication you bring to your brand. Whether you curate ready-to-wear pieces, craft shoes, design bags and jewelry, or run a boutique or fashion brand — your store is a cornerstone of the ÌRÍSÍ marketplace.
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.7; margin:0 0 18px;">
+      As a new week begins, we celebrate the craft and energy you bring to <strong>${vendor.brandName}</strong>. Here are three quick ways to capture more orders this week:
     </p>
-
-    <!-- Warm Wishes & Weekly Tip Box -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.25); border-radius: 16px; padding: 22px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 10px; font-weight: 700;">💡 Pro-Tips for Maximum Sales This Week</h3>
-      <p style="color: #d1d5db; font-size: 13px; line-height: 1.6; margin: 0 0 12px;">
-        Mondays and Tuesdays are peak browsing days for shoppers looking for weekend outfits, footwear, jewelry, and accessories. Here is how to keep your store at the top:
-      </p>
-      <ul style="color: #9ca3af; font-size: 12px; line-height: 1.7; margin: 0; padding-left: 20px;">
-        <li><strong style="color: #ffffff;">Audit Inventory:</strong> Verify your in-stock sizes, shoe numbers, and color variants so customers can buy instantly without out-of-stock cancellations.</li>
-        <li><strong style="color: #ffffff;">List New Arrivals:</strong> Merchants who upload fresh drops and restocks get up to <strong>3x more store visits</strong> and customer inquiries.</li>
-        <li><strong style="color: #ffffff;">Fast Dispatch:</strong> Fulfilling orders and dropping them off within 24 hours boosts your merchant ranking on the homepage.</li>
-      </ul>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Open Your Merchant Dashboard &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      May your sales multiply, your parcels dispatch swiftly, and your store reach new heights this week!
-    </p>
+    ${buildDetailPanel([
+      { label: '01 · Refresh Stock', value: 'Confirm in-stock sizes & colors for instant checkout' },
+      { label: '02 · Post a 24h Story', value: 'Alert followers live on Shop with multi-slide lookbooks' },
+      { label: '03 · Fast Dispatch', value: 'Fulfilling within 24h boosts storefront ranking' },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Wishing ${vendor.brandName} a High-Sales & Successful Week! ✨`, wrapLuxuryTemplate('Weekly Wishes', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Weekly Studio Brief',
+    eyebrow: 'MERCHANT PARTNER RELATIONS',
+    preheader: `Wishing ${vendor.brandName} a profitable, high-sales week ahead.`,
+    badge: 'Weekly Studio Brief',
+    badgeTone: 'gold',
+    headline: `Wishing You a Strong Week, ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'Open Your Studio',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Wishing ${vendor.brandName} a High-Sales Week Ahead`, html);
 }
 
 // ============================================================================
-// 4. INACTIVE VENDOR CHECK-IN ("WE MISS YOU AT ÌRÍSÍ")
+// 4. INACTIVE VENDOR CHECK-IN
 // ============================================================================
 export async function sendVendorInactiveCheckInNotification(params: {
   vendor: VendorContact;
@@ -549,41 +507,31 @@ export async function sendVendorInactiveCheckInNotification(params: {
   const { vendor, daysInactive = 7, portalUrl } = params;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/publish`;
 
-  const bodyContent = `
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Checking In on You &amp; ${vendor.brandName} 🤝</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.7; margin:0 0 18px;">
       Hello ${vendor.designerName || vendor.brandName},<br><br>
-      We noticed things have been quiet on your ÌRÍSÍ storefront over the past ${daysInactive} days. We know how busy running a retail business, boutique, brand, or workshop can be, and we wanted to personally reach out.
+      We noticed things have been quiet on your ÌRÍSÍ storefront over the past ${daysInactive} days. Running an independent fashion brand takes real focus — if you need a hand photographing new pieces, updating stock, or setting up pricing, our merchant team is one WhatsApp message away.
     </p>
-
-    <!-- Support Box -->
-    <div style="background-color: #0c0d0e; border: 1px dashed rgba(230, 195, 103, 0.3); border-radius: 16px; padding: 22px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 10px; font-weight: 700;">How Can We Support Your Store This Week?</h3>
-      <p style="color: #d1d5db; font-size: 13px; line-height: 1.6; margin: 0 0 12px;">
-        Whether you need help with:
-      </p>
-      <ul style="color: #9ca3af; font-size: 12px; line-height: 1.7; margin: 0 0 14px; padding-left: 20px;">
-        <li>Photographing or uploading your latest shoes, bags, clothing, or jewelry</li>
-        <li>Stock pricing suggestions and trending demand in your category</li>
-        <li>Syncing offline store inventory with your online listings</li>
-      </ul>
-      <p style="color: #ffffff; font-size: 13px; margin: 0; font-weight: 500;">
-        Our merchant support team is ready to assist you personally — no automated bots, just direct partnership.
-      </p>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Upload New Arrivals &amp; Restock Store &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Shoppers across Nigeria and abroad are constantly searching for fresh fits, footwear, and accessories. We’d love to see your storefront active and selling!
-    </p>
+    ${buildDetailPanel([
+      { label: 'Quick Win', value: 'Post a 24h Lookbook Story to re-engage followers' },
+      { label: 'Personal Support', value: 'Direct concierge help — zero bots' },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Checking in on ${vendor.brandName}: How can we support your business?`, wrapLuxuryTemplate('We Miss You', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Checking In On Your Store',
+    eyebrow: 'MERCHANT PARTNER RELATIONS',
+    preheader: `Checking in on ${vendor.brandName} — how can we help you grow this week?`,
+    badge: 'Merchant Check-In',
+    badgeTone: 'gold',
+    headline: `How Can We Support ${vendor.brandName}?`,
+    bodyHtml,
+    ctaLabel: 'Upload New Arrivals',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Checking in on ${vendor.brandName}`, html);
 }
 
 // ============================================================================
@@ -600,94 +548,88 @@ export async function sendVendorMonthlyDigestNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, monthName, year, totalEarnings, totalOrdersCompleted, soldItems, unsoldItems, portalUrl } = params;
-  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/publish`;
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/products`;
 
-  const soldItemsRows = soldItems.length > 0 ? soldItems.map(it => `
-    <tr>
-      <td style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #ffffff; font-size: 13px;">
-        <strong>${it.productName}</strong><br>
-        <span style="color: #9ca3af; font-size: 11px;">Size ${it.size} • ${it.quantitySold} unit(s) sold</span>
-      </td>
-      <td align="right" style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #10b981; font-weight: 700; font-size: 13px;">
-        ₦${it.totalEarnings.toLocaleString()}
-      </td>
-    </tr>
-  `).join('') : `
-    <tr>
-      <td colspan="2" style="padding: 14px 0; text-align: center; color: #9ca3af; font-size: 12px;">
-        No completed orders recorded this month. Let's make next month huge!
-      </td>
-    </tr>
-  `;
+  const soldRows =
+    soldItems.length > 0
+      ? soldItems
+          .map(
+            (it) => `
+        <tr>
+          <td class="irisi-ink irisi-divider" style="padding:10px 0; border-bottom:1px solid #ECEAE4; color:#111114; font-size:13px;">
+            <strong>${it.productName}</strong><br>
+            <span class="irisi-muted" style="color:#71717A; font-size:11px;">Size ${it.size} &middot; ${it.quantitySold} sold</span>
+          </td>
+          <td align="right" style="padding:10px 0; border-bottom:1px solid #ECEAE4; color:#059669; font-weight:700; font-size:13px;">
+            ₦${it.totalEarnings.toLocaleString()}
+          </td>
+        </tr>`
+          )
+          .join('')
+      : `<tr><td colspan="2" class="irisi-muted" style="padding:12px 0; color:#71717A; font-size:12.5px;">No completed orders recorded this month.</td></tr>`;
 
-  const unsoldItemsRows = unsoldItems.length > 0 ? unsoldItems.slice(0, 10).map(it => `
-    <tr>
-      <td style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #ffffff; font-size: 13px;">
-        <strong>${it.productName}</strong><br>
-        <span style="color: #9ca3af; font-size: 11px;">Current Online Stock: ${it.currentStock} piece(s)</span>
-      </td>
-      <td align="right" style="padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); color: #e6c367; font-size: 12px;">
-        ₦${it.price.toLocaleString()}
-      </td>
-    </tr>
-  `).join('') : `
-    <tr>
-      <td colspan="2" style="padding: 14px 0; text-align: center; color: #10b981; font-size: 12px;">
-        Outstanding! Every active piece in your catalog had customer engagement this month.
-      </td>
-    </tr>
-  `;
+  const unsoldRows =
+    unsoldItems.length > 0
+      ? unsoldItems
+          .slice(0, 8)
+          .map(
+            (it) => `
+        <tr>
+          <td class="irisi-ink irisi-divider" style="padding:8px 0; border-bottom:1px solid #EAE8E2; color:#111114; font-size:12.5px;">
+            ${it.productName} <span class="irisi-muted" style="color:#71717A;">(${it.currentStock} left)</span>
+          </td>
+          <td align="right" style="padding:8px 0; border-bottom:1px solid #EAE8E2; color:#9E7724; font-size:12.5px; font-weight:600;">
+            ₦${it.price.toLocaleString()}
+          </td>
+        </tr>`
+          )
+          .join('')
+      : `<tr><td colspan="2" style="padding:10px 0; color:#059669; font-size:12.5px;">Every active listing had shopper activity this month.</td></tr>`;
 
-  const bodyContent = `
-    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 12px; font-weight: 600;">${monthName} ${year} Sales &amp; Stock Audit</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
-      Here is your monthly performance report for <strong>${vendor.brandName}</strong>. Review your numbers and reconcile any stock that may have been sold offline in your boutique or showroom:
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
+      Here is your ${monthName} ${year} performance digest for <strong>${vendor.brandName}</strong>. Review your numbers and reconcile any stock sold offline in your physical studio.
     </p>
+    ${buildDetailPanel([
+      { label: 'Net Earnings', value: `₦${totalEarnings.toLocaleString()}`, highlight: '#059669' },
+      { label: 'Orders Completed', value: String(totalOrdersCompleted), highlight: '#9E7724' },
+    ])}
 
-    <!-- Metrics Cards -->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+    <div class="irisi-muted" style="font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:#71717A; font-weight:600; margin:16px 0 6px;">
+      Top Performing Pieces
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin-bottom:20px;">
+      ${soldRows}
+    </table>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="irisi-panel" style="width:100%; background-color:#F7F6F3; border:1px solid #E7E5DF; border-radius:14px; margin:14px 0 6px;">
       <tr>
-        <td width="48%" style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.2); border-radius: 14px; padding: 18px; text-align: center;">
-          <span style="color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Net Earnings</span>
-          <span style="font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 800; color: #10b981; display: block;">₦${totalEarnings.toLocaleString()}</span>
-        </td>
-        <td width="4%"></td>
-        <td width="48%" style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.2); border-radius: 14px; padding: 18px; text-align: center;">
-          <span style="color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 4px;">Orders Completed</span>
-          <span style="font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 800; color: #e6c367; display: block;">${totalOrdersCompleted}</span>
+        <td style="padding:14px 18px;">
+          <div style="font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:#9E7724; font-weight:600; margin-bottom:8px;">
+            Stock Reconciliation Checklist
+          </div>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
+            ${unsoldRows}
+          </table>
         </td>
       </tr>
     </table>
-
-    <!-- Sold Items Table -->
-    <h3 style="color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px;">Top Performing Pieces Sold</h3>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
-      ${soldItemsRows}
-    </table>
-
-    <!-- Unsold Stock Reconciliation Table -->
-    <div style="background-color: rgba(230, 195, 103, 0.05); border: 1px solid rgba(230, 195, 103, 0.25); border-radius: 14px; padding: 18px 20px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 6px; font-weight: 700;">📦 Unsold Inventory Checklist</h3>
-      <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0 0 14px;">
-        Sold any of these items offline in your physical studio? Reconcile your quantities so customers don't order out-of-stock pieces:
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        ${unsoldItemsRows}
-      </table>
-    </div>
-
-    <div style="text-align: center; margin-top: 24px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Sync Your Quantities in Portal &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 11px; line-height: 1.5; margin: 0; text-align: center;">
-      This monthly audit is generated on the 1st of every month to keep your online inventory synchronized with your physical store, boutique, or showroom.
-    </p>
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Your ${monthName} ${year} Monthly Sales & Stock Audit (${vendor.brandName})`, wrapLuxuryTemplate('Monthly Digest', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: `${monthName} ${year} Monthly Audit`,
+    eyebrow: 'MONTHLY STUDIO DIGEST',
+    preheader: `${vendor.brandName}: ₦${totalEarnings.toLocaleString()} earned across ${totalOrdersCompleted} orders in ${monthName}.`,
+    badge: `${monthName} ${year} Report`,
+    badgeTone: 'gold',
+    headline: `${monthName} ${year} Sales &amp; Stock Audit`,
+    bodyHtml,
+    ctaLabel: 'Sync Inventory in Studio',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Your ${monthName} ${year} Monthly Studio Audit (${vendor.brandName})`, html);
 }
 
 // ============================================================================
@@ -700,38 +642,31 @@ export async function sendVendorAccountApprovedNotification(params: {
   const { vendor, portalUrl } = params;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
-  const bodyContent = `
-    <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #10b981; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">🎉 Store Verified &amp; Approved!</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Welcome to ÌRÍSÍ, ${vendor.brandName}! ✨</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0 0 20px;">
-      Congratulations! Your merchant application has been reviewed and officially approved by the ÌRÍSÍ governance team. Your brand is now verified and active on the marketplace.
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.7; margin:0 0 18px;">
+      Congratulations — your brand application has been officially reviewed and approved. <strong>${vendor.brandName}</strong> is now verified and ready to receive escrow-protected orders on ÌRÍSÍ.
     </p>
-
-    <!-- Checklist Box -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.25); border-radius: 16px; padding: 22px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 12px; font-weight: 700;">🚀 3 Steps to Start Making Sales:</h3>
-      <ol style="color: #d1d5db; font-size: 13px; line-height: 1.8; margin: 0; padding-left: 20px;">
-        <li><strong style="color: #ffffff;">Publish Your First Drops:</strong> List your ready-to-wear pieces, shoes, jewelry, or bags with clear studio photos.</li>
-        <li><strong style="color: #ffffff;">Confirm Payout Details:</strong> Ensure your Nigerian bank account is saved for automated escrow disbursements upon delivery.</li>
-        <li><strong style="color: #ffffff;">Share Your Store Link:</strong> Direct your Instagram and WhatsApp audience to your verified ÌRÍSÍ storefront.</li>
-      </ol>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Access Merchant Portal &amp; Upload Stock &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Our merchant success concierge is always here to help you scale your brand. Welcome to the family!
-    </p>
+    ${buildDetailPanel([
+      { label: '01 · Upload Drops', value: 'Publish Ready-to-Ship or Made-to-Order pieces' },
+      { label: '02 · Payout Bank', value: 'Confirm your bank account in Settlements for T+0 payouts' },
+      { label: '03 · Share Storefront', value: 'Post your verified link to Instagram &amp; WhatsApp' },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Your Store Has Been Approved! Welcome ${vendor.brandName} 🎉`, wrapLuxuryTemplate('Store Approved', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Store Approved',
+    eyebrow: 'BRAND APPROVAL',
+    preheader: `Congratulations! ${vendor.brandName} is officially verified on ÌRÍSÍ.`,
+    badge: 'Store Verified & Active',
+    badgeTone: 'emerald',
+    headline: `Welcome to ÌRÍSÍ, ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'Open Merchant Studio',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Your Store Is Approved! Welcome ${vendor.brandName}`, html);
 }
 
 // ============================================================================
@@ -743,43 +678,40 @@ export async function sendVendorAccountRejectedNotification(params: {
   portalUrl?: string;
 }) {
   const { vendor, rejectionReason, portalUrl } = params;
-  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settings`;
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/atelier`;
 
-  const bodyContent = `
-    <div style="background-color: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #f43f5e; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">⚠️ Application Update Required</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Update on Your ÌRÍSÍ Store Application</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
       Hello ${vendor.designerName || vendor.brandName},<br><br>
-      Thank you for your interest in joining ÌRÍSÍ. Our compliance team reviewed your store registration, and before we can activate your storefront, a few details require your attention:
+      Our curation team reviewed your storefront profile, and a few quick details need your attention before we can activate your live catalog:
     </p>
-
-    <!-- Specific Reason Box -->
-    <div style="background-color: #0c0d0e; border: 1.5px solid rgba(244, 63, 94, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
-      <span style="color: #f43f5e; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; display: block; margin-bottom: 8px;">Reason / Notes from Verification Team:</span>
-      <p style="color: #ffffff; font-size: 14px; line-height: 1.6; margin: 0; font-family: monospace; background-color: rgba(255, 255, 255, 0.04); padding: 12px 14px; border-radius: 10px;">
-        &ldquo;${rejectionReason || 'Please verify brand identity, provide clearer item photos, or update bank account registration details.'}&rdquo;
-      </p>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Update Store Profile &amp; Re-Submit &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Need clarification? You can reply directly or message our onboarding team on WhatsApp using the concierge button below.
-    </p>
+    ${buildDetailPanel([
+      {
+        label: 'Verification Note',
+        value: rejectionReason || 'Please verify brand identity, clear product photography, and dispatch details.',
+        highlight: '#BE123C',
+      },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Action Required on Your Store Registration (${vendor.brandName})`, wrapLuxuryTemplate('Application Update', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Profile Update Required',
+    eyebrow: 'CURATION REVIEW',
+    preheader: `A quick update is needed on your ${vendor.brandName} store profile.`,
+    badge: 'Update Required',
+    badgeTone: 'rose',
+    headline: 'Update Your Store Profile',
+    bodyHtml,
+    ctaLabel: 'Update & Resubmit Profile',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Action Required on Store Profile (${vendor.brandName})`, html);
 }
 
 // ============================================================================
-// 8. UNFULFILLED / PENDING ORDER DISPATCH REMINDER (18-24h NUDGE)
+// 8. UNFULFILLED / PENDING ORDER DISPATCH REMINDER
 // ============================================================================
 export async function sendVendorUnfulfilledOrderReminder(params: {
   vendor: VendorContact;
@@ -791,40 +723,33 @@ export async function sendVendorUnfulfilledOrderReminder(params: {
 }) {
   const { vendor, orderNumber, customerName, hoursPending = 24, items, portalUrl } = params;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/orders?tab=pending`;
+  const itemsList = items.map((it) => `${it.productName} (Size ${it.size} &middot; Qty ${it.quantity})`).join('<br>');
 
-  const itemsList = items.map((it) => `• ${it.productName} (Size: ${it.size} • Qty: ${it.quantity})`).join('<br>');
-
-  const bodyContent = `
-    <div style="background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #f59e0b; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">⏰ Dispatch Reminder: Order Waiting</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Order #${orderNumber} Awaiting Packaging</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
       Hello ${vendor.brandName},<br><br>
-      This is a friendly reminder that Order <strong>#${orderNumber}</strong> placed by <strong>${customerName}</strong> was received over ${hoursPending} hours ago and is awaiting dispatch.
+      Friendly reminder: order <strong>#${orderNumber}</strong> from <strong>${customerName}</strong> has been awaiting dispatch for ${hoursPending} hours. Prompt fulfillment keeps your storefront ranking high and protects against buyer cancellation.
     </p>
-
-    <!-- Order Items Summary Box -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
-      <span style="color: #f59e0b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; display: block; margin-bottom: 8px;">Items to Prepare &amp; Drop Off:</span>
-      <div style="color: #ffffff; font-size: 13px; line-height: 1.8;">
-        ${itemsList}
-      </div>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Mark Order Packaged &amp; Dispatched &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Prompt fulfillment protects your merchant dispatch score and prevents customer order cancellation. Thank you!
-    </p>
+    ${buildDetailPanel([
+      { label: 'Order Reference', value: `#${orderNumber}` },
+      { label: 'Items Waiting', value: itemsList },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ Reminder - Order #${orderNumber} is Awaiting Fulfillment (${vendor.brandName})`, wrapLuxuryTemplate('Order Reminder', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Order Dispatch Reminder',
+    eyebrow: 'FULFILLMENT REMINDER',
+    preheader: `Order #${orderNumber} is awaiting packaging and dispatch.`,
+    badge: 'Action Needed · Pack Order',
+    badgeTone: 'amber',
+    headline: `Order #${orderNumber} Awaiting Dispatch`,
+    bodyHtml,
+    ctaLabel: 'Mark Packed & Dispatched',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ Reminder — Order #${orderNumber} Awaiting Dispatch`, html);
 }
 
 // ============================================================================
@@ -835,39 +760,29 @@ export async function sendVendorMissingBankDetailsReminder(params: {
   portalUrl?: string;
 }) {
   const { vendor, portalUrl } = params;
-  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settings`;
+  const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/settlements`;
 
-  const bodyContent = `
-    <div style="background-color: rgba(230, 195, 103, 0.12); border: 1px solid rgba(230, 195, 103, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">🏦 Action Required: Payout Account</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Link Your Nigerian Bank Account for Payouts</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
       Hello ${vendor.designerName || vendor.brandName},<br><br>
-      We noticed that your settlement bank account has not been saved on your ÌRÍSÍ merchant profile yet. 
-    </p>
-
-    <!-- Why it matters -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 10px; font-weight: 700;">Why This is Essential:</h3>
-      <p style="color: #d1d5db; font-size: 13px; line-height: 1.6; margin: 0;">
-        When shoppers purchase your pieces, footwear, or accessories, their payment is locked in secure escrow. As soon as the customer receives their order, <strong>funds are automatically disbursed</strong> to your registered bank account without manual delays.
-      </p>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Add Bank Details in Merchant Settings &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      It takes less than 60 seconds to enter your bank name, account number, and account name.
+      Your settlement payout bank account has not been linked yet. Adding your account takes under 60 seconds and ensures your escrow earnings settle automatically the moment buyers confirm delivery.
     </p>
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Action Required: Add Your Payout Bank Details (${vendor.brandName})`, wrapLuxuryTemplate('Payout Setup', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Connect Payout Account',
+    eyebrow: 'MERCHANT TREASURY',
+    preheader: `Add your bank account so ${vendor.brandName} receives automatic escrow payouts.`,
+    badge: 'Action Needed · Payout Setup',
+    badgeTone: 'gold',
+    headline: 'Connect Your Payout Bank Account',
+    bodyHtml,
+    ctaLabel: 'Add Bank Details Now',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Connect Your Payout Bank Details (${vendor.brandName})`, html);
 }
 
 // ============================================================================
@@ -884,43 +799,35 @@ export async function sendVendorLowStockReminder(params: {
   const isOutOfStock = currentStock <= 0;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal/products`;
 
-  const bodyContent = `
-    <div style="background-color: ${isOutOfStock ? 'rgba(244, 63, 94, 0.12)' : 'rgba(245, 158, 11, 0.12)'}; border: 1px solid ${isOutOfStock ? 'rgba(244, 63, 94, 0.4)' : 'rgba(245, 158, 11, 0.4)'}; border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: ${isOutOfStock ? '#f43f5e' : '#f59e0b'}; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">
-        ${isOutOfStock ? '🚨 Sold Out Alert' : '⚠️ Low Stock Warning'}
-      </span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">
-      ${isOutOfStock ? `"${productName}" is Sold Out!` : `Only ${currentStock} Unit(s) Left of "${productName}"`}
-    </h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
       Hello ${vendor.brandName},<br><br>
-      ${isOutOfStock 
-        ? `Your item <strong>${productName}</strong> ${size ? `(Size: ${size})` : ''} has reached <strong>0 units</strong>. Shoppers currently see this item as Out of Stock.` 
-        : `Your item <strong>${productName}</strong> ${size ? `(Size: ${size})` : ''} is down to its last <strong>${currentStock} unit(s)</strong>.`}
+      ${
+        isOutOfStock
+          ? `Your piece <strong>${productName}</strong> ${size ? `(Size ${size})` : ''} has reached <strong>0 units</strong> and currently shows as Sold Out to shoppers.`
+          : `Your piece <strong>${productName}</strong> ${size ? `(Size ${size})` : ''} is down to its final <strong>${currentStock} unit(s)</strong>.`
+      } Restock promptly so active buyers do not bounce.
     </p>
-
-    <!-- Restock Recommendation Box -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 8px; font-weight: 700;">Why Restock Promptly?</h3>
-      <p style="color: #d1d5db; font-size: 13px; line-height: 1.6; margin: 0;">
-        Items with active customer views and search volume lose algorithm rank when marked out of stock. If you have restocked your physical boutique or studio, update your numbers online now to capture active buyers.
-      </p>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Update Stock Quantity in Portal &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Keep your best-selling styles available for eager shoppers across Nigeria.
-    </p>
+    ${buildDetailPanel([
+      { label: 'Listing', value: productName },
+      { label: 'Remaining Stock', value: isOutOfStock ? '0 units (Sold Out)' : `${currentStock} unit(s)`, highlight: isOutOfStock ? '#BE123C' : '#B45309' },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ Alert - ${isOutOfStock ? 'Sold Out' : 'Low Stock'}: ${productName} (${vendor.brandName})`, wrapLuxuryTemplate('Stock Alert', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: isOutOfStock ? 'Sold Out Alert' : 'Low Stock Alert',
+    eyebrow: 'INVENTORY INTELLIGENCE',
+    preheader: `${productName} is ${isOutOfStock ? 'sold out' : `down to ${currentStock} left`}.`,
+    badge: isOutOfStock ? 'Sold Out Alert' : 'Low Stock Warning',
+    badgeTone: isOutOfStock ? 'rose' : 'amber',
+    headline: isOutOfStock ? `"${productName}" Is Sold Out` : `Low Stock on "${productName}"`,
+    bodyHtml,
+    ctaLabel: 'Update Stock in Catalog',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ Alert — ${isOutOfStock ? 'Sold Out' : 'Low Stock'}: ${productName}`, html);
 }
 
 // ============================================================================
@@ -933,38 +840,31 @@ export async function sendVendorWeekendRushReminder(params: {
   const { vendor, portalUrl } = params;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
-  const bodyContent = `
-    <div style="background-color: rgba(230, 195, 103, 0.12); border: 1px solid rgba(230, 195, 103, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #e6c367; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">🛍️ Weekend Rush Ahead</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Get Ready for Weekend Shoppers, ${vendor.brandName}! ✨</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0 0 20px;">
-      Thursday through Sunday is when ÌRÍSÍ experiences its highest traffic of the week. Shoppers are shopping for upcoming weddings, celebrations, dinners, and weekend parties.
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.7; margin:0 0 18px;">
+      Thursday through Sunday brings the highest shopper intent of the week on ÌRÍSÍ. Spend 2 minutes getting <strong>${vendor.brandName}</strong> ready for weekend orders:
     </p>
-
-    <!-- Checklist Box -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(230, 195, 103, 0.25); border-radius: 16px; padding: 22px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 10px; font-weight: 700;">⚡ 3-Minute Weekend Prep:</h3>
-      <ul style="color: #9ca3af; font-size: 12px; line-height: 1.8; margin: 0; padding-left: 20px;">
-        <li><strong style="color: #ffffff;">Check High-Demand Sizes:</strong> Make sure popular sizes (M, L, XL, Shoe 42-45) are listed in stock.</li>
-        <li><strong style="color: #ffffff;">Post Fresh Arrivals:</strong> Weekend shoppers love seeing "Just In" pieces and new catalog drops.</li>
-        <li><strong style="color: #ffffff;">Prepare Packaging Materials:</strong> Have your luxury boxes and mailers ready for swift Monday dispatch.</li>
-      </ul>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Review Your Storefront Before the Weekend &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Here's to a record-breaking weekend of orders and sales for your brand!
-    </p>
+    ${buildDetailPanel([
+      { label: 'Popular Sizes', value: 'Verify M, L, XL &amp; best-selling footwear sizes are stocked' },
+      { label: '24h Story Drop', value: 'Upload a fresh Lookbook Story to notify followers live' },
+      { label: 'Packaging Ready', value: 'Keep boxes &amp; mailers ready for swift dispatch' },
+    ])}
   `;
 
-  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ - Prepare for the Weekend Rush, ${vendor.brandName}! 🛍️`, wrapLuxuryTemplate('Weekend Prep', bodyContent));
+  const html = buildIrisiEmailShell({
+    title: 'Weekend Rush Prep',
+    eyebrow: 'MERCHANT GROWTH',
+    preheader: `Weekend shopping traffic peaks Thursday–Sunday — prep ${vendor.brandName} now.`,
+    badge: 'Weekend Traffic Peak',
+    badgeTone: 'gold',
+    headline: `Prepare for Weekend Orders, ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'Review Your Studio',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Get Ready for Weekend Orders, ${vendor.brandName}`, html);
 }
 
 // ============================================================================
@@ -976,51 +876,34 @@ export async function sendVendorAccountSuspendedNotification(params: {
 }) {
   const { vendor, suspensionReason } = params;
 
-  const bodyContent = `
-    <div style="background-color: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #f43f5e; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">⚠️ Store Account Suspended</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 20px; margin: 0 0 14px; font-weight: 600;">Notice of Account Suspension: ${vendor.brandName}</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
       Hello ${vendor.designerName || vendor.brandName},<br><br>
-      This is an official communication from the ÌRÍSÍ Compliance and Governance Team. Please be advised that your merchant storefront and product listings have been temporarily <strong>suspended</strong>.
+      Your storefront <strong>${vendor.brandName}</strong> has been temporarily suspended pending compliance review. Pending escrow payouts for already-delivered orders remain safely registered.
     </p>
-
-    <!-- Suspension Reason Box -->
-    <div style="background-color: #0c0d0e; border: 1.5px solid rgba(244, 63, 94, 0.35); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
-      <span style="color: #f43f5e; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; display: block; margin-bottom: 8px;">Reason for Suspension:</span>
-      <p style="color: #ffffff; font-size: 14px; line-height: 1.6; margin: 0; font-family: monospace; background-color: rgba(255, 255, 255, 0.04); padding: 12px 14px; border-radius: 10px;">
-        &ldquo;${suspensionReason || 'Store suspended due to compliance review or policy breach.'}&rdquo;
-      </p>
-    </div>
-
-    <!-- Impact Details -->
-    <div style="background-color: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;">
-      <h3 style="color: #e6c367; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 700;">Account Status Restrictions:</h3>
-      <ul style="color: #9ca3af; font-size: 12px; line-height: 1.7; margin: 0; padding-left: 20px;">
-        <li>Your catalog pieces are hidden from shoppers across the marketplace and search.</li>
-        <li>Active sessions and portal login access have been restricted until resolved.</li>
-        <li>Any pending escrow disbursements for delivered orders remain securely registered.</li>
-      </ul>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${CONCIERGE_WHATSAPP_URL}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Contact Concierge to Appeal Suspension &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      If you believe this action was taken in error or if you have questions regarding store reinstatement, please message our merchant concierge immediately.
-    </p>
+    ${buildDetailPanel([
+      {
+        label: 'Suspension Reason',
+        value: suspensionReason || 'Store suspended pending compliance review.',
+        highlight: '#BE123C',
+      },
+    ])}
   `;
 
-  return sendLuxuryEmail(
-    vendor.email,
-    `ÌRÍSÍ Notice: Merchant Account Suspended - ${vendor.brandName}`,
-    wrapLuxuryTemplate('Account Suspended', bodyContent)
-  );
+  const html = buildIrisiEmailShell({
+    title: 'Account Suspended',
+    eyebrow: 'COMPLIANCE & GOVERNANCE',
+    preheader: `Notice regarding your ${vendor.brandName} storefront status.`,
+    badge: 'Store Account Suspended',
+    badgeTone: 'rose',
+    headline: `Notice of Suspension: ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'Contact Concierge to Appeal',
+    ctaUrl: CONCIERGE_WHATSAPP_URL,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ Notice — Merchant Account Suspended (${vendor.brandName})`, html);
 }
 
 // ============================================================================
@@ -1033,40 +916,28 @@ export async function sendVendorAccountReinstatedNotification(params: {
   const { vendor, portalUrl } = params;
   const portalLink = portalUrl || `${getBaseUrl()}/vendor-portal`;
 
-  const bodyContent = `
-    <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; text-align: center;">
-      <span style="color: #10b981; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px;">✅ Account Reinstated &amp; Active</span>
-    </div>
-
-    <h2 style="color: #ffffff; font-size: 21px; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.3px;">Store Reinstated: Welcome Back, ${vendor.brandName}! ✨</h2>
-    <p style="color: #d1d5db; font-size: 14px; line-height: 1.7; margin: 0 0 20px;">
-      We are pleased to inform you that your merchant account suspension has been lifted by the ÌRÍSÍ administration. Your store is now fully verified and reinstated.
+  const bodyHtml = `
+    <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.68; margin:0 0 18px;">
+      Your storefront suspension has been lifted. <strong>${vendor.brandName}</strong> is once again live, verified, and discoverable across ÌRÍSÍ.
     </p>
-
-    <!-- Restored Features Box -->
-    <div style="background-color: #0c0d0e; border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
-      <h3 style="color: #10b981; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 700;">Restored Store Privileges:</h3>
-      <ul style="color: #d1d5db; font-size: 12px; line-height: 1.8; margin: 0; padding-left: 20px;">
-        <li>All active catalog pieces are live and discoverable by shoppers across Nigeria.</li>
-        <li>Merchant portal login and management features have been fully re-enabled.</li>
-        <li>Escrow settlements and order fulfillment operations are active.</li>
-      </ul>
-    </div>
-
-    <div style="text-align: center; margin-top: 28px; margin-bottom: 24px;">
-      <a href="${portalLink}" style="display: inline-block; background-color: #e6c367; color: #08090a; font-weight: 700; font-size: 14px; text-decoration: none; padding: 14px 34px; border-radius: 12px; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(230, 195, 103, 0.3);">
-        Access Merchant Portal &rarr;
-      </a>
-    </div>
-
-    <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0; text-align: center;">
-      Thank you for your cooperation and commitment to high-standard craftsmanship on ÌRÍSÍ.
-    </p>
+    ${buildDetailPanel([
+      { label: 'Catalog Visibility', value: 'Live &amp; searchable on Shop', highlight: '#059669' },
+      { label: 'Studio &amp; Escrow', value: 'Fully active &amp; enabled', highlight: '#059669' },
+    ])}
   `;
 
-  return sendLuxuryEmail(
-    vendor.email,
-    `ÌRÍSÍ Notice: Merchant Account Reinstated - Welcome Back ${vendor.brandName}! ✨`,
-    wrapLuxuryTemplate('Account Reinstated', bodyContent)
-  );
+  const html = buildIrisiEmailShell({
+    title: 'Store Reinstated',
+    eyebrow: 'COMPLIANCE & GOVERNANCE',
+    preheader: `Welcome back — ${vendor.brandName} is active again on ÌRÍSÍ.`,
+    badge: 'Account Reinstated',
+    badgeTone: 'emerald',
+    headline: `Welcome Back, ${vendor.brandName}`,
+    bodyHtml,
+    ctaLabel: 'Open Merchant Studio',
+    ctaUrl: portalLink,
+    ctaStyle: 'obsidian',
+  });
+
+  return sendLuxuryEmail(vendor.email, `ÌRÍSÍ — Storefront Reinstated: Welcome Back ${vendor.brandName}`, html);
 }

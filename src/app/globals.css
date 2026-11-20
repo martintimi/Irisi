@@ -226,3 +226,109 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+
+/* Bespoke Quiet-Luxury Order Status Micro-Animations */
+@keyframes irisiRiderGlide {
+  0% {
+    left: -14%;
+    transform: translateY(0px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  30% {
+    transform: translateY(-1px);
+  }
+  60% {
+    transform: translateY(0.5px);
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    transform: translateY(0px);
+    opacity: 0;
+  }
+}
+
+@keyframes irisiRoadDash {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: -32px 0;
+  }
+}
+
+@keyframes irisiParcelBob {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  35% {
+    transform: translateY(-2.5px) rotate(-3deg);
+  }
+  70% {
+    transform: translateY(0.5px) rotate(2deg);
+  }
+}
+
+@keyframes irisiRadarPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+@keyframes irisiSparkleFloat {
+  0%, 100% {
+    transform: scale(0.9) rotate(0deg);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.2) rotate(16deg);
+    opacity: 1;
+  }
+}
+
+.irisi-rider-glide {
+  animation: irisiRiderGlide 3.8s linear infinite;
+  will-change: left, transform, opacity;
+}
+
+.irisi-road-dashes {
+  background-image: repeating-linear-gradient(
+    to right,
+    rgba(212, 175, 55, 0.55) 0px,
+    rgba(212, 175, 55, 0.55) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  background-size: 32px 2px;
+  animation: irisiRoadDash 0.9s linear infinite;
+}
+
+.irisi-parcel-bob {
+  animation: irisiParcelBob 2.4s ease-in-out infinite;
+}
+
+.irisi-radar-ring {
+  animation: irisiRadarPulse 2.1s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.irisi-seal-ring {
+  animation: irisiRadarPulse 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.irisi-sparkle-float {
+  animation: irisiSparkleFloat 2.4s ease-in-out infinite;
+}

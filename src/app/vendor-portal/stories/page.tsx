@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { compressImageToFile } from '@/lib/utils/imageUtils';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 interface DraftSlide {
   id: string;
@@ -108,7 +109,11 @@ export default function VendorStoriesPage() {
 
   const loadMyStories = useCallback(async () => {
     if (!vendorLookupKey) return;
-    setLoadingStories(true);
+    const cached = getVendorCache<VendorStory[]>(vendorLookupKey, 'stories');
+    if (cached) {
+      setActiveStories(cached);
+    }
+    setLoadingStories(!cached);
     try {
       const res = await fetch(`/api/stories?vendorId=${encodeURIComponent(vendorLookupKey)}`, {
         headers: { 'Cache-Control': 'no-cache' },
@@ -116,6 +121,7 @@ export default function VendorStoriesPage() {
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.stories)) {
         setActiveStories(data.stories);
+        setVendorCache(vendorLookupKey, 'stories', data.stories);
       }
     } catch {} finally {
       setLoadingStories(false);

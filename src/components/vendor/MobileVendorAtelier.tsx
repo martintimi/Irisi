@@ -2,14 +2,13 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import {
-  Building, User, Mail, Phone, MapPin, Check,
-  ShieldCheck, ExternalLink, Sparkles, Store, Loader2,
-  Clock, AlertCircle, CheckCircle2, Truck, Navigation, Save, Camera
-} from 'lucide-react';
 import Link from 'next/link';
+import {
+  CheckCircle2, AlertCircle, Clock, ExternalLink, Camera,
+  Loader2, MapPin, Navigation, Save, Sparkles, Trash2
+} from 'lucide-react';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
-import { NIGERIAN_STATES, getCitiesForState } from '@/lib/data/nigeriaLocations';
+import { NIGERIAN_STATES } from '@/lib/data/nigeriaLocations';
 import SearchableCitySelect from '@/components/common/SearchableCitySelect';
 import { compressImageToFile } from '@/lib/utils/imageUtils';
 
@@ -44,16 +43,17 @@ export default function MobileVendorAtelier({
   setErrorMessage,
   successMessage,
   setSuccessMessage,
-  isFieldsDisabled
 }: MobileVendorAtelierProps) {
+  const [activeSection, setActiveSection] = useState<'identity' | 'dispatch' | 'socials'>('identity');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
   if (isLoadingProfile) {
-    return <VendorLuxuryLoader label="Loading Store Profile from Database..." />;
+    return <VendorLuxuryLoader label="Loading Store Profile..." />;
   }
 
   const isVerified = approvalStatus === 'approved';
   const isRejected = approvalStatus === 'rejected';
-
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const brandInitial = (form.brandName || 'B').trim().charAt(0).toUpperCase();
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,20 +72,15 @@ export default function MobileVendorAtelier({
       const formData = new FormData();
       formData.append('file', compressedFile);
 
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok || !data.success || !data.url) {
         throw new Error(data.error || 'Failed to upload logo.');
       }
 
       setForm((prev: any) => ({ ...prev, logoUrl: data.url }));
-      setSuccessMessage?.('Brand logo uploaded! Tap "Save Profile" below to activate on your storefront.');
+      setSuccessMessage?.('Brand logo uploaded — tap Save Store Profile below to publish.');
     } catch (err: any) {
-      console.error('Logo upload failed:', err);
       setErrorMessage?.(err.message || 'Failed to upload logo image.');
     } finally {
       setIsUploadingLogo(false);
@@ -93,506 +88,444 @@ export default function MobileVendorAtelier({
   };
 
   return (
-    <form onSubmit={handleSave} className="space-y-4 animate-fadeIn pb-20 select-none">
-      
-      {/* Top Error Alert Banner */}
+    <form onSubmit={handleSave} className="space-y-4 animate-fadeIn pb-8 select-none">
+      {/* Alerts */}
       {errorMessage && (
-        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono-luxury flex items-center justify-between gap-2.5 animate-fadeIn">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-rose-500 shrink-0 animate-ping" />
-            <span className="font-bold">{errorMessage}</span>
-          </div>
+        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-500 text-xs flex items-center justify-between gap-2.5">
+          <span className="leading-relaxed">{errorMessage}</span>
           {setErrorMessage && (
             <button
               type="button"
               onClick={() => setErrorMessage('')}
-              className="text-[10px] text-rose-400/70 hover:text-rose-300 uppercase font-bold cursor-pointer"
+              className="text-[10px] font-mono-luxury uppercase shrink-0 cursor-pointer"
             >
-              Dismiss
+              Close
             </button>
           )}
         </div>
       )}
 
-      {/* Top Success Alert Banner */}
       {successMessage && (
-        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury flex items-center justify-between gap-2.5 animate-fadeIn">
-          <div className="flex items-center gap-2">
+        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-xs flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 min-w-0">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
-            <span className="font-bold">{successMessage}</span>
+            <span className="leading-relaxed">{successMessage}</span>
           </div>
           {setSuccessMessage && (
             <button
               type="button"
               onClick={() => setSuccessMessage('')}
-              className="text-[10px] text-emerald-400/70 hover:text-emerald-300 uppercase font-bold cursor-pointer"
+              className="text-[10px] font-mono-luxury uppercase shrink-0 cursor-pointer"
             >
-              Dismiss
+              Done
             </button>
           )}
         </div>
       )}
 
-      {/* 1. Native Screen Header */}
-      <div>
-        <h1 className="font-editorial text-[26px] font-normal text-[var(--text-primary)] leading-tight">
-          Store Profile
-        </h1>
-        <p className="text-xs text-[var(--text-muted)] font-light">
-          Brand identity, socials &amp; dispatch hub
-        </p>
+      {/* 1. Native Hero Brand Avatar & Status Card */}
+      <section className="p-5 rounded-[24px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex flex-col items-center text-center space-y-3">
+        <div className="relative">
+          <div className="relative h-20 w-20 rounded-full overflow-hidden bg-zinc-950 border-2 border-[var(--gold-accent)]/50 flex items-center justify-center shadow-md">
+            {form.logoUrl ? (
+              <Image
+                src={form.logoUrl}
+                alt={form.brandName || 'Brand Logo'}
+                fill
+                unoptimized
+                className="object-cover"
+              />
+            ) : (
+              <span className="font-editorial text-3xl text-[var(--gold-accent)]">{brandInitial}</span>
+            )}
+            {isUploadingLogo && (
+              <div className="absolute inset-0 bg-black/65 flex items-center justify-center">
+                <Loader2 className="h-5 w-5 text-[var(--gold-accent)] animate-spin" />
+              </div>
+            )}
+          </div>
+
+          <label
+            htmlFor="mobile-logo-upload-input"
+            className="absolute -bottom-0.5 -right-0.5 h-8 w-8 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] border-2 border-[var(--bg-surface)] flex items-center justify-center shadow-sm active:scale-95 cursor-pointer"
+            aria-label="Upload brand logo"
+          >
+            <Camera className="h-3.5 w-3.5" />
+          </label>
+          <input
+            id="mobile-logo-upload-input"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/jpg"
+            disabled={isUploadingLogo}
+            onChange={handleLogoUpload}
+            className="hidden"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <h1 className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-tight">
+            {form.brandName || 'Store Profile'}
+          </h1>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            {isVerified ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-mono-luxury">
+                <CheckCircle2 className="h-3 w-3" /> Verified Store
+              </span>
+            ) : isRejected ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-500 text-[10px] font-mono-luxury">
+                <AlertCircle className="h-3 w-3" /> Needs Update
+              </span>
+            ) : isProfileSaved ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-[10px] font-mono-luxury">
+                <Clock className="h-3 w-3" /> Under Review
+              </span>
+            ) : null}
+
+            <Link
+              href={`/brand/${encodeURIComponent(form.brandName || 'store')}`}
+              target="_blank"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury text-[var(--text-secondary)]"
+            >
+              <span>Preview Store</span>
+              <ExternalLink className="h-2.5 w-2.5 text-[var(--gold-accent)]" />
+            </Link>
+
+            {form.logoUrl && (
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, logoUrl: '' })}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono-luxury text-rose-500 cursor-pointer"
+              >
+                <Trash2 className="h-2.5 w-2.5" /> Remove Logo
+              </button>
+            )}
+          </div>
+        </div>
+
+        {isRejected && rejectionReason && (
+          <p className="text-[11px] text-rose-500 bg-rose-500/10 border border-rose-500/20 px-3 py-2 rounded-xl w-full text-left">
+            Admin note: &ldquo;{rejectionReason}&rdquo;
+          </p>
+        )}
+      </section>
+
+      {/* 2. Native iOS Segmented Tab Bar */}
+      <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+        {[
+          { id: 'identity', label: 'Identity' },
+          { id: 'dispatch', label: 'Dispatch' },
+          { id: 'socials', label: 'Socials' },
+        ].map((tab) => {
+          const active = activeSection === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSection(tab.id as any)}
+              className={`py-2 rounded-xl text-xs font-mono-luxury transition-all cursor-pointer ${
+                active
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                  : 'text-[var(--text-muted)]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2. Live Status Banner */}
-      {isVerified ? (
-        <div className="space-y-2.5">
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 text-xs font-mono-luxury">
-            <div className="flex items-center gap-2 text-emerald-400">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span className="font-bold">Store Profile Approved &amp; Active</span>
-            </div>
-            <Link
-              href={`/brand/${encodeURIComponent(form.brandName || 'Atelier')}`}
-              target="_blank"
-              className="text-[10px] text-[var(--gold-accent)] uppercase font-bold flex items-center gap-1 shrink-0 underline"
-            >
-              <span>Preview</span>
-              <ExternalLink className="h-3 w-3" />
-            </Link>
-          </div>
-          {(!form.logoUrl || !form.bio || !form.city || !form.state) && (
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono-luxury text-amber-300 space-y-1.5">
-              <div className="font-bold uppercase text-amber-400 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 shrink-0" />
-                <span>Complete Your Storefront Identity</span>
-              </div>
-              <p className="text-[var(--text-secondary)] leading-relaxed">
-                Your social media handles from your application have been pre-filled below! Please upload your <strong>Brand Logo</strong>, write a short <strong>Store Bio</strong>, confirm your <strong>Dispatch Hub</strong>, and tap <strong>Save</strong>.
-              </p>
-              <Link
-                href="/vendor-portal/settlements"
-                className="inline-flex items-center gap-1 text-[10px] text-emerald-400 uppercase font-bold underline pt-0.5"
-              >
-                <span>Also remember to add your Payout Bank Account in Settlement Banking &rarr;</span>
-              </Link>
-            </div>
-          )}
-        </div>
-      ) : isRejected ? (
-        <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 space-y-1 text-xs font-mono-luxury">
-          <div className="flex items-center gap-2 text-rose-400 font-bold">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>Profile Needs Update</span>
-          </div>
-          <p className="text-[11px] text-[var(--text-secondary)]">
-            {rejectionReason || 'Please review contact numbers and store address.'}
-          </p>
-        </div>
-      ) : isProfileSaved ? (
-        <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-2.5 text-xs font-mono-luxury text-amber-400">
-          <Clock className="h-4 w-4 animate-pulse shrink-0" />
-          <span>Pending Super Admin Verification</span>
-        </div>
-      ) : null}
-
-      {/* 3. Store Identity & Contacts */}
-      <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm text-xs font-mono-luxury">
-        <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
-          1. Brand Identity &amp; Specialty
-        </span>
-
-        {/* Store Brand Logo */}
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1.5 font-bold">
-            Store Brand Logo / Emblem
-          </label>
-          <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-            <div className="relative h-16 w-24 rounded-2xl bg-black border border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial font-bold text-2xl text-[var(--gold-accent)] shadow-md shrink-0 overflow-hidden p-1">
-              {form.logoUrl ? (
-                <Image
-                  src={form.logoUrl}
-                  alt={form.brandName || 'Brand Logo'}
-                  fill
-                  unoptimized
-                  className="object-contain"
-                />
-              ) : (
-                <span>{form.brandName ? form.brandName.charAt(0).toUpperCase() : 'B'}</span>
-              )}
-              {isUploadingLogo && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
-                  <Loader2 className="h-5 w-5 text-[var(--gold-accent)] animate-spin" />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1 flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <label
-                  htmlFor="mobile-logo-upload-input"
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-mono-luxury uppercase font-bold transition-all shadow-sm ${
-                    isUploadingLogo
-                      ? 'bg-[var(--border-subtle)] text-[var(--text-muted)] cursor-not-allowed'
-                      : 'bg-[var(--text-primary)] text-[var(--bg-primary)] active:scale-95 cursor-pointer'
-                  }`}
-                >
-                  <Camera className="h-3 w-3" />
-                  <span>{form.logoUrl ? 'Change' : 'Upload Logo'}</span>
-                </label>
-
-                {form.logoUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, logoUrl: '' })}
-                    className="px-2.5 py-1.5 rounded-xl surface-card border border-rose-500/30 text-rose-400 text-[11px] font-mono-luxury uppercase font-bold"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              <input
-                id="mobile-logo-upload-input"
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/jpg"
-                disabled={isUploadingLogo}
-                onChange={handleLogoUpload}
-                className="hidden"
-              />
-              <p className="text-[10px] text-[var(--text-muted)] leading-tight font-mono-luxury">
-                Replaces first letter on your public storefront.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Store Specialty &amp; Department
-          </label>
-          <select
-            value={
-              form.specialty === 'apparel' ? 'streetwear' :
-              form.specialty === 'jewelry' ? 'accessories' :
-              (form.specialty || 'streetwear')
-            }
-            onChange={(e) => {
-              const spec = e.target.value;
-              setForm({
-                ...form,
-                specialty: spec,
-                vendorType: spec === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller'
-              });
-            }}
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
-          >
-            <option value="native_tailoring">Bespoke Native Tailoring Atelier (Agbada, Kaftans, Senator — Made to Measure)</option>
-            <option value="streetwear">Ready-to-Wear Clothing Boutique (Streetwear, Hoodies, Two-Piece Sets, Dresses)</option>
-            <option value="footwear">Footwear &amp; Slides (Palms, Slides, Loafers, Sneakers)</option>
-            <option value="caps">Caps, Hats &amp; Headwear (Fila, Dad Caps, Beanies, Bucket Hats)</option>
-            <option value="accessories">Jewelry, Watches &amp; Luxury Accessories (Chains, Watches, Bags, Belts)</option>
-            <option value="multi_department">Multi-Department Boutique (All Fashion &amp; Accessories)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Brand / Store Name <strong className="text-rose-400">*</strong>
-          </label>
-          <input
-            type="text"
-            required
-            value={form.brandName}
-            onChange={(e) => setForm({ ...form, brandName: e.target.value })}
-            placeholder="e.g. Moji Wears"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            {isBoutique ? 'Store Manager / Contact Person' : 'Lead Designer / Tailor'}
-          </label>
-          <input
-            type="text"
-            value={form.designerName}
-            onChange={(e) => setForm({ ...form, designerName: e.target.value })}
-            placeholder="e.g. Full Name"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Business Email
-          </label>
-          <input
-            type="email"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="store@example.com"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Official Phone / WhatsApp <strong className="text-rose-400">*</strong>
-          </label>
-          <input
-            type="tel"
-            required
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            placeholder="e.g. 08012345678"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
-          />
-        </div>
-
-        {/* Primary Dispatch Hub */}
-        <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
-          <span className="text-[11px] uppercase font-bold text-[var(--gold-accent)] flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            <span>Primary Dispatch Location</span>
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {/* 1. STATE (FIRST) */}
-            <div>
-              <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-                1. State <strong className="text-rose-400">*</strong>
+      {/* SECTION A: BRAND IDENTITY */}
+      {activeSection === 'identity' && (
+        <section className="space-y-3 animate-fadeIn">
+          <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            <div className="px-4 py-3 space-y-1">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                Store Specialty
               </label>
               <select
-                value={form.state}
+                value={
+                  form.specialty === 'apparel'
+                    ? 'streetwear'
+                    : form.specialty === 'jewelry'
+                    ? 'accessories'
+                    : form.specialty || 'streetwear'
+                }
                 onChange={(e) => {
-                  const newState = e.target.value;
+                  const spec = e.target.value;
                   setForm({
                     ...form,
-                    state: newState,
-                    city: ''
+                    specialty: spec,
+                    vendorType: spec === 'native_tailoring' ? 'fashion_designer' : 'boutique_seller',
                   });
                 }}
-                className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
+                className="w-full bg-transparent text-sm text-[var(--text-primary)] focus:outline-none cursor-pointer py-1"
               >
-                <option value="">Select State</option>
-                {NIGERIAN_STATES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
+                <option value="native_tailoring">Bespoke Native Tailoring Atelier</option>
+                <option value="streetwear">Ready-to-Wear Clothing Boutique</option>
+                <option value="footwear">Footwear &amp; Slides</option>
+                <option value="caps">Caps, Hats &amp; Headwear</option>
+                <option value="accessories">Jewelry, Watches &amp; Accessories</option>
+                <option value="perfume">Perfumes &amp; Fragrances</option>
+                <option value="wigs">Hair &amp; Wigs</option>
+                <option value="multi_department">Multi-Department Boutique (All)</option>
               </select>
             </div>
 
-            {/* 2. CITY (SECOND, DYNAMIC) */}
-            <div>
-              <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-                2. City / Town <strong className="text-rose-400">*</strong>
+            <div className="px-4 py-3 space-y-1">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                Brand / Store Name *
               </label>
-              <SearchableCitySelect
-                state={form.state}
-                value={form.city}
-                onChange={(newCity) => setForm({ ...form, city: newCity })}
-                placeholder={form.state ? `Search city in ${form.state}...` : 'Select state first'}
+              <input
+                type="text"
+                required
+                value={form.brandName}
+                onChange={(e) => setForm({ ...form, brandName: e.target.value })}
+                placeholder="e.g. Moji Wears"
+                className="w-full bg-transparent text-sm text-[var(--text-primary)] focus:outline-none py-0.5"
+              />
+            </div>
+
+            <div className="px-4 py-3 space-y-1">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                {isBoutique ? 'Store Manager / Founder' : 'Lead Designer / Tailor'}
+              </label>
+              <input
+                type="text"
+                value={form.designerName}
+                onChange={(e) => setForm({ ...form, designerName: e.target.value })}
+                placeholder="Full Name"
+                className="w-full bg-transparent text-sm text-[var(--text-primary)] focus:outline-none py-0.5"
+              />
+            </div>
+
+            <div className="px-4 py-3 space-y-1">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                Business Email *
+              </label>
+              <input
+                type="email"
+                required
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="store@example.com"
+                className="w-full bg-transparent text-sm text-[var(--text-primary)] focus:outline-none py-0.5"
+              />
+            </div>
+
+            <div className="px-4 py-3 space-y-1">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                Official Phone / WhatsApp *
+              </label>
+              <input
+                type="tel"
+                required
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="e.g. 08012345678"
+                className="w-full bg-transparent text-sm font-mono-luxury text-[var(--text-primary)] focus:outline-none py-0.5"
+              />
+            </div>
+
+            <div className="px-4 py-3 space-y-1">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                Store Bio / Tagline
+              </label>
+              <textarea
+                rows={3}
+                value={form.bio}
+                onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                placeholder="Tell shoppers what makes your brand special..."
+                className="w-full bg-transparent text-sm text-[var(--text-primary)] focus:outline-none resize-none py-0.5 leading-relaxed"
               />
             </div>
           </div>
-        </div>
 
-        {/* Secondary Dispatch Hub (Optional) */}
-        <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-bold text-blue-400 flex items-center gap-1">
-              <Navigation className="h-3 w-3" />
-              <span>Second Dispatch Hub (Optional)</span>
-            </span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.hasSecondaryHub}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setForm({
-                    ...form,
-                    hasSecondaryHub: checked,
-                    secondaryState: checked ? form.secondaryState : '',
-                    secondaryCity: checked ? form.secondaryCity : ''
-                  });
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-[var(--border-subtle)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--gold-accent)]"></div>
-            </label>
+          {/* Payout Quick Link */}
+          <Link
+            href="/vendor-portal/settlements"
+            className="px-4 py-3.5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between text-xs active:bg-[var(--bg-secondary)]"
+          >
+            <span className="text-[var(--text-secondary)]">Need to update your payout bank account?</span>
+            <span className="text-[var(--gold-accent)] font-mono-luxury shrink-0">Payouts ›</span>
+          </Link>
+        </section>
+      )}
+
+      {/* SECTION B: DISPATCH HUBS & TURNAROUND */}
+      {activeSection === 'dispatch' && (
+        <section className="space-y-3 animate-fadeIn">
+          <div className="p-4 rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3.5">
+            <div className="flex items-center gap-2 text-xs text-[var(--text-primary)]">
+              <MapPin className="h-4 w-4 text-[var(--gold-accent)]" />
+              <span className="font-medium">Primary Dispatch Hub</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                  State *
+                </label>
+                <select
+                  value={form.state}
+                  onChange={(e) => setForm({ ...form, state: e.target.value, city: '' })}
+                  className="w-full h-11 px-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                >
+                  <option value="">Select State</option>
+                  {NIGERIAN_STATES.map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                  City / Area *
+                </label>
+                <SearchableCitySelect
+                  state={form.state}
+                  value={form.city}
+                  onChange={(newCity) => setForm({ ...form, city: newCity })}
+                  placeholder={form.state ? `City in ${form.state}` : 'Pick state first'}
+                />
+              </div>
+            </div>
           </div>
 
-          {form.hasSecondaryHub && (
-            <div className="space-y-2 pt-1 animate-fadeIn">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-                    2nd State <strong className="text-rose-400">*</strong>
+          {/* Secondary Dispatch Hub Toggle */}
+          <div className="p-4 rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Navigation className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-[var(--text-primary)]">Second Dispatch Hub</div>
+                  <p className="text-[11px] text-[var(--text-muted)] font-light">
+                    Ship from a second city or branch
+                  </p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={form.hasSecondaryHub}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm({
+                      ...form,
+                      hasSecondaryHub: checked,
+                      secondaryState: checked ? form.secondaryState : '',
+                      secondaryCity: checked ? form.secondaryCity : '',
+                    });
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-10 h-6 bg-[var(--border-subtle)] rounded-full peer peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--gold-accent)]" />
+              </label>
+            </div>
+
+            {form.hasSecondaryHub && (
+              <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-[var(--border-subtle)]">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                    2nd State *
                   </label>
                   <select
                     value={form.secondaryState}
-                    onChange={(e) => {
-                      const newState = e.target.value;
-                      setForm({
-                        ...form,
-                        secondaryState: newState,
-                        secondaryCity: ''
-                      });
-                    }}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold cursor-pointer"
+                    onChange={(e) => setForm({ ...form, secondaryState: e.target.value, secondaryCity: '' })}
+                    className="w-full h-11 px-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
                   >
                     <option value="">Select State</option>
                     {NIGERIAN_STATES.map((st) => (
-                      <option key={st} value={st}>{st}</option>
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-                    2nd City <strong className="text-rose-400">*</strong>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                    2nd City *
                   </label>
                   <SearchableCitySelect
                     state={form.secondaryState}
                     value={form.secondaryCity}
                     onChange={(newCity) => setForm({ ...form, secondaryCity: newCity })}
-                    placeholder={form.secondaryState ? `Search city in ${form.secondaryState}...` : 'Select state first'}
+                    placeholder={form.secondaryState ? `City in ${form.secondaryState}` : 'Pick state first'}
                   />
                 </div>
               </div>
-              <p className="text-[10px] text-blue-400 font-mono-luxury">
-                ✨ When creating a product, you can pick which hub it ships from.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Store Bio / Tagline
-          </label>
-          <textarea
-            rows={2}
-            value={form.bio}
-            onChange={(e) => setForm({ ...form, bio: e.target.value })}
-            placeholder="e.g. Luxury bespoke tailoring and modern Nigerian streetwear."
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none resize-none"
-          />
-        </div>
-      </div>
-
-      {/* 2. Social Media & Direct Concierge */}
-      <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3 shadow-sm text-xs font-mono-luxury">
-        <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
-          2. Social Channels & WhatsApp
-        </span>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <div>
-            <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-              Instagram
-            </label>
-            <input
-              type="text"
-              value={form.instagram}
-              onChange={(e) => setForm({ ...form, instagram: e.target.value })}
-              placeholder="@brand"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-pink-500 focus:outline-none"
-            />
+            )}
           </div>
 
-          <div>
-            <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-              TikTok
+          {/* Turnaround Timeline */}
+          <div className="p-4 rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2">
+            <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+              Standard Dispatch Turnaround
             </label>
-            <input
-              type="text"
-              value={form.tiktok}
-              onChange={(e) => setForm({ ...form, tiktok: e.target.value })}
-              placeholder="@tiktok"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-cyan-400 focus:outline-none"
-            />
+            <select
+              value={form.dispatchDays}
+              onChange={(e) => setForm({ ...form, dispatchDays: e.target.value })}
+              className="w-full h-11 px-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+            >
+              <option value="Same-day / 1 day">Same-day / 1 business day</option>
+              <option value="1-2 business days">1–2 business days (Ready to Ship)</option>
+              <option value="2-3 business days">2–3 business days</option>
+              <option value="3-5 business days">3–5 business days (Made to Order)</option>
+              <option value="5-7 business days">5–7 business days (Bespoke Craft)</option>
+            </select>
           </div>
+        </section>
+      )}
 
-          <div>
-            <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-              Snapchat
-            </label>
-            <input
-              type="text"
-              value={form.snapchat}
-              onChange={(e) => setForm({ ...form, snapchat: e.target.value })}
-              placeholder="@snapchat"
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-amber-300 focus:outline-none"
-            />
+      {/* SECTION C: SOCIAL CHANNELS */}
+      {activeSection === 'socials' && (
+        <section className="animate-fadeIn">
+          <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            {[
+              { key: 'instagram', label: 'Instagram Handle', placeholder: '@yourbrand' },
+              { key: 'tiktok', label: 'TikTok Handle', placeholder: '@yourbrand' },
+              { key: 'snapchat', label: 'Snapchat Handle', placeholder: '@yourbrand' },
+              { key: 'whatsapp', label: 'WhatsApp Number', placeholder: 'e.g. +23480...' },
+            ].map((field) => (
+              <div key={field.key} className="px-4 py-3 space-y-1">
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                  {field.label}
+                </label>
+                <input
+                  type={field.key === 'whatsapp' ? 'tel' : 'text'}
+                  value={form[field.key] || ''}
+                  onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
+                  placeholder={field.placeholder}
+                  className="w-full bg-transparent text-sm text-[var(--text-primary)] focus:outline-none py-0.5"
+                />
+              </div>
+            ))}
           </div>
+        </section>
+      )}
 
-          <div>
-            <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold text-[10px]">
-              WhatsApp
-            </label>
-            <input
-              type="tel"
-              value={form.whatsapp}
-              onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-              placeholder="080..."
-              className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-emerald-500 focus:outline-none font-bold"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Dispatch Turnaround Timeline */}
-      <div className="p-4 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3.5 shadow-sm text-xs font-mono-luxury">
-        <span className="text-xs uppercase font-bold text-[var(--text-primary)] block">
-          3. Dispatch Turnaround Timeline
-        </span>
-
-        <div>
-          <label className="block text-[var(--text-secondary)] uppercase mb-1 font-bold">
-            Dispatch Turnaround Time
-          </label>
-          <select
-            value={form.dispatchDays}
-            onChange={(e) => setForm({ ...form, dispatchDays: e.target.value })}
-            className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none font-bold"
-          >
-            <option value="Same-day / 1 day">Same-day / 1 business day</option>
-            <option value="1-2 business days">1-2 business days (In Stock / Ready)</option>
-            <option value="2-3 business days">2-3 business days</option>
-            <option value="3-5 business days">3-5 business days (Custom Cut)</option>
-            <option value="5-7 business days">5-7 business days (Handmade Bespoke)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* 5. Clean Luxury Save Button */}
+      {/* Clean Native Primary Save Action */}
       <div className="pt-2">
         <button
           type="submit"
           disabled={isSaving}
-          className="w-full py-4 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] font-mono-luxury uppercase text-xs font-bold shadow-xl hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
         >
           {isSaving ? (
             <>
               <Sparkles className="h-4 w-4 animate-spin text-[var(--gold-accent)]" />
-              <span>Saving Profile...</span>
-            </>
-          ) : isProfileSaved ? (
-            <>
-              <Save className="h-4 w-4 stroke-[2.5]" />
-              <span>Update &amp; Save Store Profile</span>
+              <span>Saving Changes...</span>
             </>
           ) : (
             <>
-              <Save className="h-4 w-4 stroke-[2.5]" />
-              <span>Save &amp; Submit Store Profile</span>
+              <Save className="h-4 w-4" />
+              <span>{isProfileSaved ? 'Save Store Profile' : 'Save & Submit Profile'}</span>
             </>
           )}
         </button>
       </div>
-
     </form>
   );
 }

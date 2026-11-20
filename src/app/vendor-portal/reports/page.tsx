@@ -11,13 +11,17 @@ import MobileVendorReports from '@/components/vendor/MobileVendorReports';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 
 import { isBoutiqueVendor } from '@/types';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 export default function VendorReportsPage() {
   const { vendorProfile } = useStore();
   const isBoutique = isBoutiqueVendor(vendorProfile);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initReportVid = getActiveVendorId() || (vendorProfile as any)?.id || vendorProfile.email || 'default';
+  const initOrders = getVendorCache<any[]>(initReportVid, 'orders');
+  const initProds = getVendorCache<any[]>(initReportVid, 'products');
+  const [orders, setOrders] = useState<any[]>(() => initOrders || []);
+  const [products, setProducts] = useState<any[]>(() => initProds || []);
+  const [isLoading, setIsLoading] = useState(() => !(initOrders && initProds));
 
   useEffect(() => {
     async function loadReportsData() {
@@ -35,9 +39,11 @@ export default function VendorReportsPage() {
 
         if (dataOrders.success && Array.isArray(dataOrders.orders)) {
           setOrders(dataOrders.orders);
+          setVendorCache(currentVendorId, 'orders', dataOrders.orders);
         }
         if (dataProd.success && Array.isArray(dataProd.products)) {
           setProducts(dataProd.products);
+          setVendorCache(currentVendorId, 'products', dataProd.products);
         }
       } catch (e) {
         console.error('Error loading reports data:', e);

@@ -19,6 +19,7 @@ import { compressImage, compressImageToFile } from '@/lib/utils/imageUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
 import { trimVideoInBrowser } from '@/lib/utils/clientVideoTrimmer';
 import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
+import { matchesVendorSpecialtyCategory, getSpecialtyFocusLabel } from '@/lib/utils/vendorCategoryMatcher';
 
 const STANDARD_COLORS = STANDARD_FASHION_COLORS;
 
@@ -393,7 +394,15 @@ export default function MobileVendorPublish({
     return rawCategoryList;
   }, [rawCategoryList, isBoutique, vendorSpecialty]);
 
-  const filteredCategoryList = currentCategoryList;
+  const [showAllDepartments, setShowAllDepartments] = useState(vendorSpecialty === 'multi_department');
+
+  const filteredCategoryList = useMemo(() => {
+    if (!showAllDepartments && vendorSpecialty !== 'multi_department') {
+      const focused = rawCategoryList.filter((c) => matchesVendorSpecialtyCategory(c, vendorSpecialty));
+      if (focused.length > 0) return focused;
+    }
+    return currentCategoryList;
+  }, [rawCategoryList, currentCategoryList, vendorSpecialty, showAllDepartments]);
 
   const [smartDetectedCat, setSmartDetectedCat] = useState<string | null>(null);
 
@@ -1879,6 +1888,21 @@ export default function MobileVendorPublish({
             </span>
           </div>
 
+          {vendorSpecialty !== 'multi_department' && (
+            <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-mono-luxury">
+              <span className="text-[var(--text-muted)] truncate">
+                {showAllDepartments ? 'All departments unlocked' : `Focused: ${getSpecialtyFocusLabel(vendorSpecialty)}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAllDepartments((prev) => !prev)}
+                className="text-[var(--gold-accent)] shrink-0 cursor-pointer"
+              >
+                {showAllDepartments ? 'My specialty only' : '+ All departments'}
+              </button>
+            </div>
+          )}
+
           <select
             value={subCategory}
             onChange={(e) => {
@@ -1917,7 +1941,7 @@ export default function MobileVendorPublish({
             {(vendorSpecialty === 'accessories' || vendorSpecialty === 'jewelry' || vendorSpecialty === 'caps') && (
               <>
                 {filteredCategoryList.some(c => c.group === 'accessories') && (
-                  <optgroup label="Accessories, Bags & Jewelry">
+                  <optgroup label={vendorSpecialty === 'caps' && !showAllDepartments ? 'Caps & Headwear' : vendorSpecialty === 'jewelry' && !showAllDepartments ? 'Jewelry & Watches' : 'Accessories, Bags & Jewelry'}>
                     {filteredCategoryList.filter(c => c.group === 'accessories').map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.label}

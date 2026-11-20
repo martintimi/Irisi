@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendSignupVerificationEmail } from '@/lib/services/emailService';
+import { sendLuxuryEmail } from '@/lib/services/vendorNotificationService';
+import { buildIrisiEmailShell, buildDetailPanel } from '@/lib/services/emailTheme';
+import { getBaseUrl } from '@/lib/utils/url';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -267,6 +270,39 @@ export async function POST(request: Request) {
       if (vendorError) {
         console.error('Vendor insert error:', vendorError);
         return NextResponse.json({ error: vendorError.message }, { status: 400 });
+      }
+
+      // Notify founder immediately when a new brand registers directly via Vendor Portal Auth (awaited cleanly!)
+      try {
+        const adminInbox = (process.env.ADMIN_NOTIFICATION_EMAIL || 'martintimi2443@gmail.com').trim();
+        const regHtml = buildIrisiEmailShell({
+          title: `New Vendor Account Registered: ${vendorData.brand_name}`,
+          eyebrow: 'VENDOR PORTAL REGISTRATION ALERT',
+          preheader: `${vendorData.brand_name} just created a vendor account on ÌRÍSÍ.`,
+          badge: isPreApproved ? 'Pre-Approved Brand Activated' : 'New Vendor Signup',
+          badgeTone: isPreApproved ? 'emerald' : 'gold',
+          headline: vendorData.brand_name || 'New Storefront',
+          bodyHtml: `
+            <p class="irisi-text" style="color:#3F3F46; font-size:14px; line-height:1.65; margin:0 0 12px;">
+              A brand just registered directly through the Vendor Portal. Review their store details in Super Admin.
+            </p>
+            ${buildDetailPanel([
+              { label: 'Brand Name', value: vendorData.brand_name || 'My Brand' },
+              { label: 'Specialty', value: finalSpecialty, highlight: '#9E7724' },
+              { label: 'Email', value: normalizedEmail },
+              { label: 'Phone / WhatsApp', value: cleanPhone || 'Not provided' },
+              { label: 'Location', value: vendorData.location || 'Not set yet' },
+            ])}
+          `,
+          ctaLabel: 'Review in Super Admin',
+          ctaUrl: `${getBaseUrl()}/admin`,
+          ctaStyle: 'obsidian',
+        });
+        await sendLuxuryEmail(adminInbox, `New Vendor Signup: ${vendorData.brand_name}`, regHtml, {
+          fromName: 'ÌRÍSÍ Brand Relations',
+        });
+      } catch (adminMailErr) {
+        console.warn('[Register Vendor Admin Alert Warn]', adminMailErr);
       }
 
       return NextResponse.json({

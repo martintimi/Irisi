@@ -9,19 +9,29 @@ import {
 } from 'lucide-react';
 import MobileVendorSettlements from '@/components/vendor/MobileVendorSettlements';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 export default function VendorSettlementsPage() {
   const { vendorProfile } = useStore();
-  const [orders, setOrders] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initSettleVid = getActiveVendorId() || vendorProfile.email || 'default';
+  const initCachedOrders = getVendorCache<any[]>(initSettleVid, 'orders');
+  const [orders, setOrders] = useState<any[]>(() => initCachedOrders || []);
+  const [isLoading, setIsLoading] = useState(() => !initCachedOrders);
 
   const loadSettlements = useCallback(async () => {
+    const vid = getActiveVendorId() || vendorProfile.email || 'default';
+    const cached = getVendorCache<any[]>(vid, 'orders');
+    if (cached) {
+      setOrders(cached);
+      setIsLoading(false);
+    }
     try {
-      setIsLoading(true);
+      if (!cached) setIsLoading(true);
       const res = await vendorFetch('/api/orders');
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
+        setVendorCache(vid, 'orders', data.orders);
       }
     } catch (e) {
       console.error('Error loading settlements:', e);

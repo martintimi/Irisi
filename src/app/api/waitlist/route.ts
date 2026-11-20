@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendLuxuryEmail } from '@/lib/services/vendorNotificationService';
+import { buildIrisiEmailShell, buildDetailPanel } from '@/lib/services/emailTheme';
 import { getBaseUrl } from '@/lib/utils/url';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   try {
@@ -33,73 +35,54 @@ export async function POST(request: Request) {
       console.error('[WAITLIST DB ERROR]', dbErr);
     }
 
-    const appUrl = getBaseUrl();
-    const emailHtml = `
-      <div style="background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 36px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
-          <tr>
-            <td align="center" style="padding: 36px 24px 20px; border-bottom: 1px solid #f1f5f9; background: #ffffff;">
-              <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="64" height="64" style="display: block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;" />
-              <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #111827; letter-spacing: -0.5px;">ÌRÍSÍ</h1>
-              <p style="margin: 6px 0 0; font-size: 11px; color: #b89035; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Sovereign Marketplace · Nigeria</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 32px 32px 36px; background-color: #ffffff;">
-              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 26px 20px; text-align: center; margin-bottom: 20px;">
-                <span style="background: #111827; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 16px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;">Pass #${formattedPass}</span>
-                <h2 style="color: #111827; font-size: 22px; margin: 16px 0 10px; font-weight: 700;">Welcome to the Priority Roster</h2>
-                <p style="color: #4b5563; font-size: 14px; line-height: 1.65; margin: 0;">
-                  Your email has secured founding access. When the runway opens, your registered email unlocks an <strong>exclusive early shopping window</strong> on opening day.
-                </p>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding: 18px 24px; background-color: #f8fafc; border-top: 1px solid #f1f5f9;">
-              <p style="margin: 0; font-size: 11px; color: #94a3b8; font-weight: 500;">ÌRÍSÍ Marketplace · Sovereign Luxury</p>
-            </td>
-          </tr>
-        </table>
-      </div>
-    `;
+    const emailHtml = buildIrisiEmailShell({
+      title: 'Priority Access Pass Secured',
+      eyebrow: 'PRIVATE CLIENT ROSTER',
+      preheader: `Your ÌRÍSÍ Priority Access Pass #${formattedPass} is confirmed.`,
+      badge: `Priority Pass #${formattedPass}`,
+      badgeTone: 'gold',
+      headline: 'Welcome to the Priority Roster',
+      bodyHtml: `
+        <p class="irisi-text" style="color:#3F3F46; font-size:14.5px; line-height:1.7; margin:0 0 18px;">
+          Your email has secured founding access to <strong>ÌRÍSÍ</strong>. When doors open, your pass unlocks an exclusive early shopping window to browse curated independent designers and limited drops first.
+        </p>
+        ${buildDetailPanel([
+          { label: 'Pass Number', value: `#${formattedPass}`, highlight: '#9E7724' },
+          { label: 'Registered Email', value: email },
+          { label: 'Access Tier', value: 'Founding Early Access', highlight: '#059669' },
+        ])}
+      `,
+      ctaLabel: 'Visit ÌRÍSÍ',
+      ctaUrl: getBaseUrl(),
+      ctaStyle: 'obsidian',
+    });
 
-    sendLuxuryEmail(email, 'ÌRÍSÍ · Priority Access Pass Secured', emailHtml, {
-      fromName: 'ÌRÍSÍ Private Client',
-    }).catch(() => {});
+    const founderAlertHtml = buildIrisiEmailShell({
+      title: `New Waitlist Pass #${formattedPass}`,
+      eyebrow: 'WAITLIST DESK ALERT',
+      preheader: `${email} just secured Priority Pass #${formattedPass}.`,
+      badge: 'New Waitlist Pass Holder',
+      badgeTone: 'gold',
+      headline: `Pass #${formattedPass} Reserved`,
+      bodyHtml: buildDetailPanel([
+        { label: 'Pass Number', value: `#${formattedPass}`, highlight: '#9E7724' },
+        { label: 'Shopper Email', value: email },
+        { label: 'Joined At', value: new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) },
+      ]),
+      ctaLabel: 'Open Super Admin',
+      ctaUrl: `${getBaseUrl()}/admin`,
+      ctaStyle: 'obsidian',
+    });
 
-    const founderAlertHtml = `
-      <div style="background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 36px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
-          <tr>
-            <td align="center" style="padding: 32px 24px 20px; border-bottom: 1px solid #f1f5f9;">
-              <img src="https://res.cloudinary.com/dvnj8idde/image/upload/v1793703374/brand_assets/irisi_official_email_logo.png" alt="ÌRÍSÍ Emblem" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 14px; border: 1px solid #e2e8f0;" />
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #111827;">ÌRÍSÍ</h1>
-              <p style="margin: 4px 0 0; font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Priority Waitlist Dispatch</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 24px 32px;">
-              <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; text-align: center;">
-                <span style="color: #92400e; font-weight: 700; font-size: 12px; text-transform: uppercase;">🔥 New Waitlist Pass Holder</span>
-              </div>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; font-size: 13.5px; line-height: 1.8; color: #1f2937;">
-                <p style="margin: 0 0 8px;"><strong>Pass Number:</strong> <span style="color: #b89035; font-weight: 800; font-family: monospace;">#${formattedPass}</span></p>
-                <p style="margin: 0 0 8px;"><strong>Registered Email:</strong> <span style="color: #111827; font-weight: 600;">${email}</span></p>
-                <p style="margin: 0; color: #64748b;"><strong>Timestamp:</strong> ${new Date().toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })}</p>
-              </div>
-            </td>
-          </tr>
-        </table>
-      </div>
-    `;
-
-    sendLuxuryEmail(
-      'martintimi2443@gmail.com',
-      `🔥 New Waitlist Pass #${formattedPass}: ${email}`,
-      founderAlertHtml,
-      { fromName: 'ÌRÍSÍ Waitlist Desk' }
-    ).catch(() => {});
+    const adminInbox = (process.env.ADMIN_NOTIFICATION_EMAIL || 'martintimi2443@gmail.com').trim();
+    await Promise.allSettled([
+      sendLuxuryEmail(email, 'ÌRÍSÍ · Priority Access Pass Secured', emailHtml, {
+        fromName: 'ÌRÍSÍ Private Client',
+      }),
+      sendLuxuryEmail(adminInbox, `New Waitlist Pass #${formattedPass}: ${email}`, founderAlertHtml, {
+        fromName: 'ÌRÍSÍ Waitlist Desk',
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,

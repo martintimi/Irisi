@@ -8,38 +8,47 @@ import Link from 'next/link';
 import MobileVendorReviews from '@/components/vendor/MobileVendorReviews';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
+import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
 
 export default function VendorReviewsPage() {
   const { vendorProfile } = useStore();
   const activeVendorId = getActiveVendorId();
 
+  const cachedInitReviews = getVendorCache<any>(activeVendorId || 'default', 'reviews_full');
   const [reviewsData, setReviewsData] = useState<{
     averageRating: number;
     fitAccuracyPercent: number;
     count: number;
     reviews: any[];
-  }>({
+  }>(() => cachedInitReviews || {
     averageRating: 5.0,
     fitAccuracyPercent: 100,
     count: 0,
     reviews: []
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !cachedInitReviews);
 
   const fetchReviews = useCallback(async () => {
+    const cached = getVendorCache<any>(activeVendorId || 'default', 'reviews_full');
+    if (cached) {
+      setReviewsData(cached);
+      setIsLoading(false);
+    }
     try {
-      setIsLoading(true);
+      if (!cached) setIsLoading(true);
       const res = await fetch(`/api/reviews?vendorId=${encodeURIComponent(activeVendorId)}`, {
         headers: { 'Cache-Control': 'no-cache' }
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setReviewsData({
+        const nextObj = {
           averageRating: data.averageRating || 5.0,
           fitAccuracyPercent: data.fitAccuracyPercent || 100,
           count: data.count || (data.reviews ? data.reviews.length : 0),
           reviews: data.reviews || []
-        });
+        };
+        setReviewsData(nextObj);
+        setVendorCache(activeVendorId || 'default', 'reviews_full', nextObj);
       }
     } catch (e) {
       console.error('Error fetching vendor reviews:', e);
