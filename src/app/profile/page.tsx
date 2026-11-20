@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
   User, Phone, Mail, MapPin, Package, Bell, Star, ShieldCheck,
@@ -233,7 +233,9 @@ export default function ProfilePage() {
     <>
       {/* 1. DEDICATED MOBILE PROFILE VIEW */}
       <div className="block md:hidden">
-        <MobileProfileView />
+        <Suspense fallback={<div className="min-h-screen bg-[var(--bg-primary)]" />}>
+          <MobileProfileView />
+        </Suspense>
       </div>
 
       {/* 2. DESKTOP LUXURY PROFILE VIEW */}

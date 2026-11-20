@@ -4,27 +4,30 @@ import React from 'react';
 import { ShieldCheck, Sparkles, Clock } from 'lucide-react';
 
 interface OrderStatusAnimationProps {
-  trackingStage: number; // 1 = Needs Packing, 2 = Packed/Ready, 3 = In Transit, 4 = Delivered & Settled
+  trackingStage: number; // 1 = Confirmed/Needs Packing, 2 = Packed/Ready, 3 = In Transit, 4 = Delivered
   deliveryMethod?: string;
   courierName?: string;
   compact?: boolean;
+  viewer?: 'vendor' | 'shopper';
 }
 
 /**
  * Quiet-Luxury Animated Order Status Visual Strip
- * Replaces plain static dots with crisp animated vector scenes for each stage:
- * - Stage 1 (Unattended): Pulsing alert radar + bobbing parcel box
- * - Stage 2 (Packed): Sealed package + gliding dispatch ready shimmer
- * - Stage 3 (In Transit): Animated delivery motorbike gliding along a live moving road
- * - Stage 4 (Delivered): Animated emerald verification seal + subtle gold shimmer
+ * Renders crisp animated vector scenes tailored to either the Vendor Portal or Shopper Track Delivery:
+ * - Stage 1: Pulsing radar + bobbing parcel box
+ * - Stage 2: Sealed package awaiting dispatch handoff
+ * - Stage 3: Animated delivery motorbike / van gliding along a live moving road
+ * - Stage 4: Animated emerald verification seal + subtle gold shimmer
  */
 export default function OrderStatusAnimation({
   trackingStage,
   deliveryMethod,
   courierName,
   compact = false,
+  viewer = 'vendor',
 }: OrderStatusAnimationProps) {
   const isPark = deliveryMethod === 'park_pickup';
+  const isShopper = viewer === 'shopper';
 
   // STAGE 4: DELIVERED & ESCROW SETTLED
   if (trackingStage >= 4) {
@@ -53,14 +56,16 @@ export default function OrderStatusAnimation({
               </span>
             </div>
             <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
-              Buyer confirmed receipt · Payout released to treasury
+              {isShopper
+                ? 'Package delivered · Protected by ÌRÍSÍ Escrow'
+                : 'Buyer confirmed receipt · Payout released to treasury'}
             </p>
           </div>
         </div>
 
         <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono-luxury shrink-0">
           <ShieldCheck className="h-3 w-3" />
-          <span>Settled</span>
+          <span>{isShopper ? 'Verified' : 'Settled'}</span>
         </span>
       </div>
     );
@@ -81,7 +86,13 @@ export default function OrderStatusAnimation({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--gold-accent)]" />
             </span>
             <span className="text-[11px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] truncate">
-              {isPark ? 'In Transit · Bus / Hub Waybill' : 'Rider On The Road · In Transit'}
+              {isPark
+                ? isShopper
+                  ? 'On The Way · Hub Waybill'
+                  : 'In Transit · Bus / Hub Waybill'
+                : isShopper
+                ? 'Rider On The Way To You'
+                : 'Rider On The Road · In Transit'}
             </span>
           </div>
           <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] shrink-0">
@@ -92,7 +103,7 @@ export default function OrderStatusAnimation({
         {/* Live Animated Route Track with Moving Delivery Motorbike / Van */}
         <div className="relative h-8 rounded-xl bg-[var(--bg-primary)]/80 border border-[var(--border-subtle)] px-3 flex items-center justify-between overflow-hidden">
           <span className="text-[9px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] z-10 bg-[var(--bg-primary)] pr-1.5">
-            Studio
+            {isShopper ? 'Brand' : 'Studio'}
           </span>
 
           {/* Animated Highway Track */}
@@ -152,7 +163,7 @@ export default function OrderStatusAnimation({
           </div>
 
           <span className="text-[9px] font-mono-luxury uppercase tracking-wider text-[var(--gold-accent)] z-10 bg-[var(--bg-primary)] pl-1.5">
-            Buyer
+            {isShopper ? 'You' : 'Buyer'}
           </span>
         </div>
       </div>
@@ -178,10 +189,12 @@ export default function OrderStatusAnimation({
           </div>
           <div className="min-w-0">
             <div className="text-[11px] font-mono-luxury uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Packed &amp; Sealed · Ready To Dispatch
+              {isShopper ? 'Packed & Sealed · Quality Checked' : 'Packed & Sealed · Ready To Dispatch'}
             </div>
             <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
-              Tap Dispatch Order below to enter waybill or rider contact
+              {isShopper
+                ? 'Your pieces are boxed and awaiting courier handoff'
+                : 'Tap Dispatch Order below to enter waybill or rider contact'}
             </p>
           </div>
         </div>
@@ -189,7 +202,7 @@ export default function OrderStatusAnimation({
     );
   }
 
-  // STAGE 1: NEW PAID ORDER — UNATTENDED / ACTION NEEDED
+  // STAGE 1: NEW PAID ORDER — CONFIRMED / AWAITING PACKING
   return (
     <div
       className={`relative overflow-hidden flex items-center justify-between gap-3 ${
@@ -211,18 +224,20 @@ export default function OrderStatusAnimation({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-mono-luxury uppercase tracking-wider text-sky-600 dark:text-sky-400">
-              Action Needed · Awaiting Packaging
+              {isShopper ? 'Order Confirmed · Preparing' : 'Action Needed · Awaiting Packaging'}
             </span>
           </div>
           <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
-            Payment locked in Escrow · Pack &amp; mark ready for dispatch
+            {isShopper
+              ? 'Payment locked in Escrow · Brand is preparing your order'
+              : 'Payment locked in Escrow · Pack & mark ready for dispatch'}
           </p>
         </div>
       </div>
 
       <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 text-[10px] font-mono-luxury shrink-0">
         <Clock className="h-3 w-3" />
-        <span>New</span>
+        <span>{isShopper ? 'Escrow' : 'New'}</span>
       </span>
     </div>
   );
