@@ -777,7 +777,7 @@ export const useStore = create<IrisiState>()(
       clearVault: () => set({ vault: [] }),
 
       // Followed Brands / Vendors
-      followedVendors: ['moji-wears', 'arike-brand'],
+      followedVendors: [],
       toggleFollowVendor: (vendorId) => {
         const lower = (vendorId || '').toLowerCase();
         const current = get().followedVendors || [];

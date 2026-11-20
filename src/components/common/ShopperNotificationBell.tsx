@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, CheckCheck, RefreshCw, X, Sparkles, ShoppingBag, ChevronRight, CheckCircle } from 'lucide-react';
+import { Bell, CheckCheck, RefreshCw, X, Sparkles, ShoppingBag, ChevronRight, CheckCircle, Truck, Package } from 'lucide-react';
+import { playLuxuryNotificationChime } from '@/lib/utils/notificationSound';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -50,8 +51,10 @@ export default function ShopperNotificationBell({ compact = false }: { compact?:
   const [readIds, setReadIds] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [ringKey, setRingKey] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const instanceIdRef = useRef<string>(Math.random().toString(36).slice(2, 9));
+  const prevUnreadRef = useRef<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -101,7 +104,7 @@ export default function ShopperNotificationBell({ compact = false }: { compact?:
           { event: 'INSERT', schema: 'public', table: 'notifications' },
           (payload) => {
             const row = payload.new as any;
-            if (row?.type === 'follower_alert') {
+            if (row?.type === 'follower_alert' || row?.type === 'shopper_order_alert') {
               fetchAlerts();
             }
           }
@@ -159,6 +162,22 @@ export default function ShopperNotificationBell({ compact = false }: { compact?:
   ];
 
   const unreadCount = combinedItems.filter((item) => !item.isRead).length;
+
+  // Shake/ring bell + play gentle luxury chime whenever new unread notifications arrive
+  useEffect(() => {
+    if (!mounted) return;
+    if (prevUnreadRef.current === null) {
+      prevUnreadRef.current = unreadCount;
+      if (unreadCount > 0) setRingKey((k) => k + 1);
+      return;
+    }
+    if (unreadCount > prevUnreadRef.current) {
+      setRingKey((k) => k + 1);
+      playLuxuryNotificationChime();
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount, mounted]);
+
   const visibleItems =
     filterTab === 'unread' ? combinedItems.filter((item) => !item.isRead) : combinedItems;
 
@@ -229,6 +248,10 @@ export default function ShopperNotificationBell({ compact = false }: { compact?:
               <div className="h-10 w-10 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--gold-accent)] flex items-center justify-center shrink-0">
                 {item.kind === 'vendor_story' ? (
                   <Sparkles className="h-4 w-4" />
+                ) : item.kind === 'order_dispatched' ? (
+                  <Truck className="h-4 w-4" />
+                ) : item.kind === 'order_packed' || item.kind === 'order_delivered' ? (
+                  <Package className="h-4 w-4" />
                 ) : (
                   <ShoppingBag className="h-4 w-4" />
                 )}
@@ -274,7 +297,11 @@ export default function ShopperNotificationBell({ compact = false }: { compact?:
         aria-label="Notifications"
         title="Notifications"
       >
-        <Bell className={compact ? 'h-[18px] w-[18px]' : 'h-5 w-5'} strokeWidth={1.8} />
+        <Bell
+          key={ringKey}
+          className={`${compact ? 'h-[18px] w-[18px]' : 'h-5 w-5'} ${ringKey > 0 && unreadCount > 0 ? 'irisi-bell-ring text-[var(--gold-accent)]' : ''}`}
+          strokeWidth={1.8}
+        />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] px-1 rounded-full bg-[var(--gold-accent)] text-black text-[9px] font-mono-luxury flex items-center justify-center ring-2 ring-[var(--bg-primary)]">
             {unreadCount > 9 ? '9+' : unreadCount}

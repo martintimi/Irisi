@@ -187,7 +187,7 @@ export default function ProfilePage() {
   };
 
   const unreadCount = userNotifications.filter(n => !n.read).length;
-  const displayName = profileForm.name || userAuth.name || (userAuth.email ? userAuth.email.split('@')[0] : 'Ìrísí Patron');
+  const displayName = profileForm.name || userAuth.name || (userAuth.email ? userAuth.email.split('@')[0] : 'ÌRÍSÍ Member');
   const displayPhone = profileForm.phone || userAuth.phone || 'No phone added (Tap Details to Add)';
   const displayLocation = (profileForm.deliveryAddress || profileForm.city) ? `${profileForm.city}, ${profileForm.state}` : 'Lagos, Nigeria';
   const effectiveOrders = useMemo(() => {
@@ -251,7 +251,7 @@ export default function ProfilePage() {
                 {displayName}
               </h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px] font-mono-luxury font-bold">
-                ● Verified Patron Account
+                ● Verified Member Account
               </span>
             </div>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1 flex items-center gap-3 flex-wrap">
@@ -275,7 +275,7 @@ export default function ProfilePage() {
             <span className="font-bold text-sm text-[var(--text-primary)]">{effectiveOrders.length} Completed</span>
           </div>
           <div className="px-4 py-2 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-center shrink-0">
-            <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Patron Atelier ID</span>
+            <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Member ID</span>
             <span className="font-mono-luxury font-bold text-xs text-[var(--gold-accent)]">{bodyProfile.twinId || 'VY-NIG-782'}</span>
           </div>
         </div>
@@ -353,11 +353,11 @@ export default function ProfilePage() {
       {activeTab === 'orders' && (
         <div className="space-y-6 animate-fadeIn">
           <div>
-            <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+            <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--text-primary)]">
               Your Orders & Delivery Status
             </h2>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-              Direct doorstep deliveries dispatched by each verified boutique and brand across Nigeria.
+              Direct doorstep deliveries dispatched by each verified brand and seller.
             </p>
           </div>
 
@@ -365,7 +365,7 @@ export default function ProfilePage() {
             {liveOrders.length === 0 ? (
               <div className="p-16 rounded-3xl surface-card text-center space-y-4 border border-[var(--border-subtle)]">
                 <Package className="h-10 w-10 text-[var(--gold-accent)] mx-auto opacity-70" />
-                <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+                <h3 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
                   No Orders Yet
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-sm mx-auto">
@@ -418,7 +418,7 @@ export default function ProfilePage() {
 
                     <div className="text-left sm:text-right">
                       <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase block">Total Amount</span>
-                      <span className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+                      <span className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
                         ₦{order.totalAmount.toLocaleString()}
                       </span>
                     </div>
@@ -523,11 +523,11 @@ export default function ProfilePage() {
       {activeTab === 'body_twin' && (
         <div className="space-y-6 animate-fadeIn">
           <div>
-            <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+            <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--text-primary)]">
               Your Bespoke Sizing & Measurements Profile
             </h2>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-              Used by premium boutiques, designers & artisans across Nigeria to guarantee precision sizing across streetwear, ready-to-wear, and couture.
+              Used by verified brands and designers to guarantee precision sizing across streetwear, ready-to-wear, and bespoke pieces.
             </p>
           </div>
 
@@ -536,37 +536,37 @@ export default function ProfilePage() {
             <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase">Height</span>
-                <div className="font-editorial text-2xl font-bold text-[var(--text-primary)]">{bodyProfile.heightCm} cm</div>
+                <div className="font-editorial text-2xl font-normal text-[var(--text-primary)]">{bodyProfile.heightCm} cm</div>
                 <span className="text-[10px] text-emerald-500 font-mono-luxury">Calibrated</span>
               </div>
 
               <div className="p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase">Weight</span>
-                <div className="font-editorial text-2xl font-bold text-[var(--text-primary)]">{bodyProfile.weightKg} kg</div>
+                <div className="font-editorial text-2xl font-normal text-[var(--text-primary)]">{bodyProfile.weightKg} kg</div>
                 <span className="text-[10px] text-emerald-500 font-mono-luxury">Athletic Build</span>
               </div>
 
               <div className="p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase">Chest Circumference</span>
-                <div className="font-editorial text-2xl font-bold text-[var(--gold-accent)]">{bodyProfile.chestCm} cm</div>
+                <div className="font-editorial text-2xl font-normal text-[var(--gold-accent)]">{bodyProfile.chestCm} cm</div>
                 <span className="text-[10px] text-emerald-500 font-mono-luxury">Zero Pull Fit</span>
               </div>
 
               <div className="p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase">Shoulder Breadth</span>
-                <div className="font-editorial text-2xl font-bold text-[var(--gold-accent)]">{bodyProfile.shoulderWidthCm} cm</div>
+                <div className="font-editorial text-2xl font-normal text-[var(--gold-accent)]">{bodyProfile.shoulderWidthCm} cm</div>
                 <span className="text-[10px] text-emerald-500 font-mono-luxury">Broad Cut</span>
               </div>
 
               <div className="p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase">Waistline</span>
-                <div className="font-editorial text-2xl font-bold text-[var(--text-primary)]">{bodyProfile.waistCm} cm</div>
+                <div className="font-editorial text-2xl font-normal text-[var(--text-primary)]">{bodyProfile.waistCm} cm</div>
                 <span className="text-[10px] text-emerald-500 font-mono-luxury">Tailored Inseam</span>
               </div>
 
               <div className="p-5 rounded-2xl surface-card border border-[var(--border-subtle)] space-y-1">
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase">Trouser Inseam</span>
-                <div className="font-editorial text-2xl font-bold text-[var(--text-primary)]">{bodyProfile.inseamCm} cm</div>
+                <div className="font-editorial text-2xl font-normal text-[var(--text-primary)]">{bodyProfile.inseamCm} cm</div>
                 <span className="text-[10px] text-emerald-500 font-mono-luxury">Slim Break</span>
               </div>
             </div>
@@ -605,11 +605,11 @@ export default function ProfilePage() {
         <div className="space-y-6 animate-fadeIn max-w-4xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+              <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--text-primary)]">
                 Notifications & Order Updates
               </h2>
               <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-                Real-time tracking notifications from Nigerian fashion houses & Ìrísí delivery network.
+                Real-time tracking notifications from your followed brands & ÌRÍSÍ delivery network.
               </p>
             </div>
 
@@ -659,11 +659,11 @@ export default function ProfilePage() {
       {activeTab === 'profile' && (
         <div className="max-w-2xl space-y-6 animate-fadeIn">
           <div>
-            <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+            <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--text-primary)]">
               Account & Delivery Contacts
             </h2>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
-              Your mobile phone number is shared with dispatchers for seamless Lagos & Nationwide delivery.
+              Your mobile phone number is shared with dispatchers for seamless doorstep delivery.
             </p>
           </div>
 
@@ -812,8 +812,8 @@ export default function ProfilePage() {
       {activeTab === 'settings' && (
         <div className="space-y-6 animate-fadeIn">
           <div>
-            <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-              Settings & Patron Support
+            <h2 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+              Settings & Member Support
             </h2>
             <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-1">
               Manage security credentials, explore FAQs for boutiques, shoes & jewelry, rate the platform, or submit feedback.
@@ -827,11 +827,11 @@ export default function ProfilePage() {
                 <div className="h-12 w-12 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] flex items-center justify-center">
                   <KeyRound className="h-6 w-6" />
                 </div>
-                <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
                   Account Password & Security
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                  Update your Supabase authentication password. Protect your account credentials and order vault.
+                  Update your Supabase authentication password. Protect your account credentials and saved wishlist.
                 </p>
               </div>
 
@@ -851,7 +851,7 @@ export default function ProfilePage() {
                 <div className="h-12 w-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center">
                   <HelpCircle className="h-6 w-6" />
                 </div>
-                <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
                   Need Help / FAQ Topics
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
@@ -887,11 +887,11 @@ export default function ProfilePage() {
                 <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[var(--gold-accent)] flex items-center justify-center">
                   <Star className="h-6 w-6 fill-current" />
                 </div>
-                <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
                   Rate Ìrísí Experience
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
-                  Leave a 5-star rating for our platform experience. Your reviews empower authentic African couture designers.
+                  Leave a 5-star rating for our platform experience. Your reviews empower independent fashion brands and sellers.
                 </p>
               </div>
 
@@ -911,7 +911,7 @@ export default function ProfilePage() {
                 <div className="h-12 w-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
                   <Lightbulb className="h-6 w-6" />
                 </div>
-                <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+                <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
                   Help Improve Ìrísí
                 </h3>
                 <p className="text-xs font-mono-luxury text-[var(--text-secondary)] leading-relaxed">
@@ -934,9 +934,9 @@ export default function ProfilePage() {
           <div className="p-6 rounded-3xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/40 flex items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider">
-                Direct Atelier Support
+                Direct Concierge Support
               </span>
-              <h4 className="font-editorial text-lg font-bold text-[var(--text-primary)]">
+              <h4 className="font-editorial text-lg font-normal text-[var(--text-primary)]">
                 Need real-time assistance with a live custom order?
               </h4>
               <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
@@ -977,7 +977,7 @@ export default function ProfilePage() {
               <div className="h-12 w-12 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center mx-auto">
                 <Star className="h-6 w-6 fill-current" />
               </div>
-              <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+              <h3 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
                 Rate Your Items & Fit
               </h3>
               <p className="text-xs text-[var(--text-secondary)]">
@@ -1002,7 +1002,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-xs font-mono-luxury uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                Review Feedback for Ateliers
+                Review Feedback for Brand
               </label>
               <textarea
                 rows={3}

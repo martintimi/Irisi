@@ -300,6 +300,7 @@ export default function VendorOrdersPage() {
           status: 'packing',
           trackingStage: 2,
           pickupStatus: nextPickupStatus,
+          customerEmail: ord.customerEmail,
           vendorId: targetVendorId
         })
       });
@@ -391,6 +392,7 @@ export default function VendorOrdersPage() {
           waybillNumber: waybill,
           driverPhone: driverPhone,
           preDispatchProofUrl: preDispatchProofUrl || undefined,
+          customerEmail: dispatchModalOrder.customerEmail,
           vendorId: targetVendorId
         })
       });
@@ -438,6 +440,7 @@ export default function VendorOrdersPage() {
           waybillNumber: waybill.trim(),
           driverPhone: driverPhone.trim(),
           preDispatchProofUrl: proofUrl || undefined,
+          customerEmail: ord.customerEmail,
           vendorId: targetVendorId
         })
       });

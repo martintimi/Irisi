@@ -332,3 +332,145 @@ h1, h2, h3, h4, h5, h6 {
 .irisi-sparkle-float {
   animation: irisiSparkleFloat 2.4s ease-in-out infinite;
 }
+
+/* Notification Bell Shake / Ring Animation */
+@keyframes irisiBellRing {
+  0%, 100% {
+    transform: rotate(0deg) scale(1);
+  }
+  10% {
+    transform: rotate(16deg) scale(1.08);
+  }
+  20% {
+    transform: rotate(-14deg) scale(1.08);
+  }
+  32% {
+    transform: rotate(12deg) scale(1.05);
+  }
+  44% {
+    transform: rotate(-10deg) scale(1.04);
+  }
+  56% {
+    transform: rotate(7deg) scale(1.02);
+  }
+  68% {
+    transform: rotate(-5deg) scale(1);
+  }
+  80% {
+    transform: rotate(2deg) scale(1);
+  }
+}
+
+.irisi-bell-ring {
+  transform-origin: top center;
+  animation: irisiBellRing 1.15s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Instagram-Style Custom Story Reaction Particle Animations */
+@keyframes irisiReactFire {
+  0% {
+    transform: translate(0, 20px) scale(0.45) rotate(-8deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+    transform: translate(calc(var(--drift-x, 0px) * 0.25), -55px) scale(1.25) rotate(6deg);
+  }
+  55% {
+    opacity: 0.95;
+    transform: translate(calc(var(--drift-x, 0px) * 0.7), -180px) scale(1.05) rotate(-7deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift-x, 0px), -340px) scale(0.7) rotate(10deg);
+  }
+}
+
+@keyframes irisiReactHeart {
+  0% {
+    transform: translate(0, 18px) scale(0.35);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+    transform: translate(calc(var(--drift-x, 0px) * 0.45), -65px) scale(1.3);
+  }
+  55% {
+    opacity: 0.95;
+    transform: translate(calc(var(--drift-x, 0px) * -0.2), -190px) scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift-x, 0px), -330px) scale(0.85);
+  }
+}
+
+@keyframes irisiReactPop {
+  0% {
+    transform: translate(0, 14px) scale(0.3) rotate(-14deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+    transform: translate(calc(var(--drift-x, 0px) * 0.55), -110px) scale(1.38) rotate(10deg);
+  }
+  60% {
+    opacity: 0.95;
+    transform: translate(calc(var(--drift-x, 0px) * 0.9), -210px) scale(1.05) rotate(-6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift-x, 0px), -310px) scale(0.75) rotate(6deg);
+  }
+}
+
+@keyframes irisiReactSparkle {
+  0% {
+    transform: translate(0, 12px) scale(0.25) rotate(0deg);
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+    transform: translate(calc(var(--drift-x, 0px) * 0.4), -80px) scale(1.35) rotate(90deg);
+  }
+  65% {
+    opacity: 0.9;
+    transform: translate(calc(var(--drift-x, 0px) * 0.85), -205px) scale(0.9) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift-x, 0px), -320px) scale(0.4) rotate(270deg);
+  }
+}
+
+@keyframes irisiTintFlash {
+  0% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.irisi-react-fire {
+  animation: irisiReactFire 1.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.irisi-react-heart {
+  animation: irisiReactHeart 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.irisi-react-pop {
+  animation: irisiReactPop 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.irisi-react-sparkle {
+  animation: irisiReactSparkle 1.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.irisi-tint-flash {
+  animation: irisiTintFlash 0.75s ease-out forwards;
+}

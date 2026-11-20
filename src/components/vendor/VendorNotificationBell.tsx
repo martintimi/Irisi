@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { getActiveVendorId } from '@/lib/services/apiClient';
 import { supabase } from '@/lib/supabase/client';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
+import { playLuxuryNotificationChime } from '@/lib/utils/notificationSound';
 
 function stripLeadingEmojis(text: string): string {
   return String(text || '')
@@ -39,8 +40,10 @@ export default function VendorNotificationBell() {
   const [isLoading, setIsLoading] = useState(false);
   const [readIds, setReadIds] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
+  const [ringKey, setRingKey] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const instanceIdRef = useRef<string>(Math.random().toString(36).slice(2, 9));
+  const prevUnreadRef = useRef<number | null>(null);
 
   const activeVendorId = getActiveVendorId();
 
@@ -129,6 +132,22 @@ export default function VendorNotificationBell() {
   }, [isOpen]);
 
   const unreadCount = notifications.filter((n) => !readIds[n.id]).length;
+
+  // Shake/ring bell + play gentle luxury chime whenever new store notifications arrive
+  useEffect(() => {
+    if (!mounted) return;
+    if (prevUnreadRef.current === null) {
+      prevUnreadRef.current = unreadCount;
+      if (unreadCount > 0) setRingKey((k) => k + 1);
+      return;
+    }
+    if (unreadCount > prevUnreadRef.current) {
+      setRingKey((k) => k + 1);
+      playLuxuryNotificationChime();
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount, mounted]);
+
   const visibleNotifications =
     filterTab === 'unread' ? notifications.filter((n) => !readIds[n.id]) : notifications;
 
@@ -265,7 +284,10 @@ export default function VendorNotificationBell() {
         className="relative h-9 w-9 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--gold-accent)] hover:border-[var(--gold-accent)]/40 flex items-center justify-center transition-all cursor-pointer active:scale-95"
         aria-label="Store Activity Notifications"
       >
-        <Bell className="h-4 w-4" />
+        <Bell
+          key={ringKey}
+          className={`h-4 w-4 ${ringKey > 0 && unreadCount > 0 ? 'irisi-bell-ring text-[var(--gold-accent)]' : ''}`}
+        />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 rounded-full bg-[var(--gold-accent)] text-black text-[9px] font-mono-luxury font-medium flex items-center justify-center ring-2 ring-[var(--bg-primary)]">
             {unreadCount > 9 ? '9+' : unreadCount}

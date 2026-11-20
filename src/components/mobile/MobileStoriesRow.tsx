@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
@@ -12,13 +12,41 @@ interface StoriesRowProps {
   variant?: 'mobile' | 'desktop';
 }
 
+const VIEWED_STORAGE_KEY = 'irisi_viewed_story_ids';
+
 export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }: StoriesRowProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { followedVendors } = useStore();
   const [liveStories, setLiveStories] = useState<VendorStory[]>([]);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
+  const [viewedIds, setViewedIds] = useState<Record<string, boolean>>({});
   const autoOpenedParamRef = useRef<string | null>(null);
+
+  // Load shopper's seen story IDs from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEWED_STORAGE_KEY);
+      if (saved) setViewedIds(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const markStoryViewed = useCallback((storyId: string) => {
+    if (!storyId) return;
+    setViewedIds((prev) => {
+      if (prev[storyId]) return prev;
+      const next = { ...prev, [storyId]: true };
+      // Prune old map entries beyond 250 IDs so localStorage stays tiny
+      const keys = Object.keys(next);
+      if (keys.length > 250) {
+        keys.slice(0, keys.length - 200).forEach((k) => delete next[k]);
+      }
+      try {
+        localStorage.setItem(VIEWED_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   // Fetch live active 24h stories persisted in Supabase
   useEffect(() => {
@@ -41,11 +69,12 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
     [followedVendors]
   );
 
-  // Deduplicate vendor rings (1 ring per brand, opening all their slides in chronological order)
+  // Group by vendor: Unseen/New stories sort FIRST with bright Gold/Emerald ring;
+  // Already-viewed stories cleanly fade to muted monochrome grey ring (just like Instagram!)
   const vendorRings = useMemo(() => {
     const byVendor = new Map<
       string,
-      { vendorKey: string; stories: VendorStory[]; latestAt: number; isFollowed: boolean }
+      { vendorKey: string; stories: VendorStory[]; latestAt: number; isFollowed: boolean; hasUnseen: boolean }
     >();
 
     for (const st of liveStories) {
@@ -54,29 +83,40 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
       const nameSlug = (st.vendorName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const isFollowed = safeFollowed.includes(key) || safeFollowed.includes(nameSlug);
       const ts = new Date(st.createdAt).getTime() || 0;
+      const isSlideUnseen = !viewedIds[st.id];
 
       if (!byVendor.has(key)) {
-        byVendor.set(key, { vendorKey: key, stories: [st], latestAt: ts, isFollowed });
+        byVendor.set(key, {
+          vendorKey: key,
+          stories: [st],
+          latestAt: ts,
+          isFollowed,
+          hasUnseen: isSlideUnseen,
+        });
       } else {
         const entry = byVendor.get(key)!;
         entry.stories.push(st);
         if (ts > entry.latestAt) entry.latestAt = ts;
+        if (isSlideUnseen) entry.hasUnseen = true;
       }
     }
 
-    // Order vendors: followed brands first, then most recently posted
+    // Sort: Unseen first -> Followed first -> Most recent
     const orderedGroups = Array.from(byVendor.values()).sort((a, b) => {
+      if (a.hasUnseen && !b.hasUnseen) return -1;
+      if (!a.hasUnseen && b.hasUnseen) return 1;
       if (a.isFollowed && !b.isFollowed) return -1;
       if (!a.isFollowed && b.isFollowed) return 1;
       return b.latestAt - a.latestAt;
     });
 
-    // Within each vendor, play oldest-to-newest like Instagram
     const flatOrdered: VendorStory[] = [];
     const rings: Array<{
       story: VendorStory;
       firstIndex: number;
       count: number;
+      unseenCount: number;
+      hasUnseen: boolean;
       isFollowed: boolean;
       vendorKey: string;
     }> = [];
@@ -87,17 +127,21 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
       );
       const firstIndex = flatOrdered.length;
       flatOrdered.push(...chronological);
+      const unseenCount = chronological.filter((s) => !viewedIds[s.id]).length;
+
       rings.push({
-        story: chronological[chronological.length - 1], // Latest slide preview avatar
+        story: chronological[chronological.length - 1],
         firstIndex,
         count: chronological.length,
+        unseenCount,
+        hasUnseen: unseenCount > 0,
         isFollowed: grp.isFollowed,
         vendorKey: grp.vendorKey,
       });
     }
 
     return { sorted: flatOrdered, rings };
-  }, [liveStories, safeFollowed]);
+  }, [liveStories, safeFollowed, viewedIds]);
 
   // Auto-open story if shopper arrived from a follower notification (/shop?story=<vendorId>)
   useEffect(() => {
@@ -105,7 +149,6 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
     if (!storyParam || vendorRings.rings.length === 0) return;
     if (autoOpenedParamRef.current === storyParam) return;
 
-    // Prevent both mobile & desktop mounted instances from opening duplicate portals simultaneously
     if (typeof window !== 'undefined') {
       const isDesktopViewport = window.innerWidth >= 768;
       if (variant === 'desktop' && !isDesktopViewport) return;
@@ -151,7 +194,7 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
             </span>
           </div>
           <span className="text-[11px] text-[var(--text-muted)] font-light">
-            Tap any brand to watch &amp; react
+            Gold ring = New · Grey ring = Viewed
           </span>
         </div>
       )}
@@ -161,16 +204,20 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
           isDesktop ? 'gap-5' : 'gap-3.5 px-4'
         }`}
       >
-        {vendorRings.rings.map(({ story, firstIndex, count, isFollowed }) => (
+        {vendorRings.rings.map(({ story, firstIndex, count, hasUnseen, isFollowed }) => (
           <button
             key={story.vendorId || story.id}
             type="button"
             onClick={() => setSelectedStoryIndex(firstIndex)}
-            className="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group active:opacity-75 transition-opacity"
+            className={`flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group active:opacity-75 transition-opacity ${
+              hasUnseen ? 'opacity-100' : 'opacity-70'
+            }`}
           >
             <div
               className={`relative p-[2px] rounded-full transition-transform duration-200 group-hover:scale-105 ${
-                isFollowed
+                !hasUnseen
+                  ? 'bg-neutral-300 dark:bg-zinc-700'
+                  : isFollowed
                   ? 'bg-gradient-to-tr from-emerald-500 via-teal-400 to-emerald-600'
                   : 'bg-gradient-to-tr from-[#B89035] via-[#E6C367] to-[#D4AF37]'
               }`}
@@ -190,16 +237,28 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
                   />
                 </div>
               </div>
+
+              {/* Unseen NEW badge OR multi-slide count */}
+              {hasUnseen && count === 1 && (
+                <span className="absolute -bottom-0.5 right-0 h-3 w-3 rounded-full bg-[var(--gold-accent)] ring-2 ring-[var(--bg-primary)]" />
+              )}
               {count > 1 && (
-                <span className="absolute -bottom-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 rounded-full bg-zinc-950 text-white border border-white text-[9px] font-mono-luxury flex items-center justify-center">
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 rounded-full border border-[var(--bg-primary)] text-[9px] font-mono-luxury flex items-center justify-center ${
+                    hasUnseen
+                      ? 'bg-[var(--gold-accent)] text-black'
+                      : 'bg-zinc-700 text-zinc-200'
+                  }`}
+                >
                   {count}
                 </span>
               )}
             </div>
+
             <span
-              className={`text-[var(--text-primary)] font-normal truncate text-center leading-tight ${
-                isDesktop ? 'text-[11px] max-w-[78px]' : 'text-[10px] max-w-[66px]'
-              }`}
+              className={`truncate text-center leading-tight ${
+                hasUnseen ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-muted)] font-normal'
+              } ${isDesktop ? 'text-[11px] max-w-[78px]' : 'text-[10px] max-w-[66px]'}`}
             >
               {story.vendorName}
             </span>
@@ -212,6 +271,7 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
           stories={vendorRings.sorted}
           initialIndex={selectedStoryIndex}
           onClose={handleCloseViewer}
+          onStoryViewed={markStoryViewed}
           onShopLook={(product) => {
             handleCloseViewer();
             if (onOpenQuickBuy) {
