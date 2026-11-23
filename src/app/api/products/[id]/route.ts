@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
-import { parseProductMetaFromTags } from '@/lib/utils/productMetadata';
+import { parseProductMetaFromTags, syncSoldOutTag } from '@/lib/utils/productMetadata';
 import { invalidateProductsCache } from '@/lib/cache/productsCache';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
@@ -555,6 +555,21 @@ export async function PATCH(
             });
         }
       }
+    }
+
+    // Sync 48h Sold-Out auto-hide timestamp with updated total inventory (restocking >= 1 unit instantly brings item back live!)
+    if (Array.isArray(body.variants) || (body.sizeStock && typeof body.sizeStock === "object")) {
+      try {
+        const [{ data: latestVars }, { data: prodForTags }] = await Promise.all([
+          supabase.from('product_variants').select('stock_quantity').eq('product_id', id),
+          supabase.from('products').select('tags').eq('id', id).maybeSingle(),
+        ]);
+        if (latestVars && latestVars.length > 0 && prodForTags) {
+          const totalStock = latestVars.reduce((sum: number, v: any) => sum + Math.max(0, Number(v.stock_quantity) || 0), 0);
+          const nextTags = syncSoldOutTag(prodForTags.tags, totalStock);
+          await supabase.from('products').update({ tags: nextTags }).eq('id', id);
+        }
+      } catch {}
     }
 
     productDetailCache.delete(id);

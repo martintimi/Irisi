@@ -283,7 +283,11 @@ export default function MobileShopView() {
       list = diversifyCatalog(list);
     }
 
-    return list;
+    // Fashion Nova / SHEIN rule: hide >=48h sold-out items & push <48h sold-out items cleanly to the bottom
+    list = list.filter((p: any) => !p.isAutoHiddenSoldOut);
+    const inStock = list.filter((p) => p.stockQuantity !== 0);
+    const freshlySoldOut = list.filter((p) => p.stockQuantity === 0);
+    return [...inStock, ...freshlySoldOut];
   }, [allProducts, genderFilter, selectedCategory, specificCategory, departmentFilter, searchQuery, priceRange, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));

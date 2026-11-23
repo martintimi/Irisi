@@ -33,7 +33,7 @@ export default function HomeLookbookSection({
   // Prioritize real products with uploaded videos first, then fill with visually diverse fresh drops
   const lookbookItems = useMemo(() => {
     const valid = sourceProducts.filter(
-      (p) => p && p.id && (p.videoUrl || (p.imageUrl && p.imageUrl !== '/images/no-product.svg'))
+      (p) => p && p.id && p.stockQuantity !== 0 && !p.isAutoHiddenSoldOut && (p.videoUrl || (p.imageUrl && p.imageUrl !== '/images/no-product.svg'))
     );
     const withVideo = valid.filter((p) => Boolean(p.videoUrl));
     const withoutVideo = valid.filter((p) => !p.videoUrl);

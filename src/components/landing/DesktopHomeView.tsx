@@ -160,7 +160,7 @@ export default function DesktopHomeView() {
 
   // ── Products ────────────────────────────────────────────────────────────────
   const productsList = useMemo(() => {
-    let list = allProducts && allProducts.length > 0 ? [...allProducts] : [
+    let list = allProducts && allProducts.length > 0 ? allProducts.filter((p: any) => p.stockQuantity !== 0 && !p.isAutoHiddenSoldOut) : [
       { id: 'p-1', name: 'Imperial Obsidian Grand Agbada', price: 95000, vendorName: 'Atelier Sovereign', category: 'tops', genderTarget: 'male', imageUrl: '/images/products/BlackAgbada.jpg', stockQuantity: 5 } as any,
       { id: 'p-2', name: '480GSM Heavyweight Hoodie', price: 42000, vendorName: 'Urban Archive', category: 'outerwear', genderTarget: 'unisex', imageUrl: '/images/no-product.svg', stockQuantity: 12 } as any,
       { id: 'p-3', name: 'Handcrafted Leather Slides', price: 32000, vendorName: 'Kano Leather Studio', category: 'footwear', genderTarget: 'unisex', imageUrl: '/images/products/UnisexSlides.jpg', stockQuantity: 8 } as any,

@@ -665,7 +665,7 @@ export default function MobileHomeView() {
 
   // Reactive Product Filtering (Strictly adhering to active tab)
   const productsList = useMemo(() => {
-    let list = allProducts && allProducts.length > 0 ? [...allProducts] : [];
+    let list = allProducts && allProducts.length > 0 ? allProducts.filter((p: any) => p.stockQuantity !== 0 && !p.isAutoHiddenSoldOut) : [];
 
     // Fallback seed pieces if DB products not loaded yet
     if (list.length === 0) {

@@ -297,7 +297,11 @@ export default function MarketplaceGrid() {
       list = diversifyCatalog(list);
     }
 
-    return list;
+    // Fashion Nova / SHEIN rule: hide >=48h sold-out items & push <48h sold-out items cleanly to the bottom
+    list = list.filter((p: any) => !p.isAutoHiddenSoldOut);
+    const inStock = list.filter((p) => p.stockQuantity !== 0);
+    const freshlySoldOut = list.filter((p) => p.stockQuantity === 0);
+    return [...inStock, ...freshlySoldOut];
   }, [allProducts, selectedGender, selectedOriginType, selectedCategory, specificCategory, departmentFilter, selectedBrand, searchQuery, priceRange, sortBy]);
 
   // Reset page when filters change

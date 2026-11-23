@@ -317,7 +317,13 @@ export default function VendorProductsCatalogPage() {
                             qty === 0 ? 'bg-rose-500' : qty <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
                           }`}
                         />
-                        <span>{qty === 0 ? 'Sold out' : `${qty} left`}</span>
+                        <span className={qty === 0 ? "text-rose-500" : ""}>
+                          {qty === 0
+                            ? piece.isAutoHiddenSoldOut
+                              ? 'Hidden from Shop · Restock'
+                              : `Sold out · Hides in ${piece.hoursUntilAutoHide || 48}h`
+                            : `${qty} left`}
+                        </span>
                         {isMto && (
                           <>
                             <span>·</span>
@@ -594,7 +600,7 @@ export default function VendorProductsCatalogPage() {
                         isSoldOut ? 'text-rose-400' : isLowStock ? 'text-amber-400' : 'text-emerald-400'
                       }`}>
                         <span className="h-2 w-2 rounded-full bg-current inline-block" />
-                        {isSoldOut ? 'Sold Out (0 Units)' : isLowStock ? `Only ${qty} in Stock` : `${qty} in Stock`}
+                        {isSoldOut ? (piece.isAutoHiddenSoldOut ? 'Hidden from Shop (0 Units) · Restock' : `Sold Out · Hides in ${piece.hoursUntilAutoHide || 48}h`) : isLowStock ? `Only ${qty} in Stock` : `${qty} in Stock`}
                       </span>
                       <span>•</span>
                       <span className="text-[var(--text-primary)] font-bold">
