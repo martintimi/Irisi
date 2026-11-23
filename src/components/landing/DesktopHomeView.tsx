@@ -4,9 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
+import HomeLookbookSection from '@/components/landing/HomeLookbookSection';
 import {
   Search, Camera, Sparkles, ArrowRight, Heart,
-  ChevronRight, Sun, Moon, ShoppingBag, Store, ArrowUpRight
+  ChevronRight, Sun, Moon, ShoppingBag, Store, ArrowUpRight, Crown
 } from 'lucide-react';
 
 type TabId = 'men' | 'women' | 'streetwear' | 'native' | 'footwear';
@@ -35,6 +36,23 @@ export default function DesktopHomeView() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
   const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+  const [featuredBrands, setFeaturedBrands] = useState<any[]>([]);
+  const [brokenBrandLogos, setBrokenBrandLogos] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/vendors/featured', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active || !data?.success) return;
+        const list = Array.isArray(data.featuredBrands) && data.featuredBrands.length > 0
+          ? data.featuredBrands
+          : Array.isArray(data.ateliers) ? data.ateliers : [];
+        setFeaturedBrands(list.slice(0, 6));
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -444,45 +462,60 @@ export default function DesktopHomeView() {
         </div>
       </section>
 
-      {/* ── 6. FEATURED BRANDS ───────────────────────────────────────────────── */}
-      <section className="max-w-[1400px] mx-auto px-6 mt-14">
-        <div className="flex items-end justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-5">
-          <div>
-            <h2 className="text-base font-black uppercase tracking-wider text-black dark:text-white">Featured Brands & Stores</h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Independent fashion designers on Ìrísí</p>
-          </div>
-          <Link href="/vendors" className="flex items-center gap-0.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500 hover:text-black dark:hover:text-white transition-colors">
-            <span>View All Brands</span>
-            <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </div>
+      {/* ── 5B. NEW SECTION: IN MOTION · LIVE EDITORIAL LOOKBOOK ──────────── */}
+      <HomeLookbookSection variant="desktop" products={allProducts} />
 
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { name: 'Atelier Sovereign', origin: 'Verified Atelier', focus: 'Bespoke Ceremonial Agbada', image: '/images/products/BlackAgbada.jpg', slug: 'atelier-sovereign' },
-            { name: 'Urban Archive', origin: 'Verified Streetwear', focus: '480GSM Heavyweight Streetwear', image: '/images/no-product.svg', slug: 'urban-archive' },
-            { name: 'Savanna Leather Studio', origin: 'Artisan Leathercraft', focus: 'Handcrafted Calfskin Footwear', image: '/images/products/UnisexSlides.jpg', slug: 'kano-leather-studio' },
-          ].map((brand, i) => (
-            <Link
-              key={i}
-              href={`/brand/${brand.slug}`}
-              className="group flex items-center gap-4 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 bg-white dark:bg-neutral-950 transition-all hover:shadow-md"
-            >
-              <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-900 shrink-0 border border-neutral-200 dark:border-neutral-800">
-                <Image src={brand.image} alt={brand.name} fill unoptimized className="object-cover" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-sm font-black text-black dark:text-white truncate">{brand.name}</span>
-                </div>
-                <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block">{brand.origin}</span>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400 block mt-0.5 truncate">{brand.focus}</span>
-              </div>
-              <ArrowUpRight className="h-4 w-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white transition-colors shrink-0" />
+      {/* ── 6. FEATURED BRANDS (REAL SUPABASE + ÌRÍSÍ PLUS PRIORITY) ──────── */}
+      {featuredBrands.length > 0 && (
+        <section className="max-w-[1400px] mx-auto px-6 mt-14">
+          <div className="flex items-end justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-5">
+            <div>
+              <h2 className="font-editorial text-2xl font-normal text-black dark:text-white">Featured Brands &amp; Stores</h2>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Real verified brands &amp; ÌRÍSÍ Plus partners</p>
+            </div>
+            <Link href="/vendors" className="flex items-center gap-0.5 text-[11px] font-mono-luxury uppercase tracking-wider text-neutral-500 hover:text-black dark:hover:text-white transition-colors">
+              <span>View All Brands</span>
+              <ArrowUpRight className="h-3 w-3" />
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {featuredBrands.map((brand) => {
+              const logoSrc = !brokenBrandLogos[brand.id] ? (brand.logoUrl || (brand.images && brand.images[0]) || "") : "";
+              const initial = (brand.name || "B").trim().charAt(0).toUpperCase();
+              return (
+                <Link
+                  key={brand.id}
+                  href={`/brand/${encodeURIComponent(brand.slug || brand.id)}`}
+                  className="group flex items-center gap-4 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 bg-white dark:bg-neutral-950 transition-all hover:shadow-md"
+                >
+                  <div className="relative h-14 w-14 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-900 shrink-0 border border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial text-lg text-[var(--gold-accent)]">
+                    {logoSrc ? (
+                      <img src={logoSrc} alt={brand.name} onError={() => setBrokenBrandLogos((prev) => ({ ...prev, [brand.id]: true }))} className="h-full w-full object-cover" />
+                    ) : (
+                      <span>{initial}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="font-editorial text-base font-normal text-black dark:text-white truncate">{brand.name}</span>
+                      {brand.hasPaidPlus && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[8px] font-mono-luxury uppercase text-[var(--gold-accent)] shrink-0">
+                          <Crown className="h-2.5 w-2.5" />
+                          <span>Plus</span>
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-neutral-400 block truncate">{brand.location}</span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400 block mt-0.5 truncate">{brand.focus}</span>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white transition-colors shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── 7. RECENTLY VIEWED (only if user has browsed) ──────────────────── */}
       {recentlyViewed.length > 0 && (

@@ -168,7 +168,7 @@ export default function SuperAdminPage() {
 
   // Fetch live platform billing & monetization config from server API
   useEffect(() => {
-    fetch('/api/admin/commission')
+    fetch('/api/admin/commission', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data?.config) {
@@ -3357,18 +3357,62 @@ export default function SuperAdminPage() {
 
                   <button
                     type="button"
-                    onClick={() => {
+                    disabled={isSavingCommission}
+                    onClick={async () => {
                       const next = !freeLaunchModeInput;
                       setFreeLaunchModeInput(next);
                       setCommissionEnabledInput(!next);
+                      try {
+                        setIsSavingCommission(true);
+                        const res = await fetch('/api/admin/commission', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            freeLaunchMode: next,
+                            isEnabled: !next,
+                            freeTierCommissionPercent: Number(commissionInput || 0),
+                            plusTierCommissionPercent: Number(plusCommissionInput || 0),
+                            plusMonthlyPriceNgn: Number(plusPriceInput || 0),
+                            freeTierProductLimit: Number(freeProductLimitInput || 12),
+                            requirePlusForStorefront: requirePlusStorefrontInput,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success && data.config) {
+                          const cfg = data.config;
+                          setCommissionConfig({
+                            commissionPercent: Number(cfg.commissionPercent || 0),
+                            isEnabled: Boolean(cfg.isEnabled),
+                            freeLaunchMode: Boolean(cfg.freeLaunchMode),
+                            freeTierCommissionPercent: Number(cfg.freeTierCommissionPercent ?? 8),
+                            plusTierCommissionPercent: Number(cfg.plusTierCommissionPercent ?? 5),
+                            plusMonthlyPriceNgn: Number(cfg.plusMonthlyPriceNgn ?? 5000),
+                            freeTierProductLimit: Number(cfg.freeTierProductLimit ?? 12),
+                            requirePlusForStorefront: Boolean(cfg.requirePlusForStorefront),
+                          });
+                          setActionSuccessMsg(data.message || (next ? 'Free Launch Trial turned ON globally.' : 'Free Launch Trial turned OFF — Billing is now LIVE!'));
+                          setTimeout(() => setActionSuccessMsg(''), 4500);
+                        } else {
+                          setFreeLaunchModeInput(!next);
+                          setCommissionEnabledInput(next);
+                          alert(data?.error || 'Could not update Free Launch Trial switch. Please try again.');
+                        }
+                      } catch (err) {
+                        setFreeLaunchModeInput(!next);
+                        setCommissionEnabledInput(next);
+                        alert('Network error saving Free Launch Trial setting.');
+                      } finally {
+                        setIsSavingCommission(false);
+                      }
                     }}
-                    className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider border transition-all cursor-pointer shrink-0 ${
+                    className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider border transition-all cursor-pointer shrink-0 disabled:opacity-60 inline-flex items-center gap-2 ${
                       freeLaunchModeInput
                         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
                         : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40'
                     }`}
                   >
-                    {freeLaunchModeInput ? 'Free Launch Trial: ON (0%)' : 'Free Launch Trial: OFF (Billing Active)'}
+                    {isSavingCommission && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{freeLaunchModeInput ? 'Free Launch Trial: ON (0%)' : 'Free Launch Trial: OFF (Billing Active)'}</span>
                   </button>
                 </div>
 
@@ -3479,6 +3523,8 @@ export default function SuperAdminPage() {
                           confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
                           setActionSuccessMsg(data.message || 'Platform billing settings updated!');
                           setTimeout(() => setActionSuccessMsg(''), 4500);
+                        } else {
+                          alert(data?.error || 'Failed to save billing rules. Please try again.');
                         }
                       } catch (err) {
                         console.error('Failed to update billing settings:', err);

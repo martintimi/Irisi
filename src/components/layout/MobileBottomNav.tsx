@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { Home, Store, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { prefetchStories } from '@/lib/cache/storiesCache';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -14,6 +15,9 @@ export default function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [bagBounce, setBagBounce] = useState(false);
   const [flyingItem, setFlyingItem] = useState<{ name: string; imageUrl?: string } | null>(null);
+
+  // Silently warm 24h brand stories cache in background so /shop displays them instantly
+  useEffect(() => { prefetchStories(false); }, []);
 
   const lastScrollY = useRef(0);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);

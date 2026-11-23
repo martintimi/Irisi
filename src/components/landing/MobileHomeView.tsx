@@ -6,10 +6,11 @@ import Image from 'next/image';
 import { useStore } from '@/lib/store/useStore';
 import {
   Search, Camera, Sparkles, ArrowRight, Heart,
-  ChevronRight, Sun, Moon, ArrowUpRight
+  ChevronRight, Sun, Moon, ArrowUpRight, Crown
 } from 'lucide-react';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
+import HomeLookbookSection from '@/components/landing/HomeLookbookSection';
 
 export default function MobileHomeView() {
   const {
@@ -36,6 +37,26 @@ export default function MobileHomeView() {
 
   // Quick Buy Modal
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
+  const [featuredBrands, setFeaturedBrands] = useState<any[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState<boolean>(true);
+  const [brokenBrandLogos, setBrokenBrandLogos] = useState<Record<string, boolean>>({});
+
+  // Load REAL verified brands from Supabase (prioritizing ÌRÍSÍ Plus brands first — zero hardcoded brands)
+  useEffect(() => {
+    let active = true;
+    fetch('/api/vendors/featured', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active || !data?.success) return;
+        const list = Array.isArray(data.featuredBrands) && data.featuredBrands.length > 0
+          ? data.featuredBrands
+          : Array.isArray(data.ateliers) ? data.ateliers : [];
+        setFeaturedBrands(list);
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoadingBrands(false); });
+    return () => { active = false; };
+  }, []);
 
   // Dynamic Categories by Tab (Taking Categories Seriously!)
   const categoriesByTab = useMemo(() => {
@@ -640,30 +661,7 @@ export default function MobileHomeView() {
     ];
   }, [activeTab]);
 
-  // Featured Independent Ateliers
-  const featuredAteliers = [
-    {
-      id: 'at-1',
-      name: 'Atelier Sovereign',
-      origin: 'Verified Atelier',
-      focus: 'Bespoke Ceremonial Agbada',
-      image: '/images/products/BlackAgbada.jpg',
-    },
-    {
-      id: 'at-2',
-      name: 'Urban Archive',
-      origin: 'Verified Streetwear',
-      focus: '480GSM Heavyweight Streetwear',
-      image: '/images/no-product.svg',
-    },
-    {
-      id: 'at-3',
-      name: 'Savanna Leather Studio',
-      origin: 'Artisan Leathercraft',
-      focus: 'Handcrafted Calfskin Footwear',
-      image: '/images/products/UnisexSlides.jpg',
-    },
-  ];
+
 
   // Reactive Product Filtering (Strictly adhering to active tab)
   const productsList = useMemo(() => {
@@ -1171,6 +1169,9 @@ export default function MobileHomeView() {
         )}
       </section>
 
+      {/* ── 7B. NEW SECTION: IN MOTION · LIVE EDITORIAL LOOKBOOK ── */}
+      <HomeLookbookSection variant="mobile" products={allProducts} />
+
       {/* ── 8. SHOP BY OCCASION ──────────────────────────────── */}
       <section className="px-4 pt-12 space-y-3">
         <div className="border-b border-neutral-200 dark:border-neutral-800 pb-2">
@@ -1216,63 +1217,88 @@ export default function MobileHomeView() {
         </div>
       </section>
 
-      {/* ── 9. FEATURED INDEPENDENT BRANDS & STORES ───────────── */}
-      <section className="pt-12 space-y-3">
-        <div className="px-4 border-b border-neutral-200 dark:border-neutral-800 pb-2 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
-              Featured Brands & Stores
-            </h2>
-            <span className="text-[10px] text-neutral-500 dark:text-neutral-400">
-              Verified Independent Fashion Brands
-            </span>
-          </div>
-          <Link href="/vendors" className="text-[11px] font-bold text-neutral-500 uppercase hover:text-black dark:hover:text-white flex items-center gap-0.5">
-            <span>All Brands</span>
-            <ChevronRight className="h-3 w-3" />
-          </Link>
-        </div>
-
-        <div className="flex items-stretch gap-3 overflow-x-auto px-4 no-scrollbar pb-2">
-          {featuredAteliers.map((atelier) => (
-            <div
-              key={atelier.id}
-              className="w-60 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 shrink-0 flex flex-col justify-between gap-3"
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-black shrink-0 border border-neutral-200 dark:border-neutral-800">
-                  <Image
-                    src={atelier.image}
-                    alt={atelier.name}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <h4 className="font-bold text-xs text-black dark:text-white truncate">
-                    {atelier.name}
-                  </h4>
-                  <span className="text-[10px] text-neutral-500 block truncate">
-                    {atelier.origin}
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed font-light">
-                {atelier.focus}
-              </p>
-
-              <Link
-                href="/vendors"
-                className="w-full py-2 rounded border border-neutral-300 dark:border-neutral-700 text-center text-[10px] font-black uppercase tracking-wider text-black dark:text-white hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
-              >
-                Visit Brand Store
-              </Link>
+      {/* ── 9. FEATURED INDEPENDENT BRANDS (REAL SUPABASE + ÌRÍSÍ PLUS PRIORITY) ── */}
+      {(loadingBrands || featuredBrands.length > 0) && (
+        <section className="pt-12 space-y-3.5">
+          <div className="px-4 border-b border-neutral-200 dark:border-neutral-800 pb-2 flex items-end justify-between">
+            <div>
+              <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--gold-accent)] block">
+                Verified · ÌRÍSÍ Plus Spotlight
+              </span>
+              <h2 className="font-editorial text-xl font-normal text-black dark:text-white leading-tight mt-0.5">
+                Featured Brands
+              </h2>
             </div>
-          ))}
-        </div>
-      </section>
+            <Link href="/vendors" className="text-[11px] font-mono-luxury uppercase tracking-wider text-neutral-500 hover:text-black dark:hover:text-white flex items-center gap-0.5">
+              <span>All Brands</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="flex items-stretch gap-3 overflow-x-auto px-4 no-scrollbar pb-2">
+            {loadingBrands ? (
+              [1, 2, 3].map((n) => (
+                <div key={n} className="w-60 h-44 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 shrink-0 animate-pulse" />
+              ))
+            ) : (
+              featuredBrands.map((brand) => {
+                const logoSrc = !brokenBrandLogos[brand.id]
+                  ? (brand.logoUrl || (Array.isArray(brand.images) && brand.images[0]) || "")
+                  : "";
+                const initial = (brand.name || "B").trim().charAt(0).toUpperCase();
+                return (
+                  <div
+                    key={brand.id}
+                    className="w-64 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#111113] shrink-0 flex flex-col justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-12 w-12 rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-900 shrink-0 border border-[var(--gold-accent)]/40 flex items-center justify-center font-editorial text-lg text-[var(--gold-accent)]">
+                        {logoSrc ? (
+                          <img
+                            src={logoSrc}
+                            alt={brand.name}
+                            onError={() => setBrokenBrandLogos((prev) => ({ ...prev, [brand.id]: true }))}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{initial}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-editorial text-base font-normal text-black dark:text-white truncate">
+                            {brand.name}
+                          </h4>
+                          {brand.hasPaidPlus && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[8px] font-mono-luxury uppercase text-[var(--gold-accent)] shrink-0">
+                              <Crown className="h-2.5 w-2.5" />
+                              <span>Plus</span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono-luxury text-neutral-500 block truncate mt-0.5">
+                          {brand.location} · {brand.productCount} {brand.productCount === 1 ? "piece" : "pieces"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed font-light">
+                      {brand.focus || brand.desc}
+                    </p>
+
+                    <Link
+                      href={`/brand/${encodeURIComponent(brand.slug || brand.id)}`}
+                      className="w-full h-9 rounded-full bg-black dark:bg-white text-white dark:text-black text-[10px] font-mono-luxury uppercase tracking-wider flex items-center justify-center active:scale-95 transition-transform"
+                    >
+                      Visit Brand Store
+                    </Link>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ── 10. RECENTLY VIEWED PIECES (FINAL SECTION) ─────────── */}
       {recentlyViewed.length > 0 && (

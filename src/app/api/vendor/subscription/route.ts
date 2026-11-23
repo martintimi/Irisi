@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const billing = await fetchLivePlatformBillingConfig();
 
     if (!vendorKey) {
-      return NextResponse.json({ success: true, billing, vendorPlan: null });
+      return NextResponse.json({ success: true, billing, vendorPlan: null }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
     }
 
     const adminClient = createAdminClient();
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         storefrontLocked: !isPlus && billing.requirePlusForStorefront,
         storefrontCleanMode: isPlus,
       },
-    });
+    }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
   } catch (err: any) {
     console.error('Vendor subscription GET error:', err);
     return NextResponse.json({ success: false, error: err?.message || 'Server error' }, { status: 500 });

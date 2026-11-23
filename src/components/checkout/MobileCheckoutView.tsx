@@ -4,8 +4,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/lib/store/useStore';
 import {
   ShieldCheck, Truck, Lock, CreditCard, CheckCircle2,
-  ArrowRight, ArrowLeft, Phone, MapPin, Store,
-  Building, Home, Clock, Check, Loader2, Sparkles, AlertCircle
+  ArrowRight, ArrowLeft, MapPin, Building, Home,
+  Check, Loader2, AlertCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -51,19 +51,20 @@ export default function MobileCheckoutView() {
     notes: '',
   });
 
-  // Fetch fresh products and heal cart items from DB on mount
+  const [validationError, setValidationError] = useState('');
+
   useEffect(() => {
     fetchProductsFromDb();
   }, [fetchProductsFromDb]);
 
-  // Restore saved checkout form from sessionStorage so reloads never erase customer input
+  // Restore saved checkout form from sessionStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const saved = sessionStorage.getItem('irisi_checkout_form');
       if (saved) {
         const parsed = JSON.parse(saved);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           ...parsed,
           name: parsed.name || prev.name,
@@ -76,7 +77,6 @@ export default function MobileCheckoutView() {
     } catch {}
   }, []);
 
-  // Persist form changes to sessionStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -86,64 +86,70 @@ export default function MobileCheckoutView() {
 
   const handleStateChange = (newState: string) => {
     const cities = getCitiesForState(newState);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       state: newState,
-      city: cities[0] || ''
+      city: cities[0] || '',
     }));
   };
 
   const [packageMethods, setPackageMethods] = useState<Record<string, 'doorstep' | 'park_pickup'>>({});
-  const [selectedParkTerminals, setSelectedParkTerminals] = useState<Record<string, string>>({});
-  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'bank_transfer'>('paystack');
+  const [selectedParkTerminals] = useState<Record<string, string>>({});
+  const [paymentMethod] = useState<'paystack' | 'bank_transfer'>('paystack');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaystackSimModal, setShowPaystackSimModal] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<any>(null);
-  const isTestMode = (process.env.NEXT_PUBLIC_PAYSTACK_KEY || '').startsWith('pk_test_') || !process.env.NEXT_PUBLIC_PAYSTACK_KEY;
+  const isTestMode =
+    (process.env.NEXT_PUBLIC_PAYSTACK_KEY || '').startsWith('pk_test_') ||
+    !process.env.NEXT_PUBLIC_PAYSTACK_KEY;
 
   // Group items by vendor
   const groupedItems = useMemo(() => {
-    return cart.reduce((acc, item) => {
-      const vendorId = item.product.vendorId || 'boutique';
-      if (!acc[vendorId]) {
-        acc[vendorId] = {
-          vendorId,
-          vendorName: item.product.vendorName,
-          vendorCity: item.product.vendorCity || 'Lagos',
-          vendorState: item.product.vendorState || 'Lagos State',
-          dispatchDays: item.product.dispatchDays || '1-2 business days',
-          shippingRates: item.product.shippingRates || {
-            sameCity: 1000,
-            closeHub: 2500,
-            interstate: 4500,
-            parkPickup: 1500,
-            parkPickupEnabled: true,
-          },
-          items: [],
-        };
-      }
-      acc[vendorId].items.push(item);
-      return acc;
-    }, {} as Record<string, {
-      vendorId: string;
-      vendorName: string;
-      vendorCity: string;
-      vendorState: string;
-      dispatchDays: string;
-      shippingRates: any;
-      items: typeof cart;
-    }>);
+    return cart.reduce(
+      (acc, item) => {
+        const vendorId = item.product.vendorId || 'boutique';
+        if (!acc[vendorId]) {
+          acc[vendorId] = {
+            vendorId,
+            vendorName: item.product.vendorName,
+            vendorCity: item.product.vendorCity || 'Lagos',
+            vendorState: item.product.vendorState || 'Lagos State',
+            dispatchDays: item.product.dispatchDays || '1-2 business days',
+            shippingRates: item.product.shippingRates || {
+              sameCity: 1000,
+              closeHub: 2500,
+              interstate: 4500,
+              parkPickup: 1500,
+              parkPickupEnabled: true,
+            },
+            items: [],
+          };
+        }
+        acc[vendorId].items.push(item);
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          vendorId: string;
+          vendorName: string;
+          vendorCity: string;
+          vendorState: string;
+          dispatchDays: string;
+          shippingRates: any;
+          items: typeof cart;
+        }
+      >
+    );
   }, [cart]);
 
-  // Live Logistics API State
   const [liveRates, setLiveRates] = useState<Record<string, any>>({});
   const [isLoadingRates, setIsLoadingRates] = useState(false);
 
-  // Fetch real-time live carrier quotes from /api/logistics/rates
-  React.useEffect(() => {
+  useEffect(() => {
     async function fetchLiveRates() {
-      const packageRequests = Object.values(groupedItems).map(pkg => {
+      const packageRequests = Object.values(groupedItems).map((pkg) => {
         const pkgWeight = pkg.items.reduce((sum, item) => {
           return sum + estimateItemWeightKg(item.product) * item.quantity;
         }, 0);
@@ -157,7 +163,7 @@ export default function MobileCheckoutView() {
           destinationCity: formData.city || 'Lagos',
           itemCount: pkg.items.length,
           totalWeightKg: Math.max(0.5, Number(pkgWeight.toFixed(2))),
-          shippingRates: pkg.shippingRates
+          shippingRates: pkg.shippingRates,
         };
       });
 
@@ -168,7 +174,7 @@ export default function MobileCheckoutView() {
         const res = await fetch('/api/logistics/rates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ packages: packageRequests })
+          body: JSON.stringify({ packages: packageRequests }),
         });
         const data = await res.json();
         if (data.success && data.rates) {
@@ -185,24 +191,26 @@ export default function MobileCheckoutView() {
     return () => clearTimeout(timer);
   }, [groupedItems, formData.state, formData.city]);
 
-  // Calculate dynamic shipping fee per vendor package
   const packageShippingCalculations = useMemo(() => {
-    const calcs: Record<string, {
-      fee: number;
-      method: 'doorstep' | 'park_pickup';
-      reason: string;
-      isSameCity: boolean;
-      courierName?: string;
-      eta?: string;
-      packageWeightKg?: number;
-      packageDimensions?: string;
-      hasDoorstepPickup?: boolean;
-      courierServiceType?: 'pickup' | 'dropoff';
-      dropoffStation?: string;
-      instructions?: string;
-      serviceabilityBadge?: string;
-      motorParks?: any[];
-    }> = {};
+    const calcs: Record<
+      string,
+      {
+        fee: number;
+        method: 'doorstep' | 'park_pickup';
+        reason: string;
+        isSameCity: boolean;
+        courierName?: string;
+        eta?: string;
+        packageWeightKg?: number;
+        packageDimensions?: string;
+        hasDoorstepPickup?: boolean;
+        courierServiceType?: 'pickup' | 'dropoff';
+        dropoffStation?: string;
+        instructions?: string;
+        serviceabilityBadge?: string;
+        motorParks?: any[];
+      }
+    > = {};
 
     Object.values(groupedItems).forEach((pkg) => {
       const live = liveRates[pkg.vendorId];
@@ -211,7 +219,13 @@ export default function MobileCheckoutView() {
       const vendorCity = (pkg.vendorCity || '').toLowerCase().trim();
       const customerState = (formData.state || '').toLowerCase().trim();
       const vendorState = (pkg.vendorState || '').toLowerCase().trim();
-      const isSameCity = !!(customerCity && vendorCity && (customerCity === vendorCity || customerCity.includes(vendorCity) || vendorCity.includes(customerCity)));
+      const isSameCity = !!(
+        customerCity &&
+        vendorCity &&
+        (customerCity === vendorCity ||
+          customerCity.includes(vendorCity) ||
+          vendorCity.includes(customerCity))
+      );
       const isSameState = !!(customerState && vendorState && customerState === vendorState);
 
       const vendorDoorstepFee = isSameCity
@@ -227,9 +241,10 @@ export default function MobileCheckoutView() {
         calcs[pkg.vendorId] = {
           fee: isDoor ? (rateObj?.fee !== undefined ? rateObj.fee : vendorDoorstepFee) : 0,
           method: chosenMethod,
-          reason: isDoor ? (rateObj?.serviceType || 'Doorstep Courier') : 'Pay Driver on Pickup',
+          reason: isDoor ? rateObj?.serviceType || 'Doorstep Courier' : 'Pay Driver on Pickup',
           isSameCity: live.isSameCity,
-          courierName: rateObj?.courierName || (isDoor ? 'Doorstep Courier Partner' : 'Motor Park Waybill'),
+          courierName:
+            rateObj?.courierName || (isDoor ? 'Doorstep Courier Partner' : 'Motor Park Waybill'),
           eta: rateObj?.estimatedDeliveryDays || (isDoor ? '1-3 business days' : '1-2 business days'),
           packageWeightKg: live.packageWeightKg,
           packageDimensions: live.packageDimensions,
@@ -259,7 +274,11 @@ export default function MobileCheckoutView() {
           calcs[pkg.vendorId] = {
             fee: vendorDoorstepFee,
             method: 'doorstep',
-            reason: isSameCity ? 'Same-City Direct Rider' : isSameState ? 'Intra-State Doorstep' : 'Interstate Doorstep Courier',
+            reason: isSameCity
+              ? 'Same-City Direct Rider'
+              : isSameState
+              ? 'Intra-State Doorstep'
+              : 'Interstate Doorstep Courier',
             isSameCity,
             courierName: isSameCity ? 'Direct Dispatch Rider' : 'Doorstep Courier Partner',
             eta: isSameCity ? 'Same-day / 24h' : '2-3 business days',
@@ -277,46 +296,51 @@ export default function MobileCheckoutView() {
   }, [groupedItems, liveRates, packageMethods, formData.city, formData.state]);
 
   const vendorIds = useMemo(() => Object.keys(groupedItems), [groupedItems]);
-  const isAllParkPickup = vendorIds.length > 0 && vendorIds.every(
-    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method) === 'park_pickup'
-  );
-  const hasDoorstep = vendorIds.length === 0 || vendorIds.some(
-    vId => (packageMethods[vId] || packageShippingCalculations[vId]?.method || 'doorstep') === 'doorstep'
-  );
+  const isAllParkPickup =
+    vendorIds.length > 0 &&
+    vendorIds.every(
+      (vId) => (packageMethods[vId] || packageShippingCalculations[vId]?.method) === 'park_pickup'
+    );
+  const hasDoorstep =
+    vendorIds.length === 0 ||
+    vendorIds.some(
+      (vId) =>
+        (packageMethods[vId] || packageShippingCalculations[vId]?.method || 'doorstep') ===
+        'doorstep'
+    );
 
   const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  const totalShippingFee = isAllParkPickup ? 0 : Object.values(packageShippingCalculations).reduce((sum, item) => sum + item.fee, 0);
+  const totalShippingFee = isAllParkPickup
+    ? 0
+    : Object.values(packageShippingCalculations).reduce((sum, item) => sum + item.fee, 0);
   const grandTotal = subtotal + totalShippingFee;
+  const totalItemsCount = cart.reduce((s, i) => s + i.quantity, 0);
 
   const [motorParkName, setMotorParkName] = useState<string>('');
-  const resolvedMotorPark = motorParkName.trim() || `${formData.city} Motor Park`;
 
-  // Toggle park pickup vs doorstep for all vendor packages at once
   const setAllDeliveryMethods = (method: 'doorstep' | 'park_pickup') => {
     const updated: Record<string, 'doorstep' | 'park_pickup'> = {};
-    vendorIds.forEach(vId => {
+    vendorIds.forEach((vId) => {
       updated[vId] = method;
     });
     setPackageMethods(updated);
-  };
-
-  const togglePackageMethod = (vendorId: string, method: 'doorstep' | 'park_pickup') => {
-    setPackageMethods(prev => ({ ...prev, [vendorId]: method }));
+    setValidationError('');
   };
 
   const handleStartPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError('');
     if (!userAuth?.isLoggedIn) {
       router.push('/auth?redirect=/checkout');
       return;
     }
     if (cart.length === 0) return;
-    if (!formData.name || !formData.phone || !formData.city) {
-      alert('Please fill in your recipient name, phone, and city.');
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.city.trim()) {
+      setValidationError('Please enter your full name, phone number, and city.');
       return;
     }
-    if (hasDoorstep && !formData.address) {
-      alert('Please enter your street address for doorstep courier delivery.');
+    if (hasDoorstep && !formData.address.trim()) {
+      setValidationError('Please enter your street address for doorstep courier delivery.');
       return;
     }
     handlePayWithPaystack();
@@ -340,22 +364,23 @@ export default function MobileCheckoutView() {
   const handlePayWithPaystack = async () => {
     setIsProcessing(true);
     const paymentRef = `vy_escrow_${Date.now()}`;
-    const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_KEY || 'pk_test_747039dcebc800028fafa806d62e38f2ed02ab95';
+    const paystackKey =
+      process.env.NEXT_PUBLIC_PAYSTACK_KEY || 'pk_test_747039dcebc800028fafa806d62e38f2ed02ab95';
 
     try {
       const loaded = await loadPaystackScript();
       if (loaded && (window as any).PaystackPop) {
         const handler = (window as any).PaystackPop.setup({
           key: paystackKey,
-          email: formData.email || userAuth?.email || 'buyer@veyra.ng',
+          email: formData.email || userAuth?.email || 'buyer@irisimi.ng',
           amount: Math.round(grandTotal * 100),
           currency: 'NGN',
           ref: paymentRef,
           metadata: {
             custom_fields: [
               { display_name: 'Customer Name', variable_name: 'customer_name', value: formData.name },
-              { display_name: 'Phone Number', variable_name: 'phone_number', value: formData.phone }
-            ]
+              { display_name: 'Phone Number', variable_name: 'phone_number', value: formData.phone },
+            ],
           },
           callback: (response: any) => {
             setShowPaymentModal(false);
@@ -363,11 +388,11 @@ export default function MobileCheckoutView() {
           },
           onClose: () => {
             setIsProcessing(false);
-          }
+          },
         });
         handler.openIframe();
       } else {
-        alert('Could not load Paystack gateway. Please check your internet connection.');
+        setValidationError('Could not load Paystack gateway. Please check your internet connection.');
         setIsProcessing(false);
       }
     } catch (e) {
@@ -384,11 +409,6 @@ export default function MobileCheckoutView() {
       const paymentRef = resolvedPaymentRef || `vy_escrow_${Date.now()}`;
 
       const parkLocation = motorParkName.trim() || `${formData.city} Motor Park`;
-      const resolvedParkTerminals = vendorIds.reduce((acc, vId) => {
-        acc[vId] = parkLocation;
-        return acc;
-      }, {} as Record<string, string>);
-
       const formattedDeliveryAddress = isAllParkPickup
         ? `${parkLocation}, ${formData.city}, ${formData.state} (Motor Park Pickup)`
         : `${formData.address ? formData.address + ', ' : ''}${formData.city}, ${formData.state}`;
@@ -404,9 +424,13 @@ export default function MobileCheckoutView() {
 
         const courierName = isPark
           ? 'Motor Park Bus Waybill'
-          : (rateObj?.courierName || calc?.courierName || 'Shipbubble Courier');
+          : rateObj?.courierName || calc?.courierName || 'Shipbubble Courier';
 
-        const shippingFee = isPark ? 0 : (rateObj?.fee !== undefined ? rateObj.fee : (calc?.fee ?? 0));
+        const shippingFee = isPark
+          ? 0
+          : rateObj?.fee !== undefined
+          ? rateObj.fee
+          : calc?.fee ?? 0;
 
         vendorPackagesPayload[vId] = {
           vendorId: vId,
@@ -416,16 +440,27 @@ export default function MobileCheckoutView() {
           deliveryMethod: method,
           shippingFee,
           courierName,
-          courierServiceType: isPark ? 'dropoff' : (rateObj?.courierServiceType || calc?.courierServiceType || 'pickup'),
-          hasDoorstepPickup: isPark ? false : (rateObj?.hasDoorstepPickup ?? calc?.hasDoorstepPickup ?? true),
+          courierServiceType: isPark
+            ? 'dropoff'
+            : rateObj?.courierServiceType || calc?.courierServiceType || 'pickup',
+          hasDoorstepPickup: isPark
+            ? false
+            : rateObj?.hasDoorstepPickup ?? calc?.hasDoorstepPickup ?? true,
           requestToken: rateObj?.requestToken || live?.doorstep?.requestToken,
           serviceCode: rateObj?.serviceCode || live?.doorstep?.serviceCode,
           courierId: rateObj?.courierId || live?.doorstep?.courierId,
-          selectedParkTerminal: isPark ? (selectedParkTerminals[vId] || motorParkName || `${formData.city} Motor Park`) : undefined,
-          dropoffStation: isPark ? (selectedParkTerminals[vId] || motorParkName) : (rateObj?.dropoffStation || calc?.dropoffStation),
-          instructions: rateObj?.instructions || calc?.instructions || (isPark
-            ? 'Package order securely and drop at local motor park. Customer pays collection fee upon arrival.'
-            : `${courierName} rider will pick up from your store location once marked ready.`),
+          selectedParkTerminal: isPark
+            ? selectedParkTerminals[vId] || motorParkName || `${formData.city} Motor Park`
+            : undefined,
+          dropoffStation: isPark
+            ? selectedParkTerminals[vId] || motorParkName
+            : rateObj?.dropoffStation || calc?.dropoffStation,
+          instructions:
+            rateObj?.instructions ||
+            calc?.instructions ||
+            (isPark
+              ? 'Package order securely and drop at local motor park. Customer pays collection fee upon arrival.'
+              : `${courierName} rider will pick up from your store location once marked ready.`),
           packageWeightKg: live?.packageWeightKg || calc?.packageWeightKg || 1.0,
           packageDimensions: live?.packageDimensions || calc?.packageDimensions || '32×24×6cm',
           status: 'escrow_secured',
@@ -450,7 +485,7 @@ export default function MobileCheckoutView() {
           waistCm: 0,
           inseamCm: 0,
         },
-        items: cart.map(item => ({
+        items: cart.map((item) => ({
           productId: item.product.id,
           productName: item.product.name,
           vendorId: item.product.vendorId,
@@ -476,7 +511,7 @@ export default function MobileCheckoutView() {
         const res = await fetch('/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderPayload)
+          body: JSON.stringify(orderPayload),
         });
         const data = await res.json();
         if (res.ok && data.success && data.order) {
@@ -493,10 +528,10 @@ export default function MobileCheckoutView() {
       setShowPaymentModal(false);
 
       confetti({
-        particleCount: 90,
-        spread: 80,
-        origin: { y: 0.5 },
-        colors: ['#e6c367', '#10b981', '#ffffff']
+        particleCount: 80,
+        spread: 75,
+        origin: { y: 0.55 },
+        colors: ['#e6c367', '#10b981', '#ffffff'],
       });
     } catch (err) {
       console.error('Payment completion error:', err);
@@ -504,60 +539,69 @@ export default function MobileCheckoutView() {
     }
   };
 
+  /* ── ORDER CONFIRMED STATE (Quiet-Luxury Native Receipt) ─────────────── */
   if (orderPlaced) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] p-5 py-12 flex flex-col items-center justify-center text-center space-y-6 animate-fadeIn pb-32">
-        <div className="h-20 w-20 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-2xl">
-          <Check className="h-10 w-10 stroke-[3]" />
+      <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] px-5 py-12 flex flex-col items-center justify-center text-center space-y-6 animate-fadeIn pb-24">
+        <div className="h-16 w-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 flex items-center justify-center">
+          <Check className="h-8 w-8" strokeWidth={2} />
         </div>
 
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono-luxury font-bold uppercase">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>Order Confirmed &amp; Verified</span>
-          </div>
-
-          <h1 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
-            Order Placed Successfully!
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-mono-luxury uppercase tracking-wider">
+            <ShieldCheck className="h-3 w-3" />
+            <span>Escrow Secured</span>
+          </span>
+          <h1 className="font-editorial text-3xl font-normal text-[var(--text-primary)] leading-tight pt-1">
+            Order Confirmed
           </h1>
-          <p className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold">
-            Reference: {orderPlaced.orderNumber}
+          <p className="text-xs font-mono-luxury text-[var(--gold-accent)]">
+            {orderPlaced.orderNumber}
           </p>
         </div>
 
-        <div className="w-full p-5 rounded-3xl surface-card border border-[var(--border-subtle)] text-left space-y-3 text-xs font-mono-luxury shadow-lg">
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
-            <span className="text-[var(--text-secondary)]">Recipient:</span>
-            <span className="font-bold text-[var(--text-primary)]">{orderPlaced.customerName}</span>
+        <div className="w-full max-w-sm rounded-[24px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] text-left text-xs overflow-hidden">
+          <div className="px-4 py-3 flex items-center justify-between gap-2">
+            <span className="text-[var(--text-muted)]">Recipient</span>
+            <span className="text-[var(--text-primary)] font-medium truncate">
+              {orderPlaced.customerName}
+            </span>
           </div>
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
-            <span className="text-[var(--text-secondary)]">Destination:</span>
-            <span className="font-bold text-[var(--text-primary)] text-right truncate max-w-[200px]">{orderPlaced.deliveryAddress}</span>
+          <div className="px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-[var(--text-muted)] shrink-0">Destination</span>
+            <span className="text-[var(--text-primary)] text-right truncate">
+              {orderPlaced.deliveryAddress}
+            </span>
           </div>
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
-            <span className="text-[var(--text-secondary)]">Total Paid:</span>
-            <span className="font-bold text-[var(--gold-accent)] text-sm">₦{Number(orderPlaced.totalAmount || 0).toLocaleString()}</span>
+          <div className="px-4 py-3 flex items-center justify-between gap-2">
+            <span className="text-[var(--text-muted)]">Total Paid</span>
+            <span className="font-editorial text-lg text-[var(--text-primary)]">
+              ₦{Number(orderPlaced.totalAmount || 0).toLocaleString()}
+            </span>
           </div>
-          <div className="p-2.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-start gap-2 text-[11px] text-[var(--text-secondary)]">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span>Your order details have been sent to the store. They are packaging your items for courier dispatch.</span>
+          <div className="px-4 py-3 bg-[var(--bg-primary)]/50 text-[11px] text-[var(--text-secondary)] font-light leading-relaxed flex items-start gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+            <span>
+              Your brand has been notified and is preparing your pieces. Your payment remains
+              protected in escrow until delivery.
+            </span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 w-full">
+        <div className="flex flex-col gap-2.5 w-full max-w-sm">
           <Link
             href={`/track-order?orderNumber=${encodeURIComponent(orderPlaced.orderNumber)}`}
-            className="w-full py-4 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold shadow-xl flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-[0.14em] flex items-center justify-center gap-2 active:scale-[0.99]"
           >
-            <Truck className="h-4 w-4" />
-            <span>Track Order Live</span>
+            <Truck className="h-4 w-4 text-[var(--gold-accent)]" />
+            <span>Track Live Delivery</span>
           </Link>
 
           <Link
             href="/shop"
-            className="w-full py-3.5 rounded-2xl surface-card border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury uppercase text-xs font-bold text-center"
+            className="w-full h-11 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-xs font-mono-luxury uppercase tracking-wider flex items-center justify-center"
           >
-            <span>Continue Shopping</span>
+            Continue Shopping
           </Link>
         </div>
       </div>
@@ -567,34 +611,30 @@ export default function MobileCheckoutView() {
   if (!mounted) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--gold-accent)]" />
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--gold-accent)]" />
       </div>
     );
   }
 
   if (!userAuth?.isLoggedIn) {
     return (
-      <div className="min-h-[75vh] flex flex-col items-center justify-center p-6 text-center space-y-5 max-w-sm mx-auto animate-fadeIn py-16">
-        <div className="h-16 w-16 rounded-full bg-[var(--gold-accent)]/10 border border-[var(--gold-accent)]/30 flex items-center justify-center text-[var(--gold-accent)] animate-pulse">
-          <Lock className="h-8 w-8" />
+      <div className="min-h-[75vh] flex flex-col items-center justify-center px-6 text-center space-y-5 max-w-sm mx-auto animate-fadeIn py-16">
+        <div className="h-14 w-14 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--gold-accent)]">
+          <Lock className="h-6 w-6" strokeWidth={1.6} />
         </div>
-        <div className="space-y-2">
-          <h2 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-            Shopper Sign In Required
+        <div className="space-y-1.5">
+          <h2 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+            Sign In to Checkout
           </h2>
-          <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed">
-            Please log in or create an account to proceed with your checkout and complete your order.
+          <p className="text-xs text-[var(--text-muted)] font-light leading-relaxed">
+            Sign in so your escrow receipt, delivery tracking, and brand alerts sync to your account.
           </p>
-        </div>
-        <div className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--gold-accent)]">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Redirecting to login...</span>
         </div>
         <Link
           href="/auth?redirect=/checkout"
-          className="w-full py-3.5 px-6 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-[0.14em] flex items-center justify-center gap-2"
         >
-          <span>Sign In to Checkout</span>
+          <span>Continue to Sign In</span>
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -602,371 +642,390 @@ export default function MobileCheckoutView() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-36 select-none animate-fadeIn">
-      
-      {/* 1. TOP APP BAR */}
-      <div className="sticky top-0 z-30 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-32 select-none animate-fadeIn">
+      {/* 1. Native Sticky Top Header */}
+      <header className="sticky top-0 z-30 h-14 px-4 bg-[var(--bg-primary)]/90 backdrop-blur-xl border-b border-[var(--border-subtle)] flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
-            onClick={() => {
-              if (cart.length > 0) {
-                router.push('/cart');
-              } else {
-                router.push('/shop');
-              }
-            }}
-            className="p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white"
-            aria-label="Back"
+            onClick={() => router.push(cart.length > 0 ? '/cart' : '/shop')}
+            className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center active:scale-95 transition-transform shrink-0 cursor-pointer"
+            aria-label="Back to bag"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div>
-            <h1 className="font-editorial text-xl font-bold text-[var(--text-primary)] leading-tight">
-              Secure Checkout
-            </h1>
-            <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold flex items-center gap-1">
-              <ShieldCheck className="h-3 w-3" />
-              <span>100% Protected Payment</span>
-            </span>
-          </div>
+          <h1 className="font-editorial text-[20px] font-normal text-[var(--text-primary)] leading-tight truncate">
+            Checkout
+          </h1>
         </div>
-      </div>
 
-      {/* 2. CHECKOUT FORM CONTENT */}
-      <form onSubmit={handleStartPayment} id="mobile-checkout-form" className="p-4 space-y-4">
-        
-        {/* Step 1: Contact & Delivery Destination */}
-        <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-3.5 shadow-sm">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2 text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold">
-              <MapPin className="h-3.5 w-3.5" />
-              <span>1. Delivery Method & Destination</span>
-            </div>
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono-luxury text-emerald-500 shrink-0">
+          <ShieldCheck className="h-3 w-3" />
+          <span>Escrow</span>
+        </span>
+      </header>
+
+      {/* 2. Form Content */}
+      <form
+        onSubmit={handleStartPayment}
+        id="mobile-checkout-form"
+        noValidate
+        className="px-4 py-4 space-y-5"
+      >
+        {validationError && (
+          <div className="px-4 py-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-500 text-xs flex items-center gap-2 animate-fadeIn">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
+
+        {/* Section 1: Delivery Method */}
+        <section className="space-y-2.5">
+          <div className="px-1 flex items-center justify-between">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Delivery Method
+            </span>
             {isAllParkPickup && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-mono-luxury font-bold uppercase">
-                Park Pickup · Pay on Collection
+              <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)]">
+                Pay driver on pickup
               </span>
             )}
           </div>
 
-          {/* Delivery Option Toggle */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury font-bold">
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
             <button
               type="button"
               onClick={() => setAllDeliveryMethods('doorstep')}
-              className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`h-10 rounded-xl text-[11.5px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 !isAllParkPickup
-                  ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-white'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                  : 'text-[var(--text-muted)]'
               }`}
             >
-              <Home className="h-3.5 w-3.5" />
-              <span>Doorstep Delivery</span>
+              <Home className="h-3.5 w-3.5" strokeWidth={1.7} />
+              <span>Doorstep</span>
             </button>
             <button
               type="button"
               onClick={() => setAllDeliveryMethods('park_pickup')}
-              className={`py-2.5 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              className={`h-10 rounded-xl text-[11.5px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 isAllParkPickup
-                  ? 'bg-[var(--gold-accent)] text-black shadow-sm font-extrabold'
-                  : 'text-[var(--text-secondary)] hover:text-white'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm border border-[var(--border-subtle)]'
+                  : 'text-[var(--text-muted)]'
               }`}
             >
-              <Building className="h-3.5 w-3.5" />
-              <span>Motor Park Waybill</span>
+              <Building className="h-3.5 w-3.5" strokeWidth={1.7} />
+              <span>Park Waybill</span>
             </button>
           </div>
+        </section>
 
-          <div className="space-y-3 text-xs font-mono-luxury">
-            <div>
-              <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                Recipient Full Name
+        {/* Section 2: Recipient & Destination */}
+        <section className="space-y-2.5">
+          <div className="px-1 flex items-center gap-1.5 text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <MapPin className="h-3 w-3 text-[var(--gold-accent)]" />
+            <span>Recipient &amp; Address</span>
+          </div>
+
+          <div className="p-4 rounded-[22px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3.5">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] px-0.5">
+                Full Name
               </label>
               <input
                 type="text"
-                required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Full Name"
-                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (validationError) setValidationError('');
+                }}
+                placeholder="Recipient full name"
+                className="w-full h-11 px-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  {isAllParkPickup ? 'Phone (For Park Call)' : 'Phone (For Courier)'}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] px-0.5">
+                  Phone Number
                 </label>
                 <input
                   type="tel"
-                  required
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="08012*****"
-                  className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-mono-luxury focus:border-[var(--gold-accent)] focus:outline-none"
+                  onChange={(e) => {
+                    setFormData({ ...formData, phone: e.target.value });
+                    if (validationError) setValidationError('');
+                  }}
+                  placeholder="08012345678"
+                  className="w-full h-11 px-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs font-mono-luxury text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
                 />
               </div>
 
-              <div>
-                <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                  Delivery State
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] px-0.5">
+                  State
                 </label>
                 <select
                   value={formData.state}
                   onChange={(e) => handleStateChange(e.target.value)}
-                  className="w-full px-3 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                  className="w-full h-11 px-3 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
                 >
                   {NIGERIAN_STATES.map((st: string) => (
-                    <option key={st} value={st}>{st}</option>
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div>
-              <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                City / Town / District
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] px-0.5">
+                City / District
               </label>
               <select
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
+                className="w-full h-11 px-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none cursor-pointer"
               >
                 {getCitiesForState(formData.state).map((ct) => (
-                  <option key={ct} value={ct}>{ct}</option>
+                  <option key={ct} value={ct}>
+                    {ct}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Conditionally Render: Motor Park in City vs Street Address */}
             {isAllParkPickup ? (
-              <div className="p-3.5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/30 space-y-2.5 animate-fadeIn">
-                <div className="flex items-start gap-2">
-                  <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
-                    <Truck className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <h4 className="text-[11px] font-bold text-[var(--text-primary)] uppercase">
-                      Motor Park Delivery (No Street Address Needed)
-                    </h4>
-                    <p className="text-[10px] text-[var(--text-secondary)] leading-snug mt-0.5">
-                      The vendor will send your package via an interstate bus driver heading to <strong>{formData.city}, {formData.state}</strong>. When the bus arrives at the motor park in {formData.city}, the driver will call your phone ({formData.phone || 'provided above'}) to collect it.
-                    </p>
-                  </div>
+              <div className="p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--gold-accent)]/30 space-y-2.5 animate-fadeIn">
+                <div className="flex items-start gap-2.5">
+                  <Truck className="h-4 w-4 text-[var(--gold-accent)] shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-[var(--text-secondary)] font-light leading-relaxed">
+                    Your package will ship via interstate bus waybill to{' '}
+                    <span className="text-[var(--text-primary)] font-medium">
+                      {formData.city}, {formData.state}
+                    </span>
+                    . The driver calls you on arrival — pay transport directly at collection.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-[9px] uppercase text-[var(--gold-accent)] font-bold mb-1">
-                    Motor Park / Garage in {formData.city} (Optional):
-                  </label>
-                  <input
-                    type="text"
-                    value={motorParkName}
-                    onChange={(e) => setMotorParkName(e.target.value)}
-                    placeholder={`e.g. Main Motor Park, Central Garage, or nearest park in ${formData.city}`}
-                    className="w-full px-3 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] font-bold focus:border-[var(--gold-accent)] focus:outline-none"
-                  />
-                  <span className="text-[9px] text-amber-400/90 block mt-1">
-                    ⚠️ Pay the bus driver's transport fee directly when you collect your parcel from the driver in {formData.city}.
-                  </span>
-                </div>
+                <input
+                  type="text"
+                  value={motorParkName}
+                  onChange={(e) => setMotorParkName(e.target.value)}
+                  placeholder={`Preferred motor park in ${formData.city} (optional)`}
+                  className="w-full h-10 px-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--gold-accent)] focus:outline-none"
+                />
               </div>
             ) : (
               <div className="space-y-3">
-                <div>
-                  <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] px-0.5">
                     Street Address
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="House / flat number, street name, and landmark"
-                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                    onChange={(e) => {
+                      setFormData({ ...formData, address: e.target.value });
+                      if (validationError) setValidationError('');
+                    }}
+                    placeholder="House / flat number, street name, landmark"
+                    className="w-full h-11 px-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
                   />
                 </div>
 
-                <div>
-                  <label className="block uppercase text-[var(--text-secondary)] mb-1 font-bold">
-                    Delivery Notes / Landmark (Optional)
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] px-0.5">
+                    Delivery Note (Optional)
                   </label>
                   <input
                     type="text"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    placeholder="e.g. Opposite First Bank, call on arrival"
-                    className="w-full px-3.5 py-3 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:border-[var(--gold-accent)] focus:outline-none"
+                    placeholder="Gate code, nearby landmark, or call instruction"
+                    className="w-full h-11 px-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--gold-accent)] focus:outline-none transition-colors"
                   />
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Step 2: Order Summary & Escrow Breakdown */}
-        <div className="p-5 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-4 shadow-sm text-xs font-mono-luxury">
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
-            <span className="uppercase text-[var(--gold-accent)] font-bold block">
-              2. Order Summary ({cart.reduce((s, i) => s + i.quantity, 0)} item{cart.reduce((s, i) => s + i.quantity, 0) > 1 ? 's' : ''})
+        {/* Section 3: Order Summary */}
+        <section className="space-y-2.5">
+          <div className="px-1 flex items-center justify-between">
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Order Summary ({totalItemsCount} {totalItemsCount === 1 ? 'Piece' : 'Pieces'})
             </span>
-            <span className="text-[10px] text-[var(--text-secondary)] font-bold">
-              {isAllParkPickup ? 'Motor Park Delivery' : 'Doorstep Courier'}
-            </span>
+            {isLoadingRates && (
+              <span className="text-[10px] font-mono-luxury text-[var(--gold-accent)] inline-flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Updating rates</span>
+              </span>
+            )}
           </div>
 
-          {/* Cart Items List */}
-          <div className="space-y-3 max-h-64 overflow-y-auto pr-1 divide-y divide-[var(--border-subtle)]/50">
-            {cart.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 pt-2.5 first:pt-0">
-                <div className="relative h-12 w-12 rounded-xl overflow-hidden shrink-0 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-                  <Image src={item.selectedColor?.imageUrl || item.product.imageUrl} alt={item.product.name} fill unoptimized className="object-cover" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h4 className="font-bold text-[var(--text-primary)] truncate text-xs">{item.product.name}</h4>
-                  <div className="text-[10px] text-[var(--text-secondary)] mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span>Size: <strong className="text-[var(--gold-accent)]">{item.selectedSize}</strong></span>
-                    {item.selectedColor?.name && (
-                      <>
-                        <span>·</span>
-                        <span className="flex items-center gap-1">
-                          {item.selectedColor.name.toLowerCase() !== 'as pictured' && item.selectedColor.name.toLowerCase() !== 'standard' && (
-                            <span
-                              className="h-2 w-2 rounded-full border border-white/20 inline-block shrink-0"
-                              style={{ backgroundColor: item.selectedColor.hex || '#111111' }}
-                            />
-                          )}
-                          <span>{item.selectedColor.name}</span>
-                        </span>
-                      </>
-                    )}
-                    <span>·</span>
-                    <span>Qty: <strong className="text-[var(--gold-accent)]">{item.quantity}</strong></span>
+          <div className="rounded-[22px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
+            {/* Items */}
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {cart.map((item) => (
+                <div key={item.id} className="px-4 py-3 flex items-center gap-3">
+                  <div className="relative h-12 w-12 rounded-xl overflow-hidden shrink-0 border border-[var(--border-subtle)] bg-zinc-900">
+                    <Image
+                      src={item.selectedColor?.imageUrl || item.product.imageUrl}
+                      alt={item.product.name}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
                   </div>
-                  <div className="text-[10px] text-[var(--text-muted)] truncate">
-                    {item.product.vendorName || 'Atelier Store'}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium text-[var(--text-primary)] truncate">
+                      {item.product.name}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-muted)] font-light truncate mt-0.5">
+                      {item.product.vendorName || 'Verified Brand'} · Size {item.selectedSize} · Qty{' '}
+                      {item.quantity}
+                    </div>
+                  </div>
+                  <div className="font-editorial text-base text-[var(--text-primary)] shrink-0">
+                    ₦{(item.product.price * item.quantity).toLocaleString()}
                   </div>
                 </div>
-                <div className="text-right font-bold text-[var(--text-primary)] font-editorial text-sm shrink-0">
-                  ₦{(item.product.price * item.quantity).toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Price Breakdown */}
-          <div className="space-y-2.5 pt-3 border-t border-[var(--border-subtle)]">
-            <div className="flex items-center justify-between text-[var(--text-secondary)]">
-              <span>Clothes Subtotal:</span>
-              <span className="font-bold text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
+              ))}
             </div>
 
-            <div className="space-y-1">
+            {/* Totals Breakdown */}
+            <div className="px-4 py-3.5 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/40 space-y-2 text-xs">
               <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span>Delivery:</span>
-                <span className="font-bold text-[var(--gold-accent)]">
-                  {isAllParkPickup ? 'Pay Driver on Collection (~₦1,500)' : `₦${totalShippingFee.toLocaleString()}`}
+                <span>Subtotal</span>
+                <span className="text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-[var(--text-secondary)]">
+                <span>
+                  {isAllParkPickup
+                    ? 'Motor Park Waybill'
+                    : Object.values(packageShippingCalculations)[0]?.courierName || 'Courier Delivery'}
+                </span>
+                <span className="text-[var(--text-primary)]">
+                  {isAllParkPickup ? 'Pay on pickup' : `₦${totalShippingFee.toLocaleString()}`}
                 </span>
               </div>
-              {!isAllParkPickup && (
-                <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
-                  <span className="text-emerald-400 font-bold flex items-center gap-1">
-                    <Truck className="h-3 w-3" />
-                    <span>{Object.values(packageShippingCalculations)[0]?.courierName || 'Shipbubble Live Dispatch'}</span>
-                  </span>
-                  <span>{Object.values(packageShippingCalculations)[0]?.eta || '2-4 business days'}</span>
-                </div>
-              )}
-            </div>
 
-            <div className="pt-2.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-sm font-bold">
-              <span className="text-[var(--text-primary)]">Total Due Now:</span>
-              <span className="font-editorial text-2xl font-bold text-amber-600 dark:text-[var(--gold-accent)]">
-                ₦{grandTotal.toLocaleString()}
-              </span>
+              <div className="pt-2.5 border-t border-[var(--border-subtle)] flex items-baseline justify-between">
+                <span className="text-xs font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
+                  Total Due
+                </span>
+                <span className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+                  ₦{grandTotal.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
+        </section>
 
-          {/* Buyer Protection Badge */}
-          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-emerald-400 text-[10px] leading-snug">
-            <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              <strong>Buyer Protection Guarantee:</strong> Your purchase is secure and covered by ÌRÍSÍ customer protection.
-            </div>
+        {/* Escrow Guarantee Pill Card */}
+        <section className="px-4 py-3.5 rounded-[20px] bg-[#0D0D10] text-white border border-white/10 flex items-start gap-3">
+          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="text-[11px] text-zinc-300 font-light leading-relaxed">
+            <span className="text-white font-medium">100% Escrow Protected.</span> Your funds are
+            held securely until your order arrives and you confirm the quality and fit.
           </div>
-        </div>
-
+        </section>
       </form>
 
-      {/* 3. FIXED BOTTOM PAYMENT TRIGGER */}
-      <div className="fixed bottom-0 inset-x-0 z-40 bg-[#0a0a0c]/90 dark:bg-[#0a0a0c]/90 bg-white/95 backdrop-blur-2xl border-t border-black/10 dark:border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex items-center justify-between gap-3">
-        <div>
-          <span className="text-[9px] font-mono-luxury text-[var(--text-muted)] uppercase block">Total Due:</span>
-          <div className="font-editorial text-xl font-bold text-amber-600 dark:text-[var(--gold-accent)] leading-none mt-0.5">
-            ₦{grandTotal.toLocaleString()}
+      {/* 3. Sticky Native Bottom Checkout Dock */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-xl border-t border-[var(--border-subtle)] px-4 pt-3 pb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)] block">
+              Escrow Total
+            </span>
+            <div className="font-editorial text-2xl font-normal text-[var(--text-primary)] leading-none mt-0.5">
+              ₦{grandTotal.toLocaleString()}
+            </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          form="mobile-checkout-form"
-          className="flex-1 max-w-[220px] py-3.5 px-4 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-        >
-          <Lock className="h-4 w-4" />
-          <span>Proceed to Pay</span>
-        </button>
+          <button
+            type="submit"
+            form="mobile-checkout-form"
+            disabled={isProcessing || cart.length === 0}
+            className="flex-1 max-w-[215px] h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-[0.14em] flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Processing</span>
+              </>
+            ) : (
+              <>
+                <Lock className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                <span>Pay Securely</span>
+              </>
+            )}
+          </button>
+        </div>
+        <div className="h-safe-area-bottom" />
       </div>
 
-      {/* 4. PAYMENT CONFIRMATION MODAL */}
+      {/* 4. Payment Confirmation Bottom Sheet (fallback flow if triggered) */}
       {showPaymentModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end justify-center p-0 animate-fadeIn">
-          <div className="w-full max-w-md surface-card rounded-t-3xl border-t border-x border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-slideUp">
-            
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-end justify-center animate-fadeIn"
+          onClick={() => !isProcessing && setShowPaymentModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-[var(--bg-surface)] rounded-t-[28px] border-t border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center -mt-2">
+              <div className="h-1 w-10 rounded-full bg-[var(--border-subtle)]" />
+            </div>
+
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                <span className="font-editorial text-lg font-bold text-[var(--text-primary)]">Ìrísí Secure Checkout</span>
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                <span className="font-editorial text-lg font-normal text-[var(--text-primary)]">
+                  Confirm Payment
+                </span>
               </div>
-              <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold">256-Bit Encrypted</span>
+              <span className="text-[10px] font-mono-luxury text-emerald-500">256-Bit Encrypted</span>
             </div>
 
-            <div className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs font-mono-luxury space-y-1.5">
+            <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs space-y-2">
               <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span>Items Total:</span>
-                <span className="font-bold text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
+                <span>Items</span>
+                <span className="text-[var(--text-primary)]">₦{subtotal.toLocaleString()}</span>
               </div>
               <div className="flex items-center justify-between text-[var(--text-secondary)]">
-                <span>Delivery Total:</span>
-                <span className="font-bold text-[var(--gold-accent)]">₦{totalShippingFee.toLocaleString()}</span>
+                <span>Delivery</span>
+                <span className="text-[var(--text-primary)]">₦{totalShippingFee.toLocaleString()}</span>
               </div>
-              <div className="pt-1.5 border-t border-[var(--border-subtle)] flex items-center justify-between font-bold text-sm">
-                <span>Grand Total:</span>
-                <span className="text-[var(--gold-accent)] text-lg">₦{grandTotal.toLocaleString()}</span>
+              <div className="pt-2 border-t border-[var(--border-subtle)] flex items-baseline justify-between">
+                <span className="text-[var(--text-muted)]">Total</span>
+                <span className="font-editorial text-xl text-[var(--text-primary)]">
+                  ₦{grandTotal.toLocaleString()}
+                </span>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono-luxury text-emerald-400 leading-relaxed">
-              Your payment is secure and protected. Your order will be immediately processed and confirmed upon checkout.
-            </div>
-
-            <div className="space-y-2 pt-2">
+            <div className="space-y-2">
               <button
                 type="button"
-                onClick={paymentMethod === 'paystack' ? handlePayWithPaystack : () => handleCompletePayment()}
+                onClick={
+                  paymentMethod === 'paystack'
+                    ? handlePayWithPaystack
+                    : () => handleCompletePayment()
+                }
                 disabled={isProcessing}
-                className="w-full py-3.5 rounded-2xl bg-[var(--gold-accent)] text-black font-mono-luxury uppercase text-xs font-bold hover:bg-[#d8b357] transition-all shadow-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-[0.14em] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isProcessing ? (
-                  <>
-                    <Sparkles className="h-4 w-4 animate-spin text-black" />
-                    <span>Processing Payment...</span>
-                  </>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Check className="h-4 w-4 stroke-[3] text-black" />
-                    <span>Pay ₦{grandTotal.toLocaleString()} {paymentMethod === 'paystack' && isTestMode ? '(Test Mode)' : ''}</span>
-                  </>
+                  <span>Pay ₦{grandTotal.toLocaleString()}</span>
                 )}
               </button>
 
@@ -975,109 +1034,52 @@ export default function MobileCheckoutView() {
                   type="button"
                   onClick={() => handleCompletePayment()}
                   disabled={isProcessing}
-                  className="w-full py-2.5 rounded-xl border border-[var(--border-subtle)] text-center text-xs font-mono-luxury uppercase text-[var(--gold-accent)] hover:border-[var(--gold-accent)] transition-colors cursor-pointer"
+                  className="w-full h-10 rounded-full border border-[var(--border-subtle)] text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] cursor-pointer"
                 >
-                  Instant Test Checkout (Skip Gateway)
+                  Instant Test Checkout
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => setShowPaymentModal(false)}
-                className="w-full py-2 text-center text-xs font-mono-luxury text-[var(--text-muted)] cursor-pointer"
-              >
-                Cancel & Return
-              </button>
             </div>
-
+            <div className="h-safe-area-bottom" />
           </div>
         </div>
       )}
 
-      {/* 5. PAYSTACK SANDBOX SIMULATOR MODAL */}
+      {/* 5. Paystack Sandbox Simulator Modal */}
       {showPaystackSimModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
-          <div className="w-full max-w-sm surface-card rounded-3xl border border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl animate-scaleUp text-center">
-            
-            {/* Paystack Header */}
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-4 animate-fadeIn">
+          <div className="w-full max-w-sm bg-[var(--bg-surface)] rounded-t-[28px] sm:rounded-[28px] border border-[var(--border-subtle)] p-6 space-y-5 shadow-2xl text-center">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-mono-luxury font-bold uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase tracking-wider">
                 <CreditCard className="h-3.5 w-3.5" />
-                <span>Paystack Sandbox Simulation</span>
+                <span>Paystack Test Mode</span>
               </div>
-              <div className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+              <div className="font-editorial text-3xl font-normal text-[var(--text-primary)] pt-1">
                 ₦{grandTotal.toLocaleString()}
               </div>
-              <p className="text-[11px] font-mono-luxury text-[var(--text-muted)]">
-                Recipient: Ìrísí Marketplace
-              </p>
             </div>
 
-            {/* Simulated Debit Card */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-black border border-white/10 text-white text-left space-y-3 shadow-xl">
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-zinc-400">TEST DEBIT CARD</span>
-                <span className="text-[var(--gold-accent)] font-bold">VERVE / MASTERCARD</span>
-              </div>
-              <div className="font-mono text-base tracking-widest text-zinc-100 font-bold py-1">
-                4084 •••• •••• 0840
-              </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                <div>
-                  <span>EXPIRY: </span>
-                  <strong className="text-white">12/28</strong>
-                </div>
-                <div>
-                  <span>CVV: </span>
-                  <strong className="text-white">408</strong>
-                </div>
-                <div>
-                  <span>PIN: </span>
-                  <strong className="text-white">1234</strong>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono-luxury text-amber-400 text-left leading-relaxed">
-              <strong>Test Mode:</strong> Simulates a successful payment and confirms your order.
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowPaystackSimModal(false);
-                  await handleCompletePayment(`paystack_sim_${Date.now()}`);
-                }}
-                disabled={isProcessing}
-                className="w-full py-3.5 rounded-full bg-emerald-500 text-black font-mono-luxury uppercase text-xs font-bold hover:bg-emerald-400 transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isProcessing ? (
-                  <>
-                    <Sparkles className="h-4 w-4 animate-spin text-black" />
-                    <span>Processing Order...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 stroke-[3]" />
-                    <span>Simulate Successful Payment</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowPaystackSimModal(false)}
-                className="w-full py-2.5 rounded-full surface-card border border-[var(--border-subtle)] text-xs font-mono-luxury uppercase text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-              >
-                Cancel Payment
-              </button>
-            </div>
-
+            <button
+              type="button"
+              onClick={async () => {
+                setShowPaystackSimModal(false);
+                await handleCompletePayment(`paystack_sim_${Date.now()}`);
+              }}
+              disabled={isProcessing}
+              className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-[0.14em] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>Complete Test Payment</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPaystackSimModal(false)}
+              className="w-full text-xs text-[var(--text-muted)] cursor-pointer"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
-
     </div>
   );
 }

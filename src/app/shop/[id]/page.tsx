@@ -640,7 +640,10 @@ export default function ProductDetailPage() {
                           muted
                           loop
                           playsInline
-                          className="absolute inset-0 w-full h-full object-cover"
+                          controls={false}
+                          disablePictureInPicture
+                          controlsList="nodownload noplaybackrate noremoteplayback"
+                          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                         />
                       </div>
                     ) : (
@@ -1496,10 +1499,13 @@ export default function ProductDetailPage() {
                     src={currentMedia.url}
                     poster={product.imageUrl}
                     autoPlay
+                    muted
                     loop
-                    controls
                     playsInline
-                    className="relative w-full h-full max-h-[74vh] object-contain"
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nodownload noplaybackrate noremoteplayback"
+                    className="relative w-full h-full max-h-[74vh] object-contain pointer-events-none"
                   />
                 </div>
               ) : (

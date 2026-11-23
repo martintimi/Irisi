@@ -40,7 +40,7 @@ export default function VendorPlusPage() {
     }
     try {
       const qs = vendorKey ? `?vendorId=${encodeURIComponent(vendorKey)}` : '';
-      const res = await fetch(`/api/vendor/subscription${qs}`);
+      const res = await fetch(`/api/vendor/subscription${qs}`, { cache: 'no-store' });
       const data = await res.json();
       if (res.ok && data.success) {
         setBilling(data.billing);

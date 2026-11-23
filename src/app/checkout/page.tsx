@@ -602,7 +602,7 @@ export default function CheckoutPage() {
             <span>Order Confirmed &amp; Verified</span>
           </div>
 
-          <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)] leading-tight pt-1">
+          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)] leading-tight pt-1">
             Order Placed Successfully!
           </h1>
           <p className="text-xs font-mono-luxury text-[var(--gold-accent)] font-bold tracking-wider">
@@ -667,7 +667,7 @@ export default function CheckoutPage() {
           <Lock className="h-8 w-8" />
         </div>
         <div className="space-y-2">
-          <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--text-primary)]">
+          <h2 className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--text-primary)]">
             Shopper Sign In Required
           </h2>
           <p className="text-xs text-[var(--text-secondary)] font-mono-luxury leading-relaxed max-w-sm mx-auto">
@@ -708,7 +708,7 @@ export default function CheckoutPage() {
               Secure Checkout
             </span>
           </div>
-          <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mt-1">
+          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)] mt-1">
             Delivery & Payment
           </h1>
         </div>
@@ -935,7 +935,7 @@ export default function CheckoutPage() {
           {/* RIGHT 5 COLS: CHECKOUT TOTAL & ESCROW PAYMENT BUTTON */}
           <div className="lg:col-span-5 p-6 sm:p-8 rounded-3xl surface-card border border-[var(--border-subtle)] space-y-5 shadow-md sticky lg:top-24">
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-              <h3 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
+              <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)]">
                 Order Summary
               </h3>
               <span className="text-xs font-mono-luxury text-[var(--text-secondary)]">
@@ -1010,7 +1010,7 @@ export default function CheckoutPage() {
               {/* Grand Total */}
               <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-sm">
                 <span className="font-bold text-[var(--text-primary)]">Total Due Now:</span>
-                <span className="font-editorial text-2xl sm:text-3xl font-bold text-amber-600 dark:text-[var(--gold-accent)]">
+                <span className="font-editorial text-2xl sm:text-3xl font-normal text-amber-600 dark:text-[var(--gold-accent)]">
                   ₦{grandTotal.toLocaleString()}
                 </span>
               </div>
@@ -1054,7 +1054,7 @@ export default function CheckoutPage() {
             <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                <span className="font-editorial text-lg font-bold text-[var(--text-primary)]">Ìrísí Secure Checkout</span>
+                <span className="font-editorial text-lg font-normal text-[var(--text-primary)]">Ìrísí Secure Checkout</span>
               </div>
               <span className="text-[10px] font-mono-luxury text-emerald-400 font-bold">256-Bit Encrypted</span>
             </div>
@@ -1177,7 +1177,7 @@ export default function CheckoutPage() {
                 <CreditCard className="h-3.5 w-3.5" />
                 <span>Paystack Sandbox Simulation</span>
               </div>
-              <div className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+              <div className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
                 ₦{grandTotal.toLocaleString()}
               </div>
               <p className="text-[11px] font-mono-luxury text-[var(--text-muted)]">

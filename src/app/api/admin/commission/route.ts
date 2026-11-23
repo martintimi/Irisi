@@ -5,13 +5,12 @@ import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServ
 
 export const dynamic = 'force-dynamic';
 
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store, max-age=0' };
+
 // GET: Retrieve live platform billing, Free Launch Kill-Switch, Plus price & commission rates
 export async function GET() {
   const config = await fetchLivePlatformBillingConfig();
-  return NextResponse.json(
-    { success: true, config },
-    { headers: { 'Cache-Control': 'no-store, max-age=0' } }
-  );
+  return NextResponse.json({ success: true, config }, { headers: NO_STORE_HEADERS });
 }
 
 // POST: Save updated billing rules from Super Admin (anytime, live globally)
@@ -57,33 +56,66 @@ export async function POST(request: Request) {
     });
 
     const adminClient = createAdminClient();
-    const { error: dbError } = await adminClient
+    const bioPayload = JSON.stringify(newConfig);
+
+    // Check if config row already exists so update never trips NOT NULL constraints
+    const { data: existingRow } = await adminClient
       .from('vendors')
-      .upsert({
-        id: 'admin-platform-commission',
-        brand_name: 'Platform Billing & Commission Settings',
-        bio: JSON.stringify(newConfig),
-      }, { onConflict: 'id' });
+      .select('id')
+      .eq('id', 'admin-platform-commission')
+      .maybeSingle();
+
+    let dbError: any = null;
+    if (existingRow?.id) {
+      const res = await adminClient
+        .from('vendors')
+        .update({
+          brand_name: 'Platform Billing & Commission Settings',
+          bio: bioPayload,
+        })
+        .eq('id', 'admin-platform-commission');
+      dbError = res.error;
+    } else {
+      const res = await adminClient
+        .from('vendors')
+        .upsert(
+          {
+            id: 'admin-platform-commission',
+            brand_name: 'Platform Billing & Commission Settings',
+            email: 'billing-config@irisimi.ng',
+            is_verified: false,
+            bio: bioPayload,
+          },
+          { onConflict: 'id' }
+        );
+      dbError = res.error;
+    }
 
     if (dbError) {
       console.error('Failed to save platform billing config:', dbError);
-      return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
+      return NextResponse.json(
+        { success: false, error: dbError.message },
+        { status: 500, headers: NO_STORE_HEADERS }
+      );
     }
 
     const modeSummary = newConfig.freeLaunchMode
       ? 'Global Free Launch Period ACTIVE (0% commission · Free Plus access)'
       : `Billing LIVE: Free ${newConfig.freeTierCommissionPercent}% | Plus ₦${newConfig.plusMonthlyPriceNgn.toLocaleString()}/mo (${newConfig.plusTierCommissionPercent}%)`;
 
-    return NextResponse.json({
-      success: true,
-      message: modeSummary,
-      config: newConfig,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        message: modeSummary,
+        config: newConfig,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (err: any) {
     console.error('Error saving platform billing setting:', err);
     return NextResponse.json(
       { success: false, error: err?.message || 'Server error' },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }

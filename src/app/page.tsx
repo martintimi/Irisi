@@ -3,6 +3,7 @@ import KineticMarquee from '@/components/landing/KineticMarquee';
 import CuratedAteliers from '@/components/landing/CuratedAteliers';
 import ProblemSolution from '@/components/landing/ProblemSolution';
 import BrandShowcase from '@/components/landing/BrandShowcase';
+import HomeLookbookSection from '@/components/landing/HomeLookbookSection';
 import MobileHomeView from '@/components/landing/MobileHomeView';
 
 export default function Home() {
@@ -21,8 +22,11 @@ export default function Home() {
         {/* Dual-Row Velocity Kinetic Marquee */}
         <KineticMarquee />
 
-        {/* Curated Nigerian Designers (Featured Designers) */}
+        {/* Curated Occasion Edits */}
         <CuratedAteliers />
+
+        {/* In Motion · Live Editorial Lookbook */}
+        <HomeLookbookSection variant="desktop" />
 
         {/* The Ìrísí Standards Luxury Pillars (The Complete Nigerian Drip) */}
         <ProblemSolution />

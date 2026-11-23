@@ -59,6 +59,14 @@ export default function VendorPortalLayout({
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [livePlan, setLivePlan] = useState<{
+    freeLaunchMode: boolean;
+    isPlus: boolean;
+    effectiveCommissionPercent: number;
+    publishedProductCount: number;
+    productLimit: number | null;
+    plusMonthlyPriceNgn: number;
+  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -134,6 +142,33 @@ export default function VendorPortalLayout({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch live billing & plan status (Free Launch Trial vs Free Plan vs ÌRÍSÍ Plus) so vendors always know their tier
+  useEffect(() => {
+    if (pathname === '/vendor-portal/auth') return;
+    let active = true;
+    const vKey = vendorProfile.id || getActiveVendorId() || vendorProfile.email || "";
+    const qs = vKey ? `?vendorId=${encodeURIComponent(vKey)}` : "";
+    fetch(`/api/vendor/subscription${qs}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active || !data?.success || !data?.billing) return;
+        const b = data.billing;
+        const vp = data.vendorPlan;
+        setLivePlan({
+          freeLaunchMode: Boolean(b.freeLaunchMode),
+          isPlus: Boolean(vp?.isPlus),
+          effectiveCommissionPercent: Number(vp?.effectiveCommissionPercent ?? (b.freeLaunchMode ? 0 : b.freeTierCommissionPercent ?? 8)),
+          publishedProductCount: Number(vp?.publishedProductCount ?? 0),
+          productLimit: vp?.productLimit ?? (b.freeLaunchMode ? null : Number(b.freeTierProductLimit ?? 12)),
+          plusMonthlyPriceNgn: Number(b.plusMonthlyPriceNgn ?? 5000),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [vendorProfile.id, vendorProfile.email, pathname]);
+
   useEffect(() => {
     if (pathname === '/vendor-portal/auth') return;
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -183,6 +218,13 @@ export default function VendorPortalLayout({
       : `https://irisimi.ng/brand/${storeSlug}`;
   const brandInitial = (vendorProfile.brandName || 'I').trim().charAt(0).toUpperCase();
 
+  const planShortLabel = !livePlan
+    ? 'Studio'
+    : livePlan.freeLaunchMode
+    ? 'Free Trial · 0%'
+    : livePlan.isPlus
+    ? `ÌRÍSÍ Plus · ${livePlan.effectiveCommissionPercent}%`
+    : `Free Plan · ${livePlan.effectiveCommissionPercent}%`;
   const activeStudioSubRoute = STUDIO_SUB_ROUTES.find((r) => pathname.startsWith(r.prefix)) || null;
   const isStudioTabActive = pathname === '/vendor-portal/studio' || Boolean(activeStudioSubRoute);
 
@@ -329,7 +371,7 @@ export default function VendorPortalLayout({
               <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate leading-tight flex items-center gap-1">
                 <span>{liveStatus.isVerified ? 'Verified Seller' : 'Pending Review'}</span>
                 <span>·</span>
-                <span className="text-[var(--gold-accent)]">Studio</span>
+                <span className={livePlan && !livePlan.freeLaunchMode && !livePlan.isPlus ? "text-amber-500" : "text-[var(--gold-accent)]"}>{planShortLabel}</span>
               </div>
             </div>
           </Link>
@@ -400,6 +442,29 @@ export default function VendorPortalLayout({
               {vendorProfile.brandName}
             </span>
           </div>
+
+          {livePlan && (
+            <Link
+              href="/vendor-portal/plus"
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider border transition-colors shrink-0 ${
+                livePlan.freeLaunchMode
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                  : livePlan.isPlus
+                  ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/40 text-[var(--gold-accent)]'
+                  : 'bg-amber-500/10 border-amber-500/35 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15'
+              }`}
+              title="View your current plan & commission rate"
+            >
+              <Crown className="h-3 w-3 shrink-0" />
+              <span>
+                {livePlan.freeLaunchMode
+                  ? 'Free Launch Trial · 0% Fee'
+                  : livePlan.isPlus
+                  ? `ÌRÍSÍ Plus · ${livePlan.effectiveCommissionPercent}% Fee`
+                  : `Free Plan · ${livePlan.effectiveCommissionPercent}% Fee · Upgrade`}
+              </span>
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
@@ -508,6 +573,25 @@ export default function VendorPortalLayout({
                   {specialtyInfo.badge}
                 </span>
               </div>
+              {livePlan && (
+                <Link
+                  href="/vendor-portal/plus"
+                  className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-[10px] font-mono-luxury hover:opacity-85 transition-opacity"
+                >
+                  <span className="text-[var(--text-muted)]">Plan:</span>
+                  <span
+                    className={
+                      livePlan.freeLaunchMode
+                        ? 'text-emerald-500'
+                        : livePlan.isPlus
+                        ? 'text-[var(--gold-accent)]'
+                        : 'text-amber-500'
+                    }
+                  >
+                    {planShortLabel} ›
+                  </span>
+                </Link>
+              )}
             </div>
 
             <nav className="space-y-1 font-mono-luxury text-xs uppercase tracking-wider">
