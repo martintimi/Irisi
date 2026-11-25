@@ -196,7 +196,8 @@ export async function GET(
 
     const billingConfig = await fetchLivePlatformBillingConfig();
     const isPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
-    const storefrontLocked = !isPlus && billingConfig.requirePlusForStorefront;
+    // Option B guaranteed: Free plan always keeps a live basic storefront (never paused); Plus upgrades to white-label clean mode
+    const storefrontLocked = false;
 
     const vendorPayload = {
       id: vendorId,

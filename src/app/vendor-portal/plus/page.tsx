@@ -97,34 +97,70 @@ export default function VendorPlusPage() {
     }
   };
 
-  const handleSubscribePlus = () => {
+  const ensurePaystackLoaded = () => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof window !== "undefined" && (window as any).PaystackPop) {
+        resolve(true);
+        return;
+      }
+      const existing = document.getElementById("paystack-inline-js") as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener("load", () => resolve(Boolean((window as any).PaystackPop)), { once: true });
+        existing.addEventListener("error", () => resolve(false), { once: true });
+        setTimeout(() => resolve(Boolean((window as any).PaystackPop)), 2500);
+        return;
+      }
+      const s = document.createElement("script");
+      s.id = "paystack-inline-js";
+      s.src = "https://js.paystack.co/v1/inline.js";
+      s.async = true;
+      s.onload = () => resolve(Boolean((window as any).PaystackPop));
+      s.onerror = () => resolve(false);
+      document.body.appendChild(s);
+    });
+  };
+
+  const handleSubscribePlus = async () => {
     setErrorMsg('');
     setStatusMsg('');
-    const amountNgn = Number(billing?.plusMonthlyPriceNgn || 5000);
-    const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
+    setUpgrading(true);
+    const amountNgn = Math.max(100, Number(billing?.plusMonthlyPriceNgn || 5000));
+    const paystackKey =
+      process.env.NEXT_PUBLIC_PAYSTACK_KEY ||
+      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
+      'pk_test_747039dcebc800028fafa806d62e38f2ed02ab95';
     const ref = `IRISI_PLUS_${Date.now()}`;
 
-    if (typeof window !== 'undefined' && window.PaystackPop && paystackKey) {
-      const handler = window.PaystackPop.setup({
-        key: paystackKey,
-        email: vendorProfile.email || 'vendor@irisimi.ng',
-        amount: Math.round(amountNgn * 100),
-        currency: 'NGN',
-        ref,
-        metadata: {
-          custom_fields: [
-            { display_name: 'Brand', variable_name: 'brand', value: vendorProfile.brandName || 'Vendor' },
-            { display_name: 'Plan', variable_name: 'plan', value: 'IRISI Plus Monthly' },
-          ],
-        },
-        callback: (response: { reference: string }) => {
-          activateWithRef(response.reference);
-        },
-        onClose: () => {},
-      });
-      handler.openIframe();
-    } else {
-      setErrorMsg('Paystack checkout is initializing. Please refresh or contact admin support.');
+    try {
+      const loaded = await ensurePaystackLoaded();
+      if (loaded && typeof window !== "undefined" && (window as any).PaystackPop && paystackKey) {
+        const handler = (window as any).PaystackPop.setup({
+          key: paystackKey,
+          email: vendorProfile.email || 'vendor@irisimi.ng',
+          amount: Math.round(amountNgn * 100),
+          currency: 'NGN',
+          ref,
+          metadata: {
+            custom_fields: [
+              { display_name: 'Brand', variable_name: 'brand', value: vendorProfile.brandName || 'Vendor' },
+              { display_name: 'Plan', variable_name: 'plan', value: 'IRISI Plus Monthly' },
+            ],
+          },
+          callback: (response: { reference: string }) => {
+            activateWithRef(response.reference || ref);
+          },
+          onClose: () => {
+            setUpgrading(false);
+          },
+        });
+        handler.openIframe();
+      } else {
+        setErrorMsg('Could not open Paystack checkout. Please check your internet connection and try again.');
+        setUpgrading(false);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Could not launch payment window. Please try again.');
+      setUpgrading(false);
     }
   };
 
@@ -275,7 +311,10 @@ export default function VendorPlusPage() {
             </ul>
           </div>
 
-          <div className="pt-4 border-t border-[var(--border-subtle)] space-y-2">
+          <div className="pt-4 border-t border-[var(--border-subtle)] space-y-2.5">
+            {errorMsg && (
+              <p className="text-[11px] text-rose-500 text-center px-2">{errorMsg}</p>
+            )}
             {freeLaunch ? (
               <div className="w-full py-3 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-center text-xs font-mono-luxury uppercase tracking-wider">
                 Included Free During Launch Period

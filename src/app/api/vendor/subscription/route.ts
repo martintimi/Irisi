@@ -81,7 +81,7 @@ export async function GET(request: Request) {
         effectiveCommissionPercent,
         publishedProductCount: publishedProductCount || 0,
         productLimit: isPlus ? null : billing.freeTierProductLimit,
-        storefrontLocked: !isPlus && billing.requirePlusForStorefront,
+        storefrontLocked: false,
         storefrontCleanMode: isPlus,
       },
     }, { headers: { 'Cache-Control': 'no-store, max-age=0' } });

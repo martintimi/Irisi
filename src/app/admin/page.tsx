@@ -3477,17 +3477,12 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--border-subtle)]">
-                  <label className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--text-secondary)] cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={requirePlusStorefrontInput}
-                      onChange={(e) => setRequirePlusStorefrontInput(e.target.checked)}
-                      className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
-                    />
+                  <div className="flex items-center gap-2 text-xs font-mono-luxury text-emerald-600 dark:text-emerald-400">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span>
-                      Lock Unpaid Storefront Links After Free Trial (Keep UNCHECKED for Option B: Free keeps basic storefront; Check for Option A: hard paywall)
+                      Option B Active: Free brands always keep their basic storefront link open (never paused); ÌRÍSÍ Plus upgrades to a clean white-label storefront.
                     </span>
-                  </label>
+                  </div>
 
                   <button
                     type="button"
