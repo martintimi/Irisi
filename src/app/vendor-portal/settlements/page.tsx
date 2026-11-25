@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useStore } from '@/lib/store/useStore';
 import { vendorFetch, getActiveVendorId } from '@/lib/services/apiClient';
 import {
   DollarSign, CreditCard, ShieldCheck, CheckCircle2,
-  Clock, ArrowUpRight, TrendingUp, Download, Loader2, Sparkles, RefreshCw
+  Clock, ArrowUpRight, TrendingUp, Download, Loader2, Sparkles, RefreshCw, Crown, ChevronRight
 } from 'lucide-react';
 import MobileVendorSettlements from '@/components/vendor/MobileVendorSettlements';
 import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
@@ -17,6 +18,11 @@ export default function VendorSettlementsPage() {
   const initCachedOrders = getVendorCache<any[]>(initSettleVid, 'orders');
   const [orders, setOrders] = useState<any[]>(() => initCachedOrders || []);
   const [isLoading, setIsLoading] = useState(() => !initCachedOrders);
+  const [pendingPlusDeductionNgn, setPendingPlusDeductionNgn] = useState(0);
+  const [escrowPlusAutoDeduct, setEscrowPlusAutoDeduct] = useState(false);
+  const [effectiveCommissionPercent, setEffectiveCommissionPercent] = useState(0);
+  const [freeLaunchActive, setFreeLaunchActive] = useState(true);
+  const [isPlus, setIsPlus] = useState(false);
 
   const loadSettlements = useCallback(async () => {
     const vid = getActiveVendorId() || vendorProfile.email || 'default';
@@ -27,18 +33,35 @@ export default function VendorSettlementsPage() {
     }
     try {
       if (!cached) setIsLoading(true);
-      const res = await vendorFetch('/api/orders');
-      const data = await res.json();
+      const [ordersRes, subRes] = await Promise.all([
+        vendorFetch('/api/orders'),
+        vid && vid !== 'default'
+          ? fetch(`/api/vendor/subscription?vendorId=${encodeURIComponent(vid)}`, { cache: 'no-store' })
+          : Promise.resolve(null),
+      ]);
+      const data = await ordersRes.json();
       if (data.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
         setVendorCache(vid, 'orders', data.orders);
+      }
+      if (subRes && subRes.ok) {
+        const subData = await subRes.json().catch(() => null);
+        if (subData?.success) {
+          setFreeLaunchActive(Boolean(subData.billing?.freeLaunchActive));
+          if (subData.vendorPlan) {
+            setPendingPlusDeductionNgn(Math.max(0, Number(subData.vendorPlan.pendingPlusDeductionNgn || 0)));
+            setEscrowPlusAutoDeduct(Boolean(subData.vendorPlan.escrowPlusAutoDeduct));
+            setEffectiveCommissionPercent(Number(subData.vendorPlan.effectiveCommissionPercent ?? 0));
+            setIsPlus(Boolean(subData.vendorPlan.isPlus));
+          }
+        }
       }
     } catch (e) {
       console.error('Error loading settlements:', e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [vendorProfile.email]);
 
   useEffect(() => {
     loadSettlements();
@@ -67,6 +90,11 @@ export default function VendorSettlementsPage() {
           isLoading={isLoading}
           vendorProfile={vendorProfile}
           onRefresh={loadSettlements}
+          pendingPlusDeductionNgn={pendingPlusDeductionNgn}
+          escrowPlusAutoDeduct={escrowPlusAutoDeduct}
+          effectiveCommissionPercent={effectiveCommissionPercent}
+          freeLaunchActive={freeLaunchActive}
+          isPlus={isPlus}
         />
       </div>
 
@@ -75,7 +103,7 @@ export default function VendorSettlementsPage() {
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)]">
+            <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)]">
               Settlements & Merchant Treasury
             </h1>
             <p className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-1">
@@ -127,10 +155,43 @@ export default function VendorSettlementsPage() {
 
             <div className="p-6 rounded-3xl surface-card space-y-2 border border-[var(--border-subtle)]">
               <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase tracking-wider">Active Platform Fee</span>
-              <div className="font-editorial text-3xl font-bold text-emerald-500">0% Special Rate</div>
-              <span className="text-xs text-[var(--text-secondary)] font-mono-luxury">Verified Partner Store</span>
+              <div className="font-editorial text-3xl font-normal text-emerald-500">
+                {freeLaunchActive ? '0% Launch Rate' : `${effectiveCommissionPercent}% Per Order`}
+              </div>
+              <span className="text-xs text-[var(--text-secondary)] font-mono-luxury">
+                {freeLaunchActive ? 'Free Launch Promo Active' : isPlus ? 'ÌRÍSÍ Plus Lower Rate' : 'Free Plan Standard Rate'}
+              </span>
             </div>
           </div>
+
+          {/* Transparent Vendor Opt-In ÌRÍSÍ Plus Escrow Deduction Banner */}
+          {pendingPlusDeductionNgn > 0 && (
+            <div className="px-5 py-4 rounded-2xl surface-card border border-[var(--gold-accent)]/40 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-full bg-[var(--gold-subtle)] text-[var(--gold-accent)] flex items-center justify-center shrink-0">
+                  <Crown className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-[var(--text-primary)]">
+                    ÌRÍSÍ Plus Escrow Deduction (Opt-In):{' '}
+                    <span className="font-mono-luxury text-[var(--gold-accent)]">
+                      -₦{pendingPlusDeductionNgn.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] font-light mt-0.5">
+                    Scheduled from your next Escrow payout · Estimated Net Payout: ₦{Math.max(0, totalEscrowLocked - pendingPlusDeductionNgn).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/vendor-portal/plus"
+                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-[var(--border-subtle)] text-[11px] font-mono-luxury text-[var(--text-primary)] hover:border-[var(--gold-accent)] transition-colors shrink-0"
+              >
+                <span>Manage in Plus</span>
+                <ChevronRight className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+              </Link>
+            </div>
+          )}
 
           {/* Verified Bank Account Details & Settlement History */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

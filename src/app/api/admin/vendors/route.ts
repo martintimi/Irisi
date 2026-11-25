@@ -46,6 +46,10 @@ export async function GET(request: Request) {
       let suspensionReason = '';
       let suspendedAt = '';
       let awaitingPrelaunchLogin = false;
+      let subscriptionPlan = 'free';
+      let plusExpiresAt: string | null = null;
+      let escrowPlusAutoDeduct = false;
+      let pendingPlusDeductionNgn = 0;
 
       if (bioText.startsWith('{') && bioText.endsWith('}')) {
         try {
@@ -76,6 +80,10 @@ export async function GET(request: Request) {
           hasSensitivePendingUpdate = parsed.hasSensitivePendingUpdate === true;
           address = parsed.address || '';
           logoUrl = parsed.logoUrl || parsed.logo || logoUrl;
+          subscriptionPlan = parsed.subscriptionPlan || 'free';
+          plusExpiresAt = parsed.plusExpiresAt || null;
+          escrowPlusAutoDeduct = Boolean(parsed.escrowPlusAutoDeduct);
+          pendingPlusDeductionNgn = Math.max(0, Number(parsed.pendingPlusDeductionNgn || 0));
         } catch (e) {}
       } else if (bioText && bioText.trim().length > 0) {
         isProfileSaved = true;
@@ -125,6 +133,10 @@ export async function GET(request: Request) {
         suspensionReason,
         suspendedAt,
         awaitingPrelaunchLogin,
+        subscriptionPlan,
+        plusExpiresAt,
+        escrowPlusAutoDeduct,
+        pendingPlusDeductionNgn,
         productCount: vendorProducts.length,
         totalInventoryValue,
         rating: v.rating || 5.0,
