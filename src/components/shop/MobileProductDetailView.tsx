@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 interface MobileProductDetailViewProps {
@@ -797,12 +798,15 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
               <Store className="h-3.5 w-3.5" />
             </div>
             <div>
-              <span className="font-bold text-xs font-mono-luxury text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors block">
-                {product.vendorName}
-              </span>
-              <span className="text-[9px] text-[var(--gold-accent)] font-mono-luxury uppercase font-bold tracking-wider flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xs font-mono-luxury text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
+                  {product.vendorName}
+                </span>
+                {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="compact" />}
+              </div>
+              <span className="text-[9px] text-[var(--gold-accent)] font-mono-luxury uppercase tracking-wider flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3" />
-                <span>Verified Atelier Drop</span>
+                <span>{product.vendorHasPaidPlus ? 'ÌRÍSÍ Plus Brand' : 'Verified Brand'}</span>
               </span>
             </div>
           </Link>

@@ -8,7 +8,7 @@ import { useStore } from '@/lib/store/useStore';
 import {
   Camera, Crown, MessageSquare, ExternalLink, DollarSign,
   BarChart3, Star, Building, HelpCircle, ShieldCheck,
-  ChevronRight, LogOut, CheckCircle2, Share2
+  ChevronRight, LogOut, CheckCircle2, Share2, Users
 } from 'lucide-react';
 import ShareStoreSheet from '@/components/vendor/ShareStoreSheet';
 import VendorTourGuide from '@/components/vendor/VendorTourGuide';
@@ -66,6 +66,13 @@ export default function VendorStudioHubPage() {
     {
       title: 'Growth & Showcase',
       items: [
+        {
+          label: 'Followers & VIPs',
+          sub: 'Followers, top buyers & story interactions',
+          href: '/vendor-portal/audience',
+          badge: 'Plus',
+          icon: Users,
+        },
         {
           label: 'Lookbook Stories',
           sub: 'Post 24h multi-slide drops & view insights',

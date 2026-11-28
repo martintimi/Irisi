@@ -13,17 +13,19 @@ import {
   Building, MessageSquare, DollarSign, LogOut, Sun, Moon,
   ExternalLink, Sparkles, ShoppingBag, Scissors, Star, X,
   Gem, Footprints, Shirt, Crown, Plus, Grid2X2,
-  ChevronRight, ChevronLeft, Camera, Share2
+  ChevronRight, ChevronLeft, Camera, Share2, Users
 } from 'lucide-react';
 import VendorNotificationBell from '@/components/vendor/VendorNotificationBell';
 import VendorTourGuide from '@/components/vendor/VendorTourGuide';
 import ShareStoreSheet from '@/components/vendor/ShareStoreSheet';
+import VendorLuxuryLoader from '@/components/vendor/VendorLuxuryLoader';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 import { getVendorCache, getVendorCacheAgeMs, setVendorCache, clearVendorCache, hydrateVendorCacheFromSession } from '@/lib/cache/vendorPortalCache';
 import { isBoutiqueVendor, getVendorSpecialty, getVendorSpecialtyInfo } from '@/types';
 
 const STUDIO_SUB_ROUTES: Array<{ prefix: string; title: string }> = [
   { prefix: '/vendor-portal/stories', title: 'Lookbook Stories' },
+  { prefix: '/vendor-portal/audience', title: 'Followers & VIPs' },
   { prefix: '/vendor-portal/plus', title: 'ÌRÍSÍ Plus' },
   { prefix: '/vendor-portal/settlements', title: 'Payouts & Bank' },
   { prefix: '/vendor-portal/reports', title: 'Analytics' },
@@ -41,11 +43,17 @@ export default function VendorPortalLayout({
   const router = useRouter();
   const {
     vendorLogout,
+    isVendorLoggedIn,
+    setIsVendorLoggedIn,
     vendorProfile,
     setVendorProfile,
     theme,
     toggleTheme,
   } = useStore();
+
+  const [authState, setAuthState] = useState<'checking' | 'authorized' | 'redirecting'>(() =>
+    pathname === '/vendor-portal/auth' ? 'authorized' : 'checking'
+  );
 
   const [liveStatus, setLiveStatus] = useState<{
     isVerified: boolean;
@@ -82,65 +90,109 @@ export default function VendorPortalLayout({
   useBodyScrollLock(isQuickCreateOpen);
 
   const checkVendorStatus = useCallback(async (force = false) => {
-    if (!force && getVendorCacheAgeMs('global', 'layout_status') < 90_000) {
+    const storedVendorId = getActiveVendorId();
+    // If cached recently AND we actually have a stored vendor ID & real brand name, trust cache briefly
+    if (
+      !force &&
+      storedVendorId &&
+      vendorProfile?.id &&
+      vendorProfile?.brandName &&
+      vendorProfile.brandName !== 'My Brand' &&
+      getVendorCacheAgeMs(storedVendorId, 'layout_status') < 90_000
+    ) {
+      setAuthState('authorized');
       return;
     }
     try {
       const res = await vendorFetch('/api/vendor/profile');
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (res.status === 403 || data.isSuspended || data.approvalStatus === 'suspended') {
         const reason = encodeURIComponent(data.suspensionReason || data.error || 'Account suspended by administration.');
         clearVendorCache();
         vendorLogout();
-        router.push(`/vendor-portal/auth?suspended=true&reason=${reason}`);
+        setAuthState('redirecting');
+        router.replace(`/vendor-portal/auth?suspended=true&reason=${reason}`);
         return;
       }
 
-      if (res.ok && data.success && data.vendor) {
-        const v = data.vendor;
-        const verified = !!v.is_verified || !!v.isVerified;
-        const statusObj = {
-          isVerified: verified,
-          approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
-        };
-        setLiveStatus(statusObj);
-        setVendorCache('global', 'layout_status', statusObj);
-
-        const activeVid = v.id || getActiveVendorId() || v.email || 'default';
-        setVendorCache(activeVid, 'profile_raw', v);
-
-        const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
-        const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
-        const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
-        setVendorProfile({
-          id: v.id || '',
-          brandName: v.brandName || v.brand_name || 'My Brand',
-          designerName: v.designerName || v.designer_name || v.contact_person || 'Manager',
-          contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || '',
-          email: v.email || '',
-          phone: v.phone || '',
-          location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : '') || '',
-          vendorType: normalizedType,
-          specialty: spec,
-          vendorSpecialty: spec,
-          bankName: v.bankName || v.bank_name || '',
-          accountNumber: v.accountNumber || v.account_number || '',
-          accountName: v.accountName || v.account_name || '',
-          instagram: v.instagram || '',
-          bio: v.bio || '',
-          logoUrl: v.logoUrl || v.logo || '',
-        });
+      if (res.status === 401 || res.status === 404 || !res.ok || !data.success || !data.vendor || !data.vendor.id) {
+        clearVendorCache();
+        vendorLogout();
+        setAuthState('redirecting');
+        router.replace('/vendor-portal/auth');
+        return;
       }
-    } catch {}
-  }, [setVendorProfile, vendorLogout, router]);
 
-  // Run once on mount (NOT on every route transition!) — instant navigation between tabs
+      const v = data.vendor;
+      const verified = !!v.is_verified || !!v.isVerified;
+      const statusObj = {
+        isVerified: verified,
+        approvalStatus: verified ? 'approved' : (v.approvalStatus || 'pending'),
+      };
+      setLiveStatus(statusObj);
+      setVendorCache('global', 'layout_status', statusObj);
+      setVendorCache(v.id, 'layout_status', statusObj);
+
+      if (typeof window !== 'undefined' && v.id) {
+        localStorage.setItem('irisi_vendor_id', v.id);
+        localStorage.setItem('veyra_vendor_id', v.id);
+        if (v.email) {
+          localStorage.setItem('irisi_vendor_email', v.email);
+          localStorage.setItem('veyra_vendor_email', v.email);
+        }
+      }
+
+      setVendorCache(v.id, 'profile_raw', v);
+
+      const normalizedType = isBoutiqueVendor(v) ? 'boutique_seller' : 'fashion_designer';
+      const rawSpec = v.specialty || v.vendorSpecialty || (normalizedType === 'fashion_designer' ? 'native_tailoring' : 'streetwear');
+      const spec = rawSpec === 'apparel' ? 'streetwear' : rawSpec === 'jewelry' ? 'accessories' : rawSpec;
+      setIsVendorLoggedIn(true);
+      setVendorProfile({
+        id: v.id || '',
+        brandName: v.brandName || v.brand_name || 'Your Brand',
+        designerName: v.designerName || v.designer_name || v.contact_person || 'Manager',
+        contactPerson: v.contactPerson || v.contact_person || v.designerName || v.designer_name || '',
+        email: v.email || '',
+        phone: v.phone || '',
+        location: v.location || (v.city && v.state ? `${v.city}, ${v.state}` : '') || '',
+        vendorType: normalizedType,
+        specialty: spec,
+        vendorSpecialty: spec,
+        bankName: v.bankName || v.bank_name || '',
+        accountNumber: v.accountNumber || v.account_number || '',
+        accountName: v.accountName || v.account_name || '',
+        instagram: v.instagram || '',
+        bio: v.bio || '',
+        logoUrl: v.logoUrl || v.logo || '',
+      });
+      setAuthState('authorized');
+    } catch {
+      if (!storedVendorId) {
+        clearVendorCache();
+        vendorLogout();
+        setAuthState('redirecting');
+        router.replace('/vendor-portal/auth');
+      } else {
+        setAuthState('authorized');
+      }
+    }
+  }, [setVendorProfile, setIsVendorLoggedIn, vendorLogout, router, vendorProfile?.id, vendorProfile?.brandName]);
+
+  // Verify live vendor session immediately whenever entering /vendor-portal (prevents placeholder "My Brand" access!)
   useEffect(() => {
-    if (pathname === '/vendor-portal/auth') return;
+    if (pathname === '/vendor-portal/auth') {
+      setAuthState('authorized');
+      return;
+    }
+    const storedVendorId = getActiveVendorId();
+    if (!storedVendorId && !isVendorLoggedIn) {
+      setAuthState('checking');
+    }
     checkVendorStatus(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]);
 
   // Fetch live billing & plan status (Free Launch Trial vs Free Plan vs ÌRÍSÍ Plus) so vendors always know their tier
   useEffect(() => {
@@ -208,6 +260,16 @@ export default function VendorPortalLayout({
     return <>{children}</>;
   }
 
+  if (authState !== 'authorized') {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-6">
+        <VendorLuxuryLoader
+          label={authState === 'redirecting' ? 'Redirecting to Seller Sign-In...' : 'Verifying Seller Session...'}
+        />
+      </div>
+    );
+  }
+
   const isBoutique = isBoutiqueVendor(vendorProfile);
   const specialty = getVendorSpecialty(vendorProfile);
   const specialtyInfo = getVendorSpecialtyInfo(specialty, isBoutique);
@@ -256,6 +318,13 @@ export default function VendorPortalLayout({
       href: '/vendor-portal/stories',
       icon: Sparkles,
       active: pathname === '/vendor-portal/stories',
+    },
+    {
+      id: 'tour-nav-audience',
+      label: 'Followers & VIPs',
+      href: '/vendor-portal/audience',
+      icon: Users,
+      active: pathname === '/vendor-portal/audience',
     },
     {
       id: 'tour-nav-orders',
@@ -366,7 +435,7 @@ export default function VendorPortalLayout({
 
             <div className="min-w-0">
               <div className="font-editorial text-[17px] font-normal text-[var(--text-primary)] truncate leading-tight">
-                {vendorProfile.brandName || 'My Brand'}
+                {vendorProfile.brandName || 'Your Brand'}
               </div>
               <div className="text-[10px] font-mono-luxury text-[var(--text-muted)] truncate leading-tight flex items-center gap-1">
                 <span>{liveStatus.isVerified ? 'Verified Seller' : 'Pending Review'}</span>

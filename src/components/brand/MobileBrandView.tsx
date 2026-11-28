@@ -10,6 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 
 interface MobileBrandViewProps {
   brandName: string;
@@ -89,7 +90,7 @@ export default function MobileBrandView({
           ) : (
             <>
               <Plus className="h-3.5 w-3.5 stroke-[3]" />
-              <span>Follow {isBoutique ? 'Boutique' : 'Atelier'}</span>
+              <span>Follow Brand</span>
             </>
           )}
         </button>
@@ -126,11 +127,15 @@ export default function MobileBrandView({
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h1 className="font-editorial text-xl sm:text-2xl font-normal text-[var(--text-primary)] truncate">
                 {brandName}
               </h1>
-              <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
+              {vendorProfile?.hasPaidPlus ? (
+                <PlusVerifiedBadge variant="compact" />
+              ) : (
+                <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
+              )}
             </div>
             <p className="text-[11px] font-mono-luxury text-[var(--text-secondary)] mt-0.5 flex items-center gap-1.5 flex-wrap">
               <span className="flex items-center gap-1">
@@ -158,7 +163,11 @@ export default function MobileBrandView({
           </div>
           <div className="border-x border-[var(--border-subtle)]">
             <span className="text-[9px] text-[var(--text-muted)] uppercase block">Brand Status</span>
-            <span className="font-bold text-sm text-emerald-400">Verified</span>
+            {vendorProfile?.hasPaidPlus ? (
+              <span className="font-bold text-sm text-[var(--gold-accent)]">ÌRÍSÍ Plus</span>
+            ) : (
+              <span className="font-bold text-sm text-emerald-400">Verified</span>
+            )}
           </div>
           <div className="min-w-0 px-1">
             <span className="text-[9px] text-[var(--text-muted)] uppercase block">Dispatch Hub</span>

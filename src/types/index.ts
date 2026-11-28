@@ -74,6 +74,8 @@ export interface Product {
   vendorCity?: string;
   vendorState?: string;
   vendorLocation?: string;
+  vendorIsPlus?: boolean;
+  vendorHasPaidPlus?: boolean;
   dispatchDays?: string;
   shippingRates?: {
     sameCity?: number;

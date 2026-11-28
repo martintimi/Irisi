@@ -195,6 +195,11 @@ export async function GET(
       .sort((a, b) => (a.stockQuantity === 0 ? 1 : 0) - (b.stockQuantity === 0 ? 1 : 0));
 
     const billingConfig = await fetchLivePlatformBillingConfig();
+    const nowMs = Date.now();
+    const hasPaidPlus =
+      parsedVendorBio?.plusLifetimeFree === true ||
+      (parsedVendorBio?.subscriptionPlan === 'plus' &&
+        (!parsedVendorBio?.plusExpiresAt || new Date(parsedVendorBio.plusExpiresAt).getTime() > nowMs));
     const isPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
     // Option B guaranteed: Free plan always keeps a live basic storefront (never paused); Plus upgrades to white-label clean mode
     const storefrontLocked = false;
@@ -220,6 +225,7 @@ export async function GET(
       deliveryDays: dispatchDays,
       isVerified: !!resolvedVendor?.is_verified,
       isPlus,
+      hasPaidPlus,
       storefrontCleanMode: isPlus,
       storefrontLocked,
     };
@@ -231,6 +237,7 @@ export async function GET(
       count: storefrontLocked ? 0 : formattedProducts.length,
       plan: {
         isPlus,
+        hasPaidPlus,
         freeLaunchMode: billingConfig.freeLaunchMode,
         storefrontCleanMode: isPlus,
         storefrontLocked,

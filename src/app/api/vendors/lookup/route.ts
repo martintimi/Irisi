@@ -12,6 +12,7 @@ export interface VendorLookupItem {
   city: string;
   state: string;
   isVerified: boolean;
+  hasPaidPlus: boolean;
 }
 
 function normalizeKey(value: string): string {
@@ -69,6 +70,7 @@ export async function GET(request: Request) {
       let logoUrl = v.logo_url || v.logo || '';
       let city = '';
       let state = '';
+      let hasPaidPlus = false;
       const rawBio = typeof v.bio === 'string' ? v.bio.trim() : '';
       if (rawBio.startsWith('{') && rawBio.endsWith('}')) {
         try {
@@ -76,6 +78,11 @@ export async function GET(request: Request) {
           logoUrl = parsed.logoUrl || parsed.logo || logoUrl || '';
           city = parsed.city || '';
           state = parsed.state || '';
+          const nowMs = Date.now();
+          hasPaidPlus =
+            parsed?.plusLifetimeFree === true ||
+            (parsed?.subscriptionPlan === 'plus' &&
+              (!parsed?.plusExpiresAt || new Date(parsed.plusExpiresAt).getTime() > nowMs));
         } catch {}
       }
 
@@ -105,6 +112,7 @@ export async function GET(request: Request) {
           city,
           state,
           isVerified: Boolean(v.is_verified),
+          hasPaidPlus,
         } as VendorLookupItem,
       };
     });
@@ -142,6 +150,7 @@ export async function GET(request: Request) {
           city: '',
           state: '',
           isVerified: true,
+          hasPaidPlus: false,
         };
         result[reqId] = fallbackItem;
         result[lower] = fallbackItem;

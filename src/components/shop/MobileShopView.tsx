@@ -14,6 +14,7 @@ import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
 import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
 import MobileProductSlider from '@/components/shop/MobileProductSlider';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
 
 import {
@@ -607,9 +608,12 @@ export default function MobileShopView() {
                     {/* Info */}
                     <div className="pt-2.5 px-0.5 space-y-1">
                       {/* Vendor Name */}
-                      <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider line-clamp-1 font-mono-luxury">
-                        {product.vendorName || 'Atelier'}
-                      </p>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider line-clamp-1 font-mono-luxury">
+                          {product.vendorName || 'Brand'}
+                        </p>
+                        {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="icon" />}
+                      </div>
 
                       {/* Product Name */}
                       <Link href={`/shop/${product.id}`} className="block">

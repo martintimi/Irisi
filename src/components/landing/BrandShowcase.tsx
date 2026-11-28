@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Store, Star, ArrowRight, Crown } from 'lucide-react';
+import { Store, Star, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 
 interface DynamicVendor {
   id: string;
@@ -136,12 +137,7 @@ export default function BrandShowcase() {
                             </h3>
                           </Link>
                           <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                            {vendor.hasPaidPlus && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[9px] font-mono-luxury uppercase text-[var(--gold-accent)]">
-                                <Crown className="h-2.5 w-2.5" />
-                                <span>Plus</span>
-                              </span>
-                            )}
+                            {vendor.hasPaidPlus && <PlusVerifiedBadge variant="compact" />}
                             <span className="text-[11px] font-mono-luxury text-[var(--text-muted)] truncate">
                               {vendor.location}
                             </span>

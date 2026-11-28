@@ -125,32 +125,37 @@ export default function VendorOverviewPage() {
         }
       }
 
-      // 2. Fetch products and reviews using resolved vendor ID
+      if (!currentVendorId || currentVendorId === 'all' || currentVendorId === 'default') {
+        setDbProducts([]);
+        setOrders([]);
+        return;
+      }
+
+      // 2. Fetch products and reviews using strictly verified vendor ID (never 'all')
       const [resProd, resReviews] = await Promise.all([
-        vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId || 'all')}`),
-        fetch(`/api/reviews?vendorId=${encodeURIComponent(currentVendorId || 'all')}`, { headers: { 'Cache-Control': 'no-cache' } })
+        vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId)}`),
+        fetch(`/api/reviews?vendorId=${encodeURIComponent(currentVendorId)}`, { headers: { 'Cache-Control': 'no-cache' } })
       ]);
 
       // Process products
       const prodData = await resProd.json();
       if (prodData.success && Array.isArray(prodData.products)) {
-        const strictlyMyProducts = currentVendorId && currentVendorId !== 'all'
-          ? prodData.products.filter((p: any) => {
-              const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
-              const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
-              const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || currentBrandName || '').toLowerCase().trim();
-              const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
-              const targetVid = currentVendorId.toLowerCase().trim();
+        const targetVid = currentVendorId.toLowerCase().trim();
+        const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
+        const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || currentBrandName || '').toLowerCase().trim();
+        const safeBrandName = bName && bName !== 'my brand' && bName !== 'your brand' && bName.length >= 3 ? bName : '';
 
-              return (
-                pVid === targetVid ||
-                pVid.includes(targetVid) ||
-                targetVid.includes(pVid) ||
-                (vEmail && pVid === vEmail) ||
-                (bName && (pVName.includes(bName) || bName.includes(pVName)))
-              );
-            })
-          : prodData.products;
+        const strictlyMyProducts = prodData.products.filter((p: any) => {
+          const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
+          const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
+          if (!pVid && !pVName) return false;
+
+          return (
+            (pVid && pVid === targetVid) ||
+            (vEmail && pVid === vEmail) ||
+            (safeBrandName && pVName === safeBrandName)
+          );
+        });
 
         setDbProducts(strictlyMyProducts);
       } else {

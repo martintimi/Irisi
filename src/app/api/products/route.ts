@@ -86,9 +86,10 @@ export async function GET(request: Request) {
       query = query.eq('garment_origin_type', origin);
     }
 
-    const [productsResult, vendorsResult] = await Promise.all([
+    const [productsResult, vendorsResult, billingConfig] = await Promise.all([
       query,
       supabase.from('vendors').select('id, brand_name, designer_name, location, bio, is_verified'),
+      fetchLivePlatformBillingConfig(),
     ]);
 
     const { data: products, error } = productsResult;
@@ -152,10 +153,12 @@ export async function GET(request: Request) {
         };
 
         let isSuspended = false;
+        let parsedVendorBio: Record<string, any> = {};
 
         if (v.bio && v.bio.startsWith('{') && v.bio.endsWith('}')) {
           try {
             const parsed = JSON.parse(v.bio);
+            parsedVendorBio = parsed;
             city = parsed.city || '';
             state = parsed.state || '';
             dispatchDays = parsed.dispatchDays || '1-2 business days';
@@ -167,6 +170,13 @@ export async function GET(request: Request) {
             }
           } catch (e) {}
         }
+
+        const nowMs = Date.now();
+        const hasPaidPlus =
+          parsedVendorBio?.plusLifetimeFree === true ||
+          (parsedVendorBio?.subscriptionPlan === 'plus' &&
+            (!parsedVendorBio?.plusExpiresAt || new Date(parsedVendorBio.plusExpiresAt).getTime() > nowMs));
+        const isPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
 
         if (!city && v.location) {
           const matched = NIGERIAN_STATES.find(s => v.location.toLowerCase().includes(s.toLowerCase()));
@@ -190,6 +200,8 @@ export async function GET(request: Request) {
           shippingRates,
           is_suspended: isSuspended,
           is_verified: !isSuspended && !!v.is_verified,
+          is_plus: isPlus,
+          has_paid_plus: hasPaidPlus,
         });
       });
     }
@@ -432,6 +444,8 @@ export async function GET(request: Request) {
         vendorLocation: vendorInfo?.location || 'Lagos, Nigeria',
         vendorCity: vendorInfo?.city || 'Lagos',
         vendorState: vendorInfo?.state || 'Lagos',
+        vendorIsPlus: Boolean(vendorInfo?.is_plus),
+        vendorHasPaidPlus: Boolean(vendorInfo?.has_paid_plus),
         vendorDispatchDays: vendorInfo?.dispatchDays || '1-2 business days',
         vendorShippingRates: vendorInfo?.shippingRates || {
           sameCity: 1000,

@@ -17,6 +17,7 @@ import MobileProductDetailView from '@/components/shop/MobileProductDetailView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import Product3DModal from '@/components/3d/Product3DModal';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 interface MediaItem {
@@ -799,6 +800,7 @@ export default function ProductDetailPage() {
                   <Store className="h-3.5 w-3.5" />
                   <span>{product.vendorName}</span>
                 </Link>
+                {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="compact" />}
 
                 <button
                   type="button"

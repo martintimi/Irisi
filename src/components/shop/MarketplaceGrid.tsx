@@ -15,6 +15,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
 
 import {
@@ -777,10 +778,13 @@ export default function MarketplaceGrid() {
                 {/* Product Info */}
                 <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
                   <div className="space-y-1">
-                    {/* Atelier / Vendor Name */}
-                    <p className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider truncate">
-                      {product.vendorName}
-                    </p>
+                    {/* Brand / Vendor Name */}
+                    <div className="flex items-center gap-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider truncate">
+                        {product.vendorName}
+                      </p>
+                      {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="icon" />}
+                    </div>
 
                     {/* Title */}
                     <Link href={`/shop/${product.id}`} className="hover:text-[var(--gold-accent)] transition-colors block">

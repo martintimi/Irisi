@@ -15,6 +15,7 @@ import Link from 'next/link';
 import ProductQuickLookModal from '@/components/shop/ProductQuickLookModal';
 import MobileBrandView from '@/components/brand/MobileBrandView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { isBoutiqueVendor } from '@/types';
 
 // Vector App Logos
@@ -264,9 +265,13 @@ export default function BrandStorefrontPage() {
                 <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)] leading-tight">
                   {vendor.name}
                 </h1>
-                <span className="px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px] font-mono-luxury font-bold">
-                  {isBoutique ? 'Verified Nigerian Boutique' : 'Verified Nigerian Atelier'}
-                </span>
+                {vendor.hasPaidPlus ? (
+                  <PlusVerifiedBadge variant="pill" label="ÌRÍSÍ Plus Verified" />
+                ) : (
+                  <span className="px-3 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-[10px] font-mono-luxury">
+                    Verified Brand
+                  </span>
+                )}
               </div>
               
               {vendor.bio && (

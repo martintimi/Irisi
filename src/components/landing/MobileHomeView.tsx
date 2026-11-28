@@ -11,6 +11,7 @@ import {
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
 import HomeLookbookSection from '@/components/landing/HomeLookbookSection';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 
 export default function MobileHomeView() {
   const {
@@ -1137,9 +1138,12 @@ export default function MobileHomeView() {
                 {/* Meta */}
                 <Link href={`/shop/${product.id}`} className="p-2.5 flex flex-col flex-1 justify-between gap-1">
                   <div>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block truncate">
-                      {product.vendorName || 'Atelier'}
-                    </span>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block truncate">
+                        {product.vendorName || 'Brand'}
+                      </span>
+                      {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="icon" />}
+                    </div>
                     <h3 className="text-xs font-semibold text-black dark:text-white line-clamp-1 mt-0.5">
                       {product.name}
                     </h3>
@@ -1269,12 +1273,7 @@ export default function MobileHomeView() {
                           <h4 className="font-editorial text-base font-normal text-black dark:text-white truncate">
                             {brand.name}
                           </h4>
-                          {brand.hasPaidPlus && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[8px] font-mono-luxury uppercase text-[var(--gold-accent)] shrink-0">
-                              <Crown className="h-2.5 w-2.5" />
-                              <span>Plus</span>
-                            </span>
-                          )}
+                          {brand.hasPaidPlus && <PlusVerifiedBadge variant="compact" />}
                         </div>
                         <span className="text-[10px] font-mono-luxury text-neutral-500 block truncate mt-0.5">
                           {brand.location} · {brand.productCount} {brand.productCount === 1 ? "piece" : "pieces"}

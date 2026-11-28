@@ -18,6 +18,7 @@ import FaqHelpModal from '@/components/profile/FaqHelpModal';
 import RateAppModal from '@/components/profile/RateAppModal';
 import HelpImproveModal from '@/components/profile/HelpImproveModal';
 import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { getConciergeConfig, generateWhatsAppUrl } from '@/lib/config/concierge';
 
 export default function MobileProfileView() {
@@ -44,7 +45,7 @@ export default function MobileProfileView() {
   };
 
   const [activeTab, setActiveTabState] = useState<ProfileTab>(() => resolveTabFromParam(searchParams.get('tab')));
-  const [vendorDirectory, setVendorDirectory] = useState<Record<string, { id: string; slug: string; brandName: string; logoUrl: string; fallbackImage: string; city: string; state: string; isVerified: boolean }>>({});
+  const [vendorDirectory, setVendorDirectory] = useState<Record<string, { id: string; slug: string; brandName: string; logoUrl: string; fallbackImage: string; city: string; state: string; isVerified: boolean; hasPaidPlus?: boolean }>>({});
   const [brokenLogos, setBrokenLogos] = useState<Record<string, boolean>>({});
 
   // Keep activeTab synced when navigating back to /profile?tab=settings (or any tab)
@@ -649,8 +650,11 @@ export default function MobileProfileView() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[13.5px] font-medium text-[var(--text-primary)] capitalize truncate">
-                            {displayBrand}
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="text-[13.5px] font-medium text-[var(--text-primary)] capitalize truncate">
+                              {displayBrand}
+                            </span>
+                            {meta?.hasPaidPlus && <PlusVerifiedBadge variant="icon" />}
                           </div>
                           <span className="text-[10px] font-mono-luxury text-emerald-500 truncate block">
                             {locationLine ? `Following · ${locationLine}` : "Following · Alerts Active"}
