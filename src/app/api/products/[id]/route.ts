@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
-import { parseProductMetaFromTags } from '@/lib/utils/productMetadata';
+import { persistMedia } from '@/lib/services/mediaStorage';
+import { parseProductMetaFromTags, encodeProductMetaIntoTags, syncSoldOutTag } from '@/lib/utils/productMetadata';
 import { invalidateProductsCache } from '@/lib/cache/productsCache';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
+import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
+import { isVendorPlusActive } from '@/lib/config/platformBilling';
 
 const NIGERIAN_STATES = [
   'Lagos', 'Ogun', 'Oyo', 'Abuja', 'FCT - Abuja', 'Rivers', 'Anambra', 'Enugu', 'Delta',
@@ -52,6 +56,8 @@ export async function GET(
     let vendorCity = '';
     let vendorState = '';
     let vendorLocation = '';
+    let vendorIsPlus = false;
+    let vendorHasPaidPlus = false;
     let dispatchDays = '1-2 business days';
     let shippingRates = {
       sameCity: 1000,
@@ -61,12 +67,13 @@ export async function GET(
       parkPickupEnabled: true,
     };
 
-    const [vendorRes, variantsRes, orderItemsRes] = await Promise.all([
+    const [vendorRes, variantsRes, orderItemsRes, billingConfig] = await Promise.all([
       product.vendor_id
         ? supabase.from('vendors').select('id, brand_name, designer_name, location, bio, rating').eq('id', product.vendor_id).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from('product_variants').select('*').eq('product_id', id),
       supabase.from('order_items').select('quantity').eq('product_id', id),
+      fetchLivePlatformBillingConfig(),
     ]);
 
     const vendor = vendorRes.data;
@@ -75,10 +82,12 @@ export async function GET(
 
     if (vendor) {
         let isSuspended = false;
+        let parsedVendorBio: Record<string, any> = {};
         vendorName = vendor.brand_name || vendor.designer_name || 'Verified Vendor';
         if (vendor.bio && vendor.bio.startsWith('{') && vendor.bio.endsWith('}')) {
           try {
             const parsed = JSON.parse(vendor.bio);
+            parsedVendorBio = parsed;
             if (parsed.approvalStatus === 'suspended') {
               isSuspended = true;
             }
@@ -90,6 +99,12 @@ export async function GET(
             }
           } catch (e) {}
         }
+        const nowMs = Date.now();
+        vendorHasPaidPlus =
+          parsedVendorBio?.plusLifetimeFree === true ||
+          (parsedVendorBio?.subscriptionPlan === 'plus' &&
+            (!parsedVendorBio?.plusExpiresAt || new Date(parsedVendorBio.plusExpiresAt).getTime() > nowMs));
+        vendorIsPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
 
         if (isSuspended) {
           return NextResponse.json(
@@ -295,6 +310,11 @@ export async function GET(
       return matchedImg ? { ...col, imageUrl: matchedImg } : col;
     });
 
+    const subcatTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('subcat:'));
+    const resolvedSubCategory = (product as any).subcategory || (product as any).sub_category || (subcatTag ? subcatTag.replace(/^subcat:/, '') : undefined);
+    const shipsFromTag = rawTags.find((t: string) => typeof t === 'string' && t.startsWith('ships_from:'));
+    const resolvedShipsFrom = shipsFromTag ? shipsFromTag.replace(/^ships_from:/, '') : undefined;
+
     const productMeta = parseProductMetaFromTags(rawTags);
     // Filter out internal system tags (video:, img:, color_img:, ships_from:, subcat:, __*) from public customer tags
     const cleanTags = rawTags.filter(
@@ -315,12 +335,18 @@ export async function GET(
       vendorCity,
       vendorState,
       vendorLocation,
+      vendorIsPlus,
+      vendorHasPaidPlus,
       dispatchDays,
       shippingRates,
+      shipsFrom: resolvedShipsFrom,
+      is_published: product.is_published !== false,
       name: product.name,
       price: Number(product.price),
       description: product.description && product.description.trim().toLowerCase() !== product.name.trim().toLowerCase() ? product.description : '',
       category: product.category || 'tops',
+      subcategory: resolvedSubCategory,
+      subCategory: resolvedSubCategory,
       genderTarget: product.gender_target || 'unisex',
       garmentOriginType: product.garment_origin_type || 'ready_made_boutique',
       fulfillmentType: productMeta.fulfillmentType,
@@ -377,14 +403,21 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 1. Prepare fields to update on products table
     const updateData: Record<string, any> = {};
     if (body.name !== undefined) updateData.name = body.name.trim();
     if (body.price !== undefined) updateData.price = Number(body.price);
     if (body.category !== undefined) updateData.category = body.category;
-    if (body.genderTarget !== undefined) updateData.gender_target = body.genderTarget;
+    const incomingGender = body.genderTarget ?? body.gender_target;
+    if (incomingGender !== undefined) updateData.gender_target = incomingGender;
+    if (body.fulfillmentType !== undefined) {
+      updateData.garment_origin_type =
+        body.fulfillmentType === 'made_to_order' ? 'handmade_designer' : 'ready_made_boutique';
+    } else if (body.garmentOriginType !== undefined) {
+      updateData.garment_origin_type = body.garmentOriginType;
+    }
     if (body.description !== undefined) updateData.description = body.description.trim();
     if (body.is_published !== undefined) updateData.is_published = Boolean(body.is_published);
     if (body.colors !== undefined) {
@@ -392,21 +425,19 @@ export async function PATCH(
       updateData.colors = norm.map((c) => c.name);
     }
 
-    // Handle multiple gallery images & color-tagged images
-    if (Array.isArray(body.images)) {
-      const cleanImgItems = body.images.map((img: any) => {
-        if (typeof img === 'string') return { url: img.trim(), colorName: undefined, label: undefined };
-        return {
-          url: (img?.url || '').trim(),
-          colorName: (img?.colorName || '').trim() || undefined,
-          label: (img?.label || '').trim() || undefined,
-        };
-      }).filter((img: any) => img.url.length > 0);
+    const hasTagMutation =
+      Array.isArray(body.images) ||
+      Array.isArray(body.tags) ||
+      body.subcategory !== undefined ||
+      body.subCategory !== undefined ||
+      body.videoUrl !== undefined ||
+      body.video_url !== undefined ||
+      body.fulfillmentType !== undefined ||
+      body.productionLeadTime !== undefined ||
+      body.shipsFrom !== undefined ||
+      body.ships_from !== undefined;
 
-      const cleanUrls = cleanImgItems.map((i: any) => i.url);
-      updateData.image_url = cleanUrls[0] || '';
-
-      // Get current tags to preserve video:, ships_from:, subcat:, etc.
+    if (hasTagMutation) {
       const { data: currentProduct } = await supabase
         .from('products')
         .select('tags')
@@ -414,39 +445,119 @@ export async function PATCH(
         .maybeSingle();
 
       const existingTags: string[] = Array.isArray(currentProduct?.tags) ? currentProduct.tags : [];
-      let preservedTags = existingTags.filter(
-        (t: string) => typeof t === 'string' && !t.startsWith('img:') && !t.startsWith('color_img:')
+
+      // Separate existing system tags vs existing user tags
+      const existingSystemTags = existingTags.filter(
+        (t: string) =>
+          typeof t === 'string' &&
+          (t.startsWith('video:') ||
+            t.startsWith('img:') ||
+            t.startsWith('color_img:') ||
+            t.startsWith('ships_from:') ||
+            t.startsWith('subcat:') ||
+            t.startsWith('__'))
+      );
+      const existingUserTags = existingTags.filter(
+        (t: string) =>
+          typeof t === 'string' &&
+          !t.startsWith('video:') &&
+          !t.startsWith('img:') &&
+          !t.startsWith('color_img:') &&
+          !t.startsWith('ships_from:') &&
+          !t.startsWith('subcat:') &&
+          !t.startsWith('__')
       );
 
-      const subcatToSave = body.subcategory || body.subCategory;
-      if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
-        preservedTags = preservedTags.filter((t: string) => typeof t === 'string' && !t.startsWith('subcat:'));
-        preservedTags.push(`subcat:${subcatToSave.trim()}`);
+      let nextUserTags = Array.isArray(body.tags)
+        ? body.tags
+            .map((t: any) => String(t || '').trim().replace(/^#/, ''))
+            .filter(
+              (t: string) =>
+                Boolean(t) &&
+                !t.startsWith('video:') &&
+                !t.startsWith('img:') &&
+                !t.startsWith('color_img:') &&
+                !t.startsWith('ships_from:') &&
+                !t.startsWith('subcat:') &&
+                !t.startsWith('__')
+            )
+        : existingUserTags;
+
+      let nextSystemTags = [...existingSystemTags];
+
+      // Update gallery images & color_img tags if provided
+      if (Array.isArray(body.images)) {
+        const cleanImgItems = body.images
+          .map((img: any) => {
+            if (typeof img === 'string') return { url: img.trim(), colorName: undefined, label: undefined };
+            return {
+              url: (img?.url || '').trim(),
+              colorName: (img?.colorName || '').trim() || undefined,
+              label: (img?.label || '').trim() || undefined,
+            };
+          })
+          .filter((img: any) => img.url.length > 0);
+
+        const cleanUrls = cleanImgItems.map((i: any) => i.url);
+        updateData.image_url = cleanUrls[0] || '';
+
+        nextSystemTags = nextSystemTags.filter((t) => !t.startsWith('img:') && !t.startsWith('color_img:'));
+        const newImgTags = cleanUrls.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
+        const newColorImgTags = cleanImgItems
+          .filter((item: any) => item.colorName && item.colorName !== 'none' && item.colorName !== 'General / All Colors')
+          .map((item: any) => `color_img:${item.colorName}:${item.url}`);
+        nextSystemTags.push(...newImgTags, ...newColorImgTags);
       }
 
-      // Add gallery images as 'img:<url>' tags for index > 0
-      const newImgTags = cleanUrls.slice(1).map((imgUrl: string) => `img:${imgUrl}`);
-      const newColorImgTags = cleanImgItems
-        .filter((item: any) => item.colorName && item.colorName !== 'none' && item.colorName !== 'General / All Colors')
-        .map((item: any) => `color_img:${item.colorName}:${item.url}`);
-
-      updateData.tags = [...preservedTags, ...newImgTags, ...newColorImgTags];
-    } else if (body.tags !== undefined && Array.isArray(body.tags)) {
-      updateData.tags = body.tags;
-    } else if (body.subcategory !== undefined || body.subCategory !== undefined) {
-      const subcatToSave = body.subcategory || body.subCategory;
-      if (subcatToSave && typeof subcatToSave === 'string' && subcatToSave.trim()) {
-        const { data: currentProduct } = await supabase
-          .from('products')
-          .select('tags')
-          .eq('id', id)
-          .maybeSingle();
-
-        const existingTags: string[] = Array.isArray(currentProduct?.tags) ? currentProduct.tags : [];
-        const updatedTags = existingTags.filter((t: string) => typeof t === 'string' && !t.startsWith('subcat:'));
-        updatedTags.push(`subcat:${subcatToSave.trim()}`);
-        updateData.tags = updatedTags;
+      // Update subcategory tag if provided
+      const subcatToSave = body.subcategory ?? body.subCategory;
+      if (subcatToSave !== undefined) {
+        nextSystemTags = nextSystemTags.filter((t) => !t.startsWith('subcat:'));
+        if (typeof subcatToSave === 'string' && subcatToSave.trim()) {
+          nextSystemTags.push(`subcat:${subcatToSave.trim()}`);
+        }
       }
+
+      // Update ships_from tag if provided
+      const shipsFromToSave = body.shipsFrom ?? body.ships_from;
+      if (shipsFromToSave !== undefined) {
+        nextSystemTags = nextSystemTags.filter((t) => !t.startsWith('ships_from:'));
+        if (typeof shipsFromToSave === 'string' && shipsFromToSave.trim()) {
+          nextSystemTags.push(`ships_from:${shipsFromToSave.trim()}`);
+        }
+      }
+
+      // Update or remove product showcase video tag if provided
+      const rawVideoInput = body.videoUrl !== undefined ? body.videoUrl : body.video_url;
+      if (rawVideoInput !== undefined) {
+        nextSystemTags = nextSystemTags.filter((t) => !t.startsWith('video:'));
+        if (typeof rawVideoInput === 'string' && rawVideoInput.trim() && !rawVideoInput.startsWith('data:')) {
+          const normVid = normalizeVideoUrl(rawVideoInput.trim());
+          if (normVid) {
+            const persistedVid = await persistMedia(normVid, `${id}-video`);
+            if (persistedVid) {
+              nextSystemTags.push(`video:${persistedVid}`);
+            }
+          }
+        }
+      }
+
+      // Update Made-to-Order / Production Lead Time metadata tags if provided
+      if (body.fulfillmentType !== undefined || body.productionLeadTime !== undefined) {
+        const currentMeta = parseProductMetaFromTags(existingSystemTags);
+        const targetFulfillment =
+          body.fulfillmentType === 'made_to_order' || body.fulfillmentType === 'ready_to_ship'
+            ? body.fulfillmentType
+            : currentMeta.fulfillmentType;
+        const targetLeadTime =
+          body.productionLeadTime !== undefined ? String(body.productionLeadTime || '') : currentMeta.productionLeadTime;
+
+        const withoutMto = nextSystemTags.filter((t) => !t.startsWith('__mto:') && !t.startsWith('__lead:'));
+        const encodedMeta = encodeProductMetaIntoTags([], targetFulfillment, targetLeadTime);
+        nextSystemTags = [...withoutMto, ...encodedMeta];
+      }
+
+      updateData.tags = Array.from(new Set([...nextUserTags, ...nextSystemTags]));
     }
 
     if (body.imageUrl !== undefined || body.image_url !== undefined) {
@@ -557,6 +668,21 @@ export async function PATCH(
       }
     }
 
+    // Sync 48h Sold-Out auto-hide timestamp with updated total inventory (restocking >= 1 unit instantly brings item back live!)
+    if (Array.isArray(body.variants) || (body.sizeStock && typeof body.sizeStock === "object")) {
+      try {
+        const [{ data: latestVars }, { data: prodForTags }] = await Promise.all([
+          supabase.from('product_variants').select('stock_quantity').eq('product_id', id),
+          supabase.from('products').select('tags').eq('id', id).maybeSingle(),
+        ]);
+        if (latestVars && latestVars.length > 0 && prodForTags) {
+          const totalStock = latestVars.reduce((sum: number, v: any) => sum + Math.max(0, Number(v.stock_quantity) || 0), 0);
+          const nextTags = syncSoldOutTag(prodForTags.tags, totalStock);
+          await supabase.from('products').update({ tags: nextTags }).eq('id', id);
+        }
+      } catch {}
+    }
+
     productDetailCache.delete(id);
     invalidateProductsCache();
 
@@ -580,9 +706,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
-
-    // Delete variants first
+    const supabase = createAdminClient();
     await supabase.from('product_variants').delete().eq('product_id', id);
     // Delete product
     const { error } = await supabase.from('products').delete().eq('id', id);

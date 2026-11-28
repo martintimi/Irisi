@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
@@ -18,10 +18,12 @@ import FaqHelpModal from '@/components/profile/FaqHelpModal';
 import RateAppModal from '@/components/profile/RateAppModal';
 import HelpImproveModal from '@/components/profile/HelpImproveModal';
 import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { getConciergeConfig, generateWhatsAppUrl } from '@/lib/config/concierge';
 
 export default function MobileProfileView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     userAuth,
     setUserAuth,
@@ -36,7 +38,32 @@ export default function MobileProfileView() {
     toggleTheme,
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'wishlist' | 'brands' | 'settings'>('orders');
+  type ProfileTab = 'orders' | 'wishlist' | 'brands' | 'settings';
+  const resolveTabFromParam = (raw: string | null): ProfileTab => {
+    if (raw === 'wishlist' || raw === 'brands' || raw === 'settings' || raw === 'orders') return raw;
+    return 'orders';
+  };
+
+  const [activeTab, setActiveTabState] = useState<ProfileTab>(() => resolveTabFromParam(searchParams.get('tab')));
+  const [vendorDirectory, setVendorDirectory] = useState<Record<string, { id: string; slug: string; brandName: string; logoUrl: string; fallbackImage: string; city: string; state: string; isVerified: boolean; hasPaidPlus?: boolean }>>({});
+  const [brokenLogos, setBrokenLogos] = useState<Record<string, boolean>>({});
+
+  // Keep activeTab synced when navigating back to /profile?tab=settings (or any tab)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTabState(resolveTabFromParam(tabParam));
+    }
+  }, [searchParams]);
+
+  const setActiveTab = (nextTab: ProfileTab) => {
+    setActiveTabState(nextTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', nextTab);
+      window.history.replaceState(window.history.state, "", url.pathname + url.search);
+    }
+  };
   const [quickBuyProduct, setQuickBuyProduct] = useState<any>(null);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState(bodyProfile.deliveryAddress || '');
@@ -155,6 +182,26 @@ export default function MobileProfileView() {
     [followedVendors]
   );
 
+  // Fetch real brand names & logos for all followed brands
+  useEffect(() => {
+    if (cleanFollowedBrands.length === 0) return;
+    let cancelled = false;
+    async function loadVendorLogos() {
+      try {
+        const idsParam = cleanFollowedBrands.map((id) => encodeURIComponent(id)).join(",");
+        const res = await fetch(`/api/vendors/lookup?ids=${idsParam}`);
+        const data = await res.json();
+        if (!cancelled && data.success && data.vendors) {
+          setVendorDirectory(data.vendors);
+        }
+      } catch {}
+    }
+    loadVendorLogos();
+    return () => {
+      cancelled = true;
+    };
+  }, [cleanFollowedBrands]);
+
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault();
     setBodyProfile({ deliveryAddress, city, state, phone });
@@ -194,7 +241,7 @@ export default function MobileProfileView() {
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => { if (isEditingAddress) { setIsEditingAddress(false); return; } router.back(); }}
             className="h-9 w-9 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-[var(--text-primary)] flex items-center justify-center active:scale-95 transition-transform shrink-0 cursor-pointer"
             aria-label="Go back"
           >
@@ -576,26 +623,41 @@ export default function MobileProfileView() {
             ) : (
               <div className="rounded-[20px] bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
                 {cleanFollowedBrands.map((vId) => {
-                  const displayBrand = vId.replace(/-/g, ' ');
+                  const meta = vendorDirectory[vId] || vendorDirectory[vId.toLowerCase()];
+                  const displayBrand = meta?.brandName || vId.replace(/-/g, ' ');
                   const initial = displayBrand.trim().charAt(0).toUpperCase() || 'B';
+                  const logoSrc = !brokenLogos[vId] ? (meta?.logoUrl || meta?.fallbackImage || "") : "";
+                  const locationLine = [meta?.city, meta?.state].filter(Boolean).join(", ");
                   return (
                     <div
                       key={vId}
                       className="px-4 py-3.5 flex items-center justify-between gap-3"
                     >
                       <Link
-                        href={`/brand/${encodeURIComponent(vId)}`}
+                        href={`/brand/${encodeURIComponent(meta?.slug || vId)}`}
                         className="flex items-center gap-3 min-w-0 flex-1 active:opacity-75"
                       >
-                        <div className="h-10 w-10 rounded-full bg-[var(--bg-primary)] border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] flex items-center justify-center font-editorial text-lg shrink-0">
-                          {initial}
+                        <div className="relative h-11 w-11 rounded-full bg-[var(--bg-primary)] border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] flex items-center justify-center font-editorial text-lg shrink-0 overflow-hidden">
+                          {logoSrc ? (
+                            <img
+                              src={logoSrc}
+                              alt={displayBrand}
+                              onError={() => setBrokenLogos((prev) => ({ ...prev, [vId]: true }))}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span>{initial}</span>
+                          )}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[13.5px] font-medium text-[var(--text-primary)] capitalize truncate">
-                            {displayBrand}
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="text-[13.5px] font-medium text-[var(--text-primary)] capitalize truncate">
+                              {displayBrand}
+                            </span>
+                            {meta?.hasPaidPlus && <PlusVerifiedBadge variant="icon" />}
                           </div>
-                          <span className="text-[10px] font-mono-luxury text-emerald-500">
-                            Following · Alerts Active
+                          <span className="text-[10px] font-mono-luxury text-emerald-500 truncate block">
+                            {locationLine ? `Following · ${locationLine}` : "Following · Alerts Active"}
                           </span>
                         </div>
                       </Link>
@@ -878,7 +940,7 @@ export default function MobileProfileView() {
                 </button>
 
                 <Link
-                  href="/returns"
+                  href="/returns?from=settings"
                   className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -889,7 +951,7 @@ export default function MobileProfileView() {
                 </Link>
 
                 <Link
-                  href="/terms"
+                  href="/terms?from=settings"
                   className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -900,7 +962,7 @@ export default function MobileProfileView() {
                 </Link>
 
                 <Link
-                  href="/privacy"
+                  href="/privacy?from=settings"
                   className="px-4 py-3.5 flex items-center justify-between gap-3 active:bg-[var(--bg-secondary)]"
                 >
                   <div className="flex items-center gap-3 min-w-0">

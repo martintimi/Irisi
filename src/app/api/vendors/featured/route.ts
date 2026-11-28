@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
+import { isVendorPlusActive } from '@/lib/config/platformBilling';
+
+export const dynamic = 'force-dynamic';
 
 export interface DynamicAtelier {
   id: string;
   slug: string;
   name: string;
+  logoUrl: string;
   location: string;
   city: string;
   state: string;
@@ -17,34 +22,34 @@ export interface DynamicAtelier {
   rating: string;
   productCount: number;
   minPrice: number;
+  isPlus: boolean;
+  hasPaidPlus: boolean;
 }
 
 export async function GET() {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
+    const billing = await fetchLivePlatformBillingConfig();
 
-    // 1. Fetch all vendors from Supabase
-    const { data: dbVendors, error: vendorErr } = await supabase
-      .from('vendors')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // 1. Fetch all real vendors & published products in parallel
+    const [{ data: dbVendors, error: vendorErr }, { data: dbProducts, error: prodErr }] =
+      await Promise.all([
+        supabase.from('vendors').select('*').order('created_at', { ascending: false }),
+        supabase
+          .from('products')
+          .select('id, vendor_id, name, price, description, category, image_url, is_published')
+          .eq('is_published', true)
+          .order('created_at', { ascending: false }),
+      ]);
 
     if (vendorErr) {
       return NextResponse.json({ error: vendorErr.message }, { status: 500 });
     }
-
-    // 2. Fetch all published products from Supabase
-    const { data: dbProducts, error: prodErr } = await supabase
-      .from('products')
-      .select('id, vendor_id, name, price, description, category, image_url, is_published')
-      .eq('is_published', true)
-      .order('created_at', { ascending: false });
-
     if (prodErr) {
       return NextResponse.json({ error: prodErr.message }, { status: 500 });
     }
 
-    // 3. Group products by vendor
+    // 2. Group published products by normalized vendor ID
     const productsByVendor = new Map<string, any[]>();
     (dbProducts || []).forEach((p: any) => {
       const vId = (p.vendor_id || '').toLowerCase().trim();
@@ -55,51 +60,62 @@ export async function GET() {
       productsByVendor.get(vId)!.push(p);
     });
 
-    // 4. Transform vendors that have published products
+    // 3. Transform real verified vendors with live inventory
     const activeVendors: DynamicAtelier[] = [];
 
     (dbVendors || []).forEach((v: any) => {
       const vId = (v.id || '').toLowerCase().trim();
-      // Only showcase verified, non-suspended vendors with real published inventory
+      if (!vId || vId.startsWith('admin-')) return;
       if (!v.is_verified) return;
+
       const vendorProducts = productsByVendor.get(vId) || [];
       if (vendorProducts.length === 0) return;
 
-      // Parse bio and location from JSON bio if applicable
       let bioText = v.bio || '';
+      let parsedBio: Record<string, any> = {};
+      let logoUrl = v.logo_url || v.logo || '';
       let city = '';
       let state = '';
 
-      if (bioText.startsWith('{') && bioText.endsWith('}')) {
+      if (typeof bioText === 'string' && bioText.trim().startsWith('{') && bioText.trim().endsWith('}')) {
         try {
-          const parsed = JSON.parse(bioText);
-          if (parsed.approvalStatus === 'suspended') return;
-          bioText = parsed.bio || '';
-          city = parsed.city || '';
-          state = parsed.state || '';
-        } catch (e) {}
+          parsedBio = JSON.parse(bioText);
+          if (parsedBio.approvalStatus === 'suspended') return;
+          bioText = parsedBio.bio || '';
+          logoUrl = parsedBio.logoUrl || parsedBio.logo || logoUrl || '';
+          city = parsedBio.city || '';
+          state = parsedBio.state || '';
+        } catch {}
       }
 
       const locationParts = (v.location || '').split(',');
       if (!city && locationParts[0]) city = locationParts[0].trim();
       if (!state && locationParts[1]) state = locationParts[1].trim();
 
-      const locationDisplay = v.location || (city && state ? `${city}, ${state}` : city || state || 'Nigeria');
+      const locationDisplay =
+        [city, state].filter(Boolean).join(', ') || v.location || 'Verified Brand';
 
-      // Extract distinct real product images (up to 4)
+      // Explicit paid/lifetime ÌRÍSÍ Plus membership check (independent of global free launch promo)
+      const now = Date.now();
+      const hasPaidPlus =
+        parsedBio?.plusLifetimeFree === true ||
+        (parsedBio?.subscriptionPlan === 'plus' &&
+          (!parsedBio?.plusExpiresAt || new Date(parsedBio.plusExpiresAt).getTime() > now));
+
+      const isPlus = isVendorPlusActive(parsedBio, billing);
+
+      // Extract up to 4 real product photos
       const images: string[] = [];
       vendorProducts.forEach((p: any) => {
         if (p.image_url && !images.includes(p.image_url) && images.length < 4) {
           images.push(p.image_url);
         }
       });
-
-      // If no images found on products, use safe fallback
       if (images.length === 0) {
         images.push('/images/no-product.svg');
       }
 
-      // Determine focus and craft tag based on dominant product category
+      // Focus & category metadata
       const catCounts: Record<string, number> = {};
       vendorProducts.forEach((p: any) => {
         const cat = (p.category || 'tops').toLowerCase();
@@ -108,56 +124,52 @@ export async function GET() {
       const topCat = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'tops';
       const allNames = vendorProducts.map((p: any) => (p.name || '').toLowerCase()).join(' ');
 
-      let focus = 'Contemporary Ready-to-Wear & Urban Drops';
-      let tag = v.vendor_type === 'boutique_seller' || v.vendor_type === 'boutique_merchant' ? 'Verified Boutique' : 'Designer Atelier';
+      let focus = 'Contemporary Ready-to-Wear & Curated Drops';
+      let tag = hasPaidPlus ? 'ÌRÍSÍ Plus' : 'Verified Brand';
       let categoryKey: 'streetwear' | 'native' | 'jewelry' | 'footwear' | 'all' = 'streetwear';
 
       if (allNames.includes('senator') || allNames.includes('agbada') || allNames.includes('kaftan') || allNames.includes('native')) {
-        focus = 'Bespoke Senator Suits & Ceremonial Agbada';
-        tag = 'Bespoke Tailoring';
+        focus = 'Tailored Native Wear & Ceremonial Cuts';
         categoryKey = 'native';
       } else if (topCat === 'accessories' || (allNames.includes('chain') && !allNames.includes('hoodie'))) {
-        focus = 'Fine Chains, Necklaces & Luxury Accents';
-        tag = 'Artisanal Jewelry';
+        focus = 'Fine Chains, Jewelry & Statement Accents';
         categoryKey = 'jewelry';
-      } else if (topCat === 'outerwear' || topCat === 'tops' || allNames.includes('hoodie') || allNames.includes('trapstar') || allNames.includes('waistcoat')) {
-        focus = 'Afro-Streetwear & Heavyweight Drops';
-        tag = 'Ready-to-Wear Street';
+      } else if (topCat === 'outerwear' || topCat === 'tops' || allNames.includes('hoodie') || allNames.includes('jacket')) {
+        focus = 'Streetwear & Heavyweight Ready-to-Wear';
         categoryKey = 'streetwear';
-      } else if (topCat === 'footwear' || allNames.includes('slide') || allNames.includes('shoe')) {
-        focus = 'Handcrafted Footwear & Slides';
-        tag = 'Handmade Footwear';
+      } else if (topCat === 'footwear' || allNames.includes('slide') || allNames.includes('shoe') || allNames.includes('sneaker')) {
+        focus = 'Handcrafted Footwear, Slides & Sneakers';
         categoryKey = 'footwear';
       } else if (topCat === 'bottoms' || allNames.includes('jean') || allNames.includes('cargo')) {
-        focus = 'Street Denim & Tailored Cargo Fits';
-        tag = 'Ready-to-Wear Denim';
+        focus = 'Tailored Denim & Street Cargo Silhouettes';
         categoryKey = 'streetwear';
       }
 
-      // Lowest piece price
-      const validPrices = vendorProducts.map((p: any) => Number(p.price)).filter((n: number) => !isNaN(n) && n > 0);
+      const validPrices = vendorProducts
+        .map((p: any) => Number(p.price))
+        .filter((n: number) => !isNaN(n) && n > 0);
       const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
 
-      // Signature hero pieces
       const heroPieces = vendorProducts
         .slice(0, 3)
         .map((p: any) => p.name)
         .join(' · ');
 
-      // Clean description
-      const desc = typeof bioText === 'string' && bioText.trim().length > 0
-        ? bioText.trim()
-        : `Verified Nigerian merchant specializing in ${focus.toLowerCase()} crafted for immediate dispatch.`;
+      const desc =
+        typeof bioText === 'string' && bioText.trim().length > 0
+          ? bioText.trim()
+          : `Verified independent brand specializing in ${focus.toLowerCase()} with escrow-protected delivery.`;
 
       const rating = v.rating ? Number(v.rating).toFixed(1) : '5.0';
 
       activeVendors.push({
         id: v.id,
         slug: v.id,
-        name: v.brand_name || 'Verified Atelier',
+        name: v.brand_name || v.id.replace(/-/g, ' '),
+        logoUrl: typeof logoUrl === 'string' ? logoUrl.trim() : '',
         location: locationDisplay,
-        city: city || 'Nigeria',
-        state: state || 'Nigeria',
+        city,
+        state,
         focus,
         desc,
         images,
@@ -166,32 +178,49 @@ export async function GET() {
         heroPieces: heroPieces || 'Curated Ready-to-Wear',
         rating,
         productCount: vendorProducts.length,
-        minPrice
+        minPrice,
+        isPlus,
+        hasPaidPlus,
       });
     });
 
-    // Sort by product count descending (vendors with largest catalogs first)
-    activeVendors.sort((a, b) => b.productCount - a.productCount);
+    // Priority sort: 1) Active ÌRÍSÍ Plus subscribers first, 2) Largest live catalog descending
+    activeVendors.sort((a, b) => {
+      if (a.hasPaidPlus !== b.hasPaidPlus) return a.hasPaidPlus ? -1 : 1;
+      return b.productCount - a.productCount;
+    });
 
-    // Calculate category counts
+    const plusVendors = activeVendors.filter((v) => v.hasPaidPlus);
+
     const categoryCounts = {
       all: activeVendors.length,
-      streetwear: activeVendors.filter(v => v.categoryKey === 'streetwear').length,
-      native: activeVendors.filter(v => v.categoryKey === 'native').length,
-      jewelry: activeVendors.filter(v => v.categoryKey === 'jewelry').length,
-      footwear: activeVendors.filter(v => v.categoryKey === 'footwear').length,
+      streetwear: activeVendors.filter((v) => v.categoryKey === 'streetwear').length,
+      native: activeVendors.filter((v) => v.categoryKey === 'native').length,
+      jewelry: activeVendors.filter((v) => v.categoryKey === 'jewelry').length,
+      footwear: activeVendors.filter((v) => v.categoryKey === 'footwear').length,
     };
 
-    return NextResponse.json({
-      success: true,
-      count: activeVendors.length,
-      categories: categoryCounts,
-      ateliers: activeVendors
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30'
+    return NextResponse.json(
+      {
+        success: true,
+        count: activeVendors.length,
+        plusCount: plusVendors.length,
+        freeLaunchMode: billing.freeLaunchMode,
+        categories: categoryCounts,
+        // Keep `ateliers` key for backwards compatibility with existing consumers
+        ateliers: activeVendors,
+        // Featured Home subset: shows paid ÌRÍSÍ Plus brands first (or strictly Plus brands when billing is active & Plus brands exist)
+        featuredBrands:
+          !billing.freeLaunchMode && plusVendors.length > 0
+            ? plusVendors.slice(0, 8)
+            : activeVendors.slice(0, 8),
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+        },
       }
-    });
+    );
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
   }

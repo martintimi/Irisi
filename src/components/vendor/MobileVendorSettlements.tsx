@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   ShieldCheck, CheckCircle2, Download, Copy, Check,
-  Building2, Banknote, RefreshCw, Edit3, X, Loader2
+  Building2, Banknote, RefreshCw, Edit3, X, Loader2, Crown, ChevronRight
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import VendorLuxuryLoader from './VendorLuxuryLoader';
@@ -16,6 +17,11 @@ interface MobileVendorSettlementsProps {
   isLoading: boolean;
   vendorProfile: any;
   onRefresh: () => void;
+  pendingPlusDeductionNgn?: number;
+  escrowPlusAutoDeduct?: boolean;
+  effectiveCommissionPercent?: number;
+  freeLaunchActive?: boolean;
+  isPlus?: boolean;
 }
 
 export default function MobileVendorSettlements({
@@ -23,6 +29,11 @@ export default function MobileVendorSettlements({
   isLoading,
   vendorProfile,
   onRefresh,
+  pendingPlusDeductionNgn = 0,
+  escrowPlusAutoDeduct = false,
+  effectiveCommissionPercent = 0,
+  freeLaunchActive = true,
+  isPlus = false,
 }: MobileVendorSettlementsProps) {
   const { setVendorProfile } = useStore();
   const [filterTab, setFilterTab] = useState<'all' | 'escrow' | 'settled'>('all');
@@ -196,7 +207,11 @@ export default function MobileVendorSettlements({
           </span>
           <span className="inline-flex items-center gap-1 text-[10px] font-mono-luxury text-emerald-400">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>0% Launch Fee</span>
+            <span>
+              {freeLaunchActive
+                ? '0% Launch Fee'
+                : `${effectiveCommissionPercent}% ${isPlus ? 'Plus' : 'Standard'} Fee`}
+            </span>
           </span>
         </div>
 
@@ -225,6 +240,27 @@ export default function MobileVendorSettlements({
             </span>
           </div>
         </div>
+
+        {pendingPlusDeductionNgn > 0 && (
+          <Link
+            href="/vendor-portal/plus"
+            className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 text-[11px] group"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Crown className="h-3.5 w-3.5 text-[#E6C367] shrink-0" />
+              <span className="text-zinc-300 truncate">
+                ÌRÍSÍ Plus Escrow Deduction (Opt-In):{' '}
+                <span className="text-[#E6C367] font-mono-luxury">
+                  -₦{pendingPlusDeductionNgn.toLocaleString()}
+                </span>
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-mono-luxury text-zinc-400 group-hover:text-white shrink-0">
+              <span>Manage</span>
+              <ChevronRight className="h-3 w-3" />
+            </span>
+          </Link>
+        )}
       </section>
 
       {/* 3. Settlement Bank Account Card (Apple Wallet Style) */}

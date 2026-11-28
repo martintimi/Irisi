@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { computeVendorPackageMetrics, checkLocationServiceability, createShipbubbleShipment } from '@/lib/services/logistics';
+import { syncSoldOutTag } from '@/lib/utils/productMetadata';
+import { invalidateProductsCache } from '@/lib/cache/productsCache';
 import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
 import { getEffectiveCommissionPercent } from '@/lib/config/platformBilling';
 import {
@@ -464,6 +466,40 @@ export async function POST(request: Request) {
                 .eq('id', matched.id);
 
               console.log(`[Inventory] Deducted ${qty} units of ${pId} (Variant: ${matched.size || 'Standard'}, ${matched.color || 'Default'}). Stock: ${currentStock} -> ${newStock}`);
+
+              // Check total remaining stock across all variants for this product (Fashion Nova / SHEIN 48h auto-hide clock)
+              try {
+                const { data: allVarAfter } = await supabase
+                  .from('product_variants')
+                  .select('stock_quantity')
+                  .eq('product_id', pId);
+                const totalRemaining = (allVarAfter || []).reduce((s: number, vr: any) => s + Math.max(0, Number(vr.stock_quantity) || 0), 0);
+                if (totalRemaining === 0) {
+                  const { data: prodRow } = await supabase
+                    .from('products')
+                    .select('id, name, vendor_id, tags')
+                    .eq('id', pId)
+                    .maybeSingle();
+                  if (prodRow) {
+                    const nextTags = syncSoldOutTag(prodRow.tags, 0);
+                    await supabase
+                      .from('products')
+                      .update({ tags: nextTags })
+                      .eq('id', pId);
+                    invalidateProductsCache();
+                    if (prodRow.vendor_id) {
+                      await supabase.from('notifications').insert({
+                        vendor_id: prodRow.vendor_id,
+                        title: `Sold Out: ${prodRow.name || 'Product'}`,
+                        message: `"${prodRow.name || 'Your item'}" just sold out (0 units left). It will display as Sold Out for 48 hours and then auto-hide from Shop until you restock.`,
+                        type: 'low_stock',
+                        read: false,
+                        action_url: '/vendor-portal/products',
+                      });
+                    }
+                  }
+                }
+              } catch {}
             }
           } else {
             // If product had no variants in database yet, auto-create one and deduct immediately

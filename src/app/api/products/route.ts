@@ -5,7 +5,7 @@ import { normalizeVideoUrl } from '@/lib/utils/videoUtils';
 import { persistMedia } from '@/lib/services/mediaStorage';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 import { sendNewDropNotificationEmail } from '@/lib/services/emailService';
-import { parseProductMetaFromTags, encodeProductMetaIntoTags } from '@/lib/utils/productMetadata';
+import { parseProductMetaFromTags, encodeProductMetaIntoTags, computeSoldOutVisibility } from '@/lib/utils/productMetadata';
 import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
 import { isVendorPlusActive } from '@/lib/config/platformBilling';
 import { apiProductsCache, PRODUCTS_CACHE_TTL_MS as CACHE_TTL_MS, invalidateProductsCache } from '@/lib/cache/productsCache';
@@ -86,9 +86,10 @@ export async function GET(request: Request) {
       query = query.eq('garment_origin_type', origin);
     }
 
-    const [productsResult, vendorsResult] = await Promise.all([
+    const [productsResult, vendorsResult, billingConfig] = await Promise.all([
       query,
       supabase.from('vendors').select('id, brand_name, designer_name, location, bio, is_verified'),
+      fetchLivePlatformBillingConfig(),
     ]);
 
     const { data: products, error } = productsResult;
@@ -152,10 +153,12 @@ export async function GET(request: Request) {
         };
 
         let isSuspended = false;
+        let parsedVendorBio: Record<string, any> = {};
 
         if (v.bio && v.bio.startsWith('{') && v.bio.endsWith('}')) {
           try {
             const parsed = JSON.parse(v.bio);
+            parsedVendorBio = parsed;
             city = parsed.city || '';
             state = parsed.state || '';
             dispatchDays = parsed.dispatchDays || '1-2 business days';
@@ -167,6 +170,13 @@ export async function GET(request: Request) {
             }
           } catch (e) {}
         }
+
+        const nowMs = Date.now();
+        const hasPaidPlus =
+          parsedVendorBio?.plusLifetimeFree === true ||
+          (parsedVendorBio?.subscriptionPlan === 'plus' &&
+            (!parsedVendorBio?.plusExpiresAt || new Date(parsedVendorBio.plusExpiresAt).getTime() > nowMs));
+        const isPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
 
         if (!city && v.location) {
           const matched = NIGERIAN_STATES.find(s => v.location.toLowerCase().includes(s.toLowerCase()));
@@ -190,6 +200,8 @@ export async function GET(request: Request) {
           shippingRates,
           is_suspended: isSuspended,
           is_verified: !isSuspended && !!v.is_verified,
+          is_plus: isPlus,
+          has_paid_plus: hasPaidPlus,
         });
       });
     }
@@ -410,6 +422,15 @@ export async function GET(request: Request) {
         sizes: resolvedSizes,
         sizeStock: finalSizeStock,
         stockQuantity: pVariants.length > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50),
+        ...(() => {
+          const resolvedQty = pVariants.length > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50);
+          const vis = computeSoldOutVisibility(resolvedQty, productMeta.soldOutAt, (p as any).updated_at || (p as any).created_at);
+          return {
+            soldOutAt: vis.soldOutAt,
+            hoursUntilAutoHide: vis.hoursUntilAutoHide,
+            isAutoHiddenSoldOut: vis.isAutoHiddenSoldOut,
+          };
+        })(),
         unitsSold: soldMap.get(p.id) || 0,
         isCustomizable: Boolean((p as any).is_customizable),
         fulfillmentType: productMeta.fulfillmentType,
@@ -423,6 +444,8 @@ export async function GET(request: Request) {
         vendorLocation: vendorInfo?.location || 'Lagos, Nigeria',
         vendorCity: vendorInfo?.city || 'Lagos',
         vendorState: vendorInfo?.state || 'Lagos',
+        vendorIsPlus: Boolean(vendorInfo?.is_plus),
+        vendorHasPaidPlus: Boolean(vendorInfo?.has_paid_plus),
         vendorDispatchDays: vendorInfo?.dispatchDays || '1-2 business days',
         vendorShippingRates: vendorInfo?.shippingRates || {
           sameCity: 1000,
@@ -445,13 +468,24 @@ export async function GET(request: Request) {
     // Public Marketplace Gating: If browsing the public store without a vendor filter,
     // only return products from approved & verified vendors
     const isPublicQuery = !vendorId || vendorId === 'all';
-    const finalProducts = isPublicQuery
+    const publicFiltered = isPublicQuery
       ? activeProducts.filter(p => {
           const vInfo = vendorMap.get(p.vendor_id);
-          // Only show verified vendors on public shop (or fallback demo items)
-          return vInfo ? vInfo.is_verified === true : true;
+          if (vInfo && vInfo.is_verified !== true) return false;
+          // Fashion Nova / SHEIN / Zara rule: auto-hide items sold out for >= 48 hours from public feeds
+          if (p.isAutoHiddenSoldOut) return false;
+          return true;
         })
       : activeProducts;
+
+    // Push freshly sold-out (< 48h) pieces cleanly to the bottom of public Shop behind available items
+    const finalProducts = isPublicQuery
+      ? [...publicFiltered].sort((a, b) => {
+          const aOut = a.stockQuantity === 0 ? 1 : 0;
+          const bOut = b.stockQuantity === 0 ? 1 : 0;
+          return aOut - bOut;
+        })
+      : publicFiltered;
 
     const responsePayload = {
       success: true,

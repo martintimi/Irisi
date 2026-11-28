@@ -6,11 +6,13 @@ import {
   Store, Star, ArrowRight, MapPin, Search, Sparkles,
   ShieldCheck, Package, ExternalLink, Scissors, Award
 } from 'lucide-react';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 
 interface DynamicAtelier {
   id: string;
   slug: string;
   name: string;
+  logoUrl?: string;
   location: string;
   city?: string;
   state?: string;
@@ -19,6 +21,8 @@ interface DynamicAtelier {
   images?: string[];
   tag?: string;
   productCount: number;
+  isPlus?: boolean;
+  hasPaidPlus?: boolean;
 }
 
 export default function VendorsPage() {
@@ -73,8 +77,8 @@ export default function VendorsPage() {
           <span>VERIFIED FASHION HOUSES</span>
         </div>
 
-        <h1 className="font-editorial text-3xl sm:text-5xl font-bold text-[var(--text-primary)] leading-tight">
-          Discover Designers & Ateliers
+        <h1 className="font-editorial text-3xl sm:text-5xl font-normal text-[var(--text-primary)] leading-tight">
+          Discover Verified Brands &amp; Stores
         </h1>
 
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-light leading-relaxed max-w-2xl mx-auto">
@@ -178,26 +182,38 @@ export default function VendorsPage() {
                 <div className="space-y-4">
                   {/* Brand Header */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[var(--gold-accent)]/15 to-[var(--gold-accent)]/5 border border-[var(--gold-accent)]/30 font-mono-luxury font-bold text-xs flex items-center justify-center text-[var(--gold-accent)] shrink-0 shadow-inner">
-                        {initials}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative h-11 w-11 rounded-full bg-gradient-to-br from-[var(--gold-accent)]/15 to-[var(--gold-accent)]/5 border border-[var(--gold-accent)]/35 font-editorial text-sm flex items-center justify-center text-[var(--gold-accent)] shrink-0 overflow-hidden shadow-inner">
+                        {atelier.logoUrl || (atelier.images && atelier.images[0]) ? (
+                          <img
+                            src={atelier.logoUrl || atelier.images?.[0]}
+                            alt={atelier.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{initials}</span>
+                        )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <Link href={`/brand/${atelier.slug}`} className="hover:text-[var(--gold-accent)] transition-colors">
-                          <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-primary)] leading-tight group-hover:text-[var(--gold-accent)] transition-colors">
+                          <h3 className="font-editorial text-lg sm:text-xl font-normal text-[var(--text-primary)] leading-tight group-hover:text-[var(--gold-accent)] transition-colors truncate">
                             {atelier.name}
                           </h3>
                         </Link>
-                        <div className="flex items-center gap-1 text-[11px] font-mono-luxury text-[var(--text-muted)] mt-0.5">
+                        <div className="flex items-center gap-1 text-[11px] font-mono-luxury text-[var(--text-muted)] mt-0.5 truncate">
                           <MapPin className="h-3 w-3 text-[var(--gold-accent)] shrink-0" />
-                          <span>{atelier.location || 'Verified Studio'}</span>
+                          <span className="truncate">{atelier.location || 'Verified Studio'}</span>
                         </div>
                       </div>
                     </div>
 
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-luxury font-bold uppercase bg-[var(--badge-bg)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/20 shrink-0">
-                      {atelier.tag || 'Verified'}
-                    </span>
+                    {atelier.hasPaidPlus ? (
+                      <PlusVerifiedBadge variant="compact" />
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono-luxury uppercase bg-[var(--badge-bg)] text-[var(--text-secondary)] border border-[var(--border-subtle)] shrink-0">
+                        {atelier.tag || 'Verified'}
+                      </span>
+                    )}
                   </div>
 
                   {/* Specialty focus */}

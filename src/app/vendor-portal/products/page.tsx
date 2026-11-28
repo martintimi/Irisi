@@ -59,32 +59,35 @@ export default function VendorProductsCatalogPage() {
         }
       }
 
-      // Fetch products
-      const res = await vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId || 'all')}`);
+      if (!currentVendorId || currentVendorId === 'all' || currentVendorId === 'default') {
+        setProducts([]);
+        return;
+      }
+
+      // Fetch strictly this vendor's products
+      const res = await vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId)}`);
       const data = await res.json();
 
       if (data.success && Array.isArray(data.products)) {
-        // Filter strictly for this vendor's catalog
-        const filtered = currentVendorId && currentVendorId !== 'all'
-          ? data.products.filter((p: any) => {
-              const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
-              const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
-              const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || '').toLowerCase().trim();
-              const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
-              const targetVid = currentVendorId.toLowerCase().trim();
+        const targetVid = currentVendorId.toLowerCase().trim();
+        const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
+        const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || '').toLowerCase().trim();
+        const safeBrandName = bName && bName !== 'my brand' && bName !== 'your brand' && bName.length >= 3 ? bName : '';
 
-              return (
-                pVid === targetVid ||
-                pVid.includes(targetVid) ||
-                targetVid.includes(pVid) ||
-                (vEmail && pVid === vEmail) ||
-                (bName && (pVName.includes(bName) || bName.includes(pVName)))
-              );
-            })
-          : data.products;
+        const filtered = data.products.filter((p: any) => {
+          const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
+          const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
+          if (!pVid && !pVName) return false;
+
+          return (
+            (pVid && pVid === targetVid) ||
+            (vEmail && pVid === vEmail) ||
+            (safeBrandName && pVName === safeBrandName)
+          );
+        });
 
         setProducts(filtered);
-        setVendorCache(currentVendorId || 'default', 'products', filtered);
+        setVendorCache(currentVendorId, 'products', filtered);
       } else if (!cached) {
         setProducts([]);
       }
@@ -317,7 +320,13 @@ export default function VendorProductsCatalogPage() {
                             qty === 0 ? 'bg-rose-500' : qty <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
                           }`}
                         />
-                        <span>{qty === 0 ? 'Sold out' : `${qty} left`}</span>
+                        <span className={qty === 0 ? "text-rose-500" : ""}>
+                          {qty === 0
+                            ? piece.isAutoHiddenSoldOut
+                              ? 'Hidden from Shop · Restock'
+                              : `Sold out · Hides in ${piece.hoursUntilAutoHide || 48}h`
+                            : `${qty} left`}
+                        </span>
                         {isMto && (
                           <>
                             <span>·</span>
@@ -594,7 +603,7 @@ export default function VendorProductsCatalogPage() {
                         isSoldOut ? 'text-rose-400' : isLowStock ? 'text-amber-400' : 'text-emerald-400'
                       }`}>
                         <span className="h-2 w-2 rounded-full bg-current inline-block" />
-                        {isSoldOut ? 'Sold Out (0 Units)' : isLowStock ? `Only ${qty} in Stock` : `${qty} in Stock`}
+                        {isSoldOut ? (piece.isAutoHiddenSoldOut ? 'Hidden from Shop (0 Units) · Restock' : `Sold Out · Hides in ${piece.hoursUntilAutoHide || 48}h`) : isLowStock ? `Only ${qty} in Stock` : `${qty} in Stock`}
                       </span>
                       <span>•</span>
                       <span className="text-[var(--text-primary)] font-bold">

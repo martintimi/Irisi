@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useStore } from '@/lib/store/useStore';
 import {
   Crown, Check, Sparkles, ShieldCheck, Store, Layers,
-  TrendingDown, Loader2, ExternalLink, CheckCircle2
+  TrendingDown, Loader2, ExternalLink, CheckCircle2, Wallet, CreditCard
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getVendorCache, setVendorCache } from '@/lib/cache/vendorPortalCache';
@@ -24,6 +24,8 @@ export default function VendorPlusPage() {
   const cachedPlan = getVendorCache<any>(vendorKey || 'default', 'plus_plan');
   const [loading, setLoading] = useState(() => !cachedPlan);
   const [upgrading, setUpgrading] = useState(false);
+  const [togglingEscrow, setTogglingEscrow] = useState(false);
+  const [deductingFromEscrow, setDeductingFromEscrow] = useState(false);
   const [billing, setBilling] = useState<any>(() => cachedPlan?.billing || null);
   const [vendorPlan, setVendorPlan] = useState<any>(() => cachedPlan?.vendorPlan || null);
   const [statusMsg, setStatusMsg] = useState('');
@@ -40,7 +42,7 @@ export default function VendorPlusPage() {
     }
     try {
       const qs = vendorKey ? `?vendorId=${encodeURIComponent(vendorKey)}` : '';
-      const res = await fetch(`/api/vendor/subscription${qs}`);
+      const res = await fetch(`/api/vendor/subscription${qs}`, { cache: 'no-store' });
       const data = await res.json();
       if (res.ok && data.success) {
         setBilling(data.billing);
@@ -57,7 +59,6 @@ export default function VendorPlusPage() {
 
   useEffect(() => {
     loadPlan();
-    // Preload Paystack Inline script cleanly
     if (typeof window !== 'undefined' && !document.getElementById('paystack-inline-js')) {
       const s = document.createElement('script');
       s.id = 'paystack-inline-js';
@@ -97,34 +98,132 @@ export default function VendorPlusPage() {
     }
   };
 
-  const handleSubscribePlus = () => {
+  const ensurePaystackLoaded = () => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof window !== 'undefined' && (window as any).PaystackPop) {
+        resolve(true);
+        return;
+      }
+      const existing = document.getElementById('paystack-inline-js') as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener('load', () => resolve(Boolean((window as any).PaystackPop)), { once: true });
+        existing.addEventListener('error', () => resolve(false), { once: true });
+        setTimeout(() => resolve(Boolean((window as any).PaystackPop)), 2500);
+        return;
+      }
+      const s = document.createElement('script');
+      s.id = 'paystack-inline-js';
+      s.src = 'https://js.paystack.co/v1/inline.js';
+      s.async = true;
+      s.onload = () => resolve(Boolean((window as any).PaystackPop));
+      s.onerror = () => resolve(false);
+      document.body.appendChild(s);
+    });
+  };
+
+  const handleSubscribePlus = async () => {
     setErrorMsg('');
     setStatusMsg('');
-    const amountNgn = Number(billing?.plusMonthlyPriceNgn || 5000);
-    const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
+    setUpgrading(true);
+    const amountNgn = Math.max(100, Number(billing?.plusMonthlyPriceNgn || 5000));
+    const paystackKey =
+      process.env.NEXT_PUBLIC_PAYSTACK_KEY ||
+      process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ||
+      'pk_test_747039dcebc800028fafa806d62e38f2ed02ab95';
     const ref = `IRISI_PLUS_${Date.now()}`;
 
-    if (typeof window !== 'undefined' && window.PaystackPop && paystackKey) {
-      const handler = window.PaystackPop.setup({
-        key: paystackKey,
-        email: vendorProfile.email || 'vendor@irisimi.ng',
-        amount: Math.round(amountNgn * 100),
-        currency: 'NGN',
-        ref,
-        metadata: {
-          custom_fields: [
-            { display_name: 'Brand', variable_name: 'brand', value: vendorProfile.brandName || 'Vendor' },
-            { display_name: 'Plan', variable_name: 'plan', value: 'IRISI Plus Monthly' },
-          ],
-        },
-        callback: (response: { reference: string }) => {
-          activateWithRef(response.reference);
-        },
-        onClose: () => {},
+    try {
+      const loaded = await ensurePaystackLoaded();
+      if (loaded && typeof window !== 'undefined' && (window as any).PaystackPop && paystackKey) {
+        const handler = (window as any).PaystackPop.setup({
+          key: paystackKey,
+          email: vendorProfile.email || 'vendor@irisimi.ng',
+          amount: Math.round(amountNgn * 100),
+          currency: 'NGN',
+          ref,
+          metadata: {
+            custom_fields: [
+              { display_name: 'Brand', variable_name: 'brand', value: vendorProfile.brandName || 'Vendor' },
+              { display_name: 'Plan', variable_name: 'plan', value: 'IRISI Plus Monthly' },
+            ],
+          },
+          callback: (response: { reference: string }) => {
+            activateWithRef(response.reference || ref);
+          },
+          onClose: () => {
+            setUpgrading(false);
+          },
+        });
+        handler.openIframe();
+      } else {
+        setErrorMsg('Could not open Paystack checkout. Please check your internet connection and try again.');
+        setUpgrading(false);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Could not launch payment window. Please try again.');
+      setUpgrading(false);
+    }
+  };
+
+  // Vendor self-controlled opt-in toggle for Escrow payout deduction
+  const handleToggleEscrowDeduct = async () => {
+    const nextEnabled = !Boolean(vendorPlan?.escrowPlusAutoDeduct);
+    setTogglingEscrow(true);
+    setErrorMsg('');
+    setStatusMsg('');
+    try {
+      const res = await fetch('/api/vendor/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: vendorPlan?.vendorId || vendorProfile.id,
+          email: vendorProfile.email,
+          action: 'toggle_escrow_deduct',
+          enabled: nextEnabled,
+        }),
       });
-      handler.openIframe();
-    } else {
-      setErrorMsg('Paystack checkout is initializing. Please refresh or contact admin support.');
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.error || 'Could not update escrow deduction preference.');
+        return;
+      }
+      setStatusMsg(data.message);
+      await loadPlan();
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Network error updating preference.');
+    } finally {
+      setTogglingEscrow(false);
+    }
+  };
+
+  // Vendor opts in to activate / renew Plus right now using their available Escrow balance
+  const handleActivateFromEscrow = async () => {
+    setDeductingFromEscrow(true);
+    setErrorMsg('');
+    setStatusMsg('');
+    try {
+      const res = await fetch('/api/vendor/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: vendorPlan?.vendorId || vendorProfile.id,
+          email: vendorProfile.email,
+          action: 'activate_plus_from_escrow',
+          durationDays: 30,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.error || 'Could not activate ÌRÍSÍ Plus from Escrow.');
+        return;
+      }
+      setStatusMsg(data.message || 'ÌRÍSÍ Plus activated from your Escrow balance!');
+      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 }, colors: ['#c4972e', '#10b981', '#ffffff'] });
+      await loadPlan();
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Could not complete Escrow activation.');
+    } finally {
+      setDeductingFromEscrow(false);
     }
   };
 
@@ -142,6 +241,11 @@ export default function VendorPlusPage() {
   const plusComm = Number(billing?.plusTierCommissionPercent ?? 5);
   const freeCap = Number(billing?.freeTierProductLimit ?? 12);
   const isPlus = Boolean(vendorPlan?.isPlus);
+  const escrowOptIn = Boolean(vendorPlan?.escrowPlusAutoDeduct);
+  const activeEscrow = Number(vendorPlan?.activeEscrowBalance ?? 0);
+  const pendingDeduction = Number(vendorPlan?.pendingPlusDeductionNgn ?? 0);
+  const availableEscrow = Number(vendorPlan?.availableEscrowForPlus ?? Math.max(0, activeEscrow - pendingDeduction));
+  const canPayFromEscrowNow = availableEscrow >= plusPrice;
 
   return (
     <div className="px-0.5 sm:px-6 md:p-8 max-w-5xl mx-auto space-y-6 sm:space-y-8 pb-8 md:pb-24">
@@ -218,7 +322,7 @@ export default function VendorPlusPage() {
             </div>
             <ul className="space-y-2.5 text-xs text-[var(--text-secondary)] font-light pt-2">
               <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Up to {freeCap} active published products</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Basic shareable storefront link</li>
+              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Basic shareable storefront link (always active)</li>
               <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> 100% Escrow payment protection &amp; SMS alerts</li>
               <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Automated waybills &amp; doorstep/park delivery</li>
               <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> Ready-to-Ship &amp; Made-to-Order fulfillment</li>
@@ -254,43 +358,138 @@ export default function VendorPlusPage() {
             <ul className="space-y-2.5 text-xs text-[var(--text-secondary)] font-light pt-2">
               <li className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-                <span><strong>Lower {plusComm}% commission</strong> (saves {Math.max(0, freeComm - plusComm)}% on every sale — pays for itself!)</span>
+                <span><strong className="font-medium text-[var(--text-primary)]">Lower {plusComm}% commission</strong> (saves {Math.max(0, freeComm - plusComm)}% on every sale)</span>
               </li>
               <li className="flex items-center gap-2">
                 <Store className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-                <span><strong>Clean White-Label Storefront Link</strong> — zero competitor recommendations</span>
+                <span><strong className="font-medium text-[var(--text-primary)]">Clean White-Label Storefront Link</strong> — zero competitor recommendations</span>
               </li>
               <li className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-                <span><strong>Unlimited Product Listings</strong> + Batch Upload &amp; AI Copy Generator</span>
+                <span><strong className="font-medium text-[var(--text-primary)]">Unlimited Product Listings</strong> + Batch Upload &amp; AI Copy Generator</span>
               </li>
               <li className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-                <span><strong>24h Lookbook Stories &amp; Follower Drop Alerts</strong></span>
+                <span><strong className="font-medium text-[var(--text-primary)]">24h Lookbook Stories &amp; Follower Drop Alerts</strong></span>
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[var(--gold-accent)] shrink-0" />
-                <span><strong>Gold Verified Badge</strong>, Priority Discovery &amp; Direct-Sales POS</span>
+                <span><strong className="font-medium text-[var(--text-primary)]">Featured Home Placement</strong>, Gold Badge &amp; Direct-Sales POS</span>
               </li>
             </ul>
           </div>
 
-          <div className="pt-4 border-t border-[var(--border-subtle)] space-y-2">
+          <div className="pt-4 border-t border-[var(--border-subtle)] space-y-3">
+            {errorMsg && (
+              <p className="text-[11px] text-rose-500 text-center px-2">{errorMsg}</p>
+            )}
+
             {freeLaunch ? (
               <div className="w-full py-3 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-center text-xs font-mono-luxury uppercase tracking-wider">
                 Included Free During Launch Period
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleSubscribePlus}
-                disabled={upgrading}
-                className="w-full py-3.5 rounded-full bg-[var(--gold-accent)] text-black text-xs font-mono-luxury uppercase tracking-wider hover:brightness-110 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {upgrading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
-                <span>{isPlus ? `Renew ÌRÍSÍ Plus (+30 Days · ₦${plusPrice.toLocaleString()})` : `Activate ÌRÍSÍ Plus · ₦${plusPrice.toLocaleString()}/mo`}</span>
-              </button>
+              <>
+                {/* Payment Method 1: Pay Now via Paystack */}
+                <button
+                  type="button"
+                  onClick={handleSubscribePlus}
+                  disabled={upgrading || deductingFromEscrow}
+                  className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-wider hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {upgrading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 text-[var(--gold-accent)]" />
+                  )}
+                  <span>
+                    {isPlus
+                      ? `Renew via Paystack · ₦${plusPrice.toLocaleString()}`
+                      : `Pay via Paystack · ₦${plusPrice.toLocaleString()}/mo`}
+                  </span>
+                </button>
+
+                {/* Payment Method 2: Optional Self-Enabled Deduct from Escrow Earnings */}
+                <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <Wallet className="h-4 w-4 text-[var(--gold-accent)] shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-[var(--text-primary)]">
+                          Pay from Escrow Earnings
+                        </div>
+                        <p className="text-[11px] text-[var(--text-muted)] font-light leading-snug mt-0.5">
+                          Optional — enable only if you want to deduct ÌRÍSÍ Plus from your escrow payout instead of paying upfront.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Clean Native Opt-In Toggle Switch */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={escrowOptIn}
+                      disabled={togglingEscrow}
+                      onClick={handleToggleEscrowDeduct}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${
+                        escrowOptIn ? 'bg-[var(--gold-accent)]' : 'bg-[var(--border-subtle)]'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                          escrowOptIn ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {escrowOptIn && (
+                    <div className="pt-2.5 border-t border-[var(--border-subtle)] space-y-2.5 animate-fadeIn">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[var(--text-muted)]">Available Escrow Balance</span>
+                        <span className="font-mono-luxury text-[var(--text-primary)]">
+                          ₦{availableEscrow.toLocaleString()}
+                        </span>
+                      </div>
+
+                      {pendingDeduction > 0 && (
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[var(--text-muted)]">Pending Plus Deduction</span>
+                          <span className="font-mono-luxury text-[var(--gold-accent)]">
+                            -₦{pendingDeduction.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+
+                      {canPayFromEscrowNow ? (
+                        <button
+                          type="button"
+                          onClick={handleActivateFromEscrow}
+                          disabled={deductingFromEscrow || upgrading}
+                          className="w-full h-10 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/50 text-[var(--gold-accent)] text-[11px] font-mono-luxury uppercase tracking-wider hover:bg-[var(--gold-accent)] hover:text-black transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {deductingFromEscrow ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Crown className="h-3.5 w-3.5" />
+                          )}
+                          <span>
+                            {isPlus
+                              ? `Renew +30 Days from Escrow (₦${plusPrice.toLocaleString()})`
+                              : `Activate Now from Escrow (₦${plusPrice.toLocaleString()})`}
+                          </span>
+                        </button>
+                      ) : (
+                        <p className="text-[11px] text-[var(--text-muted)] font-light leading-relaxed">
+                          Enabled ✓ — You need at least <span className="text-[var(--text-primary)]">₦{plusPrice.toLocaleString()}</span> in active Escrow to activate from earnings (currently ₦{availableEscrow.toLocaleString()}). Complete a sale or use Paystack above to unlock immediately.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
+
             {vendorPlan?.plusExpiresAt && !freeLaunch && (
               <p className="text-[10px] font-mono-luxury text-center text-[var(--text-muted)]">
                 Active until {new Date(vendorPlan.plusExpiresAt).toLocaleDateString()}

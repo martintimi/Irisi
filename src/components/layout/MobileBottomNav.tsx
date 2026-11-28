@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { Home, Store, ShoppingBag, Heart, CircleUserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { prefetchStories } from '@/lib/cache/storiesCache';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -14,6 +15,9 @@ export default function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [bagBounce, setBagBounce] = useState(false);
   const [flyingItem, setFlyingItem] = useState<{ name: string; imageUrl?: string } | null>(null);
+
+  // Silently warm 24h brand stories cache in background so /shop displays them instantly
+  useEffect(() => { prefetchStories(false); }, []);
 
   const lastScrollY = useRef(0);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -247,7 +251,7 @@ export default function MobileBottomNav() {
               <span className="text-[10px] tracking-tight leading-none">Wishlist</span>
             </Link>
 
-            {/* 5. Profile / Account */}
+            {/* 5. Profile / Me */}
             <Link
               href={isLoggedIn ? '/profile' : '/auth'}
               className={`flex flex-col items-center justify-center gap-1 py-1 transition-colors ${
@@ -255,14 +259,29 @@ export default function MobileBottomNav() {
                   ? 'text-black dark:text-white font-semibold'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white'
               }`}
-              aria-label={isLoggedIn ? 'Account' : 'Account'}
+              aria-label={isLoggedIn ? 'Me' : 'Account'}
             >
-              <CircleUserRound
-                strokeWidth={isActive('/profile') || isActive('/auth') ? 2 : 1.4}
-                className="h-[21px] w-[21px]"
-              />
+              {isLoggedIn ? (
+                <div className="relative">
+                  <div
+                    className={`h-[21px] w-[21px] rounded-full flex items-center justify-center text-[10px] font-editorial leading-none border transition-all ${
+                      isActive('/profile')
+                        ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white'
+                        : 'bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white border-neutral-300 dark:border-neutral-700'
+                    }`}
+                  >
+                    {(userAuth?.name || userAuth?.email || 'M').trim().charAt(0).toUpperCase()}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-[1.5px] ring-white dark:ring-[#0A0A0C]" />
+                </div>
+              ) : (
+                <CircleUserRound
+                  strokeWidth={isActive('/auth') ? 2 : 1.4}
+                  className="h-[21px] w-[21px]"
+                />
+              )}
               <span className="text-[10px] tracking-tight leading-none">
-                {isLoggedIn ? 'Account' : 'Account'}
+                {isLoggedIn ? 'Me' : 'Account'}
               </span>
             </Link>
 

@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 interface MobileProductDetailViewProps {
@@ -693,26 +694,21 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
                         setIsVideoPlaying(false);
                         setIsVideoBuffering(false);
                       }}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      controlsList="nodownload noplaybackrate noremoteplayback"
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                     />
                   )}
 
-                  {/* Centered Play/Unlock Button Overlay if autoplay paused or blocked by battery-saver mode */}
+                  {/* Silent invisible tap unlock for iOS Low Power Mode (zero play/pause/mute controls like Adidas) */}
                   {!isVideoPlaying && !videoError && (
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
                         playVideo();
                       }}
-                      className="absolute inset-0 flex items-center justify-center bg-black/35 z-10 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-black/85 backdrop-blur-md border border-[var(--gold-accent)]/50 text-white shadow-2xl active:scale-95 transition-all">
-                        <Play className="h-4 w-4 text-[var(--gold-accent)] fill-current animate-pulse" />
-                        <span className="text-xs font-mono-luxury font-bold tracking-wider uppercase text-white">
-                          Tap to Play Video
-                        </span>
-                      </div>
-                    </div>
+                      className="absolute inset-0 z-10"
+                      aria-hidden="true"
+                    />
                   )}
 
                   {/* Loading Spinner if Video is buffering on slow connection */}
@@ -802,12 +798,15 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
               <Store className="h-3.5 w-3.5" />
             </div>
             <div>
-              <span className="font-bold text-xs font-mono-luxury text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors block">
-                {product.vendorName}
-              </span>
-              <span className="text-[9px] text-[var(--gold-accent)] font-mono-luxury uppercase font-bold tracking-wider flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xs font-mono-luxury text-[var(--text-primary)] group-hover:text-[var(--gold-accent)] transition-colors">
+                  {product.vendorName}
+                </span>
+                {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="compact" />}
+              </div>
+              <span className="text-[9px] text-[var(--gold-accent)] font-mono-luxury uppercase tracking-wider flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3" />
-                <span>Verified Atelier Drop</span>
+                <span>{product.vendorHasPaidPlus ? 'ÌRÍSÍ Plus Brand' : 'Verified Brand'}</span>
               </span>
             </div>
           </Link>
@@ -1571,9 +1570,11 @@ export default function MobileProductDetailView({ product, reviewsData }: Mobile
                     playsInline
                     webkit-playsinline="true"
                     x5-playsinline="true"
-                    controls
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nodownload noplaybackrate noremoteplayback"
                     preload="auto"
-                    className="relative w-full h-full object-contain z-10"
+                    className="relative w-full h-full object-contain z-10 pointer-events-none"
                   />
                 </div>
               ) : (

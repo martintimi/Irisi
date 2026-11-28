@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store/useStore';
 import { VendorStory } from '@/types';
 import MobileStoryViewer from './MobileStoryViewer';
+import { getCachedStories, prefetchStories } from '@/lib/cache/storiesCache';
 
 interface StoriesRowProps {
   onOpenQuickBuy?: (product: any) => void;
@@ -18,7 +19,8 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
   const router = useRouter();
   const searchParams = useSearchParams();
   const { followedVendors } = useStore();
-  const [liveStories, setLiveStories] = useState<VendorStory[]>([]);
+  const [liveStories, setLiveStories] = useState<VendorStory[]>(() => getCachedStories() || []);
+  const [hasLoadedStories, setHasLoadedStories] = useState<boolean>(() => getCachedStories() !== null);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
   const [viewedIds, setViewedIds] = useState<Record<string, boolean>>({});
   const autoOpenedParamRef = useRef<string | null>(null);
@@ -48,17 +50,24 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
     });
   }, []);
 
-  // Fetch live active 24h stories persisted in Supabase
+  // Hydrate immediately from SWR cache & revalidate fresh 24h stories silently
   useEffect(() => {
     let active = true;
-    fetch('/api/stories', { headers: { 'Cache-Control': 'no-cache' } })
-      .then((res) => res.json())
-      .then((data) => {
-        if (active && data?.success && Array.isArray(data.stories)) {
-          setLiveStories(data.stories);
+    const cached = getCachedStories();
+    if (cached) {
+      setLiveStories(cached);
+      setHasLoadedStories(true);
+    }
+    prefetchStories(true)
+      .then((stories) => {
+        if (active) {
+          setLiveStories(stories);
+          setHasLoadedStories(true);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (active) setHasLoadedStories(true);
+      });
     return () => {
       active = false;
     };
@@ -179,7 +188,25 @@ export default function MobileStoriesRow({ onOpenQuickBuy, variant = 'mobile' }:
     }
   };
 
-  if (vendorRings.rings.length === 0) return null;
+  // Show sleek quiet-luxury ring shimmer ONLY during the brief cold first fetch so layout never pops/jumps
+  if (vendorRings.rings.length === 0) {
+    if (!hasLoadedStories) {
+      const isDesktopLoading = variant === "desktop";
+      return (
+        <div className={isDesktopLoading ? "select-none pb-6 border-b border-[var(--border-subtle)]" : "select-none pt-1 pb-1"}>
+          <div className={`flex items-center overflow-hidden ${isDesktopLoading ? "gap-5" : "gap-3.5 px-4"}`}>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="flex flex-col items-center gap-1.5 shrink-0 animate-pulse">
+                <div className={`${isDesktopLoading ? "h-[74px] w-[74px]" : "h-[64px] w-[64px]"} rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)]`} />
+                <div className="h-2 w-11 rounded-full bg-[var(--bg-surface)]" />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const isDesktop = variant === 'desktop';
 

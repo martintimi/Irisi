@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, X, Sparkles, Check, Send, Bug, Compass, Layers, ShieldCheck, Truck } from 'lucide-react';
+import { Lightbulb, X, Check, Bug, Compass, Layers, ShieldCheck, Truck, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useBodyScrollLock } from '@/lib/utils/useBodyScrollLock';
 
@@ -16,8 +16,8 @@ const CATEGORIES = [
   { id: 'Feature Idea', label: 'Feature Idea', icon: Lightbulb },
   { id: 'Bug / Glitch', label: 'Bug / Glitch', icon: Bug },
   { id: 'Sizing & Fit', label: 'Sizing & Fit', icon: Layers },
-  { id: 'Checkout & Escrow', label: 'Checkout & Escrow', icon: ShieldCheck },
-  { id: 'Waybill & Delivery', label: 'Waybill & Delivery', icon: Truck },
+  { id: 'Checkout & Escrow', label: 'Escrow & Pay', icon: ShieldCheck },
+  { id: 'Waybill & Delivery', label: 'Delivery', icon: Truck },
   { id: 'Design & UX', label: 'Design & UX', icon: Compass },
 ];
 
@@ -33,18 +33,16 @@ export default function HelpImproveModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  // Complete background scroll lock when help improve modal is active
   useBodyScrollLock(isOpen);
 
-  // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !isSubmitting) onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, isSubmitting, onClose]);
 
   if (!isOpen) return null;
 
@@ -55,14 +53,15 @@ export default function HelpImproveModal({
     setIsSubmitting(true);
 
     try {
-      const diagnostics = includeDiagnostics && typeof window !== 'undefined'
-        ? {
-            userAgent: navigator.userAgent,
-            screenWidth: window.innerWidth,
-            screenHeight: window.innerHeight,
-            url: window.location.pathname,
-          }
-        : null;
+      const diagnostics =
+        includeDiagnostics && typeof window !== 'undefined'
+          ? {
+              userAgent: navigator.userAgent,
+              screenWidth: window.innerWidth,
+              screenHeight: window.innerHeight,
+              url: window.location.pathname,
+            }
+          : null;
 
       await fetch('/api/feedback', {
         method: 'POST',
@@ -80,17 +79,17 @@ export default function HelpImproveModal({
       setIsSubmitted(true);
 
       confetti({
-        particleCount: 75,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#e6c367', '#38bdf8', '#ffffff', '#10b981'],
+        particleCount: 55,
+        spread: 65,
+        origin: { y: 0.65 },
+        colors: ['#e6c367', '#10b981', '#ffffff'],
       });
 
       setTimeout(() => {
         onClose();
         setIsSubmitted(false);
         setMessage('');
-      }, 1800);
+      }, 1700);
     } catch (err) {
       console.error('Help improve submit error:', err);
     } finally {
@@ -99,129 +98,136 @@ export default function HelpImproveModal({
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn overscroll-contain"
-      onClick={onClose}
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn overscroll-contain"
+      onClick={() => !isSubmitting && onClose()}
       onWheel={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
     >
       <div
-        className="w-full max-w-md surface-card border border-[var(--border-subtle)] rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[88dvh] overflow-y-auto overscroll-contain"
+        className="w-full max-w-md bg-[var(--bg-surface)] border-t sm:border border-[var(--border-subtle)] rounded-t-[28px] sm:rounded-[28px] shadow-2xl relative max-h-[90dvh] overflow-y-auto overscroll-contain animate-slideUp"
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={isSubmitting}
-          className="absolute top-5 right-5 p-2 rounded-full surface-card border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        {/* Header */}
-        <div className="text-center space-y-2 pt-2">
-          <div className="h-12 w-12 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/30 text-[var(--gold-accent)] flex items-center justify-center mx-auto shadow-sm">
-            <Lightbulb className="h-6 w-6 text-[var(--gold-accent)]" />
-          </div>
-          <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
-            Help Improve Ìrísí
-          </h3>
-          <p className="text-xs font-mono-luxury text-[var(--text-secondary)] max-w-xs mx-auto">
-            Your ideas and reports directly shape our couture shopping experience.
-          </p>
+        {/* Mobile Native Drag Handle */}
+        <div className="pt-3 pb-1 flex justify-center sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-[var(--border-subtle)]" />
         </div>
 
-        {isSubmitted ? (
-          <div className="py-8 text-center space-y-3 animate-fadeIn">
-            <div className="h-14 w-14 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto">
-              <Check className="h-7 w-7" />
-            </div>
-            <h4 className="font-editorial text-xl font-bold text-[var(--text-primary)]">
-              Proposal Received!
-            </h4>
-            <p className="text-xs font-mono-luxury text-[var(--text-secondary)]">
-              Thank you for contributing to the evolution of Ìrísí Luxury.
-            </p>
+        {/* Minimal Header */}
+        <div className="px-6 pt-4 sm:pt-6 pb-4 border-b border-[var(--border-subtle)] flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-mono-luxury uppercase tracking-[0.18em] text-[var(--gold-accent)] block">
+              Product Feedback
+            </span>
+            <h3 className="font-editorial text-xl font-normal text-[var(--text-primary)] leading-tight mt-0.5">
+              Help Improve ÌRÍSÍ
+            </h3>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5 font-mono-luxury text-xs">
-            {/* Category Selector */}
-            <div className="space-y-2">
-              <label className="text-[10px] text-[var(--text-secondary)] uppercase font-bold block">
-                Category
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
-                  const Icon = cat.icon;
-                  const isSelected = category === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setCategory(cat.id)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)] text-[var(--gold-accent)] shadow-sm'
-                          : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-white'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="text-[11px] font-bold truncate">{cat.label}</span>
-                    </button>
-                  );
-                })}
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="h-8 w-8 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {isSubmitted ? (
+            <div className="py-8 text-center space-y-3 animate-fadeIn">
+              <div className="h-14 w-14 mx-auto rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 flex items-center justify-center">
+                <Check className="h-7 w-7" strokeWidth={1.8} />
               </div>
+              <h4 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
+                Feedback Received
+              </h4>
+              <p className="text-xs text-[var(--text-muted)] font-light max-w-xs mx-auto leading-relaxed">
+                Thank you for helping us refine ÌRÍSÍ. Our product team reviews every note directly.
+              </p>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Topic Pill Grid */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono-luxury uppercase tracking-[0.16em] text-[var(--text-muted)] block px-0.5">
+                  Topic
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORIES.map((cat) => {
+                    const Icon = cat.icon;
+                    const isSelected = category === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setCategory(cat.id)}
+                        className={`h-10 px-3 rounded-2xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-[var(--text-primary)]'
+                            : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--gold-accent)]/50'
+                        }`}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} />
+                        <span className="text-[11.5px] truncate">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-            {/* Message Area */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-[var(--text-secondary)] uppercase font-bold block">
-                Your Feedback or Suggestion
+              {/* Message */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-mono-luxury uppercase tracking-[0.16em] text-[var(--text-muted)] block px-0.5">
+                  Your Note
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  required
+                  rows={4}
+                  placeholder="Share an idea, request a feature, or describe something we can polish..."
+                  className="w-full p-3.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--gold-accent)] resize-none transition-colors"
+                />
+              </div>
+
+              {/* Clean Hairline Diagnostics Switch */}
+              <label className="px-3.5 py-2.5 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-between gap-3 cursor-pointer select-none">
+                <span className="text-[11px] text-[var(--text-secondary)] font-light leading-snug">
+                  Include anonymous device &amp; screen info to help fix issues faster
+                </span>
+                <input
+                  type="checkbox"
+                  checked={includeDiagnostics}
+                  onChange={(e) => setIncludeDiagnostics(e.target.checked)}
+                  className="h-4 w-4 rounded accent-[var(--gold-accent)] shrink-0 cursor-pointer"
+                />
               </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                required
-                rows={4}
-                placeholder="What can we improve, or what new feature would you love to see in Ìrísí?"
-                className="w-full p-3.5 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--gold-accent)] resize-none text-xs"
-              />
-            </div>
 
-            {/* Device Diagnostics Checkbox */}
-            <label className="flex items-center gap-2.5 text-[11px] text-[var(--text-secondary)] cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={includeDiagnostics}
-                onChange={(e) => setIncludeDiagnostics(e.target.checked)}
-                className="rounded border-[var(--border-subtle)] text-[var(--gold-accent)] focus:ring-[var(--gold-accent)]"
-              />
-              <span>Include anonymous browser/screen info to assist our tech team</span>
-            </label>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !message.trim()}
-              className="w-full py-3.5 rounded-xl bg-[var(--gold-accent)] text-black font-bold uppercase tracking-wider hover:brightness-110 active:scale-98 transition-all shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Sparkles className="h-3.5 w-3.5 animate-spin" />
-                  <span>Submitting Feedback...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
+              {/* Submit CTA */}
+              <button
+                type="submit"
+                disabled={isSubmitting || !message.trim()}
+                className="w-full h-12 rounded-full bg-[var(--text-primary)] text-[var(--bg-primary)] text-xs font-mono-luxury uppercase tracking-[0.14em] flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-45"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
                   <span>Send Feedback</span>
-                </>
-              )}
-            </button>
-          </form>
-        )}
+                )}
+              </button>
+            </form>
+          )}
+        </div>
+
+        <div className="h-safe-area-bottom sm:hidden" />
       </div>
     </div>
   );

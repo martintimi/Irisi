@@ -168,7 +168,7 @@ export default function SuperAdminPage() {
 
   // Fetch live platform billing & monetization config from server API
   useEffect(() => {
-    fetch('/api/admin/commission')
+    fetch('/api/admin/commission', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data?.success && data?.config) {
@@ -627,6 +627,46 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleClearVendorEscrowDeduction = async (vendorId: string, vendorName?: string) => {
+    try {
+      setActionLoadingId(`clear-deduct-${vendorId}`);
+      const res = await fetch('/api/vendor/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId,
+          action: 'admin_clear_escrow_deduction',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionSuccessMsg(data.message || `Cleared ÌRÍSÍ Plus escrow deduction for "${vendorName || vendorId}".`);
+        await fetchVendorsList();
+        if (
+          selectedVendorPayoutModal &&
+          (selectedVendorPayoutModal.resolvedVendorId === vendorId || selectedVendorPayoutModal.vendorId === vendorId)
+        ) {
+          setSelectedVendorPayoutModal((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  pendingPlusDeductionNgn: 0,
+                  netPendingEscrow: prev.pendingEscrow,
+                }
+              : prev
+          );
+        }
+        setTimeout(() => setActionSuccessMsg(''), 5000);
+      } else {
+        alert(data.error || 'Could not clear escrow deduction.');
+      }
+    } catch (err) {
+      console.error('Error clearing escrow deduction:', err);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // Helper: Resolve all vendors involved in an order with live contact info (WhatsApp & Email)
   const getOrderVendors = useCallback((ord: any) => {
     const vendorMap = new Map<string, {
@@ -752,9 +792,13 @@ export default function SuperAdminPage() {
     const activeFeePercent = commissionConfig.isEnabled ? Number(commissionConfig.commissionPercent || 0) : 0;
     const map = new Map<string, {
       vendorId: string;
+      resolvedVendorId: string;
       vendorName: string;
       totalSales: number;
       pendingEscrow: number;
+      pendingPlusDeductionNgn: number;
+      escrowPlusAutoDeduct: boolean;
+      netPendingEscrow: number;
       settledPayouts: number;
       ordersCount: number;
       bankName: string;
@@ -795,7 +839,14 @@ export default function SuperAdminPage() {
         const platformFee = Math.round(itemTotal * (activeFeePercent / 100));
         const payoutAmount = itemTotal - platformFee;
 
-        const matchedVendor = vendors.find(v => v.id === vId || (v.name && v.name.toLowerCase() === vName.toLowerCase()));
+        const normStr = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matchedVendor = vendors.find(
+          v =>
+            (v.id && v.id.toLowerCase() === vId) ||
+            (v.name && v.name.toLowerCase() === vName.toLowerCase()) ||
+            (v.id && normStr(v.id) === normStr(vId)) ||
+            (v.name && normStr(v.name) === normStr(vName))
+        );
 
         const itemRecord = {
           orderId: ord.id,
@@ -815,11 +866,17 @@ export default function SuperAdminPage() {
         };
 
         if (!map.has(vId)) {
+          const pendingDeduction = Math.max(0, Number(matchedVendor?.pendingPlusDeductionNgn || 0));
+          const initialPending = isDelivered ? 0 : payoutAmount;
           map.set(vId, {
             vendorId: vId,
+            resolvedVendorId: matchedVendor?.id || vId,
             vendorName: vName,
             totalSales: itemTotal,
-            pendingEscrow: isDelivered ? 0 : payoutAmount,
+            pendingEscrow: initialPending,
+            pendingPlusDeductionNgn: pendingDeduction,
+            escrowPlusAutoDeduct: Boolean(matchedVendor?.escrowPlusAutoDeduct),
+            netPendingEscrow: Math.max(0, initialPending - pendingDeduction),
             settledPayouts: isDelivered ? payoutAmount : 0,
             ordersCount: 1,
             bankName: matchedVendor?.bankName || 'Verified Bank',
@@ -835,6 +892,7 @@ export default function SuperAdminPage() {
           } else {
             rec.pendingEscrow += payoutAmount;
           }
+          rec.netPendingEscrow = Math.max(0, rec.pendingEscrow - rec.pendingPlusDeductionNgn);
           rec.ordersCount += 1;
           rec.itemsSold.push(itemRecord);
         }
@@ -3357,18 +3415,62 @@ export default function SuperAdminPage() {
 
                   <button
                     type="button"
-                    onClick={() => {
+                    disabled={isSavingCommission}
+                    onClick={async () => {
                       const next = !freeLaunchModeInput;
                       setFreeLaunchModeInput(next);
                       setCommissionEnabledInput(!next);
+                      try {
+                        setIsSavingCommission(true);
+                        const res = await fetch('/api/admin/commission', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            freeLaunchMode: next,
+                            isEnabled: !next,
+                            freeTierCommissionPercent: Number(commissionInput || 0),
+                            plusTierCommissionPercent: Number(plusCommissionInput || 0),
+                            plusMonthlyPriceNgn: Number(plusPriceInput || 0),
+                            freeTierProductLimit: Number(freeProductLimitInput || 12),
+                            requirePlusForStorefront: requirePlusStorefrontInput,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.success && data.config) {
+                          const cfg = data.config;
+                          setCommissionConfig({
+                            commissionPercent: Number(cfg.commissionPercent || 0),
+                            isEnabled: Boolean(cfg.isEnabled),
+                            freeLaunchMode: Boolean(cfg.freeLaunchMode),
+                            freeTierCommissionPercent: Number(cfg.freeTierCommissionPercent ?? 8),
+                            plusTierCommissionPercent: Number(cfg.plusTierCommissionPercent ?? 5),
+                            plusMonthlyPriceNgn: Number(cfg.plusMonthlyPriceNgn ?? 5000),
+                            freeTierProductLimit: Number(cfg.freeTierProductLimit ?? 12),
+                            requirePlusForStorefront: Boolean(cfg.requirePlusForStorefront),
+                          });
+                          setActionSuccessMsg(data.message || (next ? 'Free Launch Trial turned ON globally.' : 'Free Launch Trial turned OFF — Billing is now LIVE!'));
+                          setTimeout(() => setActionSuccessMsg(''), 4500);
+                        } else {
+                          setFreeLaunchModeInput(!next);
+                          setCommissionEnabledInput(next);
+                          alert(data?.error || 'Could not update Free Launch Trial switch. Please try again.');
+                        }
+                      } catch (err) {
+                        setFreeLaunchModeInput(!next);
+                        setCommissionEnabledInput(next);
+                        alert('Network error saving Free Launch Trial setting.');
+                      } finally {
+                        setIsSavingCommission(false);
+                      }
                     }}
-                    className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider border transition-all cursor-pointer shrink-0 ${
+                    className={`px-4 py-2 rounded-full text-xs font-mono-luxury uppercase tracking-wider border transition-all cursor-pointer shrink-0 disabled:opacity-60 inline-flex items-center gap-2 ${
                       freeLaunchModeInput
                         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
                         : 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40'
                     }`}
                   >
-                    {freeLaunchModeInput ? 'Free Launch Trial: ON (0%)' : 'Free Launch Trial: OFF (Billing Active)'}
+                    {isSavingCommission && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{freeLaunchModeInput ? 'Free Launch Trial: ON (0%)' : 'Free Launch Trial: OFF (Billing Active)'}</span>
                   </button>
                 </div>
 
@@ -3433,17 +3535,12 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--border-subtle)]">
-                  <label className="flex items-center gap-2 text-xs font-mono-luxury text-[var(--text-secondary)] cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={requirePlusStorefrontInput}
-                      onChange={(e) => setRequirePlusStorefrontInput(e.target.checked)}
-                      className="h-4 w-4 rounded accent-[var(--gold-accent)] cursor-pointer"
-                    />
+                  <div className="flex items-center gap-2 text-xs font-mono-luxury text-emerald-600 dark:text-emerald-400">
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
                     <span>
-                      Lock Unpaid Storefront Links After Free Trial (Keep UNCHECKED for Option B: Free keeps basic storefront; Check for Option A: hard paywall)
+                      Option B Active: Free brands always keep their basic storefront link open (never paused); ÌRÍSÍ Plus upgrades to a clean white-label storefront.
                     </span>
-                  </label>
+                  </div>
 
                   <button
                     type="button"
@@ -3479,6 +3576,8 @@ export default function SuperAdminPage() {
                           confetti({ particleCount: 35, spread: 60, origin: { y: 0.7 } });
                           setActionSuccessMsg(data.message || 'Platform billing settings updated!');
                           setTimeout(() => setActionSuccessMsg(''), 4500);
+                        } else {
+                          alert(data?.error || 'Failed to save billing rules. Please try again.');
                         }
                       } catch (err) {
                         console.error('Failed to update billing settings:', err);
@@ -3589,13 +3688,21 @@ export default function SuperAdminPage() {
                             </td>
                             <td className="py-3 text-[var(--text-primary)] font-bold">₦{v.totalSales.toLocaleString()}</td>
                             <td className="py-3 font-bold">
-                              {v.pendingEscrow > 0 ? (
-                                <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[11px]">
-                                  ₦{v.pendingEscrow.toLocaleString()}
-                                </span>
-                              ) : (
-                                <span className="text-[var(--text-muted)]">₦0</span>
-                              )}
+                              <div className="space-y-1">
+                                {v.pendingEscrow > 0 ? (
+                                  <span className="inline-block px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[11px]">
+                                    ₦{v.pendingEscrow.toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)]">₦0</span>
+                                )}
+                                {v.pendingPlusDeductionNgn > 0 && (
+                                  <div className="text-[10px] font-normal text-[var(--gold-accent)] space-y-0.5">
+                                    <div>Plus Deduction: -₦{v.pendingPlusDeductionNgn.toLocaleString()}</div>
+                                    <div className="text-[var(--text-secondary)]">Net Payout: ₦{v.netPendingEscrow.toLocaleString()}</div>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3 font-bold">
                               {v.settledPayouts > 0 ? (
@@ -3611,15 +3718,30 @@ export default function SuperAdminPage() {
                               <span className="text-[10px] text-[var(--text-muted)]">{v.accountName}</span>
                             </td>
                             <td className="py-3 text-right">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedVendorPayoutModal(v);
-                                }}
-                                className="px-3 py-1 rounded-full surface-card border border-[var(--border-subtle)] text-[10px] font-mono-luxury uppercase font-bold hover:border-[var(--gold-accent)] text-[var(--gold-accent)] transition-all cursor-pointer"
-                              >
-                                View Payouts
-                              </button>
+                              <div className="inline-flex items-center gap-1.5 justify-end">
+                                {v.pendingPlusDeductionNgn > 0 && (
+                                  <button
+                                    type="button"
+                                    disabled={actionLoadingId === `clear-deduct-${v.resolvedVendorId}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleClearVendorEscrowDeduction(v.resolvedVendorId, v.vendorName);
+                                    }}
+                                    className="px-2.5 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/50 text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] hover:bg-[var(--gold-accent)] hover:text-black transition-all cursor-pointer disabled:opacity-50"
+                                  >
+                                    {actionLoadingId === `clear-deduct-${v.resolvedVendorId}` ? 'Clearing...' : 'Mark Deducted'}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedVendorPayoutModal(v);
+                                  }}
+                                  className="px-3 py-1 rounded-full surface-card border border-[var(--border-subtle)] text-[10px] font-mono-luxury uppercase font-bold hover:border-[var(--gold-accent)] text-[var(--gold-accent)] transition-all cursor-pointer"
+                                >
+                                  View Payouts
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -4684,6 +4806,36 @@ export default function SuperAdminPage() {
                 <span className="text-[10px] font-mono-luxury text-zinc-400 block">Funds released to bank</span>
               </div>
             </div>
+
+            {/* Optional Vendor Opt-In ÌRÍSÍ Plus Escrow Deduction Banner */}
+            {Number(selectedVendorPayoutModal.pendingPlusDeductionNgn || 0) > 0 && (
+              <div className="p-4 rounded-2xl bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5 text-xs">
+                  <div className="font-mono-luxury uppercase text-[10px] text-[var(--gold-accent)] tracking-wider">
+                    ÌRÍSÍ Plus Escrow Deduction (Vendor Opt-In)
+                  </div>
+                  <div className="text-[var(--text-primary)]">
+                    Deduct <strong>-₦{Number(selectedVendorPayoutModal.pendingPlusDeductionNgn).toLocaleString()}</strong> from payout · Net Pending Transfer:{' '}
+                    <strong>₦{Number(selectedVendorPayoutModal.netPendingEscrow ?? Math.max(0, Number(selectedVendorPayoutModal.pendingEscrow || 0) - Number(selectedVendorPayoutModal.pendingPlusDeductionNgn || 0))).toLocaleString()}</strong>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={actionLoadingId === `clear-deduct-${selectedVendorPayoutModal.resolvedVendorId || selectedVendorPayoutModal.vendorId}`}
+                  onClick={() =>
+                    handleClearVendorEscrowDeduction(
+                      selectedVendorPayoutModal.resolvedVendorId || selectedVendorPayoutModal.vendorId,
+                      selectedVendorPayoutModal.vendorName
+                    )
+                  }
+                  className="px-4 py-2 rounded-full bg-[var(--gold-accent)] text-black text-[11px] font-mono-luxury uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer shrink-0 disabled:opacity-50"
+                >
+                  {actionLoadingId === `clear-deduct-${selectedVendorPayoutModal.resolvedVendorId || selectedVendorPayoutModal.vendorId}`
+                    ? 'Clearing...'
+                    : 'Mark Deducted'}
+                </button>
+              </div>
+            )}
 
             {/* Nigerian Settlement Bank Account Card */}
             <div className="p-4 rounded-2xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] space-y-2">

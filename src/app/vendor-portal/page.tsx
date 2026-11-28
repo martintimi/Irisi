@@ -46,6 +46,14 @@ export default function VendorOverviewPage() {
   } | null>(() => initCache?.profileStatus || null);
 
   const [showFirstTimeModal, setShowFirstTimeModal] = useState(false);
+  const [planInfo, setPlanInfo] = useState<{
+    freeLaunchMode: boolean;
+    isPlus: boolean;
+    effectiveCommissionPercent: number;
+    publishedProductCount: number;
+    productLimit: number | null;
+    plusMonthlyPriceNgn: number;
+  } | null>(null);
 
   const loadVendorData = useCallback(async () => {
     const activeVid = getActiveVendorId();
@@ -117,32 +125,37 @@ export default function VendorOverviewPage() {
         }
       }
 
-      // 2. Fetch products and reviews using resolved vendor ID
+      if (!currentVendorId || currentVendorId === 'all' || currentVendorId === 'default') {
+        setDbProducts([]);
+        setOrders([]);
+        return;
+      }
+
+      // 2. Fetch products and reviews using strictly verified vendor ID (never 'all')
       const [resProd, resReviews] = await Promise.all([
-        vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId || 'all')}`),
-        fetch(`/api/reviews?vendorId=${encodeURIComponent(currentVendorId || 'all')}`, { headers: { 'Cache-Control': 'no-cache' } })
+        vendorFetch(`/api/products?vendorId=${encodeURIComponent(currentVendorId)}`),
+        fetch(`/api/reviews?vendorId=${encodeURIComponent(currentVendorId)}`, { headers: { 'Cache-Control': 'no-cache' } })
       ]);
 
       // Process products
       const prodData = await resProd.json();
       if (prodData.success && Array.isArray(prodData.products)) {
-        const strictlyMyProducts = currentVendorId && currentVendorId !== 'all'
-          ? prodData.products.filter((p: any) => {
-              const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
-              const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
-              const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || currentBrandName || '').toLowerCase().trim();
-              const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
-              const targetVid = currentVendorId.toLowerCase().trim();
+        const targetVid = currentVendorId.toLowerCase().trim();
+        const vEmail = (profVendor?.email || vendorProfile.email || '').toLowerCase().trim();
+        const bName = (profVendor?.brand_name || profVendor?.brandName || vendorProfile.brandName || currentBrandName || '').toLowerCase().trim();
+        const safeBrandName = bName && bName !== 'my brand' && bName !== 'your brand' && bName.length >= 3 ? bName : '';
 
-              return (
-                pVid === targetVid ||
-                pVid.includes(targetVid) ||
-                targetVid.includes(pVid) ||
-                (vEmail && pVid === vEmail) ||
-                (bName && (pVName.includes(bName) || bName.includes(pVName)))
-              );
-            })
-          : prodData.products;
+        const strictlyMyProducts = prodData.products.filter((p: any) => {
+          const pVid = (p.vendorId || p.vendor_id || '').toLowerCase().trim();
+          const pVName = (p.vendorName || p.vendor_name || '').toLowerCase().trim();
+          if (!pVid && !pVName) return false;
+
+          return (
+            (pVid && pVid === targetVid) ||
+            (vEmail && pVid === vEmail) ||
+            (safeBrandName && pVName === safeBrandName)
+          );
+        });
 
         setDbProducts(strictlyMyProducts);
       } else {
@@ -201,6 +214,30 @@ export default function VendorOverviewPage() {
   useEffect(() => {
     loadVendorData();
   }, [loadVendorData]);
+
+  // Fetch fresh live plan status (Free Launch Trial vs Free Plan vs ÌRÍSÍ Plus) with no-store
+  useEffect(() => {
+    let active = true;
+    const vKey = vendorProfile.id || getActiveVendorId() || vendorProfile.email || "";
+    const qs = vKey ? `?vendorId=${encodeURIComponent(vKey)}` : "";
+    fetch(`/api/vendor/subscription${qs}`, { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active || !data?.success || !data?.billing) return;
+        const b = data.billing;
+        const vp = data.vendorPlan;
+        setPlanInfo({
+          freeLaunchMode: Boolean(b.freeLaunchMode),
+          isPlus: Boolean(vp?.isPlus),
+          effectiveCommissionPercent: Number(vp?.effectiveCommissionPercent ?? (b.freeLaunchMode ? 0 : b.freeTierCommissionPercent ?? 8)),
+          publishedProductCount: Number(vp?.publishedProductCount ?? 0),
+          productLimit: vp?.productLimit ?? (b.freeLaunchMode ? null : Number(b.freeTierProductLimit ?? 12)),
+          plusMonthlyPriceNgn: Number(b.plusMonthlyPriceNgn ?? 5000),
+        });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [vendorProfile.id, vendorProfile.email]);
 
   const isVerified = profileStatus?.isVerified || profileStatus?.approvalStatus === 'approved';
   const isRejected = profileStatus?.approvalStatus === 'rejected';
@@ -271,6 +308,7 @@ export default function VendorOverviewPage() {
           activeEscrowBalance={totalEscrowLocked}
           settledPayouts={totalSettled}
           recentOrders={orders}
+          planInfo={planInfo}
           onEditProduct={(piece) => {
             setSelectedProductForEdit(piece);
             setIsEditModalOpen(true);
@@ -280,6 +318,59 @@ export default function VendorOverviewPage() {
 
       {/* 2. DESKTOP LUXURY VENDOR OVERVIEW */}
       <div className="hidden md:block space-y-6 sm:space-y-8 animate-fadeIn max-w-7xl pb-16">
+        {planInfo && (
+          <div
+            className={`px-5 py-3.5 rounded-2xl border flex items-center justify-between gap-4 ${
+              planInfo.freeLaunchMode
+                ? 'bg-emerald-500/[0.07] border-emerald-500/25'
+                : planInfo.isPlus
+                ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/30'
+                : 'bg-[var(--bg-surface)] border-amber-500/35'
+            }`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  planInfo.freeLaunchMode
+                    ? 'bg-emerald-500/15 text-emerald-500'
+                    : planInfo.isPlus
+                    ? 'bg-[var(--gold-accent)]/20 text-[var(--gold-accent)]'
+                    : 'bg-amber-500/15 text-amber-500'
+                }`}
+              >
+                {planInfo.freeLaunchMode ? <Sparkles className="h-4 w-4" /> : <Crown className="h-4 w-4" />}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-[var(--text-primary)]">
+                  {planInfo.freeLaunchMode
+                    ? 'Free Launch Trial Is Active — 0% Sales Commission & Full Plus Features Unlocked'
+                    : planInfo.isPlus
+                    ? `ÌRÍSÍ Plus Active — Lower ${planInfo.effectiveCommissionPercent}% Commission & Unlimited Listings`
+                    : `You are on the Free Plan (${planInfo.effectiveCommissionPercent}% commission · ${planInfo.publishedProductCount}/${planInfo.productLimit ?? 10} active listings)`}
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] font-light">
+                  {planInfo.freeLaunchMode
+                    ? 'Enjoy unlimited drops, 24h Lookbook Stories, and clean storefront links completely free during launch.'
+                    : planInfo.isPlus
+                    ? 'Your brand is prioritized on the Home page Featured Brands showcase with full 24h Lookbook Stories.'
+                    : `Upgrade to ÌRÍSÍ Plus (₦${planInfo.plusMonthlyPriceNgn.toLocaleString()}/mo) for lower fees, unlimited products, Stories & Featured Home placement.`}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/vendor-portal/plus"
+              className={`px-4 py-2 rounded-full text-[11px] font-mono-luxury uppercase tracking-wider shrink-0 transition-opacity hover:opacity-90 ${
+                planInfo.freeLaunchMode
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                  : planInfo.isPlus
+                  ? 'bg-[var(--gold-accent)]/20 text-[var(--gold-accent)]'
+                  : 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
+              }`}
+            >
+              {planInfo.freeLaunchMode ? "View Plan" : planInfo.isPlus ? "Manage Plus" : "Upgrade to Plus"}
+            </Link>
+          </div>
+        )}
       
         {/* ======================================================== */}
         {/* STATUS NOTIFICATION BANNER */}

@@ -5,13 +5,14 @@ import Image from 'next/image';
 import {
   X, Save, Trash2, Plus, Minus, AlertTriangle, CheckCircle2,
   Package, ShoppingBag, Layers, Loader2, Sparkles, ExternalLink, RefreshCw,
-  UploadCloud, Camera, Star, Check, Palette
+  UploadCloud, Camera, Star, Check, Palette, Video, Clock, Tag, Wand2, Eye, EyeOff, MapPin
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useStore } from '@/lib/store/useStore';
 import { isBoutiqueVendor } from '@/types';
 import { parseAndNormalizeColors, STANDARD_FASHION_COLORS, resolveColorNameToHex } from '@/lib/utils/colorUtils';
 import { detectGarmentColor, FASHION_COLOR_PALETTE } from '@/lib/utils/colorDetector';
+import { trimVideoInBrowser } from '@/lib/utils/clientVideoTrimmer';
 
 export const APPAREL_CATEGORIES = [
   { id: 'hoodies', label: 'Hoodies & Sweatshirts' },
@@ -265,6 +266,22 @@ export default function EditProductModal({
   const [newSizeInput, setNewSizeInput] = useState('');
   const [newSizeStock, setNewSizeStock] = useState('10');
 
+  // Full Create-Parity Fields (Video, Fulfillment, Lead Time, Tags, Dispatch Hub, Visibility, AI Writer)
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [isTrimmingVideo, setIsTrimmingVideo] = useState(false);
+  const [trimProgress, setTrimProgress] = useState(0);
+  const [pendingTrimFile, setPendingTrimFile] = useState<File | null>(null);
+  const [videoError, setVideoError] = useState('');
+  const [fulfillmentType, setFulfillmentType] = useState<'ready_to_ship' | 'made_to_order'>('ready_to_ship');
+  const [productionLeadTime, setProductionLeadTime] = useState('5-7 business days');
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [shipsFrom, setShipsFrom] = useState('');
+  const [isPublished, setIsPublished] = useState(true);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiToast, setAiToast] = useState('');
+
   // Complete background scroll lock on both body and html
   useEffect(() => {
     if (!isOpen) return;
@@ -307,6 +324,27 @@ export default function EditProductModal({
     setCategory(normalizeCategorySlug(product.category, product.subcategory || product.subCategory));
     setGenderTarget(product.genderTarget || product.gender_target || 'unisex');
     setDescription(product.description || '');
+    setVideoUrl(product.videoUrl || product.video_url || '');
+    setVideoError('');
+    setPendingTrimFile(null);
+    setFulfillmentType(product.fulfillmentType === 'made_to_order' ? 'made_to_order' : 'ready_to_ship');
+    setProductionLeadTime(product.productionLeadTime || '5-7 business days');
+    setTags(
+      Array.isArray(product.tags)
+        ? product.tags.filter(
+            (t: any) =>
+              typeof t === 'string' &&
+              !t.startsWith('video:') &&
+              !t.startsWith('img:') &&
+              !t.startsWith('color_img:') &&
+              !t.startsWith('subcat:') &&
+              !t.startsWith('ships_from:') &&
+              !t.startsWith('__')
+          )
+        : []
+    );
+    setShipsFrom(product.shipsFrom || product.ships_from || '');
+    setIsPublished(product.is_published !== false);
 
     setUploadedImages(initializeImageItems(product));
 
@@ -332,6 +370,25 @@ export default function EditProductModal({
         setCategory(normalizeCategorySlug(p.category, p.subcategory || p.subCategory));
         setGenderTarget(p.genderTarget || p.gender_target || 'unisex');
         setDescription(p.description || '');
+        setVideoUrl(p.videoUrl || p.video_url || '');
+        setFulfillmentType(p.fulfillmentType === 'made_to_order' ? 'made_to_order' : 'ready_to_ship');
+        setProductionLeadTime(p.productionLeadTime || '5-7 business days');
+        setTags(
+          Array.isArray(p.tags)
+            ? p.tags.filter(
+                (t: any) =>
+                  typeof t === 'string' &&
+                  !t.startsWith('video:') &&
+                  !t.startsWith('img:') &&
+                  !t.startsWith('color_img:') &&
+                  !t.startsWith('subcat:') &&
+                  !t.startsWith('ships_from:') &&
+                  !t.startsWith('__')
+              )
+            : []
+        );
+        setShipsFrom(p.shipsFrom || p.ships_from || '');
+        setIsPublished(p.is_published !== false);
 
         setUploadedImages(initializeImageItems(p));
 
@@ -707,6 +764,150 @@ try {
     setShowCustomColor(false);
   };
 
+  // Video Upload & Auto-Trim (Matches Create Product Flow)
+  const processAndUploadVideo = async (fileToUpload: File, fallbackTrim = false) => {
+    setIsVideoUploading(true);
+    setVideoError('');
+    setPendingTrimFile(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', fileToUpload);
+      if (fallbackTrim) {
+        formData.append('trim', 'true');
+      }
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setVideoUrl(data.url);
+        setSuccessMessage('Product showcase video uploaded! Click "Save Changes" to publish.');
+      } else {
+        throw new Error(data.error || 'Video upload failed.');
+      }
+    } catch (err: any) {
+      setVideoError(err?.message || 'Failed to upload video. Please try again.');
+    } finally {
+      setIsVideoUploading(false);
+    }
+  };
+
+  const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoError('');
+    setPendingTrimFile(null);
+
+    if (file.size > 40 * 1024 * 1024) {
+      setVideoError('Video must be under 40MB. Please upload a clip up to 10 seconds.');
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    const tempUrl = URL.createObjectURL(file);
+    const videoEl = document.createElement('video');
+    videoEl.preload = 'metadata';
+    videoEl.src = tempUrl;
+
+    videoEl.onloadedmetadata = async () => {
+      URL.revokeObjectURL(tempUrl);
+      const roundedDur = Math.round(videoEl.duration);
+      if (videoEl.duration > 10.5) {
+        setPendingTrimFile(file);
+        setVideoError(`Video is ${roundedDur}s long (recommended length is up to 10s). Tap Auto-Trim to shorten it automatically.`);
+        return;
+      }
+      await processAndUploadVideo(file);
+    };
+    videoEl.onerror = async () => {
+      URL.revokeObjectURL(tempUrl);
+      await processAndUploadVideo(file);
+    };
+    if (e.target) e.target.value = '';
+  };
+
+  const handleAutoTrimVideo = async () => {
+    if (!pendingTrimFile) return;
+    const fileToTrim = pendingTrimFile;
+    setIsTrimmingVideo(true);
+    setTrimProgress(0);
+    setVideoError('');
+    setPendingTrimFile(null);
+    try {
+      const trimmed = await trimVideoInBrowser(fileToTrim, {
+        targetSeconds: 10,
+        onProgress: (p) => setTrimProgress(p),
+      });
+      await processAndUploadVideo(trimmed);
+    } catch {
+      await processAndUploadVideo(fileToTrim, true);
+    } finally {
+      setIsTrimmingVideo(false);
+      setTrimProgress(0);
+    }
+  };
+
+  const handleGenerateAiDescription = async () => {
+    if (!name.trim()) {
+      setAiToast('Enter a piece title first to generate copy with AI.');
+      setTimeout(() => setAiToast(''), 3000);
+      return;
+    }
+    setIsGeneratingAi(true);
+    try {
+      const res = await fetch('/api/ai/generate-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: name.trim(),
+          category,
+          genderTarget,
+          vendorType: vendorProfile.vendorType,
+          brandName: vendorProfile.brandName,
+          imageUrl: uploadedImages[0]?.url || null,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.description) setDescription(data.description);
+        if (Array.isArray(data.tags)) {
+          setTags((prev) => Array.from(new Set([...prev, ...data.tags])));
+        }
+        setAiToast('AI refreshed your product description and tags!');
+        setTimeout(() => setAiToast(''), 3500);
+      }
+    } catch {
+      setAiToast('AI generation timed out. Please try again.');
+      setTimeout(() => setAiToast(''), 3000);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
+  const handleAddTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const clean = tagInput.trim().replace(/^#/, '');
+      if (clean && !tags.some((t) => t.toLowerCase() === clean.toLowerCase())) {
+        setTags((prev) => [...prev, clean]);
+      }
+      setTagInput('');
+    }
+  };
+
+  const handleAddTagClick = () => {
+    const clean = tagInput.trim().replace(/^#/, '');
+    if (clean && !tags.some((t) => t.toLowerCase() === clean.toLowerCase())) {
+      setTags((prev) => [...prev, clean]);
+    }
+    setTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags((prev) => prev.filter((t) => t !== tagToRemove));
+  };
+
   // Submit edits
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -724,6 +925,7 @@ try {
       }));
 
       const generalDept = getDepartmentForSlug(category);
+      const safeVideo = videoUrl && !videoUrl.startsWith('data:') ? videoUrl.trim() : '';
       const payload: any = {
         name: name.trim(),
         price: Number(price) || 0,
@@ -734,6 +936,12 @@ try {
         description: description.trim(),
         images: cleanImgPayload,
         imageUrl: cleanImgPayload[0]?.url || undefined,
+        videoUrl: safeVideo,
+        fulfillmentType,
+        productionLeadTime: fulfillmentType === 'made_to_order' ? productionLeadTime : '1-2 business days',
+        tags,
+        shipsFrom: shipsFrom || undefined,
+        is_published: isPublished,
         colors: selectedColors,
       };
 
@@ -780,6 +988,12 @@ try {
           description: payload.description,
           images: cleanImgPayload.map(i => i.url),
           imageUrl: cleanImgPayload[0]?.url || product.imageUrl,
+          videoUrl: safeVideo || undefined,
+          fulfillmentType: payload.fulfillmentType,
+          productionLeadTime: payload.productionLeadTime,
+          tags: payload.tags,
+          shipsFrom: payload.shipsFrom,
+          is_published: payload.is_published,
           colors: selectedColors,
           stockQuantity: computedTotalStock,
           stock_quantity: computedTotalStock,
@@ -1146,6 +1360,154 @@ try {
                     </p>
                   </div>
 
+                  {/* Product Video Showcase Manager (Full Parity with Create Product) */}
+                  <div className="sm:col-span-2 space-y-3 p-4 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-[11px] font-mono-luxury uppercase text-[var(--gold-accent)] font-bold tracking-wider flex items-center gap-1.5">
+                        <Video className="h-3.5 w-3.5" />
+                        <span>Product Motion Video (Optional · Up to 10s)</span>
+                      </label>
+                      {videoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVideoUrl('');
+                            setVideoError('');
+                            setPendingTrimFile(null);
+                          }}
+                          className="text-[10px] text-rose-400 hover:text-rose-300 font-mono-luxury uppercase flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Remove Video</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {videoError && (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] space-y-2">
+                        <p>{videoError}</p>
+                        {pendingTrimFile && (
+                          <button
+                            type="button"
+                            onClick={handleAutoTrimVideo}
+                            disabled={isTrimmingVideo || isVideoUploading}
+                            className="px-3 py-1.5 rounded-full bg-[var(--gold-accent)] text-black text-[10px] font-mono-luxury uppercase font-bold cursor-pointer disabled:opacity-50"
+                          >
+                            {isTrimmingVideo ? `Auto-Trimming (${trimProgress}%)...` : 'Auto-Trim to 10s & Upload'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {videoUrl ? (
+                      <div className="flex flex-col sm:flex-row items-center gap-3.5">
+                        <div className="relative w-full sm:w-32 aspect-[3/4] rounded-xl overflow-hidden bg-black border border-[var(--border-subtle)] shrink-0">
+                          <video
+                            src={videoUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            controls={false}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-2 text-[11px] text-[var(--text-secondary)]">
+                          <p className="text-[var(--text-primary)] font-medium">
+                            Silent motion clip active
+                          </p>
+                          <p className="font-light leading-relaxed">
+                            Loops silently on the product page and home lookbook — zero controls or distractions.
+                          </p>
+                          <label className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase text-[var(--text-primary)] cursor-pointer">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              disabled={isVideoUploading || isTrimmingVideo}
+                              onChange={handleVideoChange}
+                              className="hidden"
+                            />
+                            {isVideoUploading || isTrimmingVideo ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--gold-accent)]" />
+                                <span>{isTrimmingVideo ? `Trimming ${trimProgress}%...` : 'Uploading...'}</span>
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                                <span>Replace Video</span>
+                              </>
+                            )}
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label
+                        className={`w-full py-5 px-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-center gap-1.5 transition-all cursor-pointer ${
+                          isVideoUploading || isTrimmingVideo
+                            ? 'border-[var(--gold-accent)] bg-[var(--gold-accent)]/5 cursor-wait'
+                            : 'border-[var(--border-subtle)] hover:border-[var(--gold-accent)] bg-[var(--bg-primary)]'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          accept="video/*"
+                          disabled={isVideoUploading || isTrimmingVideo}
+                          onChange={handleVideoChange}
+                          className="hidden"
+                        />
+                        {isVideoUploading || isTrimmingVideo ? (
+                          <>
+                            <Loader2 className="h-5 w-5 animate-spin text-[var(--gold-accent)]" />
+                            <span className="text-[11px] text-[var(--gold-accent)]">
+                              {isTrimmingVideo ? `Auto-trimming clip (${trimProgress}%)...` : 'Uploading motion video...'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Video className="h-5 w-5 text-[var(--gold-accent)]" />
+                            <span className="text-xs text-[var(--text-primary)] font-medium">
+                              Add a 3–10s Runway / Try-On Video
+                            </span>
+                            <span className="text-[10px] text-[var(--text-muted)] font-light">
+                              MP4 or MOV up to 40MB · Plays silently on loop like luxury editorials
+                            </span>
+                          </>
+                        )}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Gender / Department Target Selector */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-[10px] uppercase text-[var(--text-secondary)] font-bold block">
+                      Gender / Department Target
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'male', label: 'Men' },
+                        { id: 'female', label: 'Women' },
+                        { id: 'unisex', label: 'Unisex' },
+                      ].map((g) => {
+                        const active = (genderTarget || 'unisex').toLowerCase() === g.id;
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => setGenderTarget(g.id)}
+                            className={`h-10 rounded-xl border text-xs font-mono-luxury uppercase tracking-wider transition-all cursor-pointer ${
+                              active
+                                ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-[var(--text-primary)] shadow-sm'
+                                : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--gold-accent)]'
+                            }`}
+                          >
+                            {g.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="space-y-1 sm:col-span-2">
                     <label className="text-[10px] uppercase text-[var(--text-secondary)]">Piece Title / Name</label>
                     <input
@@ -1252,8 +1614,112 @@ try {
                     </select>
                   </div>
 
-                  <div className="space-y-1 sm:col-span-2">
-                    <label className="text-[10px] uppercase text-[var(--text-secondary)]">Description / Tailoring Notes</label>
+                  {/* Fulfillment Mode & Production Lead Time */}
+                  <div className="sm:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-[10px] uppercase text-[var(--text-secondary)] font-bold flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-[var(--gold-accent)]" />
+                        <span>Fulfillment &amp; Availability</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsPublished((prev) => !prev)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono-luxury uppercase border transition-colors cursor-pointer ${
+                          isPublished
+                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                            : 'bg-zinc-500/10 text-[var(--text-muted)] border-[var(--border-subtle)]'
+                        }`}
+                      >
+                        {isPublished ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                        <span>{isPublished ? 'Live in Store' : 'Hidden Draft'}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFulfillmentType('ready_to_ship')}
+                        className={`py-2.5 px-3 rounded-xl border text-[11px] font-mono-luxury uppercase transition-all cursor-pointer ${
+                          fulfillmentType === 'ready_to_ship'
+                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-[var(--text-primary)]'
+                            : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                        }`}
+                      >
+                        Ready to Ship
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFulfillmentType('made_to_order')}
+                        className={`py-2.5 px-3 rounded-xl border text-[11px] font-mono-luxury uppercase transition-all cursor-pointer ${
+                          fulfillmentType === 'made_to_order'
+                            ? 'bg-[var(--text-primary)] text-[var(--bg-primary)] border-[var(--text-primary)]'
+                            : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                        }`}
+                      >
+                        Made to Order
+                      </button>
+                    </div>
+
+                    {fulfillmentType === 'made_to_order' && (
+                      <div className="space-y-1 animate-fadeIn">
+                        <label className="text-[10px] uppercase text-[var(--text-muted)] block">
+                          Production Lead Time
+                        </label>
+                        <select
+                          value={productionLeadTime}
+                          onChange={(e) => setProductionLeadTime(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] font-sans"
+                        >
+                          <option value="2-4 business days">2-4 business days</option>
+                          <option value="3-5 business days">3-5 business days</option>
+                          <option value="5-7 business days">5-7 business days</option>
+                          <option value="7-10 business days">7-10 business days</option>
+                          <option value="10-14 business days">10-14 business days</option>
+                          <option value="2-3 weeks">2-3 weeks (Bespoke Couture)</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {vendorProfile?.hasSecondaryHub && vendorProfile?.secondaryCity && (
+                      <div className="space-y-1 pt-1 border-t border-[var(--border-subtle)]">
+                        <label className="text-[10px] uppercase text-[var(--text-muted)] flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-[var(--gold-accent)]" />
+                          <span>Dispatch Hub Location</span>
+                        </label>
+                        <select
+                          value={shipsFrom}
+                          onChange={(e) => setShipsFrom(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] font-sans"
+                        >
+                          <option value={vendorProfile.city || vendorProfile.location || ''}>
+                            Primary Hub ({vendorProfile.city || vendorProfile.location || 'Main Studio'})
+                          </option>
+                          <option value={`${vendorProfile.secondaryCity}${vendorProfile.secondaryState ? `, ${vendorProfile.secondaryState}` : ''}`}>
+                            Secondary Hub ({vendorProfile.secondaryCity}{vendorProfile.secondaryState ? `, ${vendorProfile.secondaryState}` : ''})
+                          </option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description with AI Writer */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-[10px] uppercase text-[var(--text-secondary)]">Description / Tailoring Notes</label>
+                      <button
+                        type="button"
+                        onClick={handleGenerateAiDescription}
+                        disabled={isGeneratingAi}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--gold-subtle)] border border-[var(--gold-accent)]/35 text-[10px] font-mono-luxury uppercase text-[var(--gold-accent)] hover:bg-[var(--gold-accent)] hover:text-black transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {isGeneratingAi ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                        <span>{isGeneratingAi ? 'Writing...' : 'AI Write'}</span>
+                      </button>
+                    </div>
+                    {aiToast && (
+                      <p className="text-[10px] text-emerald-500 font-mono-luxury">{aiToast}</p>
+                    )}
                     <textarea
                       rows={3}
                       value={description}
@@ -1261,6 +1727,52 @@ try {
                       placeholder="Garment composition, fit guidelines, or care instructions..."
                       className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] transition-colors text-xs font-sans resize-none"
                     />
+                  </div>
+
+                  {/* Searchable Tags */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="text-[10px] uppercase text-[var(--text-secondary)] flex items-center gap-1.5">
+                      <Tag className="h-3 w-3 text-[var(--gold-accent)]" />
+                      <span>Search Tags ({tags.length})</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleAddTagKeyDown}
+                        placeholder="Type tag & press Enter (e.g. heavyweight, cotton, party)"
+                        className="flex-1 px-3 py-2 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-[var(--gold-accent)] font-sans"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddTagClick}
+                        disabled={!tagInput.trim()}
+                        className="px-3.5 py-2 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:border-[var(--gold-accent)] text-[10px] font-mono-luxury uppercase text-[var(--text-primary)] cursor-pointer disabled:opacity-40"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    {tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {tags.map((t) => (
+                          <span
+                            key={t}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[10px] font-mono-luxury text-[var(--text-secondary)]"
+                          >
+                            <span>#{t}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTag(t)}
+                              className="text-[var(--text-muted)] hover:text-rose-400 cursor-pointer"
+                              aria-label={`Remove tag ${t}`}
+                            >
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

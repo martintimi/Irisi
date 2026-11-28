@@ -17,6 +17,7 @@ import MobileProductDetailView from '@/components/shop/MobileProductDetailView';
 import LuxuryLoader from '@/components/common/LuxuryLoader';
 import Product3DModal from '@/components/3d/Product3DModal';
 import FitPredictorModal from '@/components/shop/FitPredictorModal';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { parseAndNormalizeColors } from '@/lib/utils/colorUtils';
 
 interface MediaItem {
@@ -640,7 +641,10 @@ export default function ProductDetailPage() {
                           muted
                           loop
                           playsInline
-                          className="absolute inset-0 w-full h-full object-cover"
+                          controls={false}
+                          disablePictureInPicture
+                          controlsList="nodownload noplaybackrate noremoteplayback"
+                          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                         />
                       </div>
                     ) : (
@@ -796,6 +800,7 @@ export default function ProductDetailPage() {
                   <Store className="h-3.5 w-3.5" />
                   <span>{product.vendorName}</span>
                 </Link>
+                {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="compact" />}
 
                 <button
                   type="button"
@@ -1496,10 +1501,13 @@ export default function ProductDetailPage() {
                     src={currentMedia.url}
                     poster={product.imageUrl}
                     autoPlay
+                    muted
                     loop
-                    controls
                     playsInline
-                    className="relative w-full h-full max-h-[74vh] object-contain"
+                    controls={false}
+                    disablePictureInPicture
+                    controlsList="nodownload noplaybackrate noremoteplayback"
+                    className="relative w-full h-full max-h-[74vh] object-contain pointer-events-none"
                   />
                 </div>
               ) : (

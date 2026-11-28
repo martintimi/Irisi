@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { parseProductMetaFromTags } from '@/lib/utils/productMetadata';
+import { parseProductMetaFromTags, computeSoldOutVisibility } from '@/lib/utils/productMetadata';
 import { fetchLivePlatformBillingConfig } from '@/lib/config/platformBillingServer';
 import { isVendorPlusActive } from '@/lib/config/platformBilling';
 
@@ -173,16 +173,36 @@ export async function GET(
         colors: isAccessory ? [] : normalizedColors,
         sizes: resolvedSizes,
         sizeStock: finalSizeStock,
-        stockQuantity: dynamicTotalStock > 0 ? dynamicTotalStock : (isAccessory ? 20 : 85),
+        ...(() => {
+          const resolvedQty = pVariants.length > 0 ? dynamicTotalStock : (isAccessory ? 20 : 50);
+          const vis = computeSoldOutVisibility(resolvedQty, productMeta.soldOutAt, p.updated_at || p.created_at);
+          return {
+            stockQuantity: resolvedQty,
+            soldOutAt: vis.soldOutAt,
+            hoursUntilAutoHide: vis.hoursUntilAutoHide,
+            isAutoHiddenSoldOut: vis.isAutoHiddenSoldOut,
+          };
+        })(),
         rating: 5.0,
         reviewCount: 18,
         createdAt: p.created_at
       };
     });
 
+    // Fashion Nova / SHEIN / Zara 48h rule: hide >=48h sold-out items & sort <48h sold-out items to bottom
+    const visibleStorefrontProducts = formattedProducts
+      .filter((item) => !item.isAutoHiddenSoldOut)
+      .sort((a, b) => (a.stockQuantity === 0 ? 1 : 0) - (b.stockQuantity === 0 ? 1 : 0));
+
     const billingConfig = await fetchLivePlatformBillingConfig();
+    const nowMs = Date.now();
+    const hasPaidPlus =
+      parsedVendorBio?.plusLifetimeFree === true ||
+      (parsedVendorBio?.subscriptionPlan === 'plus' &&
+        (!parsedVendorBio?.plusExpiresAt || new Date(parsedVendorBio.plusExpiresAt).getTime() > nowMs));
     const isPlus = isVendorPlusActive(parsedVendorBio, billingConfig);
-    const storefrontLocked = !isPlus && billingConfig.requirePlusForStorefront;
+    // Option B guaranteed: Free plan always keeps a live basic storefront (never paused); Plus upgrades to white-label clean mode
+    const storefrontLocked = false;
 
     const vendorPayload = {
       id: vendorId,
@@ -200,11 +220,12 @@ export async function GET(
       tiktok: socialLinks.tiktok,
       snapchat: socialLinks.snapchat,
       whatsapp: socialLinks.whatsapp || resolvedVendor?.phone,
-      productCount: formattedProducts.length,
+      productCount: visibleStorefrontProducts.length,
       satisfactionRate: null,
       deliveryDays: dispatchDays,
       isVerified: !!resolvedVendor?.is_verified,
       isPlus,
+      hasPaidPlus,
       storefrontCleanMode: isPlus,
       storefrontLocked,
     };
@@ -212,10 +233,11 @@ export async function GET(
     return NextResponse.json({
       success: true,
       vendor: vendorPayload,
-      products: storefrontLocked ? [] : formattedProducts,
+      products: storefrontLocked ? [] : visibleStorefrontProducts,
       count: storefrontLocked ? 0 : formattedProducts.length,
       plan: {
         isPlus,
+        hasPaidPlus,
         freeLaunchMode: billingConfig.freeLaunchMode,
         storefrontCleanMode: isPlus,
         storefrontLocked,

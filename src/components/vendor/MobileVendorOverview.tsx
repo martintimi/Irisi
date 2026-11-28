@@ -7,7 +7,7 @@ import {
   DollarSign, Plus, ExternalLink, ShieldCheck,
   AlertTriangle, AlertCircle, Clock, ArrowRight, Store, Copy,
   Check, Lock, CheckCircle2, Camera, ChevronRight, Share2,
-  MessageSquare, BarChart3
+  MessageSquare, BarChart3, Crown, Sparkles
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import ShareStoreSheet from './ShareStoreSheet';
@@ -28,6 +28,14 @@ interface MobileVendorOverviewProps {
   settledPayouts?: number;
   recentOrders?: any[];
   onEditProduct?: (product: any) => void;
+  planInfo?: {
+    freeLaunchMode: boolean;
+    isPlus: boolean;
+    effectiveCommissionPercent: number;
+    publishedProductCount: number;
+    productLimit: number | null;
+    plusMonthlyPriceNgn: number;
+  } | null;
 }
 
 export default function MobileVendorOverview({
@@ -40,6 +48,7 @@ export default function MobileVendorOverview({
   settledPayouts = 0,
   recentOrders = [],
   onEditProduct,
+  planInfo = null,
 }: MobileVendorOverviewProps) {
   const [copied, setCopied] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -203,11 +212,79 @@ export default function MobileVendorOverview({
           <span className="truncate max-w-[65%]">
             {vendorProfile?.location || 'Dispatch hub not configured'}
           </span>
-          <span className="text-[#E6C367] font-mono-luxury text-[10px] uppercase tracking-wider shrink-0">
-            0% Launch Fee
-          </span>
+          <Link
+            href="/vendor-portal/plus"
+            className="text-[#E6C367] font-mono-luxury text-[10px] uppercase tracking-wider shrink-0 active:opacity-75"
+          >
+            {planInfo
+              ? planInfo.freeLaunchMode
+                ? 'Free Trial · 0% Fee'
+                : planInfo.isPlus
+                ? `ÌRÍSÍ Plus · ${planInfo.effectiveCommissionPercent}% Fee`
+                : `Free Plan · ${planInfo.effectiveCommissionPercent}% Fee`
+              : 'View Plan ›'}
+          </Link>
         </div>
       </section>
+
+      {/* 2B. Live Plan Awareness Strip (Always tells vendor their active plan right on Home) */}
+      {planInfo && (
+        <Link
+          href="/vendor-portal/plus"
+          className={`px-4 py-3 rounded-2xl border flex items-center justify-between gap-3 active:scale-[0.99] transition-transform ${
+            planInfo.freeLaunchMode
+              ? 'bg-emerald-500/[0.07] border-emerald-500/25'
+              : planInfo.isPlus
+              ? 'bg-[var(--gold-subtle)] border-[var(--gold-accent)]/30'
+              : 'bg-[var(--bg-surface)] border-amber-500/35'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                planInfo.freeLaunchMode
+                  ? 'bg-emerald-500/15 text-emerald-500'
+                  : planInfo.isPlus
+                  ? 'bg-[var(--gold-accent)]/20 text-[var(--gold-accent)]'
+                  : 'bg-amber-500/15 text-amber-500'
+              }`}
+            >
+              {planInfo.freeLaunchMode ? (
+                <Sparkles className="h-4 w-4" />
+              ) : (
+                <Crown className="h-4 w-4" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-[var(--text-primary)] truncate">
+                {planInfo.freeLaunchMode
+                  ? 'Free Launch Trial Active'
+                  : planInfo.isPlus
+                  ? 'ÌRÍSÍ Plus Member'
+                  : 'You are on the Free Plan'}
+              </div>
+              <p className="text-[11px] text-[var(--text-muted)] font-light truncate">
+                {planInfo.freeLaunchMode
+                  ? '0% sales commission · All Plus tools unlocked'
+                  : planInfo.isPlus
+                  ? `${planInfo.effectiveCommissionPercent}% commission · Unlimited listings & 24h Stories`
+                  : `${planInfo.effectiveCommissionPercent}% commission · ${planInfo.publishedProductCount}/${planInfo.productLimit ?? 10} listings used`}
+              </p>
+            </div>
+          </div>
+          <span
+            className={`px-3 py-1 rounded-full text-[10px] font-mono-luxury uppercase tracking-wider shrink-0 ${
+              planInfo.freeLaunchMode
+                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                : planInfo.isPlus
+                ? 'bg-[var(--gold-accent)]/20 text-[var(--gold-accent)]'
+                : 'bg-[var(--text-primary)] text-[var(--bg-primary)]'
+            }`}
+          >
+            {planInfo.freeLaunchMode ? "Details" : planInfo.isPlus ? "Active" : "Upgrade"}
+          </span>
+        </Link>
+      )}
 
       {/* 3. Native iOS Circular Quick-Action Bar (Non-redundant Studio Tools — Add Drop & Orders live in Bottom Nav) */}
       <section className="grid grid-cols-4 gap-2">

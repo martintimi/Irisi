@@ -14,6 +14,7 @@ import MobileQuickBuyDrawer from '@/components/mobile/MobileQuickBuyDrawer';
 import MobileStoriesRow from '@/components/mobile/MobileStoriesRow';
 import ShopperNotificationBell from '@/components/common/ShopperNotificationBell';
 import MobileProductSlider from '@/components/shop/MobileProductSlider';
+import PlusVerifiedBadge from '@/components/common/PlusVerifiedBadge';
 import { diversifyCatalog } from '@/lib/utils/catalogShuffle';
 
 import {
@@ -283,7 +284,11 @@ export default function MobileShopView() {
       list = diversifyCatalog(list);
     }
 
-    return list;
+    // Fashion Nova / SHEIN rule: hide >=48h sold-out items & push <48h sold-out items cleanly to the bottom
+    list = list.filter((p: any) => !p.isAutoHiddenSoldOut);
+    const inStock = list.filter((p) => p.stockQuantity !== 0);
+    const freshlySoldOut = list.filter((p) => p.stockQuantity === 0);
+    return [...inStock, ...freshlySoldOut];
   }, [allProducts, genderFilter, selectedCategory, specificCategory, departmentFilter, searchQuery, priceRange, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
@@ -603,9 +608,12 @@ export default function MobileShopView() {
                     {/* Info */}
                     <div className="pt-2.5 px-0.5 space-y-1">
                       {/* Vendor Name */}
-                      <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider line-clamp-1 font-mono-luxury">
-                        {product.vendorName || 'Atelier'}
-                      </p>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <p className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider line-clamp-1 font-mono-luxury">
+                          {product.vendorName || 'Brand'}
+                        </p>
+                        {product.vendorHasPaidPlus && <PlusVerifiedBadge variant="icon" />}
+                      </div>
 
                       {/* Product Name */}
                       <Link href={`/shop/${product.id}`} className="block">

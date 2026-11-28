@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import MobileTrackOrderView from '@/components/tracking/MobileTrackOrderView';
+import OrderStatusAnimation from '@/components/vendor/OrderStatusAnimation';
 import { supabase } from '@/lib/supabase/client';
 
 export default function TrackOrderPage() {
@@ -117,6 +118,8 @@ export default function TrackOrderPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [ratedVendors, setRatedVendors] = useState<Record<string, boolean>>({});
+  const [vendorDirectory, setVendorDirectory] = useState<Record<string, { id: string; slug: string; brandName: string; logoUrl: string; fallbackImage: string }>>({});
+  const [brokenLogos, setBrokenLogos] = useState<Record<string, boolean>>({});
 
   // Fetch live order directly from PostgreSQL backend API
   const fetchOrderFromDb = async (queryNum: string) => {
@@ -196,6 +199,7 @@ export default function TrackOrderPage() {
       supabase.removeChannel(channel);
     };
   }, [searchedOrder]);
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,6 +309,26 @@ export default function TrackOrderPage() {
       return bTime - aTime;
     });
   }, [searchedOrder]);
+
+  // Batch fetch real vendor logos for all packages in the tracked order
+  useEffect(() => {
+    if (vendorPackages.length === 0) return;
+    let cancelled = false;
+    async function loadVendorLogos() {
+      try {
+        const ids = vendorPackages.map((p) => encodeURIComponent(p.vendorId)).join(",");
+        const res = await fetch(`/api/vendors/lookup?ids=${ids}`);
+        const data = await res.json();
+        if (!cancelled && data.success && data.vendors) {
+          setVendorDirectory(data.vendors);
+        }
+      } catch {}
+    }
+    loadVendorLogos();
+    return () => {
+      cancelled = true;
+    };
+  }, [vendorPackages]);
 
   // Release Escrow for a specific vendor's package
   const handleConfirmReceivedPackage = async (vendorId: string, vendorName: string) => {
@@ -432,7 +456,7 @@ export default function TrackOrderPage() {
               Multi-Vendor Logistics Ledger
             </span>
           </div>
-          <h1 className="font-editorial text-3xl sm:text-4xl font-bold text-[var(--text-primary)] mt-1">
+          <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[var(--text-primary)] mt-1">
             Track Your Order
           </h1>
         </div>
@@ -546,7 +570,7 @@ export default function TrackOrderPage() {
                     {vendorPackages.length} {vendorPackages.length === 1 ? 'Package Shipment' : 'Vendor Shipments'}
                   </span>
                 </div>
-                <span className="font-editorial text-2xl sm:text-3xl font-bold text-[var(--gold-accent)] mt-0.5 block">
+                <span className="font-editorial text-2xl sm:text-3xl font-normal text-[var(--gold-accent)] mt-0.5 block">
                   {searchedOrder.orderNumber}
                 </span>
                 <div className="text-xs text-[var(--text-secondary)] font-mono-luxury mt-0.5">
@@ -558,7 +582,7 @@ export default function TrackOrderPage() {
                 <span className="text-[10px] font-mono-luxury text-[var(--text-muted)] uppercase tracking-wider block">
                   Total Escrow Paid
                 </span>
-                <div className="font-editorial text-xl sm:text-2xl font-bold text-emerald-400">
+                <div className="font-editorial text-xl sm:text-2xl font-normal text-emerald-400">
                   ₦{Number(searchedOrder.totalAmount || 0).toLocaleString()}
                 </div>
                 <div className="text-[10px] text-emerald-400 font-mono-luxury flex items-center gap-1 sm:justify-end">
@@ -600,35 +624,53 @@ export default function TrackOrderPage() {
               const isDelivered = pkg.packageStage >= 4;
               const isPacking = pkg.packageStage === 2;
 
+              const meta = vendorDirectory[pkg.vendorId] || vendorDirectory[pkg.vendorId.toLowerCase()];
+              const resolvedBrandName = meta?.brandName || pkg.vendorName;
+              const brandLogoSrc = !brokenLogos[pkg.vendorId] ? (meta?.logoUrl || meta?.fallbackImage || '') : '';
+              const brandInitial = resolvedBrandName.trim().charAt(0).toUpperCase() || 'B';
+
               return (
                 <div
                   key={pkg.vendorId}
-                  className={`p-6 sm:p-7 rounded-3xl surface-card border transition-all space-y-6 shadow-md ${
+                  className={`rounded-3xl surface-card border transition-all shadow-md overflow-hidden ${
                     isDelivered
-                      ? 'border-emerald-500/40 bg-emerald-500/[0.02]'
+                      ? 'border-emerald-500/35'
                       : isDispatched
-                      ? 'border-[var(--gold-accent)]/50 bg-[var(--gold-accent)]/[0.02]'
+                      ? 'border-[var(--gold-accent)]/45'
                       : 'border-[var(--border-subtle)]'
                   }`}
                 >
+                  <OrderStatusAnimation
+                    trackingStage={pkg.packageStage}
+                    deliveryMethod={pkg.deliveryMethod}
+                    courierName={pkg.courierName}
+                    viewer="shopper"
+                  />
+                  <div className="p-6 sm:p-7 space-y-6">
                   {/* Package Top Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-11 w-11 rounded-2xl flex items-center justify-center font-bold text-xs font-mono-luxury ${
-                        isDelivered
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                          : isDispatched
-                          ? 'bg-[var(--gold-subtle)] text-[var(--gold-accent)] border border-[var(--gold-accent)]/40'
-                          : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
-                      }`}>
-                        <Package className="h-5 w-5" />
-                      </div>
+                    <div className="flex items-center gap-3.5">
+                      <Link
+                        href={`/brand/${encodeURIComponent(meta?.slug || pkg.vendorId)}`}
+                        className="relative h-12 w-12 rounded-full bg-[var(--bg-primary)] border border-[var(--gold-accent)]/40 text-[var(--gold-accent)] flex items-center justify-center font-editorial text-lg shrink-0 overflow-hidden"
+                      >
+                        {brandLogoSrc ? (
+                          <img
+                            src={brandLogoSrc}
+                            alt={resolvedBrandName}
+                            onError={() => setBrokenLogos((prev) => ({ ...prev, [pkg.vendorId]: true }))}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{brandInitial}</span>
+                        )}
+                      </Link>
                       <div>
-                        <div className="text-[10px] font-mono-luxury uppercase text-[var(--text-muted)] font-bold">
+                        <div className="text-[10px] font-mono-luxury uppercase tracking-wider text-[var(--text-muted)]">
                           Package {idx + 1} of {vendorPackages.length}
                         </div>
-                        <h3 className="font-editorial text-lg sm:text-xl font-bold text-[var(--text-primary)]">
-                          {pkg.vendorName}
+                        <h3 className="font-editorial text-lg sm:text-xl font-normal text-[var(--text-primary)] capitalize">
+                          {resolvedBrandName}
                         </h3>
                         <div className="flex items-center gap-2 flex-wrap text-xs font-mono-luxury mt-1">
                           <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase flex items-center gap-1 ${
@@ -859,7 +901,7 @@ export default function TrackOrderPage() {
                       )}
                     </div>
                   </div>
-
+                  </div>
                 </div>
               );
             })}
@@ -872,7 +914,7 @@ export default function TrackOrderPage() {
             <AlertCircle className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="font-editorial text-2xl font-bold text-[var(--text-primary)]">
+            <h3 className="font-editorial text-2xl font-normal text-[var(--text-primary)]">
               Order Not Found
             </h3>
             <p className="text-xs font-mono-luxury text-[var(--text-secondary)] mt-1 max-w-sm mx-auto">
